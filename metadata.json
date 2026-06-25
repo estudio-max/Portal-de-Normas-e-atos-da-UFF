@@ -1,0 +1,6 @@
+{
+  "name": "Portal de Normas e Atos UFF",
+  "description": "Plataforma inteligente de indexação, busca e análise de relações de atos administrativos e normas do Boletim de Serviço da UFF integrado ao SEI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
