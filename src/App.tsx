@@ -14,14 +14,23 @@ export default function App() {
   const [acts, setActs] = useState<UffAct[]>([]);
   const [activeTab, setActiveTab] = useState<string>('planilha');
 
-  // Carrega a base real indexada (portal-data.json, regenerada diariamente
-  // pela rotina de extração dos boletins). Edições de cadastro valem para a
-  // sessão; o botão "Restaurar" recarrega a base oficial mais recente.
+  // Carrega a base real indexada. A rotina diária de extração envia o
+  // portal-data.json atualizado para o GitHub; o site lê de lá (raw) para
+  // refletir novos boletins SEM precisar republicar. Se o GitHub falhar,
+  // cai para o arquivo local servido junto do app.
+  const DATA_REMOTO =
+    'https://raw.githubusercontent.com/estudio-max/Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json';
+
   const carregarBaseOficial = () => {
-    fetch('./portal-data.json', { cache: 'no-store' })
-      .then(r => { if (!r.ok) throw new Error('sem portal-data.json'); return r.json(); })
+    fetch(`${DATA_REMOTO}?t=${Date.now()}`, { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error('remoto indisponível'); return r.json(); })
       .then((data: UffAct[]) => setActs(data))
-      .catch(() => setActs(INITIAL_ACTS));
+      .catch(() =>
+        fetch('./portal-data.json', { cache: 'no-store' })
+          .then(r => { if (!r.ok) throw new Error('sem portal-data.json'); return r.json(); })
+          .then((data: UffAct[]) => setActs(data))
+          .catch(() => setActs(INITIAL_ACTS))
+      );
   };
 
   useEffect(() => { carregarBaseOficial(); }, []);
