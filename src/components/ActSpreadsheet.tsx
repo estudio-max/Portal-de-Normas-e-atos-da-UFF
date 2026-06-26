@@ -437,11 +437,9 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
               className="bg-white border border-slate-200 hover:border-slate-300 rounded px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-yellow-400"
             >
               <option value="todos">Tipo: Todos</option>
-              <option value="Portaria">Portarias</option>
-              <option value="Resolução">Resoluções</option>
-              <option value="Instrução de Serviço">Instruções de Serviço</option>
-              <option value="Decisão">Decisões</option>
-              <option value="Outro">Outros</option>
+              {uniqueTypes.sort().map(tp => (
+                <option key={tp} value={tp}>{tp}</option>
+              ))}
             </select>
           </div>
 
@@ -610,6 +608,11 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                     {sortField === 'ementa' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
+                <th className="py-2 px-2.5 w-36">
+                  <div className="flex items-center gap-1">
+                    <span>Relações</span>
+                  </div>
+                </th>
                 <th className="py-2 px-2.5 w-44 cursor-pointer hover:bg-slate-100 transition-all" onClick={() => handleSort('processoSei')}>
                   <div className="flex items-center gap-1">
                     <span>Processo SEI</span>
@@ -628,7 +631,7 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {filteredAndSortedActs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
                     <AlertCircle className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
                     <p className="font-semibold text-slate-500 text-xs">Nenhum ato legislativo encontrado.</p>
                     <p className="text-[11px] text-slate-400 mt-0.5">Tente ajustar seus termos de pesquisa ou remover os filtros aplicados.</p>
@@ -698,6 +701,38 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                             )}
                           </div>
                         )}
+                      </td>
+
+                      {/* Relações (saída + entrada/referenciado por) */}
+                      <td className="py-1.5 px-2.5">
+                        {(() => {
+                          const out = Array.from(new Set(act.relacoes.map(r => r.tipoRelacao)));
+                          const inb = act.referenciadoPor || [];
+                          const cor = (t: string) => t === 'Revoga'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : t === 'Altera'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-indigo-100 text-indigo-800 border-indigo-200';
+                          if (out.length === 0 && inb.length === 0) {
+                            return <span className="text-slate-300 text-[11px]">—</span>;
+                          }
+                          return (
+                            <div className="flex flex-wrap items-center gap-1">
+                              {out.map((t, i) => (
+                                <span key={i} title={`Este ato ${t.toLowerCase()} outro(s)`}
+                                  className={`px-1.5 py-0.25 rounded text-[9px] font-extrabold uppercase border ${cor(t)}`}>
+                                  {t}
+                                </span>
+                              ))}
+                              {inb.length > 0 && (
+                                <span title={`Referenciado por ${inb.length} ato(s) posterior(es)`}
+                                  className="px-1.5 py-0.25 rounded text-[9px] font-extrabold uppercase border bg-slate-100 text-slate-600 border-slate-200 inline-flex items-center gap-0.5">
+                                  ↩ {inb.length}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* SEI Number */}
@@ -881,6 +916,31 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                 )}
               </div>
 
+              {/* Referenciado por (índice reverso pré-calculado) */}
+              <div className="space-y-2">
+                <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
+                  Referenciado por ({(viewingAct.referenciadoPor || []).length})
+                </span>
+                {(viewingAct.referenciadoPor || []).length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Nenhum ato posterior altera ou revoga este.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {(viewingAct.referenciadoPor || []).map((rev, index) => (
+                      <div key={index} className="flex items-start gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          rev.relacao === 'Revoga' ? 'bg-rose-100 text-rose-800'
+                            : rev.relacao === 'Altera' ? 'bg-amber-100 text-amber-800'
+                            : 'bg-indigo-100 text-indigo-800'
+                        }`}>
+                          {rev.relacao === 'Revoga' ? 'Revogado por' : rev.relacao === 'Altera' ? 'Alterado por' : 'Referenciado por'}
+                        </span>
+                        <span className="font-semibold text-slate-900">{rev.porLabel}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Tags & Metadata */}
               <div className="flex justify-between items-center pt-3 border-t border-slate-100 text-xs text-slate-400">
                 <div className="flex gap-1.5">
@@ -953,11 +1013,7 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                     onChange={(e) => setFormTipo(e.target.value as ActType)}
                     className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   >
-                    <option value="Portaria">Portaria</option>
-                    <option value="Resolução">Resolução</option>
-                    <option value="Instrução de Serviço">Instrução de Serviço</option>
-                    <option value="Decisão">Decisão</option>
-                    <option value="Outro">Outro</option>
+                    {['Portaria','Resolução','Determinação de Serviço','Instrução Normativa','Norma de Serviço','Decisão','Comunicado','Edital','Resumo de Despachos','Outro'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>

@@ -5,7 +5,12 @@ export interface ActRelation {
   detalhes?: string;
 }
 
-export type ActType = 'Portaria' | 'Resolução' | 'Instrução de Serviço' | 'Decisão' | 'Outro';
+// Tipos oficiais do Boletim de Serviço da UFF (abrange a base real indexada)
+export type ActType =
+  | 'Portaria' | 'Resolução' | 'Determinação de Serviço' | 'Instrução Normativa'
+  | 'Norma de Serviço' | 'Ordem de Serviço' | 'Instrução de Serviço'
+  | 'Decisão' | 'Deliberação' | 'Comunicado' | 'Edital'
+  | 'Resumo de Despachos' | 'Outro';
 
 export interface UffAct {
   id: string;
@@ -24,6 +29,15 @@ export interface UffAct {
   linkBoletim?: string; // Link direto do Boletim de Serviço
   notasInternas?: string; // Notas administrativas de indexação
   dataCriacao?: string; // Data em que foi adicionado ao portal
+  // Vínculos diretos com o SEI gerados pela indexação automática
+  seiDocumento?: string | null; // código verificador do documento SEI
+  linkSeiProcesso?: string | null;
+  linkSeiDocumento?: string | null;
+  secao?: string;
+  pagina?: string;
+  arquivo?: string;
+  // Atos posteriores que alteram/revogam este (índice reverso pré-calculado)
+  referenciadoPor?: { relacao: string; porId: string; porLabel: string; detalhes?: string }[];
 }
 
 export interface UffStatistics {

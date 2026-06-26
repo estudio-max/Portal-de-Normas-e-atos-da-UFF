@@ -10,6 +10,97 @@ interface ActParserProps {
   onAddParsedAct: (act: UffAct) => void;
 }
 
+// --- Analisador local de atos (heurística offline, sem API) -----------------
+const MESES_PT: Record<string, number> = {
+  janeiro: 1, fevereiro: 2, março: 3, marco: 3, abril: 4, maio: 5, junho: 6,
+  julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+};
+function analisarTextoLocalmente(texto: string): any {
+  const t = texto.replace(/\s+/g, ' ').trim();
+  const tl = t.toLowerCase();
+
+  // tipo
+  const tipos: [string, RegExp][] = [
+    ['Determinação de Serviço', /determina[çc][ãa]o de servi[çc]o/i],
+    ['Instrução Normativa', /instru[çc][ãa]o normativa/i],
+    ['Norma de Serviço', /norma de servi[çc]o/i],
+    ['Resolução', /resolu[çc][ãa]o/i],
+    ['Portaria', /portaria/i],
+    ['Decisão', /decis[ãa]o/i],
+    ['Edital', /edital/i],
+    ['Comunicado', /comunicado/i],
+  ];
+  let tipoAto = 'Outro';
+  for (const [nome, rgx] of tipos) { if (rgx.test(t)) { tipoAto = nome; break; } }
+
+  // número
+  const mNum = t.match(/n[ºo°\.]*\s*([\d.]+(?:\s?[A-Z]{1,4})?)/i);
+  const numero = mNum ? mNum[1].trim() : '';
+
+  // órgão / sigla (entre o tipo e o "Nº")
+  let orgaoEmissor = 'Reitoria';
+  const mOrg = t.match(/(?:servi[çc]o|resolu[çc][ãa]o|portaria|normativa|decis[ãa]o)\s+([A-ZÀ-Ú][A-ZÀ-Ú0-9/().]{1,30}(?:\/UFF)?)\s*n[ºo°\.]/i);
+  if (mOrg) orgaoEmissor = mOrg[1].replace(/\/UFF$/i, '').trim();
+
+  // data de assinatura: "DE 10 DE JUNHO DE 2026"
+  let dataAssinatura = '';
+  let ano = new Date().getFullYear();
+  const mData = t.match(/de\s+(\d{1,2})\s+de\s+([a-zà-ú]+)\s+de\s+(\d{4})/i);
+  if (mData) {
+    const m = MESES_PT[mData[2].toLowerCase()];
+    ano = Number(mData[3]);
+    if (m) dataAssinatura = `${ano}-${String(m).padStart(2, '0')}-${String(Number(mData[1])).padStart(2, '0')}`;
+  } else {
+    const mAno = t.match(/\/(\d{4})\b/) || t.match(/\b(20\d{2})\b/);
+    if (mAno) ano = Number(mAno[1]);
+  }
+
+  // processo SEI
+  const mSei = t.match(/23069[.\s]\d{6}[/\s]\d{4}[-\s]\d{2}/);
+  const processoSei = mSei ? mSei[0].replace(/\s/g, '').replace(/(\d{5})\.?(\d{6})\/?(\d{4})-?(\d{2})/, '$1.$2/$3-$4') : null;
+
+  // ementa: trecho após o título até o dispositivo
+  let ementa = '';
+  const corte = t.search(/\bRESOLVE\b|\bO REITOR\b|\bA REITORA\b|\bO CONSELHO\b|\bO COORDENADOR|\bA COORDENADOR|\bO CHEFE\b|\bO DIRETOR|\bA DIRETORA|\bO PR[ÓO]-REITOR|\bConsiderando\b|\bArt\.?\s*1/i);
+  const apósTitulo = mData ? t.indexOf(mData[0]) + mData[0].length : (mNum ? t.indexOf(mNum[0]) + mNum[0].length : 0);
+  if (corte > apósTitulo) ementa = t.slice(apósTitulo, corte).replace(/^[\s.,:–-]+/, '').trim().slice(0, 400);
+  if (!ementa) ementa = t.slice(apósTitulo, apósTitulo + 220).trim();
+
+  // relações: verbo + ato citado
+  const relacoes: any[] = [];
+  const refRgx = /(altera|revoga|torna sem efeito|substitui|retifica|republica|complementa|regulamenta)[^.;]{0,60}?(portaria|resolu[çc][ãa]o|determina[çc][ãa]o de servi[çc]o|dts|instru[çc][ãa]o normativa|decis[ãa]o)\s+([A-ZÀ-Ú0-9/().]{0,25})?\s*n[ºo°\.]*\s*([\d.]+)/gi;
+  let r: RegExpExecArray | null; let k = 0;
+  while ((r = refRgx.exec(t)) && k < 12) {
+    const verbo = r[1].toLowerCase();
+    const tipoRel = /revoga|torna sem efeito/.test(verbo) ? 'Revoga'
+      : /substitui|retifica|republica|altera/.test(verbo) ? 'Altera'
+      : /regulamenta/.test(verbo) ? 'Regulamenta' : 'Complementa';
+    const tipoRef = r[2].replace(/dts/i, 'DTS');
+    const org = (r[3] || '').trim();
+    relacoes.push({
+      id: `rel-loc-${Date.now()}-${k}`,
+      tipoRelacao: tipoRel,
+      atoDestino: `${tipoRef}${org ? ' ' + org : ''} nº ${r[4]}`,
+      detalhes: undefined,
+    });
+    k++;
+  }
+
+  // tags e resumo
+  const acaoM = ementa.match(/^(Altera|Revoga|Designa|Designar|Disp[õo]e|Aprova|Institui|Nomeia|Exonera|Concede|Cria|Estabelece|Prorroga|Retifica|Torna)/i);
+  const tags = [
+    ...(acaoM ? [acaoM[1]] : []),
+    ...orgaoEmissor.split(/[/ ]/).filter(Boolean),
+    tipoAto,
+  ].filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 6);
+
+  return {
+    tipoAto, numero, ano, dataAssinatura, orgaoEmissor,
+    ementa, processoSei, relacoes, tags,
+    conteudoResumido: ementa || 'Ato administrativo da UFF.',
+  };
+}
+
 export default function ActParser({ onAddParsedAct }: ActParserProps) {
   const [rawText, setRawText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,24 +150,17 @@ export default function ActParser({ onAddParsedAct }: ActParserProps) {
     setLoadingTipIndex(0);
 
     try {
-      const response = await fetch("/api/parse-act", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ text: rawText })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Ocorreu um erro desconhecido ao chamar a IA.");
+      // Análise local (mesma heurística da indexação automática do portal):
+      // não depende de chave de API e funciona totalmente offline.
+      await new Promise(res => setTimeout(res, 900));
+      const data = analisarTextoLocalmente(rawText);
+      if (!data.numero && !data.ementa) {
+        throw new Error("Não foi possível identificar um ato administrativo neste texto. Verifique se colou o cabeçalho da portaria/resolução.");
       }
-
       setParsedResult(data);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Erro na conexão com o servidor. Verifique suas configurações de chaves.");
+      setError(err.message || "Erro ao analisar o texto.");
     } finally {
       setLoading(false);
     }
@@ -166,7 +250,7 @@ export default function ActParser({ onAddParsedAct }: ActParserProps) {
             </h3>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-            Evite a digitação manual de relatórios e planilhas. Cole o texto copiado de qualquer PDF de Boletim de Serviço da UFF. A inteligência artificial Gemini identificará automaticamente os órgãos, ementas, números de processo SEI e as conexões de revogação ou alteração de normas.
+            Evite a digitação manual de relatórios e planilhas. Cole o texto copiado de qualquer PDF de Boletim de Serviço da UFF. O analisador identifica automaticamente — de forma local, sem chave de API — o tipo, órgão, ementa, número de processo SEI e as conexões de revogação ou alteração de normas.
           </p>
         </div>
       </div>
@@ -271,8 +355,8 @@ export default function ActParser({ onAddParsedAct }: ActParserProps) {
                 </p>
               </div>
               <div className="bg-white p-2.5 rounded border border-rose-100 text-slate-500 font-normal leading-relaxed text-[10px] max-w-md mx-auto">
-                <p className="font-bold text-red-950 mb-0.5 uppercase tracking-wide">Dica de Configuração:</p>
-                Para utilizar o assistente de IA, certifique-se de configurar a variável <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9px] text-rose-800 font-semibold">GEMINI_API_KEY</code> no menu <strong>Settings &gt; Secrets</strong> do AI Studio.
+                <p className="font-bold text-red-950 mb-0.5 uppercase tracking-wide">Dica:</p>
+                Cole o <strong>cabeçalho do ato</strong> (linha "Portaria/Resolução nº … de … de … de …") junto com a ementa. O analisador local reconhece o número, a data, o órgão, o processo SEI e as relações de revogação/alteração.
               </div>
             </div>
           ) : parsedResult ? (
@@ -299,11 +383,7 @@ export default function ActParser({ onAddParsedAct }: ActParserProps) {
                     onChange={(e) => handleResultChange('tipoAto', e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
                   >
-                    <option value="Portaria">Portaria</option>
-                    <option value="Resolução">Resolução</option>
-                    <option value="Instrução de Serviço">Instrução de Serviço</option>
-                    <option value="Decisão">Decisão</option>
-                    <option value="Outro">Outro</option>
+                    {['Portaria','Resolução','Determinação de Serviço','Instrução Normativa','Norma de Serviço','Decisão','Comunicado','Edital','Resumo de Despachos','Outro'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>

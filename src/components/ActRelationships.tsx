@@ -55,31 +55,39 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
     });
   }, [acts, selectedAct]);
 
-  // Inward relations (what affects the selected act)
-  // e.g. Newer Act "Revoga" or "Altera" -> Selected Act
+  // Inward relations (what affects the selected act).
+  // Usa o índice reverso PRÉ-CALCULADO (referenciadoPor) — rigoroso por
+  // sigla+número+tipo — com fallback para a varredura ao vivo.
   const inwardRelations = useMemo(() => {
     if (!selectedAct) return [];
+    const byId = new Map(acts.map(a => [a.id, a]));
+    const pre = selectedAct.referenciadoPor || [];
+    if (pre.length > 0) {
+      return pre.map(rev => ({
+        originAct: byId.get(rev.porId) || {
+          id: rev.porId,
+          tipoAto: rev.porLabel.split(' ')[0],
+          numero: (rev.porLabel.match(/nº\s*([\d.]+)/i) || [])[1] || '',
+          ano: Number((rev.porLabel.match(/\/(\d{4})/) || [])[1]) || '',
+          ementa: '', orgaoEmissor: ''
+        },
+        relationType: rev.relacao,
+        details: rev.detalhes
+      }));
+    }
     const relations: any[] = [];
-    
-    // Scan all other acts to see if any point to the selected act
     acts.forEach(otherAct => {
       if (otherAct.id === selectedAct.id) return;
-      
       otherAct.relacoes.forEach(rel => {
-        const matchByName = rel.atoDestino.toLowerCase().includes(`${selectedAct.tipoAto.toLowerCase()} nº ${selectedAct.numero.toLowerCase()}/${selectedAct.ano}`);
-        const matchBySpecificName = rel.atoDestino.toLowerCase().includes(`${selectedAct.tipoAto.toLowerCase()} ${selectedAct.orgaoEmissor.toLowerCase()} nº ${selectedAct.numero.toLowerCase()}/${selectedAct.ano}`);
-        const matchByNumberAndYear = rel.atoDestino.toLowerCase().includes(selectedAct.numero.toLowerCase()) && rel.atoDestino.toLowerCase().includes(selectedAct.ano.toString());
-
-        if (matchByName || matchBySpecificName || (matchByNumberAndYear && rel.atoDestino.toLowerCase().includes(selectedAct.tipoAto.toLowerCase()))) {
-          relations.push({
-            originAct: otherAct,
-            relationType: rel.tipoRelacao,
-            details: rel.detalhes
-          });
+        const d = rel.atoDestino.toLowerCase();
+        const num = selectedAct.numero.toLowerCase();
+        const tipo = selectedAct.tipoAto.toLowerCase();
+        if (d.includes(`${tipo} nº ${num}/${selectedAct.ano}`) ||
+            (d.includes(num) && d.includes(selectedAct.ano.toString()) && d.includes(tipo))) {
+          relations.push({ originAct: otherAct, relationType: rel.tipoRelacao, details: rel.detalhes });
         }
       });
     });
-
     return relations;
   }, [acts, selectedAct]);
 

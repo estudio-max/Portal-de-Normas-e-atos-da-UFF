@@ -14,26 +14,21 @@ export default function App() {
   const [acts, setActs] = useState<UffAct[]>([]);
   const [activeTab, setActiveTab] = useState<string>('planilha');
 
-  // Load from local storage or load initial pre-populated dataset
-  useEffect(() => {
-    const stored = localStorage.getItem('uff_portal_acts');
-    if (stored) {
-      try {
-        setActs(JSON.parse(stored));
-      } catch (e) {
-        console.error("Erro ao ler dados do localStorage:", e);
-        setActs(INITIAL_ACTS);
-      }
-    } else {
-      setActs(INITIAL_ACTS);
-      localStorage.setItem('uff_portal_acts', JSON.stringify(INITIAL_ACTS));
-    }
-  }, []);
+  // Carrega a base real indexada (portal-data.json, regenerada diariamente
+  // pela rotina de extração dos boletins). Edições de cadastro valem para a
+  // sessão; o botão "Restaurar" recarrega a base oficial mais recente.
+  const carregarBaseOficial = () => {
+    fetch('./portal-data.json', { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error('sem portal-data.json'); return r.json(); })
+      .then((data: UffAct[]) => setActs(data))
+      .catch(() => setActs(INITIAL_ACTS));
+  };
 
-  // Sync state to local storage
+  useEffect(() => { carregarBaseOficial(); }, []);
+
+  // Atualiza o estado em memória (a base canônica vem do portal-data.json)
   const saveActsToStorage = (updatedActs: UffAct[]) => {
     setActs(updatedActs);
-    localStorage.setItem('uff_portal_acts', JSON.stringify(updatedActs));
   };
 
   // Add individual Act
@@ -87,9 +82,9 @@ export default function App() {
     saveActsToStorage(merged);
   };
 
-  // Reset database back to default demonstration set
+  // Recarrega a base oficial indexada mais recente
   const handleResetData = () => {
-    saveActsToStorage(INITIAL_ACTS);
+    carregarBaseOficial();
   };
 
   return (
