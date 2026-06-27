@@ -4,20 +4,21 @@ import { UffAct } from '../types';
 
 interface PortalHeaderProps {
   acts: UffAct[];
+  stats?: { total: number; vigentes: number; revogados: number; alterados: number; orgaos: number; comSei: number; boletins: number } | null;
+  apiMode?: boolean;
   onResetData: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
-export default function PortalHeader({ acts, onResetData, activeTab, setActiveTab }: PortalHeaderProps) {
-  // Compute real-time stats
-  const total = acts.length;
-  const activeCount = acts.filter(a => a.status === 'Ativo').length;
-  const revokedCount = acts.filter(a => a.status === 'Revogado').length;
-  const alteradoCount = acts.filter(a => a.status === 'Alterado').length;
-  
-  const uniqueOrgaos = Array.from(new Set(acts.map(a => a.orgaoEmissor))).length;
-  const withSei = acts.filter(a => a.processoSei !== null).length;
+export default function PortalHeader({ acts, stats, apiMode, onResetData, activeTab, setActiveTab }: PortalHeaderProps) {
+  // Usa os totais da camada de dados (API ou estático); fallback p/ o array
+  const total = stats?.total ?? acts.length;
+  const activeCount = stats?.vigentes ?? acts.filter(a => a.status === 'Ativo').length;
+  const revokedCount = stats?.revogados ?? acts.filter(a => a.status === 'Revogado').length;
+  const alteradoCount = stats?.alterados ?? acts.filter(a => a.status === 'Alterado').length;
+  const uniqueOrgaos = stats?.orgaos ?? new Set(acts.map(a => a.orgaoEmissor)).size;
+  const withSei = stats?.comSei ?? acts.filter(a => a.processoSei).length;
 
   return (
     <header id="portal-header" className="bg-[#003366] text-white border-b border-blue-900 shadow-sm">
@@ -148,29 +149,33 @@ export default function PortalHeader({ acts, onResetData, activeTab, setActiveTa
             📊 Planilha e Cadastro de Atos
           </button>
           
+          {!apiMode && (
           <button
             id="tab-ia-parser"
             onClick={() => setActiveTab('ia-parser')}
             className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'ia-parser' 
-                ? 'text-yellow-400 border-yellow-400' 
+              activeTab === 'ia-parser'
+                ? 'text-yellow-400 border-yellow-400'
                 : 'text-blue-200 border-transparent hover:text-white'
             }`}
           >
             🧠 Assistente IA de Indexação
           </button>
+          )}
 
+          {!apiMode && (
           <button
             id="tab-relacoes"
             onClick={() => setActiveTab('relacoes')}
             className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'relacoes' 
-                ? 'text-yellow-400 border-yellow-400' 
+              activeTab === 'relacoes'
+                ? 'text-yellow-400 border-yellow-400'
                 : 'text-blue-200 border-transparent hover:text-white'
             }`}
           >
             🕸️ Mapa de Relações e Impacto
           </button>
+          )}
 
           <button
             id="tab-sei"

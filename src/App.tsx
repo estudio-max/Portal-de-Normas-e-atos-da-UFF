@@ -1,195 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { Database, FileText, Sparkles, HelpCircle, GitBranch, Search, AlertCircle, Info } from 'lucide-react';
+import { Database, GitBranch, Loader2 } from 'lucide-react';
 import { UffAct } from './types';
 import { INITIAL_ACTS } from './data/initialActs';
+import * as ds from './dataSource';
 
 import PortalHeader from './components/PortalHeader';
 import ActSpreadsheet from './components/ActSpreadsheet';
+import ActTable from './components/ActTable';
 import ActRelationships from './components/ActRelationships';
 import ActParser from './components/ActParser';
 import SeiIntegration from './components/SeiIntegration';
 import HelpGuide from './components/HelpGuide';
 
 export default function App() {
-  // Primary state: List of registered Acts
   const [acts, setActs] = useState<UffAct[]>([]);
   const [activeTab, setActiveTab] = useState<string>('planilha');
+  const [modo, setModo] = useState<'api' | 'estatico' | 'carregando'>('carregando');
+  const [stats, setStats] = useState<ds.Stats | null>(null);
 
-  // Carrega a base real indexada. A rotina diária de extração envia o
-  // portal-data.json atualizado para o GitHub; o site lê de lá (raw) para
-  // refletir novos boletins SEM precisar republicar. Se o GitHub falhar,
-  // cai para o arquivo local servido junto do app.
-  const DATA_REMOTO =
-    'https://raw.githubusercontent.com/estudio-max/Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json';
-
-  const carregarBaseOficial = () => {
-    fetch(`${DATA_REMOTO}?t=${Date.now()}`, { cache: 'no-store' })
-      .then(r => { if (!r.ok) throw new Error('remoto indisponível'); return r.json(); })
-      .then((data: UffAct[]) => setActs(data))
-      .catch(() =>
-        fetch('./portal-data.json', { cache: 'no-store' })
-          .then(r => { if (!r.ok) throw new Error('sem portal-data.json'); return r.json(); })
-          .then((data: UffAct[]) => setActs(data))
-          .catch(() => setActs(INITIAL_ACTS))
-      );
+  // Inicializa a camada de dados: usa a API (banco) se disponível, senão o
+  // JSON estático. No modo estático carrega tudo em memória (protótipo);
+  // no modo API as consultas são paginadas no servidor.
+  const inicializar = async () => {
+    const m = await ds.init();
+    if (m === 'estatico') {
+      const todos = ds.todosAtos();
+      setActs(todos.length ? todos : INITIAL_ACTS);
+    }
+    setStats(await ds.getStats());
+    setModo(m);
   };
+  useEffect(() => { inicializar(); }, []);
 
-  useEffect(() => { carregarBaseOficial(); }, []);
+  // Handlers de curadoria (válidos só no modo estático/protótipo)
+  const handleAddAct = (a: UffAct) => setActs(p => [a, ...p]);
+  const handleUpdateAct = (a: UffAct) => setActs(p => p.map(x => x.id === a.id ? a : x));
+  const handleDeleteAct = (id: string) => setActs(p => p.filter(x => x.id !== id));
+  const handleBulkDelete = (ids: string[]) => setActs(p => p.filter(x => !ids.includes(x.id)));
+  const handleBulkStatusUpdate = (ids: string[], status: 'Ativo' | 'Revogado' | 'Alterado') =>
+    setActs(p => p.map(x => ids.includes(x.id) ? { ...x, status } : x));
+  const handleImportActs = (imp: UffAct[]) => setActs(p => {
+    const m = [...p];
+    imp.forEach(i => { if (!m.some(x => x.tipoAto === i.tipoAto && x.numero === i.numero && x.ano === i.ano)) m.unshift(i); });
+    return m;
+  });
+  const handleResetData = () => inicializar();
 
-  // Atualiza o estado em memória (a base canônica vem do portal-data.json)
-  const saveActsToStorage = (updatedActs: UffAct[]) => {
-    setActs(updatedActs);
-  };
+  const apiMode = modo === 'api';
 
-  // Add individual Act
-  const handleAddAct = (newAct: UffAct) => {
-    const updated = [newAct, ...acts];
-    saveActsToStorage(updated);
-  };
-
-  // Update individual Act
-  const handleUpdateAct = (updatedAct: UffAct) => {
-    const updated = acts.map(act => act.id === updatedAct.id ? updatedAct : act);
-    saveActsToStorage(updated);
-  };
-
-  // Delete individual Act
-  const handleDeleteAct = (id: string) => {
-    const updated = acts.filter(act => act.id !== id);
-    saveActsToStorage(updated);
-  };
-
-  // Bulk actions
-  const handleBulkDelete = (ids: string[]) => {
-    const updated = acts.filter(act => !ids.includes(act.id));
-    saveActsToStorage(updated);
-  };
-
-  const handleBulkStatusUpdate = (ids: string[], status: 'Ativo' | 'Revogado' | 'Alterado') => {
-    const updated = acts.map(act => {
-      if (ids.includes(act.id)) {
-        return { ...act, status };
-      }
-      return act;
-    });
-    saveActsToStorage(updated);
-  };
-
-  // Bulk Import
-  const handleImportActs = (importedActs: UffAct[]) => {
-    // Avoid duplicating exact matches by matching "tipo + numero + ano"
-    const merged = [...acts];
-    importedActs.forEach(imp => {
-      const exists = merged.some(m => 
-        m.tipoAto.toLowerCase() === imp.tipoAto.toLowerCase() && 
-        m.numero.toLowerCase() === imp.numero.toLowerCase() && 
-        m.ano === imp.ano
-      );
-      if (!exists) {
-        merged.unshift(imp);
-      }
-    });
-    saveActsToStorage(merged);
-  };
-
-  // Recarrega a base oficial indexada mais recente
-  const handleResetData = () => {
-    carregarBaseOficial();
-  };
+  if (modo === 'carregando') {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">
+      <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando o portal…
+    </div>;
+  }
 
   return (
     <div id="portal-root" className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-800">
-      
-      {/* Upper Navigation & Brand Banner */}
-      <PortalHeader 
-        acts={acts} 
+      <PortalHeader
+        acts={acts} stats={stats} apiMode={apiMode}
         onResetData={handleResetData}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab={activeTab} setActiveTab={setActiveTab}
       />
 
-      {/* Main Screen Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        
-        {/* Dynamic Panel Renderer */}
         <div className="animate-fade-in duration-300">
-          
-          {/* Tab 1: Interactive Spreadsheet & Inline registration */}
+
           {activeTab === 'planilha' && (
             <div id="painel-planilha" className="space-y-3">
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
                 <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
-                  <Database className="w-4 h-4 text-yellow-500" /> Planilha de Registro e Pesquisa Normativa
+                  <Database className="w-4 h-4 text-yellow-500" /> Planilha de Pesquisa Normativa
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-                  Pesquise leis, resoluções e portarias do boletim utilizando filtros estruturados ou faça o cadastro direto. Use a caixa de seleção à esquerda de cada linha para aplicar alterações ou remoções em lote.
+                  Pesquise leis, resoluções e portarias por número, ementa, processo SEI, nome do servidor ou matrícula SIAPE.
+                  {apiMode && ' Consulta direta no banco de dados (paginação no servidor).'}
                 </p>
               </div>
-              
-              <ActSpreadsheet 
-                acts={acts}
-                onAddAct={handleAddAct}
-                onUpdateAct={handleUpdateAct}
-                onDeleteAct={handleDeleteAct}
-                onBulkDelete={handleBulkDelete}
-                onBulkStatusUpdate={handleBulkStatusUpdate}
-                onImportActs={handleImportActs}
-              />
+
+              {apiMode ? (
+                <ActTable />
+              ) : (
+                <ActSpreadsheet
+                  acts={acts}
+                  onAddAct={handleAddAct} onUpdateAct={handleUpdateAct} onDeleteAct={handleDeleteAct}
+                  onBulkDelete={handleBulkDelete} onBulkStatusUpdate={handleBulkStatusUpdate} onImportActs={handleImportActs}
+                />
+              )}
             </div>
           )}
 
-          {/* Tab 2: Intelligent AI Parser Assistant */}
-          {activeTab === 'ia-parser' && (
-            <div id="painel-ia-parser">
-              <ActParser onAddParsedAct={handleAddAct} />
-            </div>
+          {activeTab === 'ia-parser' && !apiMode && (
+            <div id="painel-ia-parser"><ActParser onAddParsedAct={handleAddAct} /></div>
           )}
 
-          {/* Tab 3: Relationship Auditor & Dependency Trace Map */}
-          {activeTab === 'relacoes' && (
+          {activeTab === 'relacoes' && !apiMode && (
             <div id="painel-relacoes" className="space-y-3">
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
                 <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
                   <GitBranch className="w-4 h-4 text-blue-600" /> Mapeamento e Auditoria de Revogações e Alterações
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-                  Evite ler atos revogados. Selecione qualquer portaria ou resolução da lista para analisar sua validade. O sistema exibirá se o ato foi modificado/revogado por outra lei posterior ou se é ele quem altera resoluções anteriores.
+                  Evite ler atos revogados. Selecione um ato para ver se foi modificado/revogado por outro posterior.
                 </p>
               </div>
-
               <ActRelationships acts={acts} />
             </div>
           )}
 
-          {/* Tab 4: External SEI Search & Guidelines integration */}
-          {activeTab === 'sei' && (
-            <div id="painel-sei">
-              <SeiIntegration />
-            </div>
-          )}
-
-          {/* Tab 5: Help / Manual for end users */}
-          {activeTab === 'ajuda' && (
-            <div id="painel-ajuda">
-              <HelpGuide />
-            </div>
-          )}
+          {activeTab === 'sei' && <div id="painel-sei"><SeiIntegration /></div>}
+          {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 
         </div>
-
       </main>
 
-      {/* Corporate footer */}
       <footer className="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-400 font-semibold">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Universidade Federal Fluminense (UFF) — Superintendência de Tecnologia da Informação (STI)</span>
+          <span>Universidade Federal Fluminense (UFF) — Superintendência de Documentação</span>
           <span className="flex items-center gap-1 text-[11px] text-slate-500">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Portal de Normas Inteligente v1.2.0 • 2026
+            Portal de Normas e Atos • {apiMode ? 'banco de dados' : 'modo estático'} • 2026
           </span>
         </div>
       </footer>
-
     </div>
   );
 }
