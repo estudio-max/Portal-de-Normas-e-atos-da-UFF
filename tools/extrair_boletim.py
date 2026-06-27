@@ -585,6 +585,8 @@ def main():
     ap.add_argument("pdfs", nargs="*", help="arquivos PDF (se vazio, usa --pasta)")
     ap.add_argument("--pasta", default=None, help="pasta com PDFs do boletim")
     ap.add_argument("--saida", default=".", help="pasta de saída")
+    ap.add_argument("--sem-app", action="store_true",
+                    help="não atualiza app/portal-data.json (use em testes/legado)")
     args = ap.parse_args()
 
     arquivos = list(args.pdfs)
@@ -613,7 +615,7 @@ def main():
     # Atualiza a base do app (Portal de Normas e Atos), se a pasta app/ existir
     # ao lado deste script (ambiente local). No CI isso é feito por gerar_dados_portal.
     app_dir = os.path.join(os.path.dirname(__file__), "app")
-    if os.path.isdir(app_dir):
+    if os.path.isdir(app_dir) and not args.sem_app:
         try:
             import gerar_dados_portal as gdp
             urls = {}

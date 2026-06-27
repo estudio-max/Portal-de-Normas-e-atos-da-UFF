@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Gera um dump SQL de carga inicial a partir do app/portal-data.json, para
-importar DIRETO no phpMyAdmin (sem precisar do importador PHP).
+Gera um dump SQL a partir de um portal-data.json, para importar no phpMyAdmin.
+
+Dois modos:
+  - FULL (padrão): limpa tudo e recarrega. Use na carga inicial (ex.: 2026).
+  - APPEND (--append): ACRESCENTA um ano sem apagar os demais. Use no backfill
+    do legado (2025, 2024, ...). Idempotente por ano.
 
 Uso:
-    python backend/db/gerar_sql.py
-Saída:
-    backend/db/carga_inicial.sql        (texto)
-    backend/db/carga_inicial.sql.gz     (comprimido — use este no phpMyAdmin)
+    python gerar_sql.py                                   # full, app/portal-data.json
+    python gerar_sql.py --entrada out/portal-data.json --saida out/carga_2025.sql --append
 
-Depois, no phpMyAdmin: selecione o banco -> aba "Importar" -> escolha o .sql.gz
--> Executar. (O schema.sql precisa ter sido rodado antes, criando as tabelas.)
+Saída: o .sql e o .sql.gz (use o .gz no phpMyAdmin: aba Importar).
 """
-import json, os, re, gzip
+import json, os, re, gzip, argparse
 
-BASE = os.path.dirname(__file__)
-JSON = os.path.join(BASE, "..", "..", "app", "portal-data.json")
-OUT = os.path.join(BASE, "carga_inicial.sql")
+ap = argparse.ArgumentParser()
+ap.add_argument("--entrada", default=os.path.join(os.path.dirname(__file__), "..", "..", "app", "portal-data.json"))
+ap.add_argument("--saida", default=os.path.join(os.path.dirname(__file__), "carga_inicial.sql"))
+ap.add_argument("--append", action="store_true", help="acrescenta um ano sem apagar os outros (legado)")
+args = ap.parse_args()
 
-dados = json.load(open(JSON, encoding="utf-8"))
+dados = json.load(open(args.entrada, encoding="utf-8"))
+OUT = args.saida
 
 
 def esc(v):
@@ -29,53 +33,80 @@ def esc(v):
     if isinstance(v, (int, float)):
         return str(v)
     s = str(v).replace("\\", "\\\\").replace("'", "\\'")
-    s = s.replace("\n", " ").replace("\r", " ")
-    return "'" + s + "'"
+    return "'" + s.replace("\n", " ").replace("\r", " ") + "'"
 
 
 def data_iso(s):
     return s if (s and re.match(r"^\d{4}-\d{2}-\d{2}$", s)) else None
 
 
-# boletins: arquivo -> id sequencial
-bol_id = {}
-bol_rows = []
+# id do boletim: determinístico e global (ano*1000+numero) no modo append;
+# sequencial no modo full (compatível com a carga inicial de 2026 já feita).
+bol_id, bol_rows = {}, []
 for a in dados:
     arq = a.get("arquivo", "")
     if arq and arq not in bol_id:
-        bid = len(bol_id) + 1
+        # número e ANO vêm do nome do boletim ("NN-YY.pdf"), não do ato
+        # (um boletim de 2026 pode conter atos datados de 2025).
+        mb = re.match(r"(\d+)-(\d{2})", arq)
+        bnum = int(mb.group(1)) if mb else None
+        bano = 2000 + int(mb.group(2)) if mb else (a.get("ano") or 0)
+        if args.append and bnum is not None:
+            bid = bano * 1000 + bnum            # global e estável (ex.: 2025153)
+        else:
+            bid = len(bol_id) + 1               # sequencial no modo full (2026 inicial)
         bol_id[arq] = bid
-        bnum = (re.findall(r"\d+", a.get("boletimNumero", "")) or [None])[0]
-        bol_rows.append((bid, arq, bnum, a.get("ano"), a.get("linkBoletim")))
+        bol_rows.append((bid, arq, bnum, bano, a.get("linkBoletim")))
 
-# resolve destino das relações (porId,relacao) -> destId  (via referenciadoPor)
+# resolve destino das relações DENTRO deste lote (cross-ano fica p/ o resolvedor)
 dest = {}
 for a in dados:
     for r in a.get("referenciadoPor", []):
         dest.setdefault((r["porId"], r["relacao"]), a["id"])
 
+# sufixo de ano dos ids (ex.: "25") para limpeza idempotente no modo append
+sufixos = {}
+for a in dados:
+    m = re.match(r"^\d+-(\d{2})-", a["id"])
+    if m:
+        sufixos[m.group(1)] = sufixos.get(m.group(1), 0) + 1
+suf_ano = max(sufixos, key=sufixos.get) if sufixos else None
 
-def insere(f, tabela, colunas, linhas, lote=200):
+
+def insere(f, tabela, colunas, linhas, lote=200, upsert_em=None):
     if not linhas:
         return
     cols = "(" + ",".join("`%s`" % c for c in colunas) + ")"
+    tail = ""
+    if upsert_em:
+        sets = ",".join(f"`{c}`=VALUES(`{c}`)" for c in colunas if c not in upsert_em)
+        tail = " ON DUPLICATE KEY UPDATE " + sets
     for i in range(0, len(linhas), lote):
-        bloco = linhas[i:i + lote]
-        vals = ",\n".join("(" + ",".join(bloco_v) + ")" for bloco_v in bloco)
-        f.write(f"INSERT INTO `{tabela}` {cols} VALUES\n{vals};\n")
+        vals = ",\n".join("(" + ",".join(r) + ")" for r in linhas[i:i + lote])
+        f.write(f"INSERT INTO `{tabela}` {cols} VALUES\n{vals}{tail};\n")
 
 
 with open(OUT, "w", encoding="utf-8") as f:
-    f.write("-- Carga inicial do Portal de Normas e Atos da UFF\n")
+    f.write("-- Carga do Portal de Normas e Atos da UFF "
+            f"({'APPEND ano ' + str(suf_ano) if args.append else 'FULL'})\n")
     f.write("SET NAMES utf8mb4;\nSET foreign_key_checks=0;\n")
-    for t in ["ato_tags", "ato_relacoes", "ato_siapes", "ato_corpo", "atos", "boletins"]:
-        f.write(f"DELETE FROM `{t}`;\n")
+
+    if args.append and suf_ano:
+        # limpa só ESTE ano (idempotente), via padrão do id
+        pad = f"'^[0-9]+-{suf_ano}-'"
+        for t in ["ato_tags", "ato_relacoes", "ato_siapes", "ato_corpo"]:
+            f.write(f"DELETE FROM `{t}` WHERE ato_id REGEXP {pad};\n")
+        f.write(f"DELETE FROM `atos` WHERE id REGEXP {pad};\n")
+    elif not args.append:
+        for t in ["ato_tags", "ato_relacoes", "ato_siapes", "ato_corpo", "atos", "boletins"]:
+            f.write(f"DELETE FROM `{t}`;\n")
 
     insere(f, "boletins", ["id", "arquivo", "numero", "ano", "url_pdf"],
-           [[esc(b[0]), esc(b[1]), esc(b[2]), esc(b[3]), esc(b[4])] for b in bol_rows])
+           [[esc(b[0]), esc(b[1]), esc(b[2]), esc(b[3]), esc(b[4])] for b in bol_rows],
+           upsert_em=("id",) if args.append else None)
 
     atos_rows, corpo_rows, siape_rows, rel_rows, tag_rows = [], [], [], [], []
-    siape_vistos, tag_vistos = set(), set()
+    sv, tv = set(), set()
     for a in dados:
         aid = a["id"]
         st = a.get("status", "Ativo")
@@ -92,31 +123,31 @@ with open(OUT, "w", encoding="utf-8") as f:
         if a.get("textoBusca"):
             corpo_rows.append([esc(aid), esc(a["textoBusca"])])
         for s in a.get("siapes", []):
-            if (aid, s) not in siape_vistos:
-                siape_vistos.add((aid, s)); siape_rows.append([esc(aid), esc(s)])
+            if (aid, s) not in sv:
+                sv.add((aid, s)); siape_rows.append([esc(aid), esc(s)])
         for r in a.get("relacoes", []):
-            did = dest.get((aid, r.get("tipoRelacao")))
-            rel_rows.append([esc(aid), esc(r.get("tipoRelacao", "")),
-                             esc(r.get("atoDestino", "")), esc(did), esc(r.get("detalhes"))])
+            rel_rows.append([esc(aid), esc(r.get("tipoRelacao", "")), esc(r.get("atoDestino", "")),
+                             esc(dest.get((aid, r.get("tipoRelacao")))), esc(r.get("detalhes"))])
         for tg in a.get("tags", []):
-            if (aid, tg) not in tag_vistos:
-                tag_vistos.add((aid, tg)); tag_rows.append([esc(aid), esc(tg)])
+            if (aid, tg) not in tv:
+                tv.add((aid, tg)); tag_rows.append([esc(aid), esc(tg)])
 
     insere(f, "atos", ["id", "boletim_id", "tipo", "sigla", "numero", "ano", "data_ato",
                        "identificador", "tipo_acao", "ementa", "conteudo_resumido", "signatario",
                        "status", "processo_sei", "sei_documento", "link_sei_processo",
-                       "link_sei_documento", "link_boletim", "secao", "pagina"], atos_rows, 100)
-    insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50)
+                       "link_sei_documento", "link_boletim", "secao", "pagina"], atos_rows, 100,
+           upsert_em=("id",) if args.append else None)
+    insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50,
+           upsert_em=("ato_id",) if args.append else None)
     insere(f, "ato_siapes", ["ato_id", "siape"], siape_rows)
-    insere(f, "ato_relacoes", ["ato_id", "tipo_relacao", "ato_destino_texto",
-                               "ato_destino_id", "detalhes"], rel_rows)
+    insere(f, "ato_relacoes", ["ato_id", "tipo_relacao", "ato_destino_texto", "ato_destino_id", "detalhes"], rel_rows)
     insere(f, "ato_tags", ["ato_id", "tag"], tag_rows)
     f.write("SET foreign_key_checks=1;\n")
 
 with open(OUT, "rb") as fi, gzip.open(OUT + ".gz", "wb") as fo:
     fo.writelines(fi)
 
-print(f"Gerado: {os.path.getsize(OUT)//1024} KB | "
-      f"{os.path.getsize(OUT + '.gz')//1024} KB (gz)")
+print(f"Gerado ({'APPEND ' + str(suf_ano) if args.append else 'FULL'}): "
+      f"{os.path.getsize(OUT)//1024} KB | {os.path.getsize(OUT + '.gz')//1024} KB (gz)")
 print(f"  boletins={len(bol_rows)} atos={len(atos_rows)} corpo={len(corpo_rows)} "
       f"siapes={len(siape_rows)} relacoes={len(rel_rows)} tags={len(tag_rows)}")

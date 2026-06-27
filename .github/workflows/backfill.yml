@@ -1,0 +1,65 @@
+name: Backfill do Legado (por ano)
+
+# Indexa UM ano inteiro do Boletim de Serviço da UFF, sob demanda.
+# Gera um SQL "append" (acrescenta o ano sem apagar os outros) e o
+# disponibiliza como artefato para você importar no phpMyAdmin.
+#
+# Como usar: aba Actions -> "Backfill do Legado" -> Run workflow -> informe o ano.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ano:
+        description: "Ano a indexar (ex.: 2025)"
+        required: true
+        default: "2025"
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependências
+        run: pip install --quiet pymupdf openpyxl
+
+      - name: Baixar boletins do ano (gentil com a UFF)
+        run: python tools/baixar_boletins.py --ano "${{ github.event.inputs.ano }}" --pasta boletins
+
+      - name: Indexar (sem tocar nos dados de produção)
+        run: python tools/extrair_boletim.py --pasta boletins --saida out --sem-app
+
+      - name: Gerar base do ano (com link do PDF na UFF)
+        run: |
+          python tools/gerar_dados_portal.py \
+            --entrada out/atos.json \
+            --saida out/portal-data.json \
+            --urls boletins/_urls.json
+
+      - name: Gerar SQL append do ano
+        run: |
+          python backend/db/gerar_sql.py \
+            --entrada out/portal-data.json \
+            --saida "out/carga_${{ github.event.inputs.ano }}.sql" \
+            --append
+
+      - name: Disponibilizar o SQL para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: carga_${{ github.event.inputs.ano }}
+          path: out/carga_${{ github.event.inputs.ano }}.sql.gz
+          retention-days: 14
+
+      - name: Resumo
+        run: |
+          echo "### Backfill ${{ github.event.inputs.ano }} concluído :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "Baixe o artefato **carga_${{ github.event.inputs.ano }}** (acima) e importe o .sql.gz no phpMyAdmin." >> $GITHUB_STEP_SUMMARY
+          echo "Ele ACRESCENTA o ano ao banco, sem apagar os demais." >> $GITHUB_STEP_SUMMARY
