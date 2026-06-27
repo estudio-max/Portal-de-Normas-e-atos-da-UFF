@@ -21,7 +21,9 @@ import argparse
 import urllib.request
 from datetime import datetime
 
-UA = {"User-Agent": "Mozilla/5.0 (compatible; UFF-Indexador/1.0)"}
+# User-Agent identificável e com contato (boa etiqueta de robô).
+UA = {"User-Agent": "UFF-Indexador/1.0 (indexacao do Boletim de Servico; "
+                    "contato estudio@fanara.com.br)"}
 
 
 def baixar_html(url):
@@ -78,6 +80,8 @@ def main():
     ap.add_argument("--ano", default=str(datetime.now().year))
     ap.add_argument("--url", default=None)
     ap.add_argument("--pasta", default=os.path.join(os.path.dirname(__file__), "boletins"))
+    ap.add_argument("--pausa", type=float, default=4.0,
+                    help="segundos de espera entre downloads (gentileza com o servidor da UFF)")
     args = ap.parse_args()
 
     url = args.url or f"https://boletimdeservico.uff.br/boletins/bs-{args.ano}/"
@@ -94,13 +98,17 @@ def main():
     with open(os.path.join(args.pasta, "_urls.json"), "w", encoding="utf-8") as f:
         _json.dump(manifesto, f, ensure_ascii=False, indent=1)
 
+    import time
     novos = 0
     falhas = []
-    for h in links:
+    # baixa SEMPRE 1 de cada vez (nunca em paralelo) e com pausa entre cada um,
+    # para não sobrecarregar o servidor da UFF. No dia a dia, com o cache, isso
+    # significa baixar só 1-2 boletins novos — carga mínima.
+    pendentes = [h for h in links
+                 if not os.path.exists(os.path.join(args.pasta, h.split("/")[-1]))]
+    for i, h in enumerate(pendentes):
         nome = h.split("/")[-1]
         destino = os.path.join(args.pasta, nome)
-        if os.path.exists(destino):
-            continue
         try:
             print("  baixando", nome, "...", flush=True)
             baixar(h, destino)
@@ -108,6 +116,8 @@ def main():
         except Exception as e:
             print("    ERRO (após retentativas):", e)
             falhas.append(nome)
+        if i < len(pendentes) - 1:        # pausa entre downloads (não após o último)
+            time.sleep(args.pausa)
 
     presentes = sum(1 for h in links if os.path.exists(
         os.path.join(args.pasta, h.split("/")[-1])))
