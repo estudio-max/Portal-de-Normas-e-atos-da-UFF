@@ -176,12 +176,24 @@ export default function PortalHeader({ acts, onResetData, activeTab, setActiveTa
             id="tab-sei"
             onClick={() => setActiveTab('sei')}
             className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'sei' 
-                ? 'text-yellow-400 border-yellow-400' 
+              activeTab === 'sei'
+                ? 'text-yellow-400 border-yellow-400'
                 : 'text-blue-200 border-transparent hover:text-white'
             }`}
           >
             🔗 Integração e Busca no SEI
+          </button>
+
+          <button
+            id="tab-ajuda"
+            onClick={() => setActiveTab('ajuda')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'ajuda'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            ❓ Ajuda
           </button>
         </div>
       </div>

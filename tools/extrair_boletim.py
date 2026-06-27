@@ -78,6 +78,9 @@ PROC_RE = re.compile(r"23069[.\s]\d{6}[/\s]\d{4}[-\s]\d{2}")
 SEI_DOC_RE = re.compile(r"SEI\s*n[ºo°]?\.?\s*(\d{6,8})")
 SEI_DOC_PAREN_RE = re.compile(r"\((\d{6,8})\)")
 
+# Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493"
+SIAPE_RE = re.compile(r"(?:SIAPE|Siape|Matr[íi]cula\s+SIAPE)\s*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
+
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
     r"UNIVERSIDADE FEDERAL FLUMINENSE.{0,5}BOLETIM DE SERVIÇO", re.I)
@@ -355,6 +358,11 @@ def parse_pdf(caminho):
         ma = ACAO_EMENTA_RE.search(ementa)
         tipo_acao = ma.group(1).title() if ma else ""
 
+        # Texto do corpo para busca por NOME (pega nomes em tabelas, listas etc.)
+        # e SIAPEs explícitas para exibição. O texto cobre o que a ementa não tem.
+        corpo_busca = limpar(corpo).lower()[:7000]
+        siapes = sorted(set(SIAPE_RE.findall(trecho)))
+
         ato = {
             "arquivo": arquivo,
             "bs_numero": bs_num,
@@ -381,6 +389,8 @@ def parse_pdf(caminho):
             "revoga": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] in ("REVOGA", "TORNA SEM EFEITO", "ANULA")),
             "substitui": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] in ("SUBSTITUI", "RETIFICA", "REPUBLICA")),
             "cita": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] == "CITA"),
+            "siapes": siapes,
+            "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
         # ter corpo muito curto e nenhum verbo "RESOLVE/Art./O ... DA UFF".

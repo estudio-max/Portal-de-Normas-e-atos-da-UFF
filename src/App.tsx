@@ -8,6 +8,7 @@ import ActSpreadsheet from './components/ActSpreadsheet';
 import ActRelationships from './components/ActRelationships';
 import ActParser from './components/ActParser';
 import SeiIntegration from './components/SeiIntegration';
+import HelpGuide from './components/HelpGuide';
 
 export default function App() {
   // Primary state: List of registered Acts
@@ -164,6 +165,13 @@ export default function App() {
           {activeTab === 'sei' && (
             <div id="painel-sei">
               <SeiIntegration />
+            </div>
+          )}
+
+          {/* Tab 5: Help / Manual for end users */}
+          {activeTab === 'ajuda' && (
+            <div id="painel-ajuda">
+              <HelpGuide />
             </div>
           )}
 

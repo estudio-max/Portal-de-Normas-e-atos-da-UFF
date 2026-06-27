@@ -105,6 +105,8 @@ def converter(dados, urls=None):
             "linkSeiDocumento": a.get("link_sei_documento") or None,
             "relacoes": relacoes,
             "tags": tags_de(a),
+            "siapes": a.get("siapes", []),
+            "textoBusca": a.get("corpo_busca", ""),  # corpo p/ busca por nome/SIAPE
             "conteudoResumido": a.get("ementa") or "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo
             "boletimNumero": f"BS nº {a.get('bs_numero','')}/{ano_pub}",

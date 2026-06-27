@@ -38,6 +38,10 @@ export interface UffAct {
   arquivo?: string;
   // Atos posteriores que alteram/revogam este (índice reverso pré-calculado)
   referenciadoPor?: { relacao: string; porId: string; porLabel: string; detalhes?: string }[];
+  // Pessoas/matrículas para o filtro por servidor
+  siapes?: string[];        // matrículas SIAPE citadas no ato
+  textoBusca?: string;      // corpo do ato (minúsculo) para busca por nome/SIAPE
+  signatario?: string;
 }
 
 export interface UffStatistics {

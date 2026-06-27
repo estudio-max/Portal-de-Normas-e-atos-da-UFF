@@ -30,6 +30,12 @@ export default function ActSpreadsheet({
   const [filterOrgao, setFilterOrgao] = useState<string>('todos');
   const [filterAno, setFilterAno] = useState<string>('todos');
   const [filterStatus, setFilterStatus] = useState<string>('todos');
+  const [soComRelacoes, setSoComRelacoes] = useState(false);
+  const [soComSei, setSoComSei] = useState(false);
+  const [filterNome, setFilterNome] = useState('');
+  const [filterSiape, setFilterSiape] = useState('');
+
+  const LIMITE_RENDER = 300; // máximo de linhas desenhadas de uma vez (desempenho)
 
   // Sorting State
   const [sortField, setSortField] = useState<keyof UffAct>('dataAssinatura');
@@ -122,8 +128,26 @@ export default function ActSpreadsheet({
         const matchesOrgao = filterOrgao === 'todos' || act.orgaoEmissor === filterOrgao;
         const matchesAno = filterAno === 'todos' || act.ano.toString() === filterAno;
         const matchesStatus = filterStatus === 'todos' || act.status === filterStatus;
+        const temRelacoes = (act.relacoes && act.relacoes.length > 0) ||
+                            (act.referenciadoPor && act.referenciadoPor.length > 0);
+        const matchesRel = !soComRelacoes || temRelacoes;
+        const matchesSei = !soComSei || !!act.processoSei;
 
-        return matchesSearch && matchesType && matchesOrgao && matchesAno && matchesStatus;
+        // Busca por NOME no corpo do ato (pega tabelas/listas), ementa e assinante
+        const nome = filterNome.trim().toLowerCase();
+        const matchesNome = !nome ||
+          (act.textoBusca || '').includes(nome) ||
+          act.ementa.toLowerCase().includes(nome) ||
+          act.orgaoEmissor.toLowerCase().includes(nome) ||
+          (act.signatario || '').toLowerCase?.().includes(nome);
+        // Busca por matrícula SIAPE (lista extraída + corpo, para SIAPEs em tabela)
+        const siape = filterSiape.replace(/\D/g, '');
+        const matchesSiape = !siape ||
+          (act.siapes || []).some(s => s.includes(siape)) ||
+          (act.textoBusca || '').includes(siape);
+
+        return matchesSearch && matchesType && matchesOrgao && matchesAno && matchesStatus
+               && matchesRel && matchesSei && matchesNome && matchesSiape;
       })
       .sort((a, b) => {
         let valA = a[sortField];
@@ -142,7 +166,7 @@ export default function ActSpreadsheet({
             : (valB as number) - (valA as number);
         }
       });
-  }, [acts, searchTerm, filterType, filterOrgao, filterAno, filterStatus, sortField, sortDirection]);
+  }, [acts, searchTerm, filterType, filterOrgao, filterAno, filterStatus, soComRelacoes, soComSei, filterNome, filterSiape, sortField, sortDirection]);
 
   // Bulk selections
   const handleSelectAll = () => {
@@ -503,8 +527,49 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
             </select>
           </div>
 
+          {/* Busca por NOME do servidor (no corpo do ato) */}
+          <div className="relative">
+            <input
+              id="input-filtro-nome"
+              type="text"
+              placeholder="Nome do servidor…"
+              value={filterNome}
+              onChange={(e) => setFilterNome(e.target.value)}
+              title="Mostra só os atos que mencionam este nome (busca no corpo, inclusive tabelas)"
+              className="w-40 bg-white border border-slate-200 hover:border-slate-300 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-yellow-400"
+            />
+          </div>
+
+          {/* Busca por matrícula SIAPE */}
+          <div className="relative">
+            <input
+              id="input-filtro-siape"
+              type="text"
+              inputMode="numeric"
+              placeholder="SIAPE…"
+              value={filterSiape}
+              onChange={(e) => setFilterSiape(e.target.value)}
+              title="Mostra só os atos que citam esta matrícula SIAPE"
+              className="w-28 bg-white border border-slate-200 hover:border-slate-300 rounded px-2 py-1 text-xs font-mono text-slate-700 focus:outline-none focus:ring-1 focus:ring-yellow-400"
+            />
+          </div>
+
+          {/* Atalhos rápidos (chips) */}
+          <button
+            onClick={() => setSoComRelacoes(v => !v)}
+            className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${soComRelacoes ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+          >
+            só c/ relações
+          </button>
+          <button
+            onClick={() => setSoComSei(v => !v)}
+            className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${soComSei ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+          >
+            só c/ SEI
+          </button>
+
           {/* Clear Filters helper */}
-          {(filterType !== 'todos' || filterOrgao !== 'todos' || filterAno !== 'todos' || filterStatus !== 'todos' || searchTerm) && (
+          {(filterType !== 'todos' || filterOrgao !== 'todos' || filterAno !== 'todos' || filterStatus !== 'todos' || searchTerm || filterNome || filterSiape || soComRelacoes || soComSei) && (
             <button
               id="btn-limpar-filtros"
               onClick={() => {
@@ -513,6 +578,10 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                 setFilterAno('todos');
                 setFilterStatus('todos');
                 setSearchTerm('');
+                setFilterNome('');
+                setFilterSiape('');
+                setSoComRelacoes(false);
+                setSoComSei(false);
               }}
               className="ml-auto flex items-center gap-1 text-yellow-600 hover:text-yellow-700 font-bold text-xs uppercase tracking-wide cursor-pointer"
             >
@@ -580,6 +649,16 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
           </div>
         </div>
       )}
+
+      {/* Contagem de resultados + aviso de limite de exibição */}
+      <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+        <span>
+          <strong className="text-slate-700">{filteredAndSortedActs.length}</strong> ato(s) encontrado(s)
+          {filteredAndSortedActs.length > LIMITE_RENDER && (
+            <span className="text-amber-600 font-semibold"> — exibindo os primeiros {LIMITE_RENDER}. Refine a busca ou os filtros para ver os demais.</span>
+          )}
+        </span>
+      </div>
 
       {/* Main Spreadsheet Grid (High Density) */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
@@ -653,7 +732,7 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                   </td>
                 </tr>
               ) : (
-                filteredAndSortedActs.map((act) => {
+                filteredAndSortedActs.slice(0, LIMITE_RENDER).map((act) => {
                   const isSelected = selectedIds.includes(act.id);
                   return (
                     <tr 
@@ -864,14 +943,29 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                   </div>
                 </div>
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <div className="text-xs text-slate-400 font-medium uppercase">Processo SEI</div>
+                  <div className="text-xs text-slate-400 font-medium uppercase">Processo / Documento SEI</div>
                   <div className="font-mono text-slate-900 mt-0.5 font-bold">
                     {viewingAct.processoSei ? (
-                      <span className="text-blue-900 underline hover:text-blue-950 cursor-pointer" onClick={() => handleCopySei(viewingAct.processoSei!)}>
+                      <span className="text-blue-900 underline hover:text-blue-950 cursor-pointer" onClick={() => handleCopySei(viewingAct.processoSei!)} title="Copiar número do processo">
                         {viewingAct.processoSei}
                       </span>
                     ) : (
                       <span className="text-slate-400 italic font-normal">Não vinculado</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {viewingAct.linkSeiProcesso && (
+                      <a href={viewingAct.linkSeiProcesso} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold bg-[#003366] text-white px-2 py-1 rounded hover:bg-blue-900 transition-all no-underline">
+                        🔎 Abrir processo no SEI
+                      </a>
+                    )}
+                    {viewingAct.linkSeiDocumento && (
+                      <a href={viewingAct.linkSeiDocumento} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-700 text-white px-2 py-1 rounded hover:bg-blue-800 transition-all no-underline"
+                        title={`Documento SEI ${viewingAct.seiDocumento || ''}`}>
+                        📄 Documento{viewingAct.seiDocumento ? ` ${viewingAct.seiDocumento}` : ''}
+                      </a>
                     )}
                   </div>
                 </div>
@@ -890,6 +984,24 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                   </div>
                 </div>
               </div>
+
+              {/* SIAPEs citadas no ato */}
+              {viewingAct.siapes && viewingAct.siapes.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
+                    Matrículas SIAPE citadas ({viewingAct.siapes.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewingAct.siapes.map((s, i) => (
+                      <button key={i} onClick={() => { setViewingAct(null); setFilterSiape(s); }}
+                        title="Filtrar atos por esta matrícula"
+                        className="font-mono text-[11px] bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 border border-slate-200 px-2 py-0.5 rounded cursor-pointer transition-all">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Official Ementa */}
               <div className="space-y-1">
