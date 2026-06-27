@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Indexação (rodada no GitHub Actions) — PDFs e saídas não vão pro repo
+boletins/
+out/
+tools/app/
+__pycache__/
+*.pyc

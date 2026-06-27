@@ -1,0 +1,75 @@
+name: Indexar Boletins UFF
+
+# Roda na nuvem (sem depender de nenhuma máquina local):
+#  - todo dia às 22:10 UTC (~19:10 em Brasília, BRT/UTC-3)
+#  - manualmente pelo botão "Run workflow"
+#  - ao alterar os scripts/o workflow (para testar)
+on:
+  schedule:
+    - cron: "10 22 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/indexar.yml"
+      - "tools/**"
+
+# permite ao job dar commit do índice atualizado de volta no repositório
+permissions:
+  contents: write
+
+concurrency:
+  group: indexar-boletins
+  cancel-in-progress: false
+
+jobs:
+  indexar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependências
+        run: pip install --quiet pymupdf openpyxl
+
+      # Cache dos PDFs já processados (infra do GitHub, efêmera) — assim só os
+      # boletins NOVOS são lidos do servidor da UFF a cada dia. Os PDFs nunca
+      # são commitados; o repositório guarda apenas o índice gerado.
+      - name: Cache dos boletins
+        uses: actions/cache@v4
+        with:
+          path: boletins
+          key: boletins-${{ github.run_id }}
+          restore-keys: |
+            boletins-
+
+      - name: Baixar boletins novos da UFF
+        run: python tools/baixar_boletins.py --pasta boletins
+
+      - name: Indexar (extrair atos e relações)
+        run: python tools/extrair_boletim.py --pasta boletins --saida out
+
+      - name: Gerar base do portal (com link do PDF na UFF)
+        run: |
+          python tools/gerar_dados_portal.py \
+            --entrada out/atos.json \
+            --saida public/portal-data.json \
+            --urls boletins/_urls.json
+          cp out/atos.csv public/atos.csv || true
+
+      - name: Publicar índice atualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/portal-data.json public/atos.csv
+          if git diff --staged --quiet; then
+            echo "Nenhuma mudança no índice — nada a publicar."
+          else
+            git commit -m "Atualiza índice de atos (automático) — $(date +%F)"
+            git push
+            echo "Índice publicado. O site no ar refletirá em ~5 min."
+          fi
