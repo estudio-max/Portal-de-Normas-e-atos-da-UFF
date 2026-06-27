@@ -47,12 +47,30 @@ def extrair_links(html, base):
     return out
 
 
-def baixar(url, destino):
-    req = urllib.request.Request(url, headers=UA)
+def baixar(url, destino, tentativas=4):
+    """Baixa com retentativas (o servidor da UFF às vezes responde devagar/cai).
+    Escreve em arquivo temporário e só renomeia se baixou por completo."""
+    import time
     ctx = ssl.create_default_context()
-    with urllib.request.urlopen(req, context=ctx, timeout=120) as r, \
-         open(destino, "wb") as f:
-        f.write(r.read())
+    ultimo_erro = None
+    for n in range(1, tentativas + 1):
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            tmp = destino + ".part"
+            with urllib.request.urlopen(req, context=ctx, timeout=180) as r, \
+                 open(tmp, "wb") as f:
+                f.write(r.read())
+            os.replace(tmp, destino)
+            return
+        except Exception as e:
+            ultimo_erro = e
+            try:
+                os.remove(destino + ".part")
+            except OSError:
+                pass
+            if n < tentativas:
+                time.sleep(3 * n)  # backoff progressivo
+    raise ultimo_erro
 
 
 def main():
@@ -77,6 +95,7 @@ def main():
         _json.dump(manifesto, f, ensure_ascii=False, indent=1)
 
     novos = 0
+    falhas = []
     for h in links:
         nome = h.split("/")[-1]
         destino = os.path.join(args.pasta, nome)
@@ -87,10 +106,19 @@ def main():
             baixar(h, destino)
             novos += 1
         except Exception as e:
-            print("    ERRO:", e)
-    print(f"Concluído. {novos} novo(s) arquivo(s) em {args.pasta}")
+            print("    ERRO (após retentativas):", e)
+            falhas.append(nome)
+
+    presentes = sum(1 for h in links if os.path.exists(
+        os.path.join(args.pasta, h.split("/")[-1])))
+    completo = presentes == len(links)
+    print(f"Concluído. {novos} novo(s) | {presentes}/{len(links)} boletins na pasta "
+          f"| {'COMPLETO' if completo else 'INCOMPLETO: faltam ' + ', '.join(falhas)}")
     if novos:
         print("Agora rode:  python extrair_boletim.py")
+    # código de saída 2 sinaliza download incompleto (a workflow trata isso)
+    if not completo:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

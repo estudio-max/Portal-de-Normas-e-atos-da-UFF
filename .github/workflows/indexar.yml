@@ -47,7 +47,10 @@ jobs:
           restore-keys: |
             boletins-
 
+      # Download incompleto (exit 2) NÃO derruba o job — a trava anti-regressão
+      # adiante garante que uma base parcial nunca substitua a completa.
       - name: Baixar boletins novos da UFF
+        continue-on-error: true
         run: python tools/baixar_boletins.py --pasta boletins
 
       - name: Indexar (extrair atos e relações)
@@ -61,8 +64,15 @@ jobs:
             --urls boletins/_urls.json
           cp out/atos.csv public/atos.csv || true
 
-      - name: Publicar índice atualizado
+      - name: Publicar índice atualizado (com trava anti-regressão)
         run: |
+          NEW=$(python -c "import json;print(len(json.load(open('public/portal-data.json'))))")
+          OLD=$(git show HEAD:public/portal-data.json 2>/dev/null | python -c "import sys,json;print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
+          echo "Atos: novo=$NEW | publicado=$OLD"
+          if [ "$NEW" -lt "$OLD" ]; then
+            echo "::warning::Base nova ($NEW) menor que a publicada ($OLD) — download provavelmente incompleto. NÃO vou publicar (mantenho a base completa)."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/portal-data.json public/atos.csv
