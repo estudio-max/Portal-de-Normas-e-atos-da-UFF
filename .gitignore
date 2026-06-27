@@ -13,3 +13,7 @@ out/
 tools/app/
 __pycache__/
 *.pyc
+
+# Backend: credenciais do banco nunca vão para o repositório
+backend/api/config.php
+**/config.php

@@ -72,7 +72,10 @@ def converter(dados, urls=None):
     saida = []
     ids = set()
     for i, a in enumerate(atos):
-        base = f"{slug(a.get('tipo'))}-{slug(a.get('sigla'))}-{slug(a.get('numero'))}-{a.get('ano')}"
+        # chave estável e globalmente única (inclui o boletim de origem) — é o
+        # PK no banco; reimportar atualiza a mesma linha (idempotente).
+        arq = re.sub(r"\.pdf$", "", a.get("arquivo", ""), flags=re.I)
+        base = f"{arq}-{slug(a.get('tipo'))}-{slug(a.get('sigla'))}-{slug(a.get('numero'))}-{a.get('ano')}"
         aid = base
         n = 2
         while aid in ids:
