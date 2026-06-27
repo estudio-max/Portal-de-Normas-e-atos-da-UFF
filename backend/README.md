@@ -30,10 +30,19 @@ backend/
    - Preencha usuário/senha do banco. *(o `.htaccess` já bloqueia o acesso web a ele)*
    - O importador usa o mesmo `config.php` (caminho relativo `../api/config.php`).
 
-4. **Carga inicial dos dados**
+4. **Carga inicial dos dados** — escolha UM caminho:
+
+   **(A) Importar o SQL pronto pelo phpMyAdmin (mais simples, sem PHP):**
+   - Gere o arquivo: `python backend/db/gerar_sql.py` (cria `backend/db/carga_inicial.sql.gz`).
+   - phpMyAdmin → selecione o banco → aba **Importar** → escolha o **`carga_inicial.sql.gz`** → Executar.
+   - O arquivo é idempotente (limpa e recarrega) — pode reimportar quando quiser.
+
+   **(B) Rodar o importador PHP (puxa o JSON do GitHub):**
    - Via SSH/cron CLI: `php api-importar/importar.php`
-   - Ou pelo navegador (defina `import_token` no config): `…/api-importar/?token=SEU_SEGREDO`
+   - Ou no navegador (defina `import_token` no config): `…/api-importar/?token=SEU_SEGREDO`
    - Deve terminar com “OK. Banco agora com N atos.”
+
+   > Use **(A)** para a carga inicial agora, e **(B)** no cron diário para manter atualizado.
 
 5. **Atualização automática diária** (cron do cPanel)
    - cPanel → **Cron Jobs** → adicionar, ex. todo dia às 20h:

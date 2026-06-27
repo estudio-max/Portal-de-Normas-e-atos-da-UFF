@@ -8,6 +8,7 @@ import { SAMPLE_TEXTS_TO_PARSE } from '../data/initialActs';
 
 interface ActParserProps {
   onAddParsedAct: (act: UffAct) => void;
+  somentePreview?: boolean;   // modo banco: analisa mas não grava (curadoria via importação)
 }
 
 // --- Analisador local de atos (heurística offline, sem API) -----------------
@@ -101,7 +102,7 @@ function analisarTextoLocalmente(texto: string): any {
   };
 }
 
-export default function ActParser({ onAddParsedAct }: ActParserProps) {
+export default function ActParser({ onAddParsedAct, somentePreview }: ActParserProps) {
   const [rawText, setRawText] = useState('');
   const [loading, setLoading] = useState(false);
   const [parsedResult, setParsedResult] = useState<any | null>(null);
@@ -503,15 +504,24 @@ export default function ActParser({ onAddParsedAct }: ActParserProps) {
                 )}
               </div>
 
-              {/* Big Action button to add to spreadsheet */}
-              <button
-                type="button"
-                onClick={handleSaveToDatabase}
-                className="w-full bg-[#003366] hover:bg-blue-800 text-white font-bold text-xs py-2 rounded-md transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer uppercase tracking-wider"
-              >
-                <span>Aprovar Indexação e Salvar na Planilha</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              {/* Ação final: gravar (modo estático) ou aviso (modo banco) */}
+              {somentePreview ? (
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-md p-2.5 text-[11px] text-slate-600 leading-relaxed">
+                  Esta é uma <strong>análise de leitura</strong>. No modo banco de dados, a inclusão de
+                  atos é feita pela <strong>rotina de indexação</strong> (que lê os boletins e popula o
+                  banco automaticamente) — não pela tela. Use esta aba para conferir rapidamente como o
+                  sistema interpreta um ato colado.
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSaveToDatabase}
+                  className="w-full bg-[#003366] hover:bg-blue-800 text-white font-bold text-xs py-2 rounded-md transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer uppercase tracking-wider"
+                >
+                  <span>Aprovar Indexação e Salvar na Planilha</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ) : (
             /* Empty state placeholder */

@@ -17,3 +17,7 @@ __pycache__/
 # Backend: credenciais do banco nunca vão para o repositório
 backend/api/config.php
 **/config.php
+
+# Carga SQL (regenerável a partir do JSON)
+backend/db/carga_inicial.sql
+backend/db/carga_inicial.sql.gz

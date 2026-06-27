@@ -8,6 +8,7 @@ import PortalHeader from './components/PortalHeader';
 import ActSpreadsheet from './components/ActSpreadsheet';
 import ActTable from './components/ActTable';
 import ActRelationships from './components/ActRelationships';
+import ActRelationsApi from './components/ActRelationsApi';
 import ActParser from './components/ActParser';
 import SeiIntegration from './components/SeiIntegration';
 import HelpGuide from './components/HelpGuide';
@@ -89,11 +90,11 @@ export default function App() {
             </div>
           )}
 
-          {activeTab === 'ia-parser' && !apiMode && (
-            <div id="painel-ia-parser"><ActParser onAddParsedAct={handleAddAct} /></div>
+          {activeTab === 'ia-parser' && (
+            <div id="painel-ia-parser"><ActParser onAddParsedAct={handleAddAct} somentePreview={apiMode} /></div>
           )}
 
-          {activeTab === 'relacoes' && !apiMode && (
+          {activeTab === 'relacoes' && (
             <div id="painel-relacoes" className="space-y-3">
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
                 <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
@@ -103,7 +104,7 @@ export default function App() {
                   Evite ler atos revogados. Selecione um ato para ver se foi modificado/revogado por outro posterior.
                 </p>
               </div>
-              <ActRelationships acts={acts} />
+              {apiMode ? <ActRelationsApi /> : <ActRelationships acts={acts} />}
             </div>
           )}
 

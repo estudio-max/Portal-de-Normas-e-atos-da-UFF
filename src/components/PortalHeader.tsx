@@ -149,21 +149,6 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
             📊 Planilha e Cadastro de Atos
           </button>
           
-          {!apiMode && (
-          <button
-            id="tab-ia-parser"
-            onClick={() => setActiveTab('ia-parser')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'ia-parser'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            🧠 Assistente IA de Indexação
-          </button>
-          )}
-
-          {!apiMode && (
           <button
             id="tab-relacoes"
             onClick={() => setActiveTab('relacoes')}
@@ -175,7 +160,18 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
           >
             🕸️ Mapa de Relações e Impacto
           </button>
-          )}
+
+          <button
+            id="tab-ia-parser"
+            onClick={() => setActiveTab('ia-parser')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'ia-parser'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            🧠 {apiMode ? 'Analisar Ato (texto)' : 'Assistente IA de Indexação'}
+          </button>
 
           <button
             id="tab-sei"
