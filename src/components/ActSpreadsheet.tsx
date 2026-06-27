@@ -81,6 +81,21 @@ export default function ActSpreadsheet({
   const uniqueOrgaos = useMemo(() => Array.from(new Set(acts.map(a => a.orgaoEmissor))).sort(), [acts]);
   const uniqueYears = useMemo(() => Array.from(new Set(acts.map(a => a.ano))).sort((a, b) => b - a), [acts]);
 
+  // Resolve relações para atos da própria base (para navegar clicando)
+  const actById = useMemo(() => new Map(acts.map(a => [a.id, a])), [acts]);
+  const resolveRef = (atoDestino: string): UffAct | undefined => {
+    const dest = atoDestino.toLowerCase();
+    const nums = (atoDestino.match(/\d[\d.]*/g) || []).map(s => s.replace(/\D/g, ''));
+    return acts.find(a => {
+      const nd = a.numero.replace(/\D/g, '');
+      if (!nd || !nums.includes(nd)) return false;
+      const sigla = (a.orgaoEmissor || '').toLowerCase().split(/[ /]/)[0];
+      const tipoWord = a.tipoAto.toLowerCase().split(' ')[0];
+      const siglaOk = sigla && sigla !== 'reitoria' && sigla !== 'uff' && dest.includes(sigla);
+      return siglaOk || (dest.includes(tipoWord) && nd.length >= 3);
+    });
+  };
+
   // Handle Sort
   const handleSort = (field: keyof UffAct) => {
     if (sortField === field) {
@@ -717,20 +732,24 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                             return <span className="text-slate-300 text-[11px]">—</span>;
                           }
                           return (
-                            <div className="flex flex-wrap items-center gap-1">
+                            <button
+                              onClick={() => setViewingAct(act)}
+                              title="Ver atos relacionados (clicável)"
+                              className="flex flex-wrap items-center gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
+                            >
                               {out.map((t, i) => (
-                                <span key={i} title={`Este ato ${t.toLowerCase()} outro(s)`}
+                                <span key={i}
                                   className={`px-1.5 py-0.25 rounded text-[9px] font-extrabold uppercase border ${cor(t)}`}>
                                   {t}
                                 </span>
                               ))}
                               {inb.length > 0 && (
-                                <span title={`Referenciado por ${inb.length} ato(s) posterior(es)`}
+                                <span
                                   className="px-1.5 py-0.25 rounded text-[9px] font-extrabold uppercase border bg-slate-100 text-slate-600 border-slate-200 inline-flex items-center gap-0.5">
                                   ↩ {inb.length}
                                 </span>
                               )}
-                            </div>
+                            </button>
                           );
                         })()}
                       </td>
@@ -897,21 +916,37 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                   <p className="text-xs text-slate-400 italic">Nenhum vínculo legislativo registrado.</p>
                 ) : (
                   <div className="space-y-1.5">
-                    {viewingAct.relacoes.map((rel, index) => (
+                    {viewingAct.relacoes.map((rel, index) => {
+                      const alvo = resolveRef(rel.atoDestino);
+                      return (
                       <div key={index} className="flex items-start gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                          rel.tipoRelacao === 'Revoga' 
-                            ? 'bg-rose-100 text-rose-800' 
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
+                          rel.tipoRelacao === 'Revoga'
+                            ? 'bg-rose-100 text-rose-800'
+                            : rel.tipoRelacao === 'Altera'
+                            ? 'bg-amber-100 text-amber-800'
                             : 'bg-indigo-100 text-indigo-800'
                         }`}>
                           {rel.tipoRelacao}
                         </span>
                         <div>
-                          <span className="font-semibold text-slate-900">{rel.atoDestino}</span>
+                          {alvo ? (
+                            <button
+                              onClick={() => setViewingAct(alvo)}
+                              className="font-semibold text-blue-800 hover:text-blue-950 underline decoration-dotted cursor-pointer text-left"
+                              title="Abrir este ato"
+                            >
+                              {rel.atoDestino}
+                            </button>
+                          ) : (
+                            <span className="font-semibold text-slate-900">
+                              {rel.atoDestino} <span className="text-slate-400 italic font-normal">(ato externo)</span>
+                            </span>
+                          )}
                           {rel.detalhes && <span className="text-slate-500 ml-1">({rel.detalhes})</span>}
                         </div>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 )}
               </div>
@@ -925,18 +960,30 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                   <p className="text-xs text-slate-400 italic">Nenhum ato posterior altera ou revoga este.</p>
                 ) : (
                   <div className="space-y-1.5">
-                    {(viewingAct.referenciadoPor || []).map((rev, index) => (
+                    {(viewingAct.referenciadoPor || []).map((rev, index) => {
+                      const origem = actById.get(rev.porId);
+                      return (
                       <div key={index} className="flex items-start gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
                           rev.relacao === 'Revoga' ? 'bg-rose-100 text-rose-800'
                             : rev.relacao === 'Altera' ? 'bg-amber-100 text-amber-800'
                             : 'bg-indigo-100 text-indigo-800'
                         }`}>
                           {rev.relacao === 'Revoga' ? 'Revogado por' : rev.relacao === 'Altera' ? 'Alterado por' : 'Referenciado por'}
                         </span>
-                        <span className="font-semibold text-slate-900">{rev.porLabel}</span>
+                        {origem ? (
+                          <button
+                            onClick={() => setViewingAct(origem)}
+                            className="font-semibold text-blue-800 hover:text-blue-950 underline decoration-dotted cursor-pointer text-left"
+                            title="Abrir este ato"
+                          >
+                            {rev.porLabel}
+                          </button>
+                        ) : (
+                          <span className="font-semibold text-slate-900">{rev.porLabel}</span>
+                        )}
                       </div>
-                    ))}
+                    );})}
                   </div>
                 )}
               </div>
