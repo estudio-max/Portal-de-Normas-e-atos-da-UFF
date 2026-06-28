@@ -8,10 +8,11 @@
 //    1. Marca relações que citam ÓRGÃOS FEDERAIS EXTERNOS (MEC, DOU, SGP/ME…)
 //       — esses atos nunca estarão no Boletim da UFF, então saem da fila de
 //       pendentes (coluna `externo`) em vez de serem tentados todo dia.
-//    2. Liga as demais relações pendentes a atos de QUALQUER ano já no banco,
-//       casando tipo + número (tolerante a zeros/pontos) + sigla. Em caso de
-//       AMBIGUIDADE sem sigla que desempate, NÃO adivinha (deixa pendente) —
-//       é melhor ficar sem link do que apontar para o ato errado.
+//    2. Liga as demais relações a atos de QUALQUER ano já no banco, casando
+//       tipo + número (tolerante a zeros/pontos) + sigla e respeitando a ordem
+//       temporal (não liga a um homônimo mais NOVO que o ato citante). Se a
+//       AMBIGUIDADE persistir, NÃO adivinha (deixa pendente) — melhor sem link
+//       do que apontando para o ato errado.
 //    3. Recalcula o status de vigência (Ativo/Alterado/Revogado) de forma
 //       idempotente, derivado SÓ das relações resolvidas, respeitando a regra
 //       temporal: um ato só afeta outro se for de data igual/posterior.
@@ -96,20 +97,31 @@ function numero_variantes(string $num): array
 }
 
 /**
- * Procura o ato destino. Desambiguação SEGURA: se houver mais de um candidato
- * e a sigla não desempatar para exatamente um, devolve 'ambiguo' (não chuta).
+ * Procura o ato destino respeitando a GUARDA TEMPORAL (um ato não referencia algo
+ * de data posterior à sua) e com desambiguação SEGURA: se sobrar mais de um
+ * candidato e a sigla não desempatar para exatamente um, devolve 'ambiguo'.
+ * @param ?string $origem_data data (YYYY-MM-DD) do ato citante, p/ a guarda temporal.
  * @return array{id:?string,status:'ok'|'ambiguo'|'nao_encontrado'}
  */
-function buscar_destino(PDO $pdo, array $p): array
+function buscar_destino(PDO $pdo, array $p, ?string $origem_data): array
 {
     $nums = numero_variantes($p['numero']);
     $ph   = implode(',', array_fill(0, count($nums), '?'));
-    $stmt = $pdo->prepare("SELECT id, sigla FROM atos WHERE tipo=? AND numero IN ($ph)");
+    $stmt = $pdo->prepare("SELECT id, sigla, data_ato FROM atos WHERE tipo=? AND numero IN ($ph)");
     $stmt->execute(array_merge([$p['tipo']], $nums));
     $rows = $stmt->fetchAll();
+    if (!$rows) return ['id' => null, 'status' => 'nao_encontrado'];
 
-    if (!$rows)                return ['id' => null,           'status' => 'nao_encontrado'];
-    if (count($rows) === 1)    return ['id' => $rows[0]['id'], 'status' => 'ok'];
+    // Guarda temporal: o alvo não pode ser mais NOVO que o ato citante. Se o único
+    // homônimo é posterior, o alvo real é uma versão anterior (legado) ainda não
+    // indexada — melhor deixar pendente do que ligar ao homônimo recente.
+    if ($origem_data) {
+        $rows = array_values(array_filter($rows, fn($r) =>
+            empty($r['data_ato']) || $r['data_ato'] <= $origem_data));
+        if (!$rows) return ['id' => null, 'status' => 'nao_encontrado'];
+    }
+
+    if (count($rows) === 1) return ['id' => $rows[0]['id'], 'status' => 'ok'];
 
     // múltiplos: só resolve se a sigla citada casar EXATAMENTE um candidato
     if ($p['sigla'] !== '') {
@@ -149,7 +161,10 @@ function resolver_links(PDO $pdo): void
     $pdo->exec("UPDATE ato_relacoes SET ato_destino_id = NULL, externo = 0");
 
     $todas = $pdo->query(
-        "SELECT id, ato_destino_texto FROM ato_relacoes WHERE ato_destino_texto <> ''"
+        "SELECT r.id, r.ato_destino_texto, o.data_ato AS origem_data
+         FROM ato_relacoes r
+         JOIN atos o ON o.id = r.ato_id
+         WHERE r.ato_destino_texto <> ''"
     )->fetchAll();
 
     if (!$todas) { log_("Links: nenhuma relação a processar."); return; }
@@ -168,7 +183,7 @@ function resolver_links(PDO $pdo): void
         $p = parse_destino($texto);
         if (!$p) { $n_naoparseou++; continue; }
 
-        $r = buscar_destino($pdo, $p);
+        $r = buscar_destino($pdo, $p, $rel['origem_data']);
         if ($r['status'] === 'ok')          { $ligaDestino->execute([$r['id'], $rel['id']]); $n_ok++; }
         elseif ($r['status'] === 'ambiguo') { $n_amb++; }
         else                                { $n_miss++; }
