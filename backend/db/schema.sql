@@ -111,10 +111,12 @@ CREATE TABLE `ato_relacoes` (
   `tipo_relacao`      VARCHAR(20)  NOT NULL,         -- Altera/Revoga/Complementa/Regulamenta
   `ato_destino_texto` VARCHAR(200) NOT NULL,         -- como citado no texto
   `ato_destino_id`    VARCHAR(191) NULL,             -- resolvido p/ ato da base (se houver)
+  `externo`           TINYINT(1)   NOT NULL DEFAULT 0, -- cita órgão federal externo (MEC/DOU/SGP…): nunca resolve
   `detalhes`          VARCHAR(255) NULL,
   PRIMARY KEY (`id`),
   KEY `ix_origem`  (`ato_id`),
   KEY `ix_destino` (`ato_destino_id`),
+  KEY `ix_externo` (`externo`),
   CONSTRAINT `fk_rel_ato` FOREIGN KEY (`ato_id`)
     REFERENCES `atos`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

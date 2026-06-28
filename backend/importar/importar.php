@@ -87,22 +87,14 @@ try {
         }
     }
 
-    // 2) Resolve o destino das relações usando o índice reverso (referenciadoPor):
-    //    para cada ato A, cada {porId, relacao} significa "porId --relacao--> A".
-    $resolve = $pdo->prepare(
-        "UPDATE ato_relacoes SET ato_destino_id=:dest
-         WHERE ato_id=:orig AND tipo_relacao=:tr AND ato_destino_id IS NULL LIMIT 1");
-    foreach ($dados as $a) {
-        foreach (($a['referenciadoPor'] ?? []) as $ref) {
-            $resolve->execute([':dest' => $a['id'], ':orig' => $ref['porId'] ?? '', ':tr' => $ref['relacao'] ?? '']);
-        }
-    }
-
     $pdo->commit();
     $n = $pdo->query("SELECT COUNT(*) FROM atos")->fetchColumn();
     log_("OK. Banco agora com $n atos.");
 
-    // 3) Resolve relações cross-ano e atualiza vigência
+    // 2) Resolve TODAS as relações (intra e cross-ano) e recalcula a vigência.
+    //    O resolver é a autoridade única: zera e reprocessa os destinos com
+    //    desambiguação segura, marca citações a órgãos externos e deriva o
+    //    status (Ativo/Alterado/Revogado) das relações resolvidas.
     require_once __DIR__ . '/resolver_relacoes.php';
     resolver_cross_ano($pdo);
 } catch (Throwable $e) {
