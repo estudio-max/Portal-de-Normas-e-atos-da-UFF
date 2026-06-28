@@ -91,6 +91,15 @@ with open(OUT, "w", encoding="utf-8") as f:
             f"({'APPEND ano ' + str(suf_ano) if args.append else 'FULL'})\n")
     f.write("SET NAMES utf8mb4;\nSET foreign_key_checks=0;\n")
 
+    # Garante ato_siapes.nome (idempotente). O backfill é importado pelo phpMyAdmin,
+    # não pelo importar.php, então a coluna precisa ser criada aqui em bases antigas.
+    f.write(
+        "SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ato_siapes' AND COLUMN_NAME='nome');\n"
+        "SET @ddl := IF(@c=0, "
+        "'ALTER TABLE `ato_siapes` ADD COLUMN `nome` VARCHAR(120) NULL AFTER `siape`', 'DO 0');\n"
+        "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
+
     if args.append and suf_ano:
         # limpa só ESTE ano (idempotente), via padrão do id
         pad = f"'^[0-9]+-{suf_ano}-'"
@@ -122,9 +131,14 @@ with open(OUT, "w", encoding="utf-8") as f:
         ])
         if a.get("textoBusca"):
             corpo_rows.append([esc(aid), esc(a["textoBusca"])])
-        for s in a.get("siapes", []):
+        nome_de = {}
+        for pz in a.get("pessoas", []):
+            sp = pz.get("siape", "")
+            if sp:
+                nome_de[sp] = pz.get("nome") or None
+        for s in dict.fromkeys(list(a.get("siapes", [])) + list(nome_de.keys())):
             if (aid, s) not in sv:
-                sv.add((aid, s)); siape_rows.append([esc(aid), esc(s)])
+                sv.add((aid, s)); siape_rows.append([esc(aid), esc(s), esc(nome_de.get(s))])
         for r in a.get("relacoes", []):
             rel_rows.append([esc(aid), esc(r.get("tipoRelacao", "")), esc(r.get("atoDestino", "")),
                              esc(dest.get((aid, r.get("tipoRelacao")))), esc(r.get("detalhes"))])
@@ -139,7 +153,7 @@ with open(OUT, "w", encoding="utf-8") as f:
            upsert_em=("id",) if args.append else None)
     insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50,
            upsert_em=("ato_id",) if args.append else None)
-    insere(f, "ato_siapes", ["ato_id", "siape"], siape_rows)
+    insere(f, "ato_siapes", ["ato_id", "siape", "nome"], siape_rows)
     insere(f, "ato_relacoes", ["ato_id", "tipo_relacao", "ato_destino_texto", "ato_destino_id", "detalhes"], rel_rows)
     insere(f, "ato_tags", ["ato_id", "tag"], tag_rows)
     f.write("SET foreign_key_checks=1;\n")
