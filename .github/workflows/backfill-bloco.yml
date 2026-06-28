@@ -1,0 +1,108 @@
+name: Backfill em Bloco (múltiplos anos)
+
+# Indexa um intervalo de anos do Boletim de Serviço da UFF e gera um único
+# arquivo SQL para importar no phpMyAdmin de uma só vez.
+#
+# Como usar:
+#   Aba Actions → "Backfill em Bloco" → Run workflow
+#   → informe ano_inicial e ano_final (ex.: 2020 e 2024)
+#
+# Após importar o .sql.gz no phpMyAdmin, rode o resolver uma vez:
+#   https://uff.fanara.com.br/importar/resolver_relacoes.php?token=SEU_TOKEN
+
+on:
+  workflow_dispatch:
+    inputs:
+      ano_inicial:
+        description: "Primeiro ano do bloco (mais antigo, ex.: 2020)"
+        required: true
+        default: "2020"
+      ano_final:
+        description: "Último ano do bloco (ex.: 2024)"
+        required: true
+        default: "2024"
+
+permissions:
+  contents: read
+
+jobs:
+  backfill-bloco:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependências
+        run: pip install --quiet pymupdf openpyxl
+
+      - name: Processar cada ano em sequência (gentil com a UFF)
+        run: |
+          mkdir -p out
+          for ano in $(seq ${{ github.event.inputs.ano_inicial }} ${{ github.event.inputs.ano_final }}); do
+            echo ""
+            echo "════════════════════════════════════"
+            echo "  Processando $ano"
+            echo "════════════════════════════════════"
+
+            mkdir -p boletins_$ano
+
+            python tools/baixar_boletins.py --ano $ano --pasta boletins_$ano
+
+            python tools/extrair_boletim.py \
+              --pasta boletins_$ano --saida out_$ano --sem-app
+
+            python tools/gerar_dados_portal.py \
+              --entrada out_$ano/atos.json \
+              --saida   out_$ano/portal-data.json \
+              --urls    boletins_$ano/_urls.json
+
+            python backend/db/gerar_sql.py \
+              --entrada out_$ano/portal-data.json \
+              --saida   out/carga_$ano.sql \
+              --append
+
+            # Libera disco: PDFs não são mais necessários depois da extração.
+            rm -rf boletins_$ano out_$ano
+          done
+
+      - name: Combinar em um único SQL
+        run: |
+          ANO_I=${{ github.event.inputs.ano_inicial }}
+          ANO_F=${{ github.event.inputs.ano_final }}
+          BLOCO="out/carga_bloco_${ANO_I}_a_${ANO_F}.sql"
+
+          # Concatena do mais antigo para o mais recente.
+          for ano in $(seq $ANO_I $ANO_F); do
+            cat out/carga_$ano.sql >> "$BLOCO"
+          done
+
+          gzip "$BLOCO"
+          ls -lh out/*.sql.gz
+
+      - name: Upload do bloco combinado
+        uses: actions/upload-artifact@v4
+        with:
+          name: carga_bloco_${{ github.event.inputs.ano_inicial }}_a_${{ github.event.inputs.ano_final }}
+          path: out/carga_bloco_${{ github.event.inputs.ano_inicial }}_a_${{ github.event.inputs.ano_final }}.sql.gz
+          retention-days: 30
+
+      - name: Resumo
+        run: |
+          ANO_I=${{ github.event.inputs.ano_inicial }}
+          ANO_F=${{ github.event.inputs.ano_final }}
+          BLOCO="out/carga_bloco_${ANO_I}_a_${ANO_F}.sql.gz"
+          TAMANHO=$(du -h "$BLOCO" | cut -f1)
+          echo "### Backfill ${ANO_I}–${ANO_F} concluído :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Arquivo:** \`carga_bloco_${ANO_I}_a_${ANO_F}.sql.gz\` (${TAMANHO})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Próximos passos:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Baixe o artefato acima e importe no phpMyAdmin (aba Importar → selecione o .sql.gz)." >> $GITHUB_STEP_SUMMARY
+          echo "   O SQL ACRESCENTA os anos ao banco sem apagar os dados existentes." >> $GITHUB_STEP_SUMMARY
+          echo "2. Depois de importar, rode o resolver uma vez para ligar as relações cross-ano e recalcular a vigência:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`https://uff.fanara.com.br/importar/resolver_relacoes.php?token=SEU_TOKEN\`" >> $GITHUB_STEP_SUMMARY
