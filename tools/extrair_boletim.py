@@ -98,7 +98,12 @@ _BLOCK_NOME = set((
     "divisao coordenacao reitoria central documento paragrafo considerando quadro permanente "
     "senhor senhora gabinete vice decano superintendente lotar designar dispensar exonerar "
     "nomear conceder autorizar instituir revogar alterar prorrogar tornar retificar republicar "
-    "considerar resolver delegar aprovar homologar redistribuido"
+    "considerar resolver delegar aprovar homologar redistribuido "
+    "professores professoras diretores coordenadores coordenadoras chefes presidentes "
+    "secretarios tecnicos analistas assistentes servidores substitutos assuntos educacionais "
+    "educacional gerais administrativos administrativa academicos academica financeiros "
+    "institucional institucionais setor nucleo gerencia assessoria pessoal ensino pesquisa "
+    "extensao graduacao licenca afastamento concessao capacitacao"
 ).split())
 _PALAVRA_NOME = r"(?:[A-ZÀ-Ú][a-zà-ú]+|[A-ZÀ-Ú]{2,})"
 NOME_RE = re.compile(r"%s(?:\s+(?:de|da|do|das|dos|e|%s)){1,6}" % (_PALAVRA_NOME, _PALAVRA_NOME))
