@@ -206,10 +206,23 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
             </div>
           </div>
 
-          {ato.siapes?.length > 0 && (
+          {(ato.pessoas?.length || ato.siapes?.length || 0) > 0 && (
             <div className="space-y-1">
-              <span className="text-xs text-slate-400 font-semibold uppercase block">Matrículas SIAPE citadas ({ato.siapes.length})</span>
-              <div className="flex flex-wrap gap-1.5">{ato.siapes.map((s: string, i: number) => <button key={i} onClick={() => setSiape(s)} className="font-mono text-[11px] bg-slate-100 hover:bg-blue-100 border border-slate-200 px-2 py-0.5 rounded">{s}</button>)}</div>
+              <span className="text-xs text-slate-400 font-semibold uppercase block">Pessoas citadas ({ato.pessoas?.length || ato.siapes?.length})</span>
+              <div className="flex flex-wrap gap-1.5">
+                {ato.pessoas?.length
+                  ? ato.pessoas.map((p, i) => (
+                      <button key={i} onClick={() => setSiape(p.siape)} title="Filtrar pelos atos desta matrícula"
+                        className="text-[11px] bg-slate-100 hover:bg-blue-100 border border-slate-200 px-2 py-0.5 rounded">
+                        {p.nome && <span className="font-medium text-slate-700">{p.nome} · </span>}
+                        <span className="font-mono text-slate-500">{p.siape}</span>
+                      </button>
+                    ))
+                  : ato.siapes!.map((s: string, i: number) => (
+                      <button key={i} onClick={() => setSiape(s)}
+                        className="font-mono text-[11px] bg-slate-100 hover:bg-blue-100 border border-slate-200 px-2 py-0.5 rounded">{s}</button>
+                    ))}
+              </div>
             </div>
           )}
 

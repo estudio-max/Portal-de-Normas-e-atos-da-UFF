@@ -94,6 +94,7 @@ CREATE TABLE `ato_siapes` (
   `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `ato_id` VARCHAR(191) NOT NULL,
   `siape`  VARCHAR(10)  NOT NULL,
+  `nome`   VARCHAR(120) NULL,                  -- nome da pessoa dessa matrícula
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_ato_siape` (`ato_id`, `siape`),
   KEY `ix_siape` (`siape`),

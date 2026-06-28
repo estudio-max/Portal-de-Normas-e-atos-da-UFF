@@ -40,6 +40,7 @@ export interface UffAct {
   referenciadoPor?: { relacao: string; porId: string; porLabel: string; detalhes?: string }[];
   // Pessoas/matrículas para o filtro por servidor
   siapes?: string[];        // matrículas SIAPE citadas no ato
+  pessoas?: { nome: string; siape: string }[];  // nome + matrícula p/ a Ficha
   textoBusca?: string;      // corpo do ato (minúsculo) para busca por nome/SIAPE
   signatario?: string;
 }

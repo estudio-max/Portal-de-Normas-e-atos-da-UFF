@@ -28,6 +28,11 @@ function log_($m) { echo $m . "\n"; @flush(); }
 
 $pdo = conectar($cfg);
 
+// Garante a coluna 'nome' em ato_siapes (idempotente; bases antigas não a têm).
+if (!$pdo->query("SHOW COLUMNS FROM ato_siapes LIKE 'nome'")->fetch()) {
+    $pdo->exec("ALTER TABLE ato_siapes ADD COLUMN nome VARCHAR(120) NULL AFTER siape");
+}
+
 // 1) Carrega o JSON (arquivo local no CLI, senão a URL configurada)
 $origem = ($cli && isset($argv[1])) ? $argv[1] : ($cfg['fonte_json'] ?? '');
 log_("Lendo dados de: $origem");
@@ -56,7 +61,7 @@ try {
     $upCorpo = $pdo->prepare("INSERT INTO ato_corpo (ato_id,texto) VALUES (:id,:t)
                               ON DUPLICATE KEY UPDATE texto=VALUES(texto)");
     $delSiape = $pdo->prepare("DELETE FROM ato_siapes WHERE ato_id=:id");
-    $insSiape = $pdo->prepare("INSERT IGNORE INTO ato_siapes (ato_id,siape) VALUES (:id,:s)");
+    $insSiape = $pdo->prepare("INSERT IGNORE INTO ato_siapes (ato_id,siape,nome) VALUES (:id,:s,:n)");
     $delTag = $pdo->prepare("DELETE FROM ato_tags WHERE ato_id=:id");
     $insTag = $pdo->prepare("INSERT INTO ato_tags (ato_id,tag) VALUES (:id,:t)");
     $delRel = $pdo->prepare("DELETE FROM ato_relacoes WHERE ato_id=:id");
@@ -77,7 +82,15 @@ try {
         ]);
         $upCorpo->execute([':id' => $a['id'], ':t' => $a['textoBusca'] ?? '']);
         $delSiape->execute([':id' => $a['id']]);
-        foreach (($a['siapes'] ?? []) as $s) $insSiape->execute([':id' => $a['id'], ':s' => $s]);
+        $nomeDe = [];                       // siape -> nome (quando a extração achou)
+        foreach (($a['pessoas'] ?? []) as $pz) {
+            $sp = $pz['siape'] ?? '';
+            if ($sp !== '') $nomeDe[$sp] = ($pz['nome'] ?? '') ?: null;
+        }
+        $todosSiapes = array_unique(array_merge($a['siapes'] ?? [], array_keys($nomeDe)));
+        foreach ($todosSiapes as $s) {
+            $insSiape->execute([':id' => $a['id'], ':s' => $s, ':n' => $nomeDe[$s] ?? null]);
+        }
         $delTag->execute([':id' => $a['id']]);
         foreach (($a['tags'] ?? []) as $t) $insTag->execute([':id' => $a['id'], ':t' => $t]);
         $delRel->execute([':id' => $a['id']]);

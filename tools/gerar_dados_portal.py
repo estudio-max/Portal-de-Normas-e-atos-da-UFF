@@ -109,6 +109,7 @@ def converter(dados, urls=None):
             "relacoes": relacoes,
             "tags": tags_de(a),
             "siapes": a.get("siapes", []),
+            "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
             "textoBusca": a.get("corpo_busca", ""),  # corpo p/ busca por nome/SIAPE
             "conteudoResumido": a.get("ementa") or "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo

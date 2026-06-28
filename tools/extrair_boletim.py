@@ -28,6 +28,7 @@ import re
 import json
 import glob
 import argparse
+import unicodedata
 from datetime import datetime
 
 import fitz  # PyMuPDF
@@ -68,7 +69,11 @@ TITULO_RE = re.compile(
     r"(?P<tipo>%s)\s+"
     r"(?P<orgao>[A-ZÀ-Ú0-9/().\- ]{0,40}?)?\s*"
     r"N[ºo°]?\.?\s*(?P<numero>[\d\.]+(?:\s*[A-Z]{1,4})?)\s*,?\s*"
-    r"DE\s+(?P<dia>\d{1,2})\s+DE\s+(?P<mes>[A-Za-zçÇãÃ]+)\s+DE\s+(?P<ano>\d{4})"
+    # Conectores de data podem vir minúsculos: as portarias da Reitoria (SIGA-EX)
+    # saem como "Nº 68.884 de 4 de fevereiro de 2026". O TIPO continua exigido em
+    # MAIÚSCULO, então citações minúsculas no corpo ("portaria nº 8858, de ...")
+    # NÃO viram falso título.
+    r"[Dd][Ee]\s+(?P<dia>\d{1,2})\s+[Dd][Ee]\s+(?P<mes>[A-Za-zçÇãÃéíóúâêôõ]+)\s+[Dd][Ee]\s+(?P<ano>\d{4})"
     % TIPOS_RE
 )
 
@@ -80,6 +85,23 @@ SEI_DOC_PAREN_RE = re.compile(r"\((\d{6,8})\)")
 
 # Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493"
 SIAPE_RE = re.compile(r"(?:SIAPE|Siape|Matr[íi]cula\s+SIAPE)[:\s]*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
+
+# Nome da pessoa citada, ancorado na matrícula SIAPE que aparece logo depois.
+# _CONNECT: conectores que ficam minúsculos no nome ("de", "da", ...).
+# _BLOCK_NOME: verbos/cargos/descritores que NÃO fazem parte do nome (sem acento).
+_CONNECT = {"de", "da", "do", "das", "dos", "e"}
+_BLOCK_NOME = set((
+    "professor professora reitor reitora diretor diretora coordenador coordenadora coord "
+    "chefe presidente secretario secretaria tecnico analista assistente magisterio superior "
+    "matricula codigo cargo ocupante servidor servidora substituto substituta membro membros "
+    "comissao subcomissao universidade federal fluminense ministerio educacao departamento "
+    "divisao coordenacao reitoria central documento paragrafo considerando quadro permanente "
+    "senhor senhora gabinete vice decano superintendente lotar designar dispensar exonerar "
+    "nomear conceder autorizar instituir revogar alterar prorrogar tornar retificar republicar "
+    "considerar resolver delegar aprovar homologar redistribuido"
+).split())
+_PALAVRA_NOME = r"(?:[A-ZÀ-Ú][a-zà-ú]+|[A-ZÀ-Ú]{2,})"
+NOME_RE = re.compile(r"%s(?:\s+(?:de|da|do|das|dos|e|%s)){1,6}" % (_PALAVRA_NOME, _PALAVRA_NOME))
 
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
@@ -390,6 +412,7 @@ def parse_pdf(caminho):
             "substitui": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] in ("SUBSTITUI", "RETIFICA", "REPUBLICA")),
             "cita": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] == "CITA"),
             "siapes": siapes,
+            "pessoas": extrai_pessoas(trecho),
             "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
@@ -454,6 +477,49 @@ def extrai_signatario(trecho):
             if letras and cand.upper() == cand and len(letras) >= 6:
                 return limpar(cand)
     return ""
+
+
+def _fold(s):
+    """minúsculas e sem acento, para comparar com a blocklist de nomes."""
+    return "".join(c for c in unicodedata.normalize("NFD", s)
+                   if unicodedata.category(c) != "Mn").lower()
+
+
+def _titlecase_nome(s):
+    return " ".join(w.lower() if _fold(w) in _CONNECT else (w[:1].upper() + w[1:].lower())
+                    for w in s.split())
+
+
+def _limpa_nome(run):
+    """Tira verbo/cargo/conector colado nas pontas; exige nome com 2+ palavras."""
+    p = run.split()
+    while p and (_fold(p[0]) in _BLOCK_NOME or _fold(p[0]) in _CONNECT):
+        p.pop(0)
+    while p and _fold(p[-1]) in _CONNECT:
+        p.pop()
+    return _titlecase_nome(" ".join(p)) if len(p) >= 2 else ""
+
+
+def nome_antes_siape(texto, pos):
+    """Nome mais próximo ANTES da matrícula (posição pos), pulando cargos/verbos."""
+    janela = texto[max(0, pos - 170): pos]
+    for m in reversed(list(NOME_RE.finditer(janela))):
+        nome = _limpa_nome(m.group(0))
+        if nome:
+            return nome
+    return ""
+
+
+def extrai_pessoas(trecho):
+    """[{nome, siape}] das pessoas citadas — uma por matrícula, sem repetir."""
+    pessoas, vistos = [], set()
+    for m in SIAPE_RE.finditer(trecho):
+        s = m.group(1)
+        if s in vistos:
+            continue
+        vistos.add(s)
+        pessoas.append({"nome": nome_antes_siape(trecho, m.start()), "siape": s})
+    return pessoas
 
 
 # --------------------------------------------------------------------------- #

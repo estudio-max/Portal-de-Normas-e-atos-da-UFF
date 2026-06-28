@@ -16,10 +16,22 @@ Só usa biblioteca padrão (urllib).
 """
 import os
 import re
+import sys
 import ssl
 import argparse
 import urllib.request
+from urllib.parse import urlsplit, urlunsplit, quote
 from datetime import datetime
+
+
+def _url_segura(url):
+    """Reescreve a URL com caminho/query escapados (espaço -> %20 etc.).
+    O servidor da UFF às vezes lista PDFs com espaço no nome
+    (ex.: '60-22 RETIFICADO.pdf'); sem escapar, o urllib recusa a requisição
+    com 'URL can't contain control characters'."""
+    p = urlsplit(url)
+    return urlunsplit((p.scheme, p.netloc, quote(p.path, safe="/%"),
+                       quote(p.query, safe="=&%"), p.fragment))
 
 # User-Agent identificável e com contato (boa etiqueta de robô).
 UA = {"User-Agent": "UFF-Indexador/1.0 (indexacao do Boletim de Servico; "
@@ -27,7 +39,7 @@ UA = {"User-Agent": "UFF-Indexador/1.0 (indexacao do Boletim de Servico; "
 
 
 def baixar_html(url):
-    req = urllib.request.Request(url, headers=UA)
+    req = urllib.request.Request(_url_segura(url), headers=UA)
     ctx = ssl.create_default_context()
     with urllib.request.urlopen(req, context=ctx, timeout=60) as r:
         return r.read().decode("utf-8", "ignore")
@@ -57,7 +69,7 @@ def baixar(url, destino, tentativas=4):
     ultimo_erro = None
     for n in range(1, tentativas + 1):
         try:
-            req = urllib.request.Request(url, headers=UA)
+            req = urllib.request.Request(_url_segura(url), headers=UA)
             tmp = destino + ".part"
             with urllib.request.urlopen(req, context=ctx, timeout=180) as r, \
                  open(tmp, "wb") as f:
@@ -94,7 +106,7 @@ def main():
     # Manifesto nome->URL oficial na UFF (para o portal linkar o PDF de origem,
     # sem precisar hospedar/duplicar o arquivo).
     import json as _json
-    manifesto = {h.split("/")[-1]: h for h in links}
+    manifesto = {h.split("/")[-1]: _url_segura(h) for h in links}
     with open(os.path.join(args.pasta, "_urls.json"), "w", encoding="utf-8") as f:
         _json.dump(manifesto, f, ensure_ascii=False, indent=1)
 

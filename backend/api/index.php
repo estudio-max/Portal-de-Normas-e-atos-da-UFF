@@ -147,9 +147,12 @@ function ficha(PDO $pdo, string $id): void {
     $a = $st->fetch();
     if (!$a) responder_json(['erro' => 'ato não encontrado'], 404);
 
-    $st = $pdo->prepare("SELECT siape FROM ato_siapes WHERE ato_id=:id ORDER BY siape");
+    $st = $pdo->prepare("SELECT siape, nome FROM ato_siapes WHERE ato_id=:id
+                         ORDER BY nome IS NULL, nome, siape");
     $st->execute([':id' => $id]);
-    $siapes = array_column($st->fetchAll(), 'siape');
+    $rowsSiape = $st->fetchAll();
+    $siapes = array_column($rowsSiape, 'siape');
+    $pessoas = array_map(fn($r) => ['nome' => $r['nome'], 'siape' => $r['siape']], $rowsSiape);
 
     $st = $pdo->prepare("SELECT tipo_relacao, ato_destino_texto, ato_destino_id, detalhes
                          FROM ato_relacoes WHERE ato_id=:id");
@@ -183,7 +186,7 @@ function ficha(PDO $pdo, string $id): void {
         'linkSeiProcesso' => $a['link_sei_processo'],
         'linkSeiDocumento' => $a['link_sei_documento'],
         'linkBoletim' => $a['link_boletim'], 'secao' => $a['secao'], 'pagina' => $a['pagina'],
-        'siapes' => $siapes, 'tags' => $tags,
+        'siapes' => $siapes, 'pessoas' => $pessoas, 'tags' => $tags,
         'relacoes' => array_map(fn($r) => [
             'tipoRelacao' => $r['tipo_relacao'], 'atoDestino' => $r['ato_destino_texto'],
             'atoDestinoId' => $r['ato_destino_id'], 'detalhes' => $r['detalhes'],
