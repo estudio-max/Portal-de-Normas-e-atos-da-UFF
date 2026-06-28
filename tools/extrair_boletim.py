@@ -99,7 +99,7 @@ _BLOCK_NOME = set((
     "senhor senhora gabinete vice decano superintendente lotar designar dispensar exonerar "
     "nomear conceder autorizar instituir revogar alterar prorrogar tornar retificar republicar "
     "considerar resolver delegar aprovar homologar redistribuido "
-    "professores professoras diretores coordenadores coordenadoras chefes presidentes "
+    "professores professoras docente docentes diretores coordenadores coordenadoras chefes presidentes "
     "secretarios tecnicos analistas assistentes servidores substitutos assuntos educacionais "
     "educacional gerais administrativos administrativa academicos academica financeiros "
     "institucional institucionais setor nucleo gerencia assessoria pessoal ensino pesquisa "
@@ -500,7 +500,7 @@ def _limpa_nome(run):
     p = run.split()
     while p and (_fold(p[0]) in _BLOCK_NOME or _fold(p[0]) in _CONNECT):
         p.pop(0)
-    while p and _fold(p[-1]) in _CONNECT:
+    while p and (_fold(p[-1]) in _BLOCK_NOME or _fold(p[-1]) in _CONNECT):
         p.pop()
     return _titlecase_nome(" ".join(p)) if len(p) >= 2 else ""
 
