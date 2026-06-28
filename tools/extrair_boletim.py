@@ -79,7 +79,7 @@ SEI_DOC_RE = re.compile(r"SEI\s*n[ºo°]?\.?\s*(\d{6,8})")
 SEI_DOC_PAREN_RE = re.compile(r"\((\d{6,8})\)")
 
 # Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493"
-SIAPE_RE = re.compile(r"(?:SIAPE|Siape|Matr[íi]cula\s+SIAPE)\s*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
+SIAPE_RE = re.compile(r"(?:SIAPE|Siape|Matr[íi]cula\s+SIAPE)[:\s]*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
 
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
