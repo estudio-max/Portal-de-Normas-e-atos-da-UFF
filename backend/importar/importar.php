@@ -101,6 +101,10 @@ try {
     $pdo->commit();
     $n = $pdo->query("SELECT COUNT(*) FROM atos")->fetchColumn();
     log_("OK. Banco agora com $n atos.");
+
+    // 3) Resolve relações cross-ano e atualiza vigência
+    require_once __DIR__ . '/resolver_relacoes.php';
+    resolver_cross_ano($pdo);
 } catch (Throwable $e) {
     $pdo->rollBack();
     exit("ERRO na importação: " . $e->getMessage() . "\n");
