@@ -83,8 +83,11 @@ PROC_RE = re.compile(r"23069[.\s]\d{6}[/\s]\d{4}[-\s]\d{2}")
 SEI_DOC_RE = re.compile(r"SEI\s*n[ºo°]?\.?\s*(\d{6,8})")
 SEI_DOC_PAREN_RE = re.compile(r"\((\d{6,8})\)")
 
-# Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493"
-SIAPE_RE = re.compile(r"(?:SIAPE|Siape|Matr[íi]cula\s+SIAPE)[:\s]*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
+# Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493".
+# Consome também a abreviação de "Matrícula" colada/pontuada ("Mat. SIAPE 123",
+# "MATSIAPE 123") — senão o "MAT" era absorvido como sobrenome ("...SANTOS MAT").
+SIAPE_RE = re.compile(
+    r"(?:\b(?:matr[íi]cula|mat)\.?\s*)?(?:SIAPE|Siape)[:\s]*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
 
 # Nome da pessoa citada, ancorado na matrícula SIAPE que aparece logo depois.
 # _CONNECT: conectores que ficam minúsculos no nome ("de", "da", ...).
@@ -125,14 +128,28 @@ _BLOCK_NOME = set((
     "humanas naturais exatas biologicas medicina odontologia farmacia nutricao fisioterapia "
     "fonoaudiologia veterinaria cirurgia clinica pediatria ginecologia obstetricia cardiologia "
     "neurologia ortopedia radiologia anestesiologia dermatologia oftalmologia urologia patologia "
-    "psiquiatria geriatria traumatologia bucomaxilofacial bucomaxilofaciais buco maxilo facial geral"
+    "psiquiatria geriatria traumatologia bucomaxilofacial bucomaxilofaciais buco maxilo facial geral "
+    # ruído de cabeçalho de tabela ("Nome:") e abreviação de "Matrícula" que colam no nome
+    "nome mat"
 ).split())
-_PALAVRA_NOME = r"(?:[A-ZÀ-Ú][a-zà-ú]+|[A-ZÀ-Ú]{2,})"
-NOME_RE = re.compile(r"%s(?:\s+(?:de|da|do|das|dos|e|%s)){1,6}" % (_PALAVRA_NOME, _PALAVRA_NOME))
-# Nomes em portaria de designação aparecem em CAIXA ALTA; cargos/títulos em title-case.
-# NOME_CAPS_RE só casa sequências totalmente em maiúsculas (prioridade em nome_antes_siape).
-_PALAVRA_CAPS = r"[A-ZÀ-Ú]{2,}"
-NOME_CAPS_RE = re.compile(r"%s(?:\s+(?:de|da|do|das|dos|e|%s)){1,6}" % (_PALAVRA_CAPS, _PALAVRA_CAPS))
+# Classes de letras Latin-1 COMPLETAS: a faixa antiga "à-ú" não cobria ü/û/ý/ÿ
+# nem Ü/Þ, o que truncava sobrenomes germânicos ("Frühauf"->"Fr", "SCHMÜTZ"->
+# "Schm"). O apóstrofo ('/’) integra sobrenomes ("Sant'Anna", "Dal'Magro",
+# "D'Almeida"). A cauda aceita CAIXA MISTA p/ tolerar typo de caps-lock do PDF
+# ("LIma"->"Lima", "LIzarbe"->"Lizarbe").
+_UP = "A-ZÀ-ÖØ-Þ"          # maiúsculas Latin-1 (pula × U+00D7)
+_LO = "a-zà-öø-ÿ"          # minúsculas Latin-1 (pula ÷ U+00F7)
+_LET = _UP + _LO
+_AP = "'’"
+_PALAVRA_NOME = r"[%s][%s]*(?:[%s][%s]+)*" % (_UP, _LET, _AP, _LET)
+# NOME_CAPS_RE prioriza CAIXA ALTA (distingue nome de cargo, que vem em title-
+# case): exige 2+ maiúsculas iniciais, mas tolera cauda minúscula de typo/OCR
+# ("WASSERMAn" -> "Wasserman").
+_PALAVRA_CAPS = r"[%s]{2,}[%s]*(?:[%s][%s]+)*" % (_UP, _LET, _AP, _LET)
+# Conector: inclui "d'Aquino"/"d'Ávila" inteiros (senão o "d'" corta o sobrenome).
+_CONN = r"(?:de|da|do|das|dos|e|d[%s][%s]*)" % (_AP, _LET)
+NOME_RE = re.compile(r"%s(?:\s+(?:%s|%s)){1,6}" % (_PALAVRA_NOME, _CONN, _PALAVRA_NOME))
+NOME_CAPS_RE = re.compile(r"%s(?:\s+(?:%s|%s)){1,6}" % (_PALAVRA_CAPS, _CONN, _PALAVRA_CAPS))
 
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
@@ -333,9 +350,23 @@ def monta_ref(rm):
     return " ".join(partes)
 
 
+def _norm_pdf(s):
+    """Normaliza o texto extraído do PDF, ANTES de qualquer parsing:
+      - NFC: junta diacrítico combinante ('c'+cedilha -> 'ç') que truncava nomes
+        ("Picanço"->"Picanc"), pois o regex parava na letra-base.
+      - remove hífen-suave e caracteres de largura-zero que o PDF insere.
+      - cola apóstrofo de sobrenome com espaço espúrio ("Sant’ Anna"->"Sant’Anna")."""
+    s = unicodedata.normalize("NFC", s)
+    s = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", s)  # chars de controle (glitch de glifo)
+    s = re.sub("[­​‌‍⁠﻿]", "", s)  # hífen-suave / largura-zero
+    s = s.replace("\xa0", " ")     # espaço inquebrável -> espaço comum
+    s = re.sub(r"([A-Za-zÀ-ÿ]['’])[ \t]+(?=[A-Za-zÀ-ÿ])", r"\1", s)
+    return s
+
+
 def parse_pdf(caminho):
     doc = fitz.open(caminho)
-    paginas = [doc[p].get_text() for p in range(doc.page_count)]
+    paginas = [_norm_pdf(doc[p].get_text()) for p in range(doc.page_count)]
     doc.close()
 
     bs_num, bs_data, bs_ano = metadados_bs(paginas)
@@ -490,10 +521,20 @@ def extrai_ementa(resto):
         if mm and mm.start() < pos:
             pos = mm.start()
     ementa = limpar(resto[:pos])
-    # remove números de página/seção residuais
-    ementa = re.sub(r"SEÇÃO\s+[IVX]+\s+P[ÁA]G\.?\s*\d+", "", ementa, flags=re.I)
-    ementa = re.sub(r"ANO\s+[IVXLCDM]+.{0,3}N[º°o]?\.?\s*\d+", "", ementa, flags=re.I)
+    # remove números de página/seção e cabeçalho/rodapé do BS que vazam na ementa
+    ementa = re.sub(r"(?i)ANO\s+[IVXLCDM]+\s*[–—-]?\s*N[.°º\s]*\d+", "", ementa)
+    ementa = re.sub(r"(?i)SE[ÇC][ÃA]O\s+[IVX]+\s*P[ÁA]?G?[.\s]*\d+", "", ementa)
+    ementa = re.sub(r"(?i)P[ÁA]G[.\s]*\d+", "", ementa)
     ementa = re.sub(r"\d{2}/\d{2}/\d{4}", "", ementa)
+    ementa = re.sub(r"(?i)MINIST[ÉE]RIO\s+DA\s+EDUCA[ÇC][ÃA]O", "", ementa)
+    ementa = re.sub(r"(?i)UNIVERSIDADE\s+FEDERAL\s+FLUMINENSE", "", ementa)
+    ementa = re.sub(r"(?i)BOLETIM\s+DE\s+SERVI[ÇC]O", "", ementa)
+    ementa = re.sub(r"#(?:\s*#)+", "", ementa)  # marcadores "# # # #" de rodapé
+    # tira pontuação/rótulo iniciais (". ", ", ", "Ementa:") — ruído muito comum
+    ementa = limpar(ementa)
+    ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
+    ementa = re.sub(r"(?i)^ementa\s*:?\s*", "", ementa)
+    ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
     return limpar(ementa)[:600]
 
 
@@ -552,8 +593,11 @@ def limpa_sigla(orgao):
 
 
 def _titlecase_nome(s):
-    return " ".join(w.lower() if _fold(w) in _CONNECT else (w[:1].upper() + w[1:].lower())
-                    for w in s.split())
+    def cap(w):
+        w = w.lower() if _fold(w) in _CONNECT else (w[:1].upper() + w[1:].lower())
+        # capitaliza após apóstrofo/hífen: "sant'anna"->"Sant'Anna", "dal'magro"->"Dal'Magro"
+        return re.sub(r"(['’\-])([a-zà-öø-ÿ])", lambda m: m.group(1) + m.group(2).upper(), w)
+    return " ".join(cap(w) for w in s.split())
 
 
 def _limpa_nome(run):

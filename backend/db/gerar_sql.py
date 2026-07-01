@@ -48,11 +48,17 @@ bol_id, bol_rows = {}, []
 for a in dados:
     arq = a.get("arquivo", "")
     if arq and arq not in bol_id:
-        # número e ANO vêm do nome do boletim ("NN-YY.pdf"), não do ato
-        # (um boletim de 2026 pode conter atos datados de 2025).
-        mb = re.match(r"(\d+)-(\d{2})", arq)
+        # número e ANO vêm do nome do boletim ("NN-YY.pdf" recente, ou
+        # "NNN-YYYY.pdf" legado 2015-2017 — a UFF trocou a convenção no meio
+        # do caminho). \d{4} TEM que vir antes de \d{2} na alternância: senão
+        # "2015" casa só os 2 primeiros dígitos ("20") e bano vira 2000+20=2020,
+        # colidindo com o boletim real de 2020 (bug real encontrado 01/07/2026).
+        mb = re.match(r"(\d+)-(\d{4}|\d{2})", arq)
         bnum = int(mb.group(1)) if mb else None
-        bano = 2000 + int(mb.group(2)) if mb else (a.get("ano") or 0)
+        if mb:
+            bano = int(mb.group(2)) if len(mb.group(2)) == 4 else 2000 + int(mb.group(2))
+        else:
+            bano = a.get("ano") or 0
         if args.append and bnum is not None:
             bid = bano * 1000 + bnum            # global e estável (ex.: 2025153)
         else:
@@ -69,9 +75,13 @@ for a in dados:
 # sufixo de ano dos ids (ex.: "25") para limpeza idempotente no modo append.
 # Após "NN-YY" pode vir "-" (normal), "_" ("108-25_RETIFICADO") ou "-1" etc.;
 # por isso o separador é [^0-9], não "-" fixo (senão o DELETE não pega esses ids).
+# Boletins legado (2015-2022) vêm nomeados pela UFF com ANO DE 4 DÍGITOS
+# ("007-2015.pdf"), diferente dos recentes ("22-26.pdf", 2 dígitos) — por isso
+# aceita \d{2} OU \d{4} (senão suf_ano nunca é detectado p/ esses anos e o
+# DELETE de limpeza é pulado por completo, quebrando o append idempotente).
 sufixos = {}
 for a in dados:
-    m = re.match(r"^\d+-(\d{2})[^0-9]", a["id"])
+    m = re.match(r"^\d+-(\d{4}|\d{2})[^0-9]", a["id"])
     if m:
         sufixos[m.group(1)] = sufixos.get(m.group(1), 0) + 1
 suf_ano = max(sufixos, key=sufixos.get) if sufixos else None
@@ -180,7 +190,8 @@ with open(OUT, "w", encoding="utf-8") as f:
                upsert_em=("id",) if args.append else None)
         insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50,
                upsert_em=("ato_id",) if args.append else None)
-        insere(f, "ato_siapes", ["ato_id", "siape", "nome"], siape_rows)
+        insere(f, "ato_siapes", ["ato_id", "siape", "nome"], siape_rows,
+               upsert_em=("ato_id", "siape") if args.append else None)
         insere(f, "ato_relacoes", ["ato_id", "tipo_relacao", "ato_destino_texto", "ato_destino_id", "detalhes"], rel_rows)
         insere(f, "ato_tags", ["ato_id", "tag"], tag_rows)
     insere(f, "ato_funcoes",
