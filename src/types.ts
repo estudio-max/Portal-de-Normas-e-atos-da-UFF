@@ -19,7 +19,8 @@ export interface UffAct {
   ano: number; // ex: 2026
   dataAssinatura: string; // YYYY-MM-DD
   orgaoEmissor: string; // ex: "Reitoria", "PROGEPE", "CUV", "CEPEx", "PROGRAD"
-  ementa: string; // Resumo oficial do ato
+  ementa: string; // Ementa oficial OU, se ementaInferida=true, resumo automático do dispositivo
+  ementaInferida?: boolean; // true = 'ementa' é resumo automático gerado do texto (não é a oficial)
   processoSei: string | null; // e.g. "23069.011245/2026-12" ou null
   relacoes: ActRelation[]; // Relações com outras leis/atos
   tags: string[]; // Marcadores/Palavras-chave

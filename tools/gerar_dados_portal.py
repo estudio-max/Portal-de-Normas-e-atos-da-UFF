@@ -136,6 +136,12 @@ def converter(dados, urls=None):
 
         orgao = norm_sigla(a.get("sigla")) or ("Reitoria" if a.get("tipo") == "PORTARIA" else "UFF")
         ano_pub = ano_bs.get(a.get("arquivo"), "2026")
+        # Ementa: oficial > resumo inferido > placeholder. ementaInferida sinaliza
+        # ao front-end que o texto é um "resumo automático" (não a ementa oficial).
+        ementa_oficial = (a.get("ementa") or "").strip()
+        ementa_resumo = (a.get("ementa_resumo") or "").strip()
+        ementa_inferida = bool(ementa_resumo) and not ementa_oficial
+        ementa_disp = ementa_oficial or ementa_resumo or "(sem ementa formal no boletim)"
         saida.append({
             "id": aid,
             "_idx": i,
@@ -144,7 +150,8 @@ def converter(dados, urls=None):
             "ano": int(a["ano"]) if str(a.get("ano", "")).isdigit() else 2026,
             "dataAssinatura": a.get("data_ato") or "",
             "orgaoEmissor": orgao,
-            "ementa": a.get("ementa") or "(sem ementa formal no boletim)",
+            "ementa": ementa_disp,
+            "ementaInferida": ementa_inferida,
             "processoSei": a.get("processo_sei_principal") or None,
             "seiDocumento": a.get("sei_documento") or None,
             "linkSeiProcesso": a.get("link_sei_processo") or None,
@@ -155,7 +162,7 @@ def converter(dados, urls=None):
             "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
             "funcoes": a.get("funcoes", []),  # [{acao,cargo,unidade,unidade_chave,nome,siape}] p/ Chefias
             "textoBusca": a.get("corpo_busca", ""),  # corpo p/ busca por nome/SIAPE
-            "conteudoResumido": a.get("ementa") or "Ato administrativo publicado no Boletim de Serviço da UFF.",
+            "conteudoResumido": ementa_disp if ementa_disp[:1] != "(" else "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo
             "boletimNumero": f"BS nº {a.get('bs_numero','')}/{ano_pub}",
             "linkBoletim": urls.get(a.get("arquivo", ""),

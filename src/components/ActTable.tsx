@@ -227,8 +227,15 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
           )}
 
           <div className="space-y-1">
-            <span className="text-xs text-slate-400 font-semibold uppercase block">Ementa Oficial</span>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs italic leading-relaxed">"{ato.ementa}"</div>
+            {ato.ementaInferida ? (
+              <span className="text-xs font-semibold uppercase block text-amber-600">
+                Resumo automático
+                <span className="ml-2 normal-case font-normal text-[10px] text-amber-500">gerado do texto do ato — não é a ementa oficial</span>
+              </span>
+            ) : (
+              <span className="text-xs text-slate-400 font-semibold uppercase block">Ementa Oficial</span>
+            )}
+            <div className={`p-4 rounded-xl border text-xs italic leading-relaxed ${ato.ementaInferida ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-slate-50 border-slate-100'}`}>"{ato.ementa}"</div>
           </div>
 
           <div className="space-y-2">

@@ -447,6 +447,11 @@ def parse_pdf(caminho):
         corpo_busca = limpar(corpo).lower()[:7000]
         siapes = sorted(set(SIAPE_RE.findall(trecho)))
 
+        # Ementa inferida: só quando NÃO há ementa formal. Resume o dispositivo.
+        ementa_resumo, ementa_inferida = "", False
+        if len(ementa.strip()) < 12:
+            ementa_resumo, ementa_inferida = sintetiza_ementa(corpo)
+
         ato = {
             "arquivo": arquivo,
             "bs_numero": bs_num,
@@ -462,6 +467,8 @@ def parse_pdf(caminho):
             "identificador": monta_identificador(tipo, sigla, numero, ano_ato),
             "tipo_acao": tipo_acao,
             "ementa": ementa,
+            "ementa_resumo": ementa_resumo,
+            "ementa_inferida": ementa_inferida,
             "signatario": signatario,
             "processos_sei": procs,
             "processo_sei_principal": procs[0] if procs else "",
@@ -536,6 +543,107 @@ def extrai_ementa(resto):
     ementa = re.sub(r"(?i)^ementa\s*:?\s*", "", ementa)
     ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
     return limpar(ementa)[:600]
+
+
+# --------------------------------------------------------------------------- #
+# Ementa INFERIDA: para atos sem ementa formal, resume o próprio dispositivo
+# (o texto após "resolve:") em 3ª pessoa. NÃO inventa nada — usa as palavras do
+# ato. O resultado é marcado como inferido (ementa_inferida=True) para o portal
+# exibir como "resumo automático", nunca confundido com a ementa oficial.
+# --------------------------------------------------------------------------- #
+# Verbo do dispositivo (infinitivo) -> forma na 3ª pessoa do singular.
+_VERBO_EMENTA = [
+    (r"tornar\s+sem\s+efeito", "Torna sem efeito"), (r"tornar\s+p[úu]blico", "Torna público"),
+    (r"designar", "Designa"), (r"nomear", "Nomeia"), (r"exonerar", "Exonera"),
+    (r"dispensar", "Dispensa"), (r"constituir", "Constitui"), (r"instituir", "Institui"),
+    (r"conceder", "Concede"), (r"autorizar", "Autoriza"), (r"prorrogar", "Prorroga"),
+    (r"alterar", "Altera"), (r"revogar", "Revoga"), (r"aprovar", "Aprova"),
+    (r"homologar", "Homologa"), (r"retificar", "Retifica"), (r"republicar", "Republica"),
+    (r"delegar", "Delega"), (r"criar", "Cria"), (r"estabelecer", "Estabelece"),
+    (r"remover", "Remove"), (r"redistribuir", "Redistribui"), (r"lotar", "Lota"),
+    (r"cancelar", "Cancela"), (r"suspender", "Suspende"), (r"determinar", "Determina"),
+    (r"fixar", "Fixa"), (r"declarar", "Declara"), (r"convalidar", "Convalida"),
+    (r"reconduzir", "Reconduz"), (r"destituir", "Destitui"), (r"substituir", "Substitui"),
+    (r"conceituar", "Conceitua"), (r"ratificar", "Ratifica"), (r"dispor", "Dispõe sobre"),
+    (r"interromper", "Interrompe"), (r"aposentar", "Aposenta"), (r"aplicar", "Aplica"),
+    (r"atribuir", "Atribui"), (r"extinguir", "Extingue"), (r"atualizar", "Atualiza"),
+    (r"publicar", "Publica"), (r"readaptar", "Readapta"), (r"incluir", "Inclui"),
+    (r"excluir", "Exclui"), (r"abonar", "Abona"), (r"conferir", "Confere"),
+    (r"transferir", "Transfere"), (r"anular", "Anula"), (r"validar", "Valida"),
+]
+_ENUM_EMENTA_RE = re.compile(
+    r"(?i)^\s*(?:art\.?\s*\d+[ºo°.\-]*\s*[-–]?\s*|[ivx]{1,4}\s*[-–.)]\s*|"
+    r"\d+\s*[-–.)]\s*|[a-z]\s*[-)]\s*|§\s*\d*[ºo°]?\s*|par[áa]grafo\s+\S+\s*[-–.:]?\s*)")
+# Corte do objeto: ";" ou "." de fim de frase (NÃO o "." interno de nº de
+# processo "23069.002753"), próximo item (II-, IV-), ou início de cláusula acessória.
+_STOP_EMENTA_RE = re.compile(
+    r"(?i)(?:;|\.(?=\s|$)|\bII+\s*[-–]|\bIV\s*[-–]|,?\s*\bmatr[íi]cula\b|,?\s*\bsiape\b|"
+    r",?\s*\bc[óo]digo\b|\ba partir\b|\bcom valid|\bpelo per[íi]odo\b|\bno per[íi]odo\b|"
+    r"\btendo em vista\b|\bem virtude\b|\bnos termos\b|\bem substitui|"
+    r"\bpublique-se\b|\bregistre-se\b|\bfica\b)")
+# Cláusula acessória inicial a descartar para chegar ao objeto real. Ex.:
+# "dispensar, A PEDIDO, A PARTIR DE 04/08/2025, Fulano..." -> "Fulano...".
+_CLAUSULA_INI_RE = re.compile(
+    r"(?i)^\s*,?\s*(?:"
+    r"consoante\b[^,]*|conforme\b[^,]*|nos termos\b[^,]*|tendo em vista\b[^,]*|"
+    r"de acordo com\b[^,]*|com base n[oa]\b[^,]*|a pedido|"
+    r"a partir d[eo]\b[^,]*|a contar d[eo]\b[^,]*|com efeitos?\b[^,]*|"
+    r"pelo per[íi]odo\b[^,]*|no per[íi]odo\b[^,]*|retroativ[oa]\b[^,]*|"
+    r"em car[áa]ter\b[^,]*|por \d+[^,]*"
+    r")\s*,\s*")
+_MINUSC_FRASE = {"de", "da", "do", "das", "dos", "e", "a", "o", "as", "os", "em", "no",
+                 "na", "nos", "nas", "para", "por", "com", "sem", "ao", "aos", "à", "às",
+                 "que", "sob", "sobre", "entre"}
+
+
+def _titlecase_frase(s):
+    """Title-case de uma frase (só p/ objetos que vieram em CAIXA ALTA): mantém
+    conectores minúsculos, capitaliza as demais palavras."""
+    out = []
+    for i, w in enumerate(s.split()):
+        out.append(w.lower() if (i > 0 and _fold(w) in _MINUSC_FRASE)
+                   else (w[:1].upper() + w[1:].lower()))
+    return " ".join(out)
+
+
+def sintetiza_ementa(corpo):
+    """Resume o dispositivo de um ato sem ementa formal, em 3ª pessoa, usando as
+    próprias palavras do ato. Ex.: '...resolve: exonerar Fulano do cargo...' ->
+    'Exonera Fulano.'. Retorna (resumo, True) se achou um verbo de dispositivo;
+    ('', False) se não deu para inferir (vai p/ o fallback de LLM)."""
+    txt = limpar(corpo)
+    m = re.search(r"(?i)\bresolve[m]?\b\s*:?\s*", txt)
+    disp = txt[m.end():] if m else txt
+    for _ in range(4):                       # pula "I -", "Art. 1º -", "a)"...
+        e = _ENUM_EMENTA_RE.match(disp)
+        if not e or e.end() == 0:
+            break
+        disp = disp[e.end():]
+    disp = disp.lstrip(" -–.)")
+    verbo3 = resto = None
+    for pat, t3 in _VERBO_EMENTA:
+        mm = re.match(r"(?i)" + pat + r"\b", disp)
+        if mm:
+            verbo3, resto = t3, disp[mm.end():]
+            break
+    if not verbo3:
+        return "", False
+    for _ in range(3):                            # pula cláusulas acessórias iniciais
+        novo = _CLAUSULA_INI_RE.sub("", resto, count=1)
+        if novo == resto:
+            break
+        resto = novo
+    sm = _STOP_EMENTA_RE.search(resto)
+    obj = (resto[:sm.start()] if sm else resto).strip(" ,;.:-–")
+    obj = re.sub(r"\s+", " ", obj)
+    if len(obj) < 2:
+        return "", False
+    # title-case runs de 2+ palavras em CAIXA ALTA (nomes/benefícios embutidos):
+    # "RENATA HELENA MARTO" -> "Renata Helena Marto"; acrônimos isolados ficam.
+    obj = re.sub(r"[A-ZÀ-Þ][A-ZÀ-Þ0-9'’\-]*(?:\s+[A-ZÀ-Þ][A-ZÀ-Þ0-9'’\-]*)+",
+                 lambda mm: _titlecase_frase(mm.group(0)), obj)
+    ementa = re.sub(r"\s+([,;.])", r"\1", f"{verbo3} {obj}").strip(" ,;:-–")
+    return limpar(ementa)[:280].rstrip(" ,;:-–") + ".", True
 
 
 def extrai_signatario(trecho):

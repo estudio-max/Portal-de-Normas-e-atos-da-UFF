@@ -114,7 +114,7 @@ function listar(PDO $pdo): void {
     $pag = max((int)($_GET['pagina'] ?? 1), 1);
     $off = ($pag - 1) * $por;
 
-    $sql = "SELECT a.id, a.tipo, a.sigla, a.numero, a.ano, a.data_ato, a.ementa,
+    $sql = "SELECT a.id, a.tipo, a.sigla, a.numero, a.ano, a.data_ato, a.ementa, a.ementa_inferida,
                    a.status, a.processo_sei,
               (SELECT GROUP_CONCAT(DISTINCT r.tipo_relacao) FROM ato_relacoes r WHERE r.ato_id=a.id) AS rel_tipos,
               (SELECT COUNT(*) FROM ato_relacoes r2 WHERE r2.ato_destino_id=a.id) AS ref_count
@@ -128,6 +128,7 @@ function listar(PDO $pdo): void {
             'id' => $r['id'], 'tipo' => $r['tipo'], 'sigla' => $r['sigla'],
             'numero' => $r['numero'], 'ano' => (int)$r['ano'],
             'dataAssinatura' => $r['data_ato'], 'ementa' => $r['ementa'],
+            'ementaInferida' => (bool)$r['ementa_inferida'],
             'status' => $r['status'], 'processoSei' => $r['processo_sei'],
             'relTipos' => $r['rel_tipos'] ? explode(',', $r['rel_tipos']) : [],
             'refCount' => (int)$r['ref_count'],
@@ -181,6 +182,7 @@ function ficha(PDO $pdo, string $id): void {
         'id' => $a['id'], 'tipoAto' => $a['tipo'], 'sigla' => $a['sigla'],
         'orgaoEmissor' => $a['sigla'], 'numero' => $a['numero'], 'ano' => (int)$a['ano'],
         'dataAssinatura' => $a['data_ato'], 'ementa' => $a['ementa'],
+        'ementaInferida' => (bool)$a['ementa_inferida'],
         'conteudoResumido' => $a['conteudo_resumido'], 'signatario' => $a['signatario'],
         'status' => $a['status'], 'processoSei' => $a['processo_sei'],
         'seiDocumento' => $a['sei_documento'],

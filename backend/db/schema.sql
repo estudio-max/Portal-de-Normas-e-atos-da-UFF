@@ -49,6 +49,7 @@ CREATE TABLE `atos` (
   `identificador`      VARCHAR(160) NULL,
   `tipo_acao`          VARCHAR(40)  NULL,            -- Altera/Designa/Revoga...
   `ementa`             TEXT NULL,
+  `ementa_inferida`    TINYINT(1) NOT NULL DEFAULT 0,  -- 1 = ementa é resumo automático do dispositivo
   `conteudo_resumido`  TEXT NULL,
   `signatario`         VARCHAR(160) NULL,
   `status`             ENUM('Ativo','Alterado','Revogado') NOT NULL DEFAULT 'Ativo',

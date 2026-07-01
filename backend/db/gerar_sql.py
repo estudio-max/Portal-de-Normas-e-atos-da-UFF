@@ -114,6 +114,14 @@ with open(OUT, "w", encoding="utf-8") as f:
         "'ALTER TABLE `ato_siapes` ADD COLUMN `nome` VARCHAR(120) NULL AFTER `siape`', 'DO 0');\n"
         "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
 
+    # Garante atos.ementa_inferida (idempotente): 1 = ementa é resumo automático.
+    f.write(
+        "SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='atos' AND COLUMN_NAME='ementa_inferida');\n"
+        "SET @ddl := IF(@c=0, "
+        "'ALTER TABLE `atos` ADD COLUMN `ementa_inferida` TINYINT(1) NOT NULL DEFAULT 0 AFTER `ementa`', 'DO 0');\n"
+        "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
+
     # Tabela de chefias (idempotente): criada aqui p/ bases que ainda não a têm.
     f.write(
         "CREATE TABLE IF NOT EXISTS `ato_funcoes` ("
@@ -156,7 +164,8 @@ with open(OUT, "w", encoding="utf-8") as f:
             esc(aid), esc(bol_id.get(a.get("arquivo", ""))), esc(a.get("tipoAto", "")),
             esc(a.get("orgaoEmissor", "")), esc(a.get("numero", "")), esc(a.get("ano")),
             esc(data_iso(a.get("dataAssinatura", ""))), esc(a.get("identificador")),
-            esc(a.get("tipoAcao")), esc(a.get("ementa", "")), esc(a.get("conteudoResumido", "")),
+            esc(a.get("tipoAcao")), esc(a.get("ementa", "")), esc(1 if a.get("ementaInferida") else 0),
+            esc(a.get("conteudoResumido", "")),
             esc(a.get("signatario")), esc(st), esc(a.get("processoSei")), esc(a.get("seiDocumento")),
             esc(a.get("linkSeiProcesso")), esc(a.get("linkSeiDocumento")), esc(a.get("linkBoletim")),
             esc(a.get("secao")), esc(a.get("pagina")),
@@ -184,8 +193,8 @@ with open(OUT, "w", encoding="utf-8") as f:
 
     if not args.so_chefias:
         insere(f, "atos", ["id", "boletim_id", "tipo", "sigla", "numero", "ano", "data_ato",
-                           "identificador", "tipo_acao", "ementa", "conteudo_resumido", "signatario",
-                           "status", "processo_sei", "sei_documento", "link_sei_processo",
+                           "identificador", "tipo_acao", "ementa", "ementa_inferida", "conteudo_resumido",
+                           "signatario", "status", "processo_sei", "sei_documento", "link_sei_processo",
                            "link_sei_documento", "link_boletim", "secao", "pagina"], atos_rows, 100,
                upsert_em=("id",) if args.append else None)
         insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50,
