@@ -490,7 +490,7 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
               onChange={(e) => setFilterOrgao(e.target.value)}
               className="bg-white border border-slate-200 hover:border-slate-300 rounded px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-yellow-400"
             >
-              <option value="todos">Órgão: Todos</option>
+              <option value="todos">Emissor: Todos</option>
               {uniqueOrgaos.map(orgao => (
                 <option key={orgao} value={orgao}>{orgao}</option>
               ))}

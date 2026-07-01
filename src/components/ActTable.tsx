@@ -82,7 +82,7 @@ export default function ActTable() {
             <option value="todos">Tipo: Todos</option>{filtros.tipos.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
           <select value={orgao} onChange={e => setOrgao(e.target.value)} className="bg-white border border-slate-200 rounded px-2 py-1 text-xs font-semibold">
-            <option value="todos">Órgão: Todos</option>{filtros.orgaos.map(o => <option key={o} value={o}>{o}</option>)}
+            <option value="todos">Emissor: Todos</option>{filtros.orgaos.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
           <select value={ano} onChange={e => setAno(e.target.value)} className="bg-white border border-slate-200 rounded px-2 py-1 text-xs font-semibold">
             <option value="todos">Ano: Todos</option>{filtros.anos.map(a => <option key={a} value={String(a)}>{a}</option>)}

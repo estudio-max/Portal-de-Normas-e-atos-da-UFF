@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, GitBranch, Loader2 } from 'lucide-react';
+import { Database, GitBranch, Loader2, Moon, Sun } from 'lucide-react';
 import { UffAct } from './types';
 import { INITIAL_ACTS } from './data/initialActs';
 import * as ds from './dataSource';
@@ -9,6 +9,7 @@ import ActSpreadsheet from './components/ActSpreadsheet';
 import ActTable from './components/ActTable';
 import ActRelationships from './components/ActRelationships';
 import ActRelationsApi from './components/ActRelationsApi';
+import ChefiasApi from './components/ChefiasApi';
 import ActParser from './components/ActParser';
 import SeiIntegration from './components/SeiIntegration';
 import HelpGuide from './components/HelpGuide';
@@ -18,6 +19,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('planilha');
   const [modo, setModo] = useState<'api' | 'estatico' | 'carregando'>('carregando');
   const [stats, setStats] = useState<ds.Stats | null>(null);
+
+  // Tema escuro p/ fotofobia: classe .fotofobia em <html>, persistida em
+  // localStorage. O index.html já aplica antes de renderizar (evita flash);
+  // aqui o estado nasce do que já está no <html> e o botão alterna.
+  const [fotofobia, setFotofobia] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('fotofobia')
+  );
+  useEffect(() => {
+    document.documentElement.classList.toggle('fotofobia', fotofobia);
+    try { localStorage.setItem('tema-fotofobia', fotofobia ? '1' : '0'); } catch { /* ignore */ }
+  }, [fotofobia]);
 
   // Inicializa a camada de dados: usa a API (banco) se disponível, senão o
   // JSON estático. No modo estático carrega tudo em memória (protótipo);
@@ -108,6 +120,8 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'chefias' && <div id="painel-chefias"><ChefiasApi /></div>}
+
           {activeTab === 'sei' && <div id="painel-sei"><SeiIntegration /></div>}
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 
@@ -116,13 +130,24 @@ export default function App() {
 
       <footer className="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-400 font-semibold">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Universidade Federal Fluminense (UFF) — Superintendência de Documentação</span>
+          <span>Universidade Federal Fluminense (UFF) - Criado por João Fanara - joafanara@id.uff.br</span>
           <span className="flex items-center gap-1 text-[11px] text-slate-500">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             Portal de Normas e Atos • {apiMode ? 'banco de dados' : 'modo estático'} • 2026
           </span>
         </div>
       </footer>
+
+      <button
+        onClick={() => setFotofobia(v => !v)}
+        aria-pressed={fotofobia}
+        aria-label={fotofobia ? 'Desativar modo escuro' : 'Ativar modo escuro (conforto para fotofobia)'}
+        title={fotofobia ? 'Voltar ao modo claro' : 'Modo escuro (fotofobia)'}
+        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full shadow-lg border border-slate-300 bg-white text-slate-700 text-xs font-bold hover:bg-slate-100"
+      >
+        {fotofobia ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-[#003366]" />}
+        <span className="hidden sm:inline">{fotofobia ? 'Modo claro' : 'Modo escuro'}</span>
+      </button>
     </div>
   );
 }

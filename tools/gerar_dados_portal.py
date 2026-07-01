@@ -13,6 +13,7 @@ import os
 import re
 import json
 import argparse
+import unicodedata
 from datetime import datetime
 
 # Mapas de tradução para o esquema do app -------------------------------------
@@ -41,6 +42,48 @@ REL_MAP = {
 def slug(s):
     s = re.sub(r"[^a-z0-9]+", "-", (s or "").lower()).strip("-")
     return s or "ato"
+
+
+def _fold(s):
+    return "".join(c for c in unicodedata.normalize("NFD", s or "")
+                   if unicodedata.category(c) != "Mn").lower()
+
+
+# Palavras-descritor que NUNCA são sigla de emissor (caem fora na limpeza).
+_NAO_SIGLA = set((
+    "conjunta de da do das dos e a o em uff retificado "
+    "pessoal notificacao retificacao selecao monitoria ciencia comissao eleitoral local "
+    "tutor eliminacao documentos progressao remocao nomeacao designacao exoneracao "
+    "aposentadoria concessao processo seletivo simplificado conselho "
+    "programa gestao geral nacional permanente especial executiva executivo interna interno "
+    "setorial integrada integrado avaliacao planejamento desenvolvimento ensino pesquisa extensao"
+).split())
+# Descrições por extenso (sem acrônimo no texto) -> sigla oficial. Estender conforme aparecer.
+_ALIAS_SIGLA = {
+    "de ciencia de eliminacao de documentos": "CPAD",
+    "de pessoal": "PORTARIA DE PESSOAL",   # portarias de pessoal (assinadas pelo Reitor)
+}
+
+
+def norm_sigla(orgao):
+    """Sigla de EXIBIÇÃO limpa: tira prepositivos/descritores e parênteses,
+    mantém só os tokens que parecem acrônimo; conservadora (se nada sobrar,
+    devolve o original em vez de apagar). NÃO afeta o id do ato."""
+    s = (orgao or "").replace(".", "").strip(" /.,-–")   # tira pontos (I.S.N.F.->ISNF) e bordas
+    if not s or s in ("Reitoria", "UFF"):
+        return s
+    if _fold(s) in _ALIAS_SIGLA:
+        return _ALIAS_SIGLA[_fold(s)]
+    s2 = re.sub(r"\s*\(\s*", "/", s).replace(")", " ")
+    bons = []
+    for p in re.split(r"[\s/\-–]+", s2):                  # divide por espaço, barra E hífen
+        p = p.strip(" .,()-–")
+        if not p or _fold(p) in _NAO_SIGLA:
+            continue
+        letras = re.sub(r"[^A-Za-zÀ-Ú0-9]", "", p)
+        if p == p.upper() and 2 <= len(letras) <= 8 and p not in bons:
+            bons.append(p)
+    return "/".join(bons) if bons else s
 
 
 def tags_de(a):
@@ -91,7 +134,7 @@ def converter(dados, urls=None):
                 "detalhes": r.get("bs_origem") or (r.get("trecho", "")[:90] or None),
             })
 
-        orgao = a.get("sigla") or ("Reitoria" if a.get("tipo") == "PORTARIA" else "UFF")
+        orgao = norm_sigla(a.get("sigla")) or ("Reitoria" if a.get("tipo") == "PORTARIA" else "UFF")
         ano_pub = ano_bs.get(a.get("arquivo"), "2026")
         saida.append({
             "id": aid,
@@ -110,6 +153,7 @@ def converter(dados, urls=None):
             "tags": tags_de(a),
             "siapes": a.get("siapes", []),
             "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
+            "funcoes": a.get("funcoes", []),  # [{acao,cargo,unidade,unidade_chave,nome,siape}] p/ Chefias
             "textoBusca": a.get("corpo_busca", ""),  # corpo p/ busca por nome/SIAPE
             "conteudoResumido": a.get("ementa") or "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo

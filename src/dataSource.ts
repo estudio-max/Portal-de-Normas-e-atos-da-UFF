@@ -149,6 +149,60 @@ export async function getStats(): Promise<Stats> {
   return { total: CACHE.length, vigentes: c.Ativo || 0, revogados: c.Revogado || 0, alterados: c.Alterado || 0, orgaos: orgs.size, comSei: sei, boletins: bols.size };
 }
 
+// ---------- CHEFIAS (titular atual por unidade + cargo) -------------------
+export interface Chefia {
+  cargo: string; unidade: string; nome: string | null; siape: string | null;
+  desde: string; atoId: string; atoLabel: string; linkBoletim: string | null;
+}
+export interface ChefiasResp { total: number; atualizadoEm: string; chefias: Chefia[]; }
+
+export async function getChefias(): Promise<ChefiasResp> {
+  if (MODO === 'api') {
+    try {
+      const r = await fetch(`${API_BASE}/chefias`);
+      if (r.ok) {
+        const j = await r.json();
+        // só aceita se vier no formato esperado (API antiga cai p/ vazio, sem quebrar)
+        if (j && Array.isArray(j.chefias))
+          return { total: j.total ?? j.chefias.length, atualizadoEm: j.atualizadoEm ?? '', chefias: j.chefias };
+      }
+    } catch { /* cai p/ estático */ }
+    return { total: 0, atualizadoEm: '', chefias: [] };
+  }
+  // Estático: projeta do CACHE. Cada ato traz .funcoes + dataAssinatura.
+  // Regra (igual ao SQL): por (unidade_chave|cargo) vale o evento de MAIOR
+  // data; só conta como titular se esse evento for 'designar'.
+  type Ev = {
+    acao: string; cargo: string; unidade: string; chave: string;
+    nome: string; siape: string; data: string; atoId: string; atoLabel: string; link: string | null;
+  };
+  const porPos: Record<string, Ev> = {};
+  for (const a of CACHE as any[]) {
+    for (const f of (a.funcoes || [])) {
+      const chave = f.unidade_chave || f.unidadeChave || '';
+      const data = a.dataAssinatura || '';
+      if (!chave || !data) continue;
+      let nome = f.nome || '';
+      if (!nome && f.siape) nome = ((a.pessoas || []).find((x: any) => x.siape === f.siape)?.nome) || '';
+      const e: Ev = {
+        acao: f.acao, cargo: f.cargo, unidade: f.unidade, chave, nome, siape: f.siape || '',
+        data, atoId: a.id, atoLabel: `${a.tipoAto} nº ${a.numero}/${a.ano}`, link: a.linkBoletim || null,
+      };
+      const k = `${chave}|${(f.cargo || '').toLowerCase()}`;
+      const cur = porPos[k];
+      if (!cur || e.data > cur.data || (e.data === cur.data && e.atoId > cur.atoId)) porPos[k] = e;
+    }
+  }
+  const chefias: Chefia[] = Object.values(porPos)
+    .filter(e => e.acao === 'designar')
+    .map(e => ({
+      cargo: e.cargo, unidade: e.unidade, nome: e.nome || null, siape: e.siape || null,
+      desde: e.data, atoId: e.atoId, atoLabel: e.atoLabel, linkBoletim: e.link,
+    }))
+    .sort((a, b) => a.unidade.localeCompare(b.unidade) || a.cargo.localeCompare(b.cargo));
+  return { total: chefias.length, atualizadoEm: new Date().toISOString().slice(0, 10), chefias };
+}
+
 export async function getFiltros(): Promise<{ tipos: string[]; orgaos: string[]; anos: number[] }> {
   if (MODO === 'api') return (await fetch(`${API_BASE}/filtros`)).json();
   const tipos = new Set<string>(); const orgaos = new Set<string>(); const anos = new Set<number>();

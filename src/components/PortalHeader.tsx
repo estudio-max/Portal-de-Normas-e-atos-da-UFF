@@ -162,6 +162,18 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
           </button>
 
           <button
+            id="tab-chefias"
+            onClick={() => setActiveTab('chefias')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'chefias'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            👥 Chefias da UFF
+          </button>
+
+          <button
             id="tab-ia-parser"
             onClick={() => setActiveTab('ia-parser')}
             className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${

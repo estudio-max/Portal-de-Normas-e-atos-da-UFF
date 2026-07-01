@@ -36,6 +36,7 @@ if ($path !== '') {
 switch ($recurso) {
     case 'stats':   stats($pdo); break;
     case 'filtros': filtros($pdo); break;
+    case 'chefias': chefias($pdo); break;
     case 'ato':     ficha($pdo, $id); break;
     case 'atos':
     default:        listar($pdo); break;
@@ -220,5 +221,75 @@ function filtros(PDO $pdo): void {
         'tipos'  => array_column($pdo->query("SELECT DISTINCT tipo FROM atos ORDER BY tipo")->fetchAll(), 'tipo'),
         'orgaos' => array_column($pdo->query("SELECT DISTINCT sigla FROM atos WHERE sigla<>'' ORDER BY sigla")->fetchAll(), 'sigla'),
         'anos'   => array_map('intval', array_column($pdo->query("SELECT DISTINCT ano FROM atos WHERE ano IS NOT NULL ORDER BY ano DESC")->fetchAll(), 'ano')),
+    ]);
+}
+
+// ---- CHEFIAS (titular atual por unidade + cargo) -------------------------
+// Projeção temporal: para cada (cargo, unidade), vale a designação MAIS
+// RECENTE não substituída. Se o evento mais novo da posição é uma dispensa,
+// a posição fica vaga (não listada). Tudo rastreável ao ato de origem.
+function chefias(PDO $pdo): void {
+    // a tabela pode não existir ainda (base antiga) — responde vazio nesse caso.
+    try {
+        $existe = $pdo->query("SHOW TABLES LIKE 'ato_funcoes'")->fetch();
+    } catch (Throwable $e) { $existe = false; }
+    if (!$existe) { responder_json(['total' => 0, 'atualizadoEm' => date('Y-m-d'), 'chefias' => []]); }
+
+    $rows = $pdo->query("
+        SELECT f.cargo, f.unidade, f.unidade_chave, f.siape,
+               COALESCE(NULLIF(f.nome,''), s.nome) AS nome,
+               a.id AS ato_id, a.data_ato, a.tipo, a.numero, a.ano, a.link_boletim
+        FROM ato_funcoes f
+        JOIN atos a ON a.id = f.ato_id
+        LEFT JOIN ato_siapes s ON s.ato_id = f.ato_id AND s.siape = f.siape
+        JOIN (
+            SELECT f2.unidade_chave, f2.cargo, MAX(a2.data_ato) AS dmax
+            FROM ato_funcoes f2 JOIN atos a2 ON a2.id = f2.ato_id
+            WHERE a2.data_ato IS NOT NULL
+            GROUP BY f2.unidade_chave, f2.cargo
+        ) u ON u.unidade_chave = f.unidade_chave AND u.cargo = f.cargo AND a.data_ato = u.dmax
+        WHERE f.acao = 'designar'
+        ORDER BY f.unidade, f.cargo, a.id DESC
+    ")->fetchAll();
+
+    // dedupe por (unidade_chave|cargo): trata empate de data (ex.: boletim
+    // retificado repete a designação na mesma data) ficando com o ato mais novo.
+    $vistos = [];
+    $chefias = [];
+    foreach ($rows as $r) {
+        $k = $r['unidade_chave'] . '|' . mb_strtolower($r['cargo']);
+        if (isset($vistos[$k])) continue;
+        $vistos[$k] = true;
+        $chefias[] = [
+            'cargo' => $r['cargo'],
+            'unidade' => $r['unidade'],
+            'nome' => $r['nome'],
+            'siape' => $r['siape'],
+            'desde' => $r['data_ato'],
+            'atoId' => $r['ato_id'],
+            'atoLabel' => trim("{$r['tipo']} nº {$r['numero']}/{$r['ano']}"),
+            'linkBoletim' => $r['link_boletim'],
+        ];
+    }
+
+    // Deduplica por SIAPE: a mesma pessoa não pode ocupar dois cargos ao mesmo tempo.
+    // Ordena por data desc → fica com a designação mais recente; descarta as antigas.
+    usort($chefias, fn($a, $b) => strcmp($b['desde'] ?? '', $a['desde'] ?? ''));
+    $vistosSiape = [];
+    $chefiasFiltradas = [];
+    foreach ($chefias as $c) {
+        $s = $c['siape'] ?? '';
+        if ($s === '' || !isset($vistosSiape[$s])) {
+            if ($s !== '') $vistosSiape[$s] = true;
+            $chefiasFiltradas[] = $c;
+        }
+    }
+    usort($chefiasFiltradas, fn($a, $b) => strcmp($a['unidade'] ?? '', $b['unidade'] ?? ''));
+    $chefias = $chefiasFiltradas;
+
+    responder_json([
+        'total' => count($chefias),
+        'atualizadoEm' => date('Y-m-d'),
+        'chefias' => $chefias,
     ]);
 }

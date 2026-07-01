@@ -103,10 +103,36 @@ _BLOCK_NOME = set((
     "secretarios tecnicos analistas assistentes servidores substitutos assuntos educacionais "
     "educacional gerais administrativos administrativa academicos academica financeiros "
     "institucional institucionais setor nucleo gerencia assessoria pessoal ensino pesquisa "
-    "extensao graduacao licenca afastamento concessao capacitacao"
+    "extensao graduacao licenca afastamento concessao capacitacao "
+    # cargos/ocupações — evita capturar o cargo no lugar do nome ("Auxiliar de
+    # Enfermagem", "Produtor Cultural"). Só termos que NÃO servem de sobrenome.
+    "auxiliar auxiliares enfermeiro enfermeira enfermagem medico medica odontologo odontologa "
+    "dentista cirurgiao psicologo psicologa nutricionista farmaceutico farmaceutica bioquimico "
+    "fisioterapeuta fonoaudiologo biologo biomedico veterinario zootecnista engenheiro engenheira "
+    "arquiteto arquiteta quimico geologo estatistico economista contador contadora administrador "
+    "administradora administrativo bibliotecario bibliotecaria documentalista arquivista museologo "
+    "jornalista publicitario tradutor tradutora revisor revisora programador programadora operador "
+    "operadora motorista telefonista recepcionista almoxarife vigilante porteiro copeiro cozinheiro "
+    "cozinheira servente jardineiro eletricista mecanico soldador torneiro marceneiro desenhista "
+    "fotografo diagramador instrumentador produtor produtora cultural social sociologo historiador "
+    "pedagogo pedagoga artifice contabilidade laboratorio laboratorista "
+    # áreas/departamentos e especialidades — em tabelas de colegiado o nome do
+    # departamento antecede o nome da pessoa ("Psicologia João Batista..."). Só
+    # termos que não servem de sobrenome.
+    "sociologia antropologia geografia historia filosofia psicologia pedagogia letras linguistica "
+    "comunicacao jornalismo economia administracao direito arquitetura engenharia matematica fisica "
+    "quimica biologia geologia computacao informatica ciencia ciencias politica politicas sociais "
+    "humanas naturais exatas biologicas medicina odontologia farmacia nutricao fisioterapia "
+    "fonoaudiologia veterinaria cirurgia clinica pediatria ginecologia obstetricia cardiologia "
+    "neurologia ortopedia radiologia anestesiologia dermatologia oftalmologia urologia patologia "
+    "psiquiatria geriatria traumatologia bucomaxilofacial bucomaxilofaciais buco maxilo facial geral"
 ).split())
 _PALAVRA_NOME = r"(?:[A-ZÀ-Ú][a-zà-ú]+|[A-ZÀ-Ú]{2,})"
 NOME_RE = re.compile(r"%s(?:\s+(?:de|da|do|das|dos|e|%s)){1,6}" % (_PALAVRA_NOME, _PALAVRA_NOME))
+# Nomes em portaria de designação aparecem em CAIXA ALTA; cargos/títulos em title-case.
+# NOME_CAPS_RE só casa sequências totalmente em maiúsculas (prioridade em nome_antes_siape).
+_PALAVRA_CAPS = r"[A-ZÀ-Ú]{2,}"
+NOME_CAPS_RE = re.compile(r"%s(?:\s+(?:de|da|do|das|dos|e|%s)){1,6}" % (_PALAVRA_CAPS, _PALAVRA_CAPS))
 
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
@@ -296,7 +322,7 @@ ACRONIMOS = {"Dts": "DTS", "Rdd": "RDD", "In": "IN", "Ns": "NS", "Os": "OS",
 def monta_ref(rm):
     tipo = limpar(rm.group("tipo")).title()
     tipo = ACRONIMOS.get(tipo, tipo)
-    orgao = re.sub(r"\s+", " ", limpar(rm.group("orgao") or "")).strip(" /.,")
+    orgao = re.sub(r"\s+", " ", limpar(rm.group("orgao") or "")).strip(" /.,-()")
     num = limpar(rm.group("numero"))
     if not re.search(r"\d", num):
         return ""
@@ -347,7 +373,7 @@ def parse_pdf(caminho):
 
         tipo = limpar(m.group("tipo"))
         orgao = limpar(m.group("orgao") or "")
-        orgao = re.sub(r"\s+", " ", orgao).strip(" /.,")
+        orgao = re.sub(r"\s+", " ", orgao).strip(" /.,-()")
         numero = limpar(m.group("numero"))
         data_ato = data_iso(m.group("dia"), m.group("mes"), m.group("ano"))
         ano_ato = m.group("ano")
@@ -377,8 +403,8 @@ def parse_pdf(caminho):
             if sp:
                 sei_doc = sp.group(1)
 
-        # ID do órgão/sigla "limpo" (sem /UFF)
-        sigla = orgao.replace("/UFF", "").replace("UFF", "").strip(" /")
+        # ID do órgão/sigla "limpo": tira traço/CONJUNTA/conector inicial e /UFF
+        sigla = limpa_sigla(orgao)
 
         relacoes = detecta_relacoes(ementa, corpo, sigla, numero)
 
@@ -418,6 +444,7 @@ def parse_pdf(caminho):
             "cita": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] == "CITA"),
             "siapes": siapes,
             "pessoas": extrai_pessoas(trecho),
+            "funcoes": extrai_funcoes(trecho),
             "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
@@ -490,6 +517,40 @@ def _fold(s):
                    if unicodedata.category(c) != "Mn").lower()
 
 
+# Conectores "de/do/da" que precedem a sigla no título ("... DO RCM/RIC Nº").
+_CONECT_SIGLA = {"do", "da", "de", "dos", "das"}
+
+
+def limpa_sigla(orgao):
+    """Normaliza a sigla do órgão emissor capturada no título do ato.
+
+    O título traz separadores e qualificadores que NÃO fazem parte da sigla:
+    um traço solto ("DETERMINAÇÃO DE SERVIÇO - DAP/UFF"), o qualificador
+    "CONJUNTA" ("PORTARIA CONJUNTA PROPLAN/DCF") ou um conector inicial
+    ("... DO RCM/RIC"). Também remove o "/UFF". Ex.:
+      "- DAP/UFF"            -> "DAP"
+      "CONJUNTA PROPLAN/DCF" -> "PROPLAN/DCF"
+      "DO FFE / ISNF"        -> "FFE/ISNF"
+    """
+    s = orgao or ""
+    s = re.sub(r"[–—]", "-", s)                      # unifica traços
+    s = re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"(?i)/?\s*\bUFF\b", "", s)           # tira "/UFF" ou "UFF" solto
+    # remove "CONJUNTA" e conectores iniciais (repete até estabilizar)
+    mudou = True
+    while mudou:
+        mudou = False
+        s = s.strip(" /.,-()")
+        mc = re.match(r"(?i)CONJUNTA\b\s*", s)
+        if mc:
+            s = s[mc.end():]; mudou = True; continue
+        mp = re.match(r"([A-Za-zÀ-ú]+)\b\s*", s)
+        if mp and _fold(mp.group(1)) in _CONECT_SIGLA:
+            s = s[mp.end():]; mudou = True
+    s = re.sub(r"\s*/\s*", "/", s)                   # "FFE / ISNF" -> "FFE/ISNF"
+    return s.strip(" /.,-()")
+
+
 def _titlecase_nome(s):
     return " ".join(w.lower() if _fold(w) in _CONNECT else (w[:1].upper() + w[1:].lower())
                     for w in s.split())
@@ -508,6 +569,12 @@ def _limpa_nome(run):
 def nome_antes_siape(texto, pos):
     """Nome mais próximo ANTES da matrícula (posição pos), pulando cargos/verbos."""
     janela = texto[max(0, pos - 170): pos]
+    # Portaria padrão: nomes em CAIXA ALTA, cargos/ocupação em title-case.
+    # Tenta primeiro sequências totalmente em maiúsculas para evitar capturar o cargo.
+    for m in reversed(list(NOME_CAPS_RE.finditer(janela))):
+        nome = _limpa_nome(m.group(0))
+        if nome:
+            return nome
     for m in reversed(list(NOME_RE.finditer(janela))):
         nome = _limpa_nome(m.group(0))
         if nome:
@@ -525,6 +592,155 @@ def extrai_pessoas(trecho):
         vistos.add(s)
         pessoas.append({"nome": nome_antes_siape(trecho, m.start()), "siape": s})
     return pessoas
+
+
+# ===========================================================================
+#  CHEFIAS — designações/dispensas de função (Chefe, Coordenador, Diretor...)
+#  Extrai só do DISPOSITIVO ("...função de Chefe do Departamento X..."), que é
+#  a fonte autoritativa. Cada evento vira uma linha rastreável a um ato; a
+#  projeção do "titular atual" (último não substituído) é feita no servidor.
+# ===========================================================================
+_MINUSC = {"de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "a", "o",
+           "ao", "aos", "com", "para", "por", "sob", "sem", "entre", "sobre"}
+
+_PFX_CARGO = r"(?:Vice[-\s]?|Sub[-\s]?)?"
+_NUC_CARGO = (r"(?:Chefes?|Coordenador[ae]?(?:es)?|Diretor[ae]?(?:es)?|Superintendentes?|"
+              r"Gerentes?|Decan[oa]s?|Pr[óo][-\s]?Reitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)")
+_CARGO_G = r"(?P<cargo>%s%s)" % (_PFX_CARGO, _NUC_CARGO)
+_CONECT_CU = r"(?:d[oae]s?|d')"
+
+# Gatilho do dispositivo. Cobre "função de", "função gratificada de",
+# "cargo de", "cargo de direção de", "exercício do cargo de"... (toda chefia
+# é função gratificada/CD, então a qualificação pode aparecer no meio).
+_TRIG_FUNC = (r"(?P<prep>d[ao]s?|para\s+(?:as?|os?)|pel[ao]|a|as|o|os)\s+"
+              r"(?:exerc[íi]cio\s+d[ao]\s+)?"
+              r"(?:fun[çc](?:[ãa]o|[õo]es)|cargo)\s+"
+              r"(?:(?:gratificad|comissionad)[ao]s?\s+|de\s+confian[çc]a\s+|em\s+comiss[ãa]o\s+)?"
+              r"de\s+(?:dire[çc][ãa]o\s+de\s+)?")
+FUNCAO_RE = re.compile(
+    _TRIG_FUNC + _CARGO_G + r"\s+" + _CONECT_CU + r"\s+"
+    r"(?P<unidade>[A-ZÀ-Úa-zà-ú(][^;:.]{2,90}?)"
+    r"(?=\s*(?:,|;|\.|:|\bc[óo]digo\b|\bc[óo]d\b|\bs[íi]mbolo\b|\bFG[- ]?\d|\bCD[- ]?\d|"
+    r"\bFCC\b|\bFUC\b|\bn[ºo°]|\ba partir\b|\bpelo per|\bno per[íi]odo\b|\bcom valid|"
+    r"\bem substitui|\bda Universidade\b|/UFF|\bem virtude\b|\bdurante\b|$))", re.I)
+
+_TIPO_SO_UNID = {"curso", "departamento", "programa", "instituto", "faculdade", "escola",
+                 "divisao", "secao", "setor", "nucleo", "coordenacao", "coordenadoria",
+                 "diretoria", "gerencia", "reitoria", "unidade", "polo", "colegiado"}
+_VERBO_FUNC = re.compile(r"design|dispens|exoner|destitu")
+_SUBST_FUNC = re.compile(r"(?i)substitut|eventual|pro\s*tempore|respond|interin|exerc[íi]cio eventual")
+_ANAFORA_UNID = re.compile(r"\b(referid|mesm|respectiv|citad|aludid|supracitad|present|seguinte|propri)")
+
+
+def canon_cargo(c):
+    """Normaliza a grafia do cargo, preservando Vice-/Sub."""
+    low = _fold(c)
+    pref = ""
+    m = re.match(r"(vice|sub)[-\s]?", low)
+    if m:
+        pref = "Vice-" if m.group(1) == "vice" else "Sub"
+        low = low[m.end():]
+    if "reitor" in low:        base = "Pró-Reitor" if "pro" in _fold(c) else "Reitor"
+    elif "superintend" in low: base = "Superintendente"
+    elif "coordena" in low:    base = "Coordenador"
+    elif "chef" in low:        base = "Chefe"
+    elif "dire" in low:        base = "Diretor"
+    elif "geren" in low:       base = "Gerente"
+    elif "decan" in low:       base = "Decano"
+    else:                      base = c.title()
+    return ("Sub" + base.lower()) if pref == "Sub" else (pref + base)
+
+
+def _titulo_unidade(u):
+    """Title-case da unidade: conectores minúsculos, siglas curtas preservadas."""
+    u = re.sub(r"\s+", " ", u).strip()
+    saida = []
+    for w in u.split(" "):
+        sub = []
+        for part in w.split("-"):
+            if not part:
+                sub.append(part); continue
+            f = _fold(part)
+            if f in _MINUSC and saida:
+                sub.append(part.lower())
+            elif part.isupper() and len(part) <= 6 and not re.search(r"[À-Ú]", part):
+                sub.append(part)
+            else:
+                sub.append(part[:1].upper() + part[1:].lower())
+        saida.append("-".join(sub))
+    return " ".join(saida)
+
+
+def _limpa_unid(u):
+    u = unicodedata.normalize("NFKC", u)                      # desfaz ligaduras (ﬁ->fi)
+    u = re.sub(r"\s+", " ", u).strip(" /.,-–·()")
+    u = re.sub(r"(?i)\s+d[aoe]st?[ae]?\s+Universidade.*$", "", u)
+    u = re.sub(r"(?i)\s+d[ao]\s+UFF\b.*$", "", u)
+    u = re.sub(r"\s*\([^)]*$", "", u)                         # parêntese aberto no fim
+    u = re.sub(r"(?i)\b(\w+)(\s+\1\b)+", r"\1", u)            # colapsa palavra repetida (em em)
+    return u.strip(" /.,-–·")
+
+
+def _unid_ok(u):
+    f = _fold(u)
+    return len(f) >= 4 and f not in _TIPO_SO_UNID and not _ANAFORA_UNID.search(f)
+
+
+def chave_unidade(u):
+    """Chave estável p/ casar a mesma unidade escrita de formas diferentes."""
+    f = _fold(unicodedata.normalize("NFKC", u))
+    f = re.sub(r"[\-–]\s*[a-z]{2,6}$", "", f)                 # sigla final "- gcm"
+    f = re.sub(r"\([a-z0-9/]{2,8}\)", "", f)                  # sigla "(pch)"
+    f = re.sub(r"\bpos\s*-?\s*graduacao\b", "posgraduacao", f)
+    f = re.sub(r"[^a-z0-9]+", " ", f)
+    return re.sub(r"\s+", " ", f).strip()
+
+
+def _acao_func(trecho, pos, prep):
+    jan = _fold(trecho[max(0, pos - 300):pos])
+    last = None
+    for mm in _VERBO_FUNC.finditer(jan):
+        last = mm.group(0)
+    if last in ("dispens", "exoner", "destitu"):
+        return "dispensar"
+    if last == "design":
+        return "designar"
+    return "dispensar" if re.match(r"d[ao]s?$", _fold(prep).strip()) else "designar"
+
+
+def _pessoa_antes(trecho, pos):
+    achou = None
+    for m in SIAPE_RE.finditer(trecho[:pos]):
+        achou = m
+    if achou and pos - achou.start() < 220:
+        return achou.group(1), nome_antes_siape(trecho, achou.start())
+    return "", nome_antes_siape(trecho, pos)
+
+
+def extrai_funcoes(trecho):
+    """[{acao, cargo, unidade, unidade_chave, nome, siape}] — designações/dispensas
+    de chefia/coordenação/direção citadas no dispositivo. Sempre exige SIAPE."""
+    ev, vistos = [], set()
+    for m in FUNCAO_RE.finditer(trecho):
+        if _SUBST_FUNC.search(trecho[max(0, m.start() - 50):m.start("cargo")]):
+            continue
+        unid = _limpa_unid(m.group("unidade"))
+        if not _unid_ok(unid):
+            continue
+        siape, nome = _pessoa_antes(trecho, m.start("cargo"))
+        if not siape:
+            continue
+        if nome and _fold(nome) in _fold(unid):              # nome-lixo da própria unidade
+            nome = ""
+        cargo = canon_cargo(m.group("cargo"))
+        chave = chave_unidade(unid)
+        k = (_acao_func(trecho, m.start(), m.group("prep")), cargo.lower(), chave, siape)
+        if k in vistos:
+            continue
+        vistos.add(k)
+        ev.append({"acao": k[0], "cargo": cargo, "unidade": _titulo_unidade(unid),
+                   "unidade_chave": chave, "nome": nome, "siape": siape})
+    return ev
 
 
 # --------------------------------------------------------------------------- #

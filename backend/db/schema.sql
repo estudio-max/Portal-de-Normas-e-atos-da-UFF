@@ -10,6 +10,7 @@ SET foreign_key_checks = 0;
 -- ---------------------------------------------------------------------------
 -- Boletins de Serviço (1 linha por edição)
 -- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS `ato_funcoes`;
 DROP TABLE IF EXISTS `ato_tags`;
 DROP TABLE IF EXISTS `ato_relacoes`;
 DROP TABLE IF EXISTS `ato_siapes`;
@@ -99,6 +100,27 @@ CREATE TABLE `ato_siapes` (
   UNIQUE KEY `uq_ato_siape` (`ato_id`, `siape`),
   KEY `ix_siape` (`siape`),
   CONSTRAINT `fk_siape_ato` FOREIGN KEY (`ato_id`)
+    REFERENCES `atos`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Chefias: designações/dispensas de função (Chefe, Coordenador, Diretor...).
+-- 1 linha por evento (rastreável ao ato). O "titular atual" por unidade+cargo
+-- é projetado na consulta (designação mais recente não substituída).
+-- ---------------------------------------------------------------------------
+CREATE TABLE `ato_funcoes` (
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ato_id`        VARCHAR(191) NOT NULL,
+  `acao`          ENUM('designar','dispensar') NOT NULL,
+  `cargo`         VARCHAR(40)  NOT NULL,          -- Chefe, Coordenador, Diretor, Vice-...
+  `unidade`       VARCHAR(180) NOT NULL,          -- rótulo para exibição
+  `unidade_chave` VARCHAR(180) NOT NULL,          -- chave normalizada (casa a mesma unidade)
+  `siape`         VARCHAR(10)  NULL,
+  `nome`          VARCHAR(120) NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_chave` (`unidade_chave`, `cargo`),
+  KEY `ix_ato`   (`ato_id`),
+  CONSTRAINT `fk_func_ato` FOREIGN KEY (`ato_id`)
     REFERENCES `atos`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
