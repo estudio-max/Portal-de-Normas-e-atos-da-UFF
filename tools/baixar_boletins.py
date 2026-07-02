@@ -74,6 +74,10 @@ def baixar(url, destino, tentativas=4):
             with urllib.request.urlopen(req, context=ctx, timeout=180) as r, \
                  open(tmp, "wb") as f:
                 f.write(r.read())
+            # resposta 200 com corpo vazio/truncado (raro, mas já aconteceu com
+            # a UFF) não é sucesso — um PDF de verdade nunca tem <1KB.
+            if os.path.getsize(tmp) < 1024:
+                raise OSError(f"download suspeito de {os.path.getsize(tmp)} bytes (esperado PDF)")
             os.replace(tmp, destino)
             return
         except Exception as e:

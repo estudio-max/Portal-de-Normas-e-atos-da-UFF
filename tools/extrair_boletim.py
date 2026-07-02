@@ -1085,12 +1085,22 @@ def main():
 
     todos = []
     metas = []
+    falhas = []
     for caminho in arquivos:
         print(f"Lendo {os.path.basename(caminho)} ...", flush=True)
-        atos, meta = parse_pdf(caminho)
+        # Um PDF corrompido/vazio (download truncado pela UFF) não pode
+        # derrubar o lote inteiro — pula só esse arquivo e segue os demais.
+        try:
+            atos, meta = parse_pdf(caminho)
+        except Exception as e:
+            print(f"   AVISO: pulando {os.path.basename(caminho)} (erro ao ler: {e})")
+            falhas.append(os.path.basename(caminho))
+            continue
         print(f"   -> {len(atos)} atos | BS {meta['bs_numero']} de {meta['bs_data']}")
         todos.extend(atos)
         metas.append(meta)
+    if falhas:
+        print(f"\n{len(falhas)} PDF(s) pulado(s) por erro de leitura: {', '.join(falhas)}")
 
     os.makedirs(args.saida, exist_ok=True)
     salvar_csv(todos, os.path.join(args.saida, "atos.csv"))

@@ -51,7 +51,18 @@ jobs:
 
             mkdir -p boletins_$ano
 
+            # exit 2 = download incompleto (ex.: link 404 removido pela UFF em
+            # anos antigos) — NÃO derruba o bloco inteiro; segue com o que
+            # baixou. Só um exit code diferente (erro real) interrompe o job.
+            set +e
             python tools/baixar_boletins.py --ano $ano --pasta boletins_$ano
+            rc=$?
+            set -e
+            if [ $rc -ne 0 ] && [ $rc -ne 2 ]; then
+              echo "::error::baixar_boletins.py falhou (exit $rc) p/ $ano"
+              exit $rc
+            fi
+            [ $rc -eq 2 ] && echo "::warning::Download incompleto p/ $ano (alguns PDFs sumiram do site da UFF) — indexando o que baixou."
 
             python tools/extrair_boletim.py \
               --pasta boletins_$ano --saida out_$ano --sem-app
