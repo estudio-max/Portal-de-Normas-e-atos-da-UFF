@@ -32,6 +32,21 @@ $pdo = conectar($cfg);
 if (!$pdo->query("SHOW COLUMNS FROM ato_siapes LIKE 'nome'")->fetch()) {
     $pdo->exec("ALTER TABLE ato_siapes ADD COLUMN nome VARCHAR(120) NULL AFTER siape");
 }
+// Garante a coluna 'ementa_inferida' em atos (1 = ementa é resumo automático).
+if (!$pdo->query("SHOW COLUMNS FROM atos LIKE 'ementa_inferida'")->fetch()) {
+    $pdo->exec("ALTER TABLE atos ADD COLUMN ementa_inferida TINYINT(1) NOT NULL DEFAULT 0 AFTER ementa");
+}
+// Garante a tabela de chefias (mesma DDL do gerar_sql.py; bases antigas não a têm).
+$pdo->exec("CREATE TABLE IF NOT EXISTS ato_funcoes (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ato_id VARCHAR(191) NOT NULL,
+    acao ENUM('designar','dispensar') NOT NULL,
+    cargo VARCHAR(40) NOT NULL,
+    unidade VARCHAR(180) NOT NULL,
+    unidade_chave VARCHAR(180) NOT NULL,
+    siape VARCHAR(10) NULL, nome VARCHAR(120) NULL,
+    PRIMARY KEY (id), KEY ix_chave (unidade_chave, cargo), KEY ix_ato (ato_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 // 1) Carrega o JSON (arquivo local no CLI, senão a URL configurada)
 $origem = ($cli && isset($argv[1])) ? $argv[1] : ($cfg['fonte_json'] ?? '');
@@ -47,13 +62,14 @@ try {
     $boletins = [];
     $upAto = $pdo->prepare(
         "INSERT INTO atos (id,boletim_id,tipo,sigla,numero,ano,data_ato,identificador,
-            tipo_acao,ementa,conteudo_resumido,signatario,status,processo_sei,sei_documento,
+            tipo_acao,ementa,ementa_inferida,conteudo_resumido,signatario,status,processo_sei,sei_documento,
             link_sei_processo,link_sei_documento,link_boletim,secao,pagina)
-         VALUES (:id,:bol,:tipo,:sigla,:numero,:ano,:data,:ident,:acao,:ementa,:resumo,:sign,
+         VALUES (:id,:bol,:tipo,:sigla,:numero,:ano,:data,:ident,:acao,:ementa,:einf,:resumo,:sign,
             :status,:proc,:seidoc,:lproc,:ldoc,:lbol,:secao,:pagina)
          ON DUPLICATE KEY UPDATE boletim_id=VALUES(boletim_id),tipo=VALUES(tipo),sigla=VALUES(sigla),
             numero=VALUES(numero),ano=VALUES(ano),data_ato=VALUES(data_ato),identificador=VALUES(identificador),
-            tipo_acao=VALUES(tipo_acao),ementa=VALUES(ementa),conteudo_resumido=VALUES(conteudo_resumido),
+            tipo_acao=VALUES(tipo_acao),ementa=VALUES(ementa),ementa_inferida=VALUES(ementa_inferida),
+            conteudo_resumido=VALUES(conteudo_resumido),
             signatario=VALUES(signatario),status=VALUES(status),processo_sei=VALUES(processo_sei),
             sei_documento=VALUES(sei_documento),link_sei_processo=VALUES(link_sei_processo),
             link_sei_documento=VALUES(link_sei_documento),link_boletim=VALUES(link_boletim),
@@ -67,6 +83,9 @@ try {
     $delRel = $pdo->prepare("DELETE FROM ato_relacoes WHERE ato_id=:id");
     $insRel = $pdo->prepare("INSERT INTO ato_relacoes (ato_id,tipo_relacao,ato_destino_texto,detalhes)
                              VALUES (:id,:tr,:dest,:det)");
+    $delFunc = $pdo->prepare("DELETE FROM ato_funcoes WHERE ato_id=:id");
+    $insFunc = $pdo->prepare("INSERT INTO ato_funcoes (ato_id,acao,cargo,unidade,unidade_chave,siape,nome)
+                              VALUES (:id,:ac,:ca,:un,:uk,:si,:no)");
 
     foreach ($dados as $a) {
         $bid = boletim_id($pdo, $boletins, $a);
@@ -74,7 +93,8 @@ try {
             ':id' => $a['id'], ':bol' => $bid, ':tipo' => $a['tipoAto'] ?? '', ':sigla' => $a['sigla'] ?? ($a['orgaoEmissor'] ?? ''),
             ':numero' => $a['numero'] ?? '', ':ano' => intval($a['ano'] ?? 0) ?: null,
             ':data' => valida_data($a['dataAssinatura'] ?? ''), ':ident' => $a['identificador'] ?? null,
-            ':acao' => $a['tipoAcao'] ?? null, ':ementa' => $a['ementa'] ?? '', ':resumo' => $a['conteudoResumido'] ?? '',
+            ':acao' => $a['tipoAcao'] ?? null, ':ementa' => $a['ementa'] ?? '',
+            ':einf' => !empty($a['ementaInferida']) ? 1 : 0, ':resumo' => $a['conteudoResumido'] ?? '',
             ':sign' => $a['signatario'] ?? null, ':status' => in_array($a['status'] ?? '', ['Ativo','Alterado','Revogado']) ? $a['status'] : 'Ativo',
             ':proc' => $a['processoSei'] ?? null, ':seidoc' => $a['seiDocumento'] ?? null,
             ':lproc' => $a['linkSeiProcesso'] ?? null, ':ldoc' => $a['linkSeiDocumento'] ?? null,
@@ -97,6 +117,15 @@ try {
         foreach (($a['relacoes'] ?? []) as $r) {
             $insRel->execute([':id' => $a['id'], ':tr' => $r['tipoRelacao'] ?? '',
                 ':dest' => $r['atoDestino'] ?? '', ':det' => $r['detalhes'] ?? null]);
+        }
+        // Chefias: eventos de designação/dispensa do dispositivo (aba Chefias).
+        $delFunc->execute([':id' => $a['id']]);
+        foreach (($a['funcoes'] ?? []) as $fz) {
+            $acao = ($fz['acao'] ?? '') === 'dispensar' ? 'dispensar' : 'designar';
+            $insFunc->execute([':id' => $a['id'], ':ac' => $acao,
+                ':ca' => $fz['cargo'] ?? '', ':un' => $fz['unidade'] ?? '',
+                ':uk' => $fz['unidade_chave'] ?? '', ':si' => $fz['siape'] ?? null,
+                ':no' => $fz['nome'] ?? null]);
         }
     }
 
