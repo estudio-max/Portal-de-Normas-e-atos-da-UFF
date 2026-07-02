@@ -61,33 +61,43 @@ TIPOS = [
 # Regex alternativa de tipos (mais longos primeiro p/ casar o mais específico)
 TIPOS_RE = "|".join(re.escape(t) for t in sorted(TIPOS, key=len, reverse=True))
 
+# Abreviação de "número" no texto do BS: "Nº", "N°", "No", "N.º" ou "Nº.". A
+# ORDEM varia entre boletins/anos — muitos usam PONTO ANTES do símbolo º
+# ("PORTARIA N.º 54.919"), não depois. Um regex "[ºo°]?\.?" só aceita a ordem
+# símbolo-depois-ponto e por isso IGNORAVA por completo títulos assim, jogando
+# o ato inteiro (e suas pessoas/SIAPEs) dentro do trecho do ato vizinho que
+# por acaso casou (bug real: Portaria 55.002/2015 "herdou" 71 SIAPEs de outras
+# portarias do mesmo boletim). Aceita qualquer ordem/repetição de ./º/°/o.
+_ORD = r"[.ºo°]{0,3}"
+
 # Título de um ato. Ex.:
 #   DETERMINAÇÃO DE SERVIÇO COLUNI/UFF Nº. 20, DE 12 DE JUNHO DE 2026
 #   PORTARIA Nº 1004, DE 10 DE JUNHO DE 2026
 #   RESOLUÇÃO CEPEX/UFF Nº 004 AR, DE 10 DE JUNHO DE 2026
+#   PORTARIA N.º 54.919 de 11 de novembro de 2015
 TITULO_RE = re.compile(
     r"(?P<tipo>%s)\s+"
     r"(?P<orgao>[A-ZÀ-Ú0-9/().\- ]{0,40}?)?\s*"
-    r"N[ºo°]?\.?\s*(?P<numero>[\d\.]+(?:\s*[A-Z]{1,4})?)\s*,?\s*"
+    r"N%s\s*(?P<numero>[\d\.]+(?:\s*[A-Z]{1,4})?)\s*,?\s*"
     # Conectores de data podem vir minúsculos: as portarias da Reitoria (SIGA-EX)
     # saem como "Nº 68.884 de 4 de fevereiro de 2026". O TIPO continua exigido em
     # MAIÚSCULO, então citações minúsculas no corpo ("portaria nº 8858, de ...")
     # NÃO viram falso título.
     r"[Dd][Ee]\s+(?P<dia>\d{1,2})\s+[Dd][Ee]\s+(?P<mes>[A-Za-zçÇãÃéíóúâêôõ]+)\s+[Dd][Ee]\s+(?P<ano>\d{4})"
-    % TIPOS_RE
+    % (TIPOS_RE, _ORD)
 )
 
 # Processo SEI: 23069.166342/2026-40  (aceita espaços no lugar de . / -)
 PROC_RE = re.compile(r"23069[.\s]\d{6}[/\s]\d{4}[-\s]\d{2}")
 # Código verificador SEI: "SEI nº 3441183"  ou  "(3442574)"
-SEI_DOC_RE = re.compile(r"SEI\s*n[ºo°]?\.?\s*(\d{6,8})")
+SEI_DOC_RE = re.compile(r"SEI\s*n%s\s*(\d{6,8})" % _ORD)
 SEI_DOC_PAREN_RE = re.compile(r"\((\d{6,8})\)")
 
 # Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493".
 # Consome também a abreviação de "Matrícula" colada/pontuada ("Mat. SIAPE 123",
 # "MATSIAPE 123") — senão o "MAT" era absorvido como sobrenome ("...SANTOS MAT").
 SIAPE_RE = re.compile(
-    r"(?:\b(?:matr[íi]cula|mat)\.?\s*)?(?:SIAPE|Siape)[:\s]*n?[ºo°]?\.?\s*(\d{6,7})", re.I)
+    r"(?:\b(?:matr[íi]cula|mat)\.?\s*)?(?:SIAPE|Siape)[:\s]*n?%s\s*(\d{6,7})" % _ORD, re.I)
 
 # Nome da pessoa citada, ancorado na matrícula SIAPE que aparece logo depois.
 # _CONNECT: conectores que ficam minúsculos no nome ("de", "da", ...).
@@ -154,7 +164,7 @@ NOME_CAPS_RE = re.compile(r"%s(?:\s+(?:%s|%s)){1,6}" % (_PALAVRA_CAPS, _CONN, _P
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
     r"UNIVERSIDADE FEDERAL FLUMINENSE.{0,5}BOLETIM DE SERVIÇO", re.I)
-ANO_NUM_RE = re.compile(r"ANO\s+([IVXLCDM]+)\s*.{0,4}\s*N[º°o]?\.?\s*(\d+)", re.I)
+ANO_NUM_RE = re.compile(r"ANO\s+([IVXLCDM]+)\s*.{0,4}\s*N%s\s*(\d+)" % _ORD, re.I)
 DATA_BS_RE = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
 SECAO_RE = re.compile(r"SEÇÃO\s+([IVX]+)\s+(?:PÁG|P)\.?\s*0?(\d+)", re.I)
 
@@ -188,10 +198,10 @@ REF_TIPOS = (r"Portaria|Resolução|Determinação de Serviço|DTS|Norma de Serv
              r"Instrução Normativa|Decisão|Edital|Ordem de Serviço|Deliberação")
 REF_RE = re.compile(
     r"(?P<tipo>(?i:%s))\s+(?P<orgao>[A-ZÀ-Ú0-9/().]{1,25}(?:\s[A-ZÀ-Ú0-9/().]{1,15}){0,3})?\s*"
-    r"n[ºo°]?\.?\s*(?P<numero>\d[\d\.]*(?:\s*[A-Z]{1,4})?)" % REF_TIPOS)
+    r"n%s\s*(?P<numero>\d[\d\.]*(?:\s*[A-Z]{1,4})?)" % (REF_TIPOS, _ORD))
 
 # Referência a outro Boletim: "publicada no BS nº 102, de 01/09/2025"
-BS_REF_RE = re.compile(r"BS\s*n[ºo°]?\.?\s*(\d+)\s*,?\s*de\s*(\d{2}/\d{2}/\d{4})", re.I)
+BS_REF_RE = re.compile(r"BS\s*n%s\s*(\d+)\s*,?\s*de\s*(\d{2}/\d{2}/\d{4})" % _ORD, re.I)
 
 
 # --------------------------------------------------------------------------- #
@@ -773,7 +783,7 @@ FUNCAO_RE = re.compile(
     _TRIG_FUNC + _CARGO_G + r"\s+" + _CONECT_CU + r"\s+"
     r"(?P<unidade>[A-ZÀ-Úa-zà-ú(][^;:.]{2,90}?)"
     r"(?=\s*(?:,|;|\.|:|\bc[óo]digo\b|\bc[óo]d\b|\bs[íi]mbolo\b|\bFG[- ]?\d|\bCD[- ]?\d|"
-    r"\bFCC\b|\bFUC\b|\bn[ºo°]|\ba partir\b|\bpelo per|\bno per[íi]odo\b|\bcom valid|"
+    r"\bFCC\b|\bFUC\b|\bn[.ºo°]|\ba partir\b|\bpelo per|\bno per[íi]odo\b|\bcom valid|"
     r"\bem substitui|\bda Universidade\b|/UFF|\bem virtude\b|\bdurante\b|$))", re.I)
 
 _TIPO_SO_UNID = {"curso", "departamento", "programa", "instituto", "faculdade", "escola",
