@@ -58,8 +58,19 @@ TIPOS = [
     "RESUMO DE DESPACHOS E DECISÕES",
     "RESUMO DE DESPACHOS",
 ]
-# Regex alternativa de tipos (mais longos primeiro p/ casar o mais específico)
+# Regex alternativa de tipos (mais longos primeiro p/ casar o mais específico).
+# Tolera o typo real da UFF "DETERMINAÇÃO DE SERIIÇO" (190-20.pdf) — 1 a 3
+# letras quaisquer entre "SER" e "ÇO"; canonizado depois em canon_tipo().
 TIPOS_RE = "|".join(re.escape(t) for t in sorted(TIPOS, key=len, reverse=True))
+TIPOS_RE += r"|DETERMINA[ÇC][ÃA]O DE SER[A-ZÀ-Ú]{1,3}[ÇC]O"
+
+
+def canon_tipo(t):
+    """Normaliza o tipo casado: caixa alta e correção de typos conhecidos."""
+    t = t.upper()
+    if t.startswith("DETERMINA") and t != "DETERMINAÇÃO DE SERVIÇO":
+        return "DETERMINAÇÃO DE SERVIÇO"
+    return t
 
 # Abreviação de "número" no texto do BS: "Nº", "N°", "No", "N.º" ou "Nº.". A
 # ORDEM varia entre boletins/anos — muitos usam PONTO ANTES do símbolo º
@@ -70,6 +81,21 @@ TIPOS_RE = "|".join(re.escape(t) for t in sorted(TIPOS, key=len, reverse=True))
 # portarias do mesmo boletim). Aceita qualquer ordem/repetição de ./º/°/o.
 _ORD = r"[.ºo°]{0,3}"
 
+# Cauda comum do título: número + data. Tolera as variações reais do BS:
+#   "Nº 052, DE 13 DE OUTUBRO DE 2020"        (padrão)
+#   "Nº 03/2020 - NITERÓI, 09 DE OUTUBRO DE 2020"  (num/ano + cidade, sem "DE" antes do dia)
+#   "N° 14 DE 13 DE OUTUBRO 2020"             (sem "DE" antes do ano — typo comum)
+_TIT_NUM_DATA = (
+    # sufixo do número ("004 AR") não pode engolir o "DE" da data
+    r"N%s\s*(?P<numero>[\d\.]+(?:\s*(?!DE\b)[A-Z]{1,4})?)(?:\s*/\s*\d{2,4})?\s*,?\s*"
+    r"(?:[-–]\s*[A-ZÀ-Ú][A-Za-zÀ-ÿ ]{1,30},?\s*)?"
+    # Conectores de data podem vir minúsculos: as portarias da Reitoria (SIGA-EX)
+    # saem como "Nº 68.884 de 4 de fevereiro de 2026". O TIPO continua exigido em
+    # MAIÚSCULO (ou ancorado no marcador SIGA, abaixo), então citações minúsculas
+    # no corpo ("portaria nº 8858, de ...") NÃO viram falso título.
+    r"(?:[Dd][Ee]\s+)?(?P<dia>\d{1,2})\s+[Dd][Ee]\s+(?P<mes>[A-Za-zçÇãÃéíóúâêôõ]+)\s+(?:[Dd][Ee]\s+)?(?P<ano>\d{4})"
+) % _ORD
+
 # Título de um ato. Ex.:
 #   DETERMINAÇÃO DE SERVIÇO COLUNI/UFF Nº. 20, DE 12 DE JUNHO DE 2026
 #   PORTARIA Nº 1004, DE 10 DE JUNHO DE 2026
@@ -78,13 +104,17 @@ _ORD = r"[.ºo°]{0,3}"
 TITULO_RE = re.compile(
     r"(?P<tipo>%s)\s+"
     r"(?P<orgao>[A-ZÀ-Ú0-9/().\- ]{0,40}?)?\s*"
-    r"N%s\s*(?P<numero>[\d\.]+(?:\s*[A-Z]{1,4})?)\s*,?\s*"
-    # Conectores de data podem vir minúsculos: as portarias da Reitoria (SIGA-EX)
-    # saem como "Nº 68.884 de 4 de fevereiro de 2026". O TIPO continua exigido em
-    # MAIÚSCULO, então citações minúsculas no corpo ("portaria nº 8858, de ...")
-    # NÃO viram falso título.
-    r"[Dd][Ee]\s+(?P<dia>\d{1,2})\s+[Dd][Ee]\s+(?P<mes>[A-Za-zçÇãÃéíóúâêôõ]+)\s+[Dd][Ee]\s+(?P<ano>\d{4})"
-    % (TIPOS_RE, _ORD)
+    % TIPOS_RE + _TIT_NUM_DATA
+)
+
+# Portarias emitidas pelo SIGA em ALGUNS anos (ex.: 2020) saem em Title Case
+# ("Portaria Nº 67.634 de 16 de outubro de 2020") — invisíveis ao TITULO_RE,
+# que exige TIPO em CAIXA ALTA. A âncora segura é o marcador de documento SIGA
+# ("UFFPOR202067634A") na linha imediatamente anterior — citações no corpo do
+# texto nunca têm esse marcador, então não há falso positivo.
+TITULO_SIGA_RE = re.compile(
+    r"UFF[A-Z]{3}\d{6,}[A-Z]?\s*\n\s*"
+    r"(?P<tipo>Portaria|PORTARIA)(?P<orgao>)\s+" + _TIT_NUM_DATA
 )
 
 # Processo SEI: 23069.166342/2026-40  (aceita espaços no lugar de . / -)
@@ -390,12 +420,19 @@ def parse_pdf(caminho):
         full += t + "\n"
 
     # Localiza todos os títulos (pulando o SUMÁRIO, onde aparecem só listas).
+    # Junta o regex principal (TIPO em CAIXA ALTA) com o das portarias SIGA em
+    # Title Case (ancoradas no marcador "UFFPOR..."), ordena por posição e
+    # descarta sobreposições (um SIGA em CAIXA ALTA casa nos dois).
+    brutos = sorted(list(TITULO_RE.finditer(full)) + list(TITULO_SIGA_RE.finditer(full)),
+                    key=lambda m: m.start())
     titulos = []
-    for m in TITULO_RE.finditer(full):
+    for m in brutos:
         # ignora ocorrências dentro do sumário (heurística: sem "RESOLVE"/"Art."
         # logo depois e com muitos títulos colados não é o caso; melhor filtrar
         # por presença do cabeçalho do BS antes). Mantemos todos e filtramos
         # quando o corpo for vazio.
+        if titulos and m.start() < titulos[-1].end():
+            continue                      # sobreposto ao título anterior
         titulos.append(m)
 
     atos = []
@@ -412,7 +449,7 @@ def parse_pdf(caminho):
         ctx = full[max(0, ini - 400): ini + 200]
         secao, pagina = contexto_secao_pagina(ctx)
 
-        tipo = limpar(m.group("tipo"))
+        tipo = canon_tipo(limpar(m.group("tipo")))
         orgao = limpar(m.group("orgao") or "")
         orgao = re.sub(r"\s+", " ", orgao).strip(" /.,-()")
         numero = limpar(m.group("numero"))
