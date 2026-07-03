@@ -78,22 +78,25 @@ def canon_tipo(t):
 # símbolo-depois-ponto e por isso IGNORAVA por completo títulos assim, jogando
 # o ato inteiro (e suas pessoas/SIAPEs) dentro do trecho do ato vizinho que
 # por acaso casou (bug real: Portaria 55.002/2015 "herdou" 71 SIAPEs de outras
-# portarias do mesmo boletim). Aceita qualquer ordem/repetição de ./º/°/o.
-_ORD = r"[.ºo°]{0,3}"
+# portarias do mesmo boletim). Aceita qualquer ordem/repetição de ./º/°/o, e
+# também "O" maiúsculo ("TEC/TCE NO 015" — "Nº" digitado/OCRizado como "NO").
+_ORD = r"[.ºo°O]{0,3}"
 
 # Cauda comum do título: número + data. Tolera as variações reais do BS:
 #   "Nº 052, DE 13 DE OUTUBRO DE 2020"        (padrão)
 #   "Nº 03/2020 - NITERÓI, 09 DE OUTUBRO DE 2020"  (num/ano + cidade, sem "DE" antes do dia)
 #   "N° 14 DE 13 DE OUTUBRO 2020"             (sem "DE" antes do ano — typo comum)
 _TIT_NUM_DATA = (
-    # sufixo do número ("004 AR") não pode engolir o "DE" da data
-    r"N%s\s*(?P<numero>[\d\.]+(?:\s*(?!DE\b)[A-Z]{1,4})?)(?:\s*/\s*\d{2,4})?\s*,?\s*"
+    # sufixo do número ("004 AR") não pode engolir o "DE" da data. O "N" do "Nº"
+    # aceita minúsculo mesmo com TIPO em caixa alta ("SERVIÇO — HUAP - nº 58").
+    r"[Nn]%s\s*(?P<numero>[\d\.]+(?:\s*(?!DE\b)[A-Z]{1,4})?)(?:\s*/\s*\d{2,4})?\s*,?\s*"
     r"(?:[-–]\s*[A-ZÀ-Ú][A-Za-zÀ-ÿ ]{1,30},?\s*)?"
     # Conectores de data podem vir minúsculos: as portarias da Reitoria (SIGA-EX)
     # saem como "Nº 68.884 de 4 de fevereiro de 2026". O TIPO continua exigido em
     # MAIÚSCULO (ou ancorado no marcador SIGA, abaixo), então citações minúsculas
     # no corpo ("portaria nº 8858, de ...") NÃO viram falso título.
-    r"(?:[Dd][Ee]\s+)?(?P<dia>\d{1,2})\s+[Dd][Ee]\s+(?P<mes>[A-Za-zçÇãÃéíóúâêôõ]+)\s+(?:[Dd][Ee]\s+)?(?P<ano>\d{4})"
+    # "de" antes do mês também pode faltar ("de 10 março de 2022").
+    r"(?:[Dd][Ee]\s+)?(?P<dia>\d{1,2})\s+(?:[Dd][Ee]\s+)?(?P<mes>[A-Za-zçÇãÃéíóúâêôõ]+)\s+(?:[Dd][Ee]\s+)?(?P<ano>\d{4})"
 ) % _ORD
 
 # Título de um ato. Ex.:
@@ -101,9 +104,11 @@ _TIT_NUM_DATA = (
 #   PORTARIA Nº 1004, DE 10 DE JUNHO DE 2026
 #   RESOLUÇÃO CEPEX/UFF Nº 004 AR, DE 10 DE JUNHO DE 2026
 #   PORTARIA N.º 54.919 de 11 de novembro de 2015
+#   DETERMINAÇÃO DE SERVIÇO DDRH, Nº. 068 de 20 de julho de 2010  (vírgula antes do Nº)
+#   DETERMINAÇÃO DE SERVIÇO — HUAP - nº 58, de 26 de setembro de 2000  (travessão)
 TITULO_RE = re.compile(
     r"(?P<tipo>%s)\s+"
-    r"(?P<orgao>[A-ZÀ-Ú0-9/().\- ]{0,40}?)?\s*"
+    r"(?P<orgao>[A-ZÀ-Ú0-9/().\-–— ]{0,40}?)?,?\s*"
     % TIPOS_RE + _TIT_NUM_DATA
 )
 
@@ -115,6 +120,25 @@ TITULO_RE = re.compile(
 TITULO_SIGA_RE = re.compile(
     r"UFF[A-Z]{3}\d{6,}[A-Z]?\s*\n\s*"
     r"(?P<tipo>Portaria|PORTARIA)(?P<orgao>)\s+" + _TIT_NUM_DATA
+)
+
+# Marcador de fim/início de ato usado em todo o corpus: OU o separador
+# "# # # # # #" entre atos na mesma página, OU o cabeçalho/rodapé de página
+# ("PÁG. 09") quando o ato começa bem no topo da página seguinte. Ancora com
+# segurança formatos CURTOS de título que não têm data por extenso na mesma
+# linha — comuns em Decisões/Resoluções de colegiados (CEP/CUV) em anos mais
+# antigos: "DECISÃO N.º 026/2012", "RESOLUÇÃO 18/2002" (às vezes sem "Nº"
+# nenhum). Como citações no corpo NUNCA vêm logo após um desses marcadores nem
+# são seguidas de linha em branco, não há risco de falso título.
+_HASH_SEP = r"#\s*#\s*#\s*#\s*#\s*#"
+_ATO_BOUNDARY = r"(?:%s|P[ÁA]G\.?\s*0?\d+)" % _HASH_SEP
+TITULO_CURTO_RE = re.compile(
+    r"%s\s*\n\s*"
+    r"(?P<tipo>DECISÃO|RESOLUÇÃO)(?P<orgao>)\s+"
+    r"(?:[Nn]%s\s*)?(?P<numero>[\d\.]+)\s*/\s*(?P<ano>\d{2,4})\s*\.?"
+    r"(?P<dia>)(?P<mes>)"
+    r"(?=[ \t]*\n[ \t]*\n)"
+    % (_ATO_BOUNDARY, _ORD)
 )
 
 # Processo SEI: 23069.166342/2026-40  (aceita espaços no lugar de . / -)
@@ -421,9 +445,11 @@ def parse_pdf(caminho):
 
     # Localiza todos os títulos (pulando o SUMÁRIO, onde aparecem só listas).
     # Junta o regex principal (TIPO em CAIXA ALTA) com o das portarias SIGA em
-    # Title Case (ancoradas no marcador "UFFPOR..."), ordena por posição e
-    # descarta sobreposições (um SIGA em CAIXA ALTA casa nos dois).
-    brutos = sorted(list(TITULO_RE.finditer(full)) + list(TITULO_SIGA_RE.finditer(full)),
+    # Title Case (ancoradas no marcador "UFFPOR...") e o de títulos curtos sem
+    # data por extenso (ancorados no separador "# # # # # #"), ordena por
+    # posição e descarta sobreposições (um SIGA em CAIXA ALTA casa nos dois).
+    brutos = sorted(list(TITULO_RE.finditer(full)) + list(TITULO_SIGA_RE.finditer(full))
+                     + list(TITULO_CURTO_RE.finditer(full)),
                     key=lambda m: m.start())
     titulos = []
     for m in brutos:
