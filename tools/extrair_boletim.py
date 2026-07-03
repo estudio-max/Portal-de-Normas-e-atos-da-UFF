@@ -842,10 +842,17 @@ _TRIG_FUNC = (r"(?P<prep>d[ao]s?|para\s+(?:as?|os?)|pel[ao]|a|as|o|os)\s+"
               r"(?:fun[çc](?:[ãa]o|[õo]es)|cargo)\s+"
               r"(?:(?:gratificad|comissionad)[ao]s?\s+|de\s+confian[çc]a\s+|em\s+comiss[ãa]o\s+)?"
               r"de\s+(?:dire[çc][ãa]o\s+de\s+)?")
+# A vírgula só encerra a unidade quando NÃO for parte do próprio nome: em
+# "Pró-Reitor de Pesquisa, Pós-Graduação e Inovação" a vírgula é interna
+# (seguida de Palavra Capitalizada) e truncava a unidade em só "Pesquisa" —
+# fragmentando a chave e quebrando o pareamento designação↔exoneração.
+# Vírgula seguida de minúscula ("Divisão X, da Superintendência...") continua
+# encerrando (o que vem depois é o órgão-pai, não parte do nome).
+# O traço opcional antes dos marcadores cobre "... e Inovação - Código CD-2".
 FUNCAO_RE = re.compile(
     _TRIG_FUNC + _CARGO_G + r"\s+" + _CONECT_CU + r"\s+"
     r"(?P<unidade>[A-ZÀ-Úa-zà-ú(][^;:.]{2,90}?)"
-    r"(?=\s*(?:,|;|\.|:|\bc[óo]digo\b|\bc[óo]d\b|\bs[íi]mbolo\b|\bFG[- ]?\d|\bCD[- ]?\d|"
+    r"(?=\s*(?:[-–—]\s*)?(?:,(?!\s*(?-i:[A-ZÀ-Ú][a-zà-ú]))|;|\.|:|\bc[óo]digo\b|\bc[óo]d\b|\bs[íi]mbolo\b|\bFG[- ]?\d|\bCD[- ]?\d|"
     r"\bFCC\b|\bFUC\b|\bn[.ºo°]|\ba partir\b|\bpelo per|\bno per[íi]odo\b|\bcom valid|"
     r"\bem substitui|\bda Universidade\b|/UFF|\bem virtude\b|\bdurante\b|$))", re.I)
 

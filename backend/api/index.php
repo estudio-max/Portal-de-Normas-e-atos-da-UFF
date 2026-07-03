@@ -271,20 +271,51 @@ function chefias(PDO $pdo): void {
             'atoId' => $r['ato_id'],
             'atoLabel' => trim("{$r['tipo']} nº {$r['numero']}/{$r['ano']}"),
             'linkBoletim' => $r['link_boletim'],
+            '_k' => $k,                     // interno (removido antes da resposta)
         ];
     }
 
-    // Deduplica por SIAPE: a mesma pessoa não pode ocupar dois cargos ao mesmo tempo.
-    // Ordena por data desc → fica com a designação mais recente; descarta as antigas.
-    usort($chefias, fn($a, $b) => strcmp($b['desde'] ?? '', $a['desde'] ?? ''));
-    $vistosSiape = [];
+    // Situação ATUAL de cada pessoa: seu último evento de função (designação
+    // OU dispensa) em QUALQUER unidade. Uma pessoa só permanece titular se o
+    // último evento dela for exatamente a designação exibida (mesma unidade e
+    // cargo). Isso resolve dois problemas que o pareamento por unidade não vê:
+    //   1. Unidade RENOMEADA: a exoneração cita o nome novo (chave diferente)
+    //      e nunca casaria com a designação antiga — ex.: Nóbrega, designado
+    //      Pró-Reitor de "Pesquisa e Pós-Graduação" (2009) e exonerado de
+    //      "Pesquisa, Pós-Graduação e Inovação" (2014).
+    //   2. Pessoa que MUDOU de cargo, mas cuja designação nova foi superada
+    //      por titular mais recente na unidade nova (some da lista em vez de
+    //      aparecer com o cargo velho).
+    // Também subsome a regra anterior de 1 cargo por SIAPE (a mesma pessoa não
+    // pode ocupar dois cargos ao mesmo tempo): no máximo UMA entrada por
+    // pessoa casa com o seu último evento.
+    $ult = [];   // siape => ['data', 'acao', 'k']
+    $ev = $pdo->query("
+        SELECT f.siape, f.acao, f.unidade_chave, LOWER(f.cargo) AS cargo, a.data_ato
+        FROM ato_funcoes f
+        JOIN atos a ON a.id = f.ato_id
+        WHERE f.siape <> '' AND a.data_ato IS NOT NULL");
+    while ($e = $ev->fetch()) {
+        $s = $e['siape'];
+        $m = $ult[$s] ?? null;
+        // empate de data: designação vence dispensa (dispensa+redesignação no
+        // mesmo dia significa que a pessoa segue, no cargo novo).
+        if (!$m || $e['data_ato'] > $m['data']
+                || ($e['data_ato'] === $m['data'] && $e['acao'] === 'designar')) {
+            $ult[$s] = ['data' => $e['data_ato'], 'acao' => $e['acao'],
+                        'k' => $e['unidade_chave'] . '|' . $e['cargo']];
+        }
+    }
     $chefiasFiltradas = [];
     foreach ($chefias as $c) {
         $s = $c['siape'] ?? '';
-        if ($s === '' || !isset($vistosSiape[$s])) {
-            if ($s !== '') $vistosSiape[$s] = true;
-            $chefiasFiltradas[] = $c;
+        if ($s !== '' && isset($ult[$s])) {
+            $u = $ult[$s];
+            if ($u['acao'] !== 'designar') continue;   // último evento: deixou a função
+            if ($u['k'] !== $c['_k']) continue;        // designação mais recente é outra
         }
+        unset($c['_k']);
+        $chefiasFiltradas[] = $c;
     }
     usort($chefiasFiltradas, fn($a, $b) => strcmp($a['unidade'] ?? '', $b['unidade'] ?? ''));
     $chefias = $chefiasFiltradas;
