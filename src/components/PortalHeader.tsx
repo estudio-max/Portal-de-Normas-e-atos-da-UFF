@@ -67,18 +67,20 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
               <ExternalLink className="w-3 h-3 text-blue-300" />
             </a>
 
-            <button
-              id="btn-restaurar-dados"
-              onClick={() => {
-                if(window.confirm("Deseja restaurar o banco de dados original do portal? Suas alterações locais serão mescladas ou substituídas.")) {
-                  onResetData();
-                }
-              }}
-              title="Restaurar base de dados de demonstração original"
-              className="p-1.5 bg-blue-800/40 hover:bg-red-900/40 border border-blue-400/30 hover:border-red-900 text-slate-200 hover:text-red-100 rounded-md transition-all flex items-center justify-center cursor-pointer h-[30px]"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
+            {!apiMode && (
+              <button
+                id="btn-restaurar-dados"
+                onClick={() => {
+                  if(window.confirm("Deseja restaurar os dados de demonstração original? Suas alterações locais (modo estático) serão descartadas.")) {
+                    onResetData();
+                  }
+                }}
+                title="Restaurar base de dados de demonstração original"
+                className="p-1.5 bg-blue-800/40 hover:bg-red-900/40 border border-blue-400/30 hover:border-red-900 text-slate-200 hover:text-red-100 rounded-md transition-all flex items-center justify-center cursor-pointer h-[30px]"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 

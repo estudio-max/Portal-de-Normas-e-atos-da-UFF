@@ -20,9 +20,12 @@ export default function ChefiasApi() {
     return () => { vivo = false; };
   }, []);
 
-  // famílias de cargo p/ o filtro (ignora prefixo Vice-/Sub)
+  // famílias de cargo p/ o filtro (ignora prefixo Vice-/Sub). Exceção: Reitor
+  // não existe como cargo próprio (é nomeado por ato externo, fora do
+  // boletim) — tirar o prefixo de "Vice-Reitor" geraria uma família "Reitor"
+  // enganosa, que ninguém ocupa de fato nesta lista.
   const cargos = useMemo(() => {
-    const fam = (c: string) => c.replace(/^(Vice-|Sub)/i, '');
+    const fam = (c: string) => /reitor/i.test(c) ? c : c.replace(/^(Vice-|Sub)/i, '');
     return Array.from(new Set(lista.map(c => fam(c.cargo)))).sort();
   }, [lista]);
 

@@ -193,8 +193,18 @@ export async function getChefias(): Promise<ChefiasResp> {
       if (!cur || e.data > cur.data || (e.data === cur.data && e.atoId > cur.atoId)) porPos[k] = e;
     }
   }
+  // Corte de mandato (igual ao PHP): sem nenhum ato novo há mais de 4 anos, é
+  // mais provável que a chave da unidade tenha mudado de grafia entre
+  // boletins do que a pessoa seguir de fato no posto há tantos anos.
+  const limiteMandato = new Date();
+  limiteMandato.setFullYear(limiteMandato.getFullYear() - 4);
+  const limiteStr = limiteMandato.toISOString().slice(0, 10);
+  // Reitor é nomeado por ato externo (decreto presidencial no DOU), nunca
+  // pelo Boletim de Serviço — nunca vamos captar essa designação, então não
+  // faz sentido exibir o cargo (ficaria sempre errado ou vazio). Vice-Reitor
+  // e Pró-Reitor continuam, pois são designados por ato interno no boletim.
   const chefias: Chefia[] = Object.values(porPos)
-    .filter(e => e.acao === 'designar')
+    .filter(e => e.acao === 'designar' && e.data >= limiteStr && e.cargo.trim().toLowerCase() !== 'reitor')
     .map(e => ({
       cargo: e.cargo, unidade: e.unidade, nome: e.nome || null, siape: e.siape || null,
       desde: e.data, atoId: e.atoId, atoLabel: e.atoLabel, linkBoletim: e.link,

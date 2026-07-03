@@ -317,6 +317,27 @@ function chefias(PDO $pdo): void {
         unset($c['_k']);
         $chefiasFiltradas[] = $c;
     }
+    // Corte de mandato: designações com mais de 4 anos, sem redesignação nem
+    // dispensa registrada desde então, são descartadas. A maioria das chefias
+    // (Chefe/Coordenador de setor) não tem mandato fixo — mas passado esse
+    // tempo sem nenhum ato novo, é mais provável que a chave da unidade tenha
+    // mudado de grafia entre boletins (o mesmo problema do caso Nóbrega) do
+    // que a pessoa seguir de fato no posto há tantos anos sem qualquer
+    // republicação — melhor omitir do que arriscar mostrar um titular errado.
+    $limiteMandato = date('Y-m-d', strtotime('-4 years'));
+    $chefiasFiltradas = array_values(array_filter(
+        $chefiasFiltradas, fn($c) => $c['desde'] >= $limiteMandato
+    ));
+
+    // Reitor é nomeado por ato externo (decreto presidencial no DOU), nunca
+    // pelo Boletim de Serviço — o sistema nunca vai captar essa designação,
+    // então não faz sentido exibir o cargo aqui (ficaria sempre errado ou
+    // vazio). Vice-Reitor e Pró-Reitor continuam, pois esses SÃO designados
+    // por ato interno (Portaria/Resolução) publicado no boletim.
+    $chefiasFiltradas = array_values(array_filter(
+        $chefiasFiltradas, fn($c) => mb_strtolower(trim($c['cargo'])) !== 'reitor'
+    ));
+
     usort($chefiasFiltradas, fn($a, $b) => strcmp($a['unidade'] ?? '', $b['unidade'] ?? ''));
     $chefias = $chefiasFiltradas;
 

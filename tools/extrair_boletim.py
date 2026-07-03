@@ -828,9 +828,10 @@ def extrai_pessoas(trecho):
 _MINUSC = {"de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "a", "o",
            "ao", "aos", "com", "para", "por", "sob", "sem", "entre", "sobre"}
 
-_PFX_CARGO = r"(?:Vice[-\s]?|Sub[-\s]?)?"
+_HIFEN_QUEBRA = r"[-\s]*"   # tolera "Pró-" no fim de linha + "reitor" na linha seguinte
+_PFX_CARGO = r"(?:Vice%s|Sub%s)?" % (_HIFEN_QUEBRA, _HIFEN_QUEBRA)
 _NUC_CARGO = (r"(?:Chefes?|Coordenador[ae]?(?:es)?|Diretor[ae]?(?:es)?|Superintendentes?|"
-              r"Gerentes?|Decan[oa]s?|Pr[óo][-\s]?Reitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)")
+              r"Gerentes?|Decan[oa]s?|Pr[óo]%sReitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)" % _HIFEN_QUEBRA)
 _CARGO_G = r"(?P<cargo>%s%s)" % (_PFX_CARGO, _NUC_CARGO)
 _CONECT_CU = r"(?:d[oae]s?|d')"
 
