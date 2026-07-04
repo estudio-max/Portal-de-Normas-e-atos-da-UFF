@@ -522,8 +522,9 @@ def parse_pdf(caminho):
 
         # Ementa inferida: só quando NÃO há ementa formal. Resume o dispositivo.
         # "Ementa" que é só o preâmbulo ("FULANA, no uso de suas atribuições,")
-        # conta como ausente — o que interessa é o que vem depois do RESOLVE:.
-        if PREAMBULO_RE.search(ementa):
+        # ou só a cláusula de vigência ("Esta DTS entrará em vigor...") conta
+        # como ausente — o que interessa é o que vem depois do RESOLVE:.
+        if PREAMBULO_RE.search(ementa) or BOILERPLATE_EMENTA_RE.match(ementa):
             ementa = ""
         ementa_resumo, ementa_inferida = "", False
         if len(ementa.strip()) < 12:
@@ -596,7 +597,16 @@ def monta_identificador(tipo, sigla, numero, ano):
 # atribuições" logo no início (sem frase de ementa antes). Acontece quando o
 # corte por autoridade não pega a variação de grafia — melhor detectar e tratar
 # como sem-ementa (inferindo do dispositivo) do que exibir o preâmbulo na ficha.
-PREAMBULO_RE = re.compile(r"(?i)^[^.;]{0,80}\bno uso d(?:e suas?|as)\b")
+PREAMBULO_RE = re.compile(
+    r"(?i)^[^.;]{0,80}\bno uso d(?:e suas?\b|e atribui\w*|as?\s+(?:atribui|compet)\w*)")
+
+# "Ementa" que é só a cláusula de vigência/fecho do ato ("Esta DTS entrará em
+# vigor na data de sua assinatura. DOCUMENTO ASSINADO..."): ato sem ementa cujo
+# corpo começou a ser lido no lugar errado — trata como sem-ementa e infere.
+BOILERPLATE_EMENTA_RE = re.compile(
+    r"(?i)^\s*est[ae]\s+(?:dts|determina\w*(?:\s+de\s+servi[çc]o)?|portaria|"
+    r"resolu[çc][ãa]o|instru[çc][ãa]o(?:\s+normativa)?|norma|ordem|decis[ãa]o)\b"
+    r"[^.;]{0,40}\bentrar?[áa]?\s+em\s+vigor")
 
 
 def extrai_ementa(resto):
@@ -606,6 +616,7 @@ def extrai_ementa(resto):
     # preâmbulo sem corte e virava "ementa" — visto na DTS PROAD 15/2020).
     # [-\s]* tolera "PRÓ- REITOR" (hífen+espaço da quebra de linha do PDF).
     cortes = [r"\bRESOLVE\b", r"\bRESOLVEM\b",
+              r"\bR\s+E\s+S\s+O\s+L\s+V\s+E\b",     # "R E S O L V E" espaçado
               r"\b[OA]\s+(?:VICE[-\s]*|PR[ÓO][-\s]*)?REITORA?\b",
               r"\bO\s+CONSELHO\b", r"\b[OA]\s+COORDENADORA?\b",
               r"\b[OA]\s+CHEFE\b", r"\b[OA]\s+DIRETORA?\b",
@@ -623,14 +634,25 @@ def extrai_ementa(resto):
     ementa = re.sub(r"(?i)SE[ÇC][ÃA]O\s+[IVX]+\s*P[ÁA]?G?[.\s]*\d+", "", ementa)
     ementa = re.sub(r"(?i)P[ÁA]G[.\s]*\d+", "", ementa)
     ementa = re.sub(r"\d{2}/\d{2}/\d{4}", "", ementa)
-    ementa = re.sub(r"(?i)MINIST[ÉE]RIO\s+DA\s+EDUCA[ÇC][ÃA]O", "", ementa)
-    ementa = re.sub(r"(?i)UNIVERSIDADE\s+FEDERAL\s+FLUMINENSE", "", ementa)
-    ementa = re.sub(r"(?i)BOLETIM\s+DE\s+SERVI[ÇC]O", "", ementa)
+    # Cabeçalho de página: os pares completos somem; MAS menção à universidade
+    # no meio da frase vira "UFF" em vez de sumir — apagar deixava buracos
+    # agramaticais ("celebrado entre a e a empresa", "Estabelecer, na , o
+    # calendário"): 1.682 ementas afetadas só em 2023-2026.
+    ementa = re.sub(r"(?i)MINIST[ÉE]RIO\s+DA\s+EDUCA[ÇC][ÃA]O"
+                    r"(?:\s+UNIVERSIDADE\s+FEDERAL\s+FLUMINENSE)?", "", ementa)
+    ementa = re.sub(r"(?i)UNIVERSIDADE\s+FEDERAL\s+FLUMINENSE"
+                    r"\s*[–—-]+\s*BOLETIM\s+DE\s+SERVI[ÇC]O", "", ementa)
+    ementa = re.sub(r"(?i)UNIVERSIDADE\s+FEDERAL\s+FLUMINENSE", "UFF", ementa)
+    ementa = re.sub(r"(?i)BOLETIM\s+DE\s+SERVI[ÇC]O", "BS", ementa)
     ementa = re.sub(r"#(?:\s*#)+", "", ementa)  # marcadores "# # # #" de rodapé
+    # rodapé de assinatura digital que vaza para dentro da ementa
+    ementa = re.sub(r"(?i)\s*documento\s+assinado\s+eletronicamente\b.*$", "", ementa)
     # tira pontuação/rótulo iniciais (". ", ", ", "Ementa:") — ruído muito comum
     ementa = limpar(ementa)
     ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
     ementa = re.sub(r"(?i)^ementa\s*:?\s*", "", ementa)
+    # enumerador que sobra na frente ("II - Designar...", "1. No item 3.1...")
+    ementa = re.sub(r"^(?:[IVX]{1,4}|\d{1,2})\s*[-–—.)]\s+", "", ementa)
     ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
     return limpar(ementa)[:600]
 
@@ -652,7 +674,12 @@ _VERBO_EMENTA = [
     (r"delegar", "Delega"), (r"criar", "Cria"), (r"estabelecer", "Estabelece"),
     (r"remover", "Remove"), (r"redistribuir", "Redistribui"), (r"lotar", "Lota"),
     (r"cancelar", "Cancela"), (r"suspender", "Suspende"), (r"determinar", "Determina"),
-    (r"fixar", "Fixa"), (r"declarar", "Declara"), (r"convalidar", "Convalida"),
+    # "declarar vago" ANTES de "declarar": o verbo-frase leva o objeto junto
+    # ("Declara vago o cargo de..."), senão o corte em "a partir de" deixava
+    # só "Declara vago." seco (266 casos em 2023-2026).
+    (r"fixar", "Fixa"), (r"declarar\s+vagos", "Declara vagos"),
+    (r"declarar\s+vago", "Declara vago"), (r"declarar", "Declara"),
+    (r"convalidar", "Convalida"),
     (r"reconduzir", "Reconduz"), (r"destituir", "Destitui"), (r"substituir", "Substitui"),
     (r"conceituar", "Conceitua"), (r"ratificar", "Ratifica"), (r"dispor", "Dispõe sobre"),
     (r"interromper", "Interrompe"), (r"aposentar", "Aposenta"), (r"aplicar", "Aplica"),
@@ -702,6 +729,10 @@ def sintetiza_ementa(corpo):
     'Exonera Fulano.'. Retorna (resumo, True) se achou um verbo de dispositivo;
     ('', False) se não deu para inferir (vai p/ o fallback de LLM)."""
     txt = limpar(corpo)
+    # "R E S O L V E" com letras espaçadas (diagramação antiga) vira RESOLVE,
+    # senão o marcador do dispositivo não é achado e nada é inferido.
+    txt = re.sub(r"(?i)\bR\s+E\s+S\s+O\s+L\s+V\s+E(\s+M)?\b",
+                 lambda m: "RESOLVEM" if m.group(1) else "RESOLVE", txt)
     m = re.search(r"(?i)\bresolve[m]?\b\s*:?\s*", txt)
     disp = txt[m.end():] if m else txt
     for _ in range(4):                       # pula "I -", "Art. 1º -", "a)"...
