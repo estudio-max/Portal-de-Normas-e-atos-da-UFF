@@ -20,6 +20,7 @@ import sys
 import ssl
 import argparse
 import urllib.request
+import urllib.error
 from urllib.parse import urlsplit, urlunsplit, quote
 from datetime import datetime
 
@@ -38,11 +39,27 @@ UA = {"User-Agent": "UFF-Indexador/1.0 (indexacao do Boletim de Servico; "
                     "contato estudio@fanara.com.br)"}
 
 
-def baixar_html(url):
+def baixar_html(url, tentativas=4):
+    """Baixa a página-índice do ano com retentativas. O servidor da UFF às
+    vezes responde 5xx transitório nessa listagem — sem retry, um único 500
+    derrubava o bloco inteiro de anos no backfill (visto 03/07/2026)."""
+    import time
     req = urllib.request.Request(_url_segura(url), headers=UA)
     ctx = ssl.create_default_context()
-    with urllib.request.urlopen(req, context=ctx, timeout=60) as r:
-        return r.read().decode("utf-8", "ignore")
+    ultimo_erro = None
+    for n in range(1, tentativas + 1):
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=60) as r:
+                return r.read().decode("utf-8", "ignore")
+        except urllib.error.HTTPError as e:
+            ultimo_erro = e
+            if e.code < 500 and e.code != 429:   # 4xx "de verdade" não adianta repetir
+                raise
+        except (urllib.error.URLError, TimeoutError, ssl.SSLError) as e:
+            ultimo_erro = e
+        if n < tentativas:
+            time.sleep(5 * n)   # backoff: 5s, 10s, 15s
+    raise ultimo_erro
 
 
 def extrair_links(html, base):

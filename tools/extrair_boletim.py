@@ -864,6 +864,32 @@ _VERBO_FUNC = re.compile(r"design|dispens|exoner|destitu")
 _SUBST_FUNC = re.compile(r"(?i)substitut|eventual|pro\s*tempore|respond|interin|exerc[íi]cio eventual")
 _ANAFORA_UNID = re.compile(r"\b(referid|mesm|respectiv|citad|aludid|supracitad|present|seguinte|propri)")
 
+# Nomeação de pessoa EXTERNA (convidado/sem vínculo => SEM SIAPE): p.ex. o Reitor
+# "Nomear Marina Vieira Gontijo, para exercer como Convidado, o Cargo de
+# Superintendente da ...". Como não há matrícula, o nome é o único identificador.
+# Só captura com verbo de nomeação + Nome Próprio (capitalizado) + "para exercer"
+# logo antes do gatilho do cargo — a exigência de SIAPE é o que segura o ruído
+# nos demais casos, então este atalho tem que ser bem restrito.
+_NOMEIA_EXT = re.compile(
+    r"\b[Nn]omear\s+(?P<nome>[A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,4})"
+    r"\s*,\s*para\s+exercer\b")
+
+
+def _nome_externo_antes(trecho, pos_gatilho):
+    """Nome do convidado nomeado, quando o ato não traz SIAPE. Exige que a
+    nomeação ('Nomear FULANO, para exercer') termine logo antes do gatilho do
+    cargo (até ~50 chars de 'como Convidado,' no meio). Senão retorna ''."""
+    jan_ini = max(0, pos_gatilho - 150)
+    jan = trecho[jan_ini:pos_gatilho]
+    ult = None
+    for x in _NOMEIA_EXT.finditer(jan):
+        ult = x
+    if not ult:
+        return ""
+    if pos_gatilho - (jan_ini + ult.end()) > 50:   # nome longe do cargo: não é a mesma frase
+        return ""
+    return _limpa_nome(ult.group("nome"))
+
 
 def canon_cargo(c):
     """Normaliza a grafia do cargo, preservando Vice-/Sub."""
@@ -962,7 +988,10 @@ def extrai_funcoes(trecho):
             continue
         siape, nome = _pessoa_antes(trecho, m.start("cargo"))
         if not siape:
-            continue
+            # Sem SIAPE: só segue se for nomeação de convidado externo (nome próprio).
+            nome = _nome_externo_antes(trecho, m.start())
+            if not nome:
+                continue
         if nome and _fold(nome) in _fold(unid):              # nome-lixo da própria unidade
             nome = ""
         cargo = canon_cargo(m.group("cargo"))
