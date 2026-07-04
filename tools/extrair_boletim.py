@@ -521,6 +521,10 @@ def parse_pdf(caminho):
         siapes = sorted(set(SIAPE_RE.findall(trecho)))
 
         # Ementa inferida: só quando NÃO há ementa formal. Resume o dispositivo.
+        # "Ementa" que é só o preâmbulo ("FULANA, no uso de suas atribuições,")
+        # conta como ausente — o que interessa é o que vem depois do RESOLVE:.
+        if PREAMBULO_RE.search(ementa):
+            ementa = ""
         ementa_resumo, ementa_inferida = "", False
         if len(ementa.strip()) < 12:
             ementa_resumo, ementa_inferida = sintetiza_ementa(corpo)
@@ -588,13 +592,26 @@ def monta_identificador(tipo, sigla, numero, ano):
     return " ".join(partes)
 
 
+# "Ementa" que na verdade é o PREÂMBULO do ato: a autoridade + "no uso de suas
+# atribuições" logo no início (sem frase de ementa antes). Acontece quando o
+# corte por autoridade não pega a variação de grafia — melhor detectar e tratar
+# como sem-ementa (inferindo do dispositivo) do que exibir o preâmbulo na ficha.
+PREAMBULO_RE = re.compile(r"(?i)^[^.;]{0,80}\bno uso d(?:e suas?|as)\b")
+
+
 def extrai_ementa(resto):
     """A ementa é o texto descritivo logo após o título, antes do dispositivo."""
     # corta no primeiro marcador de início de dispositivo
-    cortes = [r"\bRESOLVE\b", r"\bRESOLVEM\b", r"\bO\s+REITOR\b", r"\bA\s+REITORA\b",
-              r"\bO\s+CONSELHO\b", r"\bO\s+COORDENADOR", r"\bA\s+COORDENADOR",
-              r"\bO\s+CHEFE\b", r"\bA\s+DIRETORA\b", r"\bO\s+DIRETOR\b",
-              r"\bO\s+PR[ÓO]-REITOR", r"\bConsiderando\b", r"\bArt\.?\s*1"]
+    # A autoridade cobre masculino E feminino ("A PRÓ-REITORA..." começava o
+    # preâmbulo sem corte e virava "ementa" — visto na DTS PROAD 15/2020).
+    # [-\s]* tolera "PRÓ- REITOR" (hífen+espaço da quebra de linha do PDF).
+    cortes = [r"\bRESOLVE\b", r"\bRESOLVEM\b",
+              r"\b[OA]\s+(?:VICE[-\s]*|PR[ÓO][-\s]*)?REITORA?\b",
+              r"\bO\s+CONSELHO\b", r"\b[OA]\s+COORDENADORA?\b",
+              r"\b[OA]\s+CHEFE\b", r"\b[OA]\s+DIRETORA?\b",
+              r"\b[OA]\s+SUPERINTENDENTE\b", r"\b[OA]\s+PRESIDENTE\b",
+              r"\b[OA]\s+DECANA?\b", r"\b[OA]\s+GERENTE\b",
+              r"\bConsiderando\b", r"\bArt\.?\s*1"]
     pos = len(resto)
     for c in cortes:
         mm = re.search(c, resto)
@@ -870,9 +887,14 @@ _ANAFORA_UNID = re.compile(r"\b(referid|mesm|respectiv|citad|aludid|supracitad|p
 # Só captura com verbo de nomeação + Nome Próprio (capitalizado) + "para exercer"
 # logo antes do gatilho do cargo — a exigência de SIAPE é o que segura o ruído
 # nos demais casos, então este atalho tem que ser bem restrito.
-_NOMEIA_EXT = re.compile(
-    r"\b[Nn]omear\s+(?P<nome>[A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,4})"
-    r"\s*,\s*para\s+exercer\b")
+# Nome próprio em Title Case OU CAIXA ALTA (portarias de nomeação usam os dois):
+# token começa com maiúscula e o resto pode ser maiúsculo ("MARINA") ou
+# minúsculo ("Marina"); conectores de/da/dos entre os tokens em qualquer caixa.
+_NOME_PROP = r"[A-ZÀ-Ú][A-ZÀ-Úa-zà-ú]+(?:\s+(?:d[aeo]s?\s+|D[AEO]S?\s+)?[A-ZÀ-Ú][A-ZÀ-Úa-zà-ú]+){1,4}"
+_NOMEIA_EXT = re.compile(r"\b[Nn]omear\s+(?P<nome>" + _NOME_PROP + r")\s*,\s*para\s+exercer\b")
+# Palavras que denunciam que o "nome" é na verdade um coletivo/genérico.
+_NAO_NOME = re.compile(r"\b(comiss|membro|docente|servidor|professor|grupo|equipe|"
+                       r"seguinte|abaixo|relacionad)", re.I)
 
 
 def _nome_externo_antes(trecho, pos_gatilho):
@@ -887,6 +909,8 @@ def _nome_externo_antes(trecho, pos_gatilho):
     if not ult:
         return ""
     if pos_gatilho - (jan_ini + ult.end()) > 50:   # nome longe do cargo: não é a mesma frase
+        return ""
+    if _NAO_NOME.search(ult.group("nome")):         # coletivo/genérico, não é pessoa
         return ""
     return _limpa_nome(ult.group("nome"))
 

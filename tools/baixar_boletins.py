@@ -39,10 +39,12 @@ UA = {"User-Agent": "UFF-Indexador/1.0 (indexacao do Boletim de Servico; "
                     "contato estudio@fanara.com.br)"}
 
 
-def baixar_html(url, tentativas=4):
+def baixar_html(url, tentativas=6):
     """Baixa a página-índice do ano com retentativas. O servidor da UFF às
-    vezes responde 5xx transitório nessa listagem — sem retry, um único 500
-    derrubava o bloco inteiro de anos no backfill (visto 03/07/2026)."""
+    vezes responde 5xx transitório ou nem completa o handshake TLS — sem
+    retry, um único erro derrubava o bloco inteiro de anos no backfill
+    (visto 03/07/2026: HTTP 500 e depois SSL handshake timeout). O backoff
+    longo (até ~4 min no total) dá tempo de instabilidades curtas passarem."""
     import time
     req = urllib.request.Request(_url_segura(url), headers=UA)
     ctx = ssl.create_default_context()
@@ -58,7 +60,7 @@ def baixar_html(url, tentativas=4):
         except (urllib.error.URLError, TimeoutError, ssl.SSLError) as e:
             ultimo_erro = e
         if n < tentativas:
-            time.sleep(5 * n)   # backoff: 5s, 10s, 15s
+            time.sleep(15 * n)   # backoff: 15s, 30s, 45s, 60s, 75s
     raise ultimo_erro
 
 
