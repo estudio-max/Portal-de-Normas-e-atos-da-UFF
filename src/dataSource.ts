@@ -21,6 +21,8 @@ export interface ListaResp {
 export interface Stats {
   total: number; vigentes: number; revogados: number; alterados: number;
   orgaos: number; comSei: number; boletins: number;
+  ultimaAtualizacao?: string | null;                       // yyyy-mm-dd
+  ultimoBoletim?: { arquivo: string; numero: string; ano: number; link: string | null } | null;
 }
 
 let MODO: 'api' | 'estatico' = 'estatico';
@@ -146,7 +148,25 @@ export async function getStats(): Promise<Stats> {
     orgs.add(a.orgaoEmissor || ''); bols.add((a as any).arquivo || '');
     if (a.processoSei) sei++;
   }
-  return { total: CACHE.length, vigentes: c.Ativo || 0, revogados: c.Revogado || 0, alterados: c.Alterado || 0, orgaos: orgs.size, comSei: sei, boletins: bols.size };
+  // Último boletim indexado (maior numeração "NN-AA.pdf") e a data mais
+  // recente de assinatura dentro dele — aproximação da última atualização.
+  const chaveBol = (arq: string) => {
+    const m = /^(\d+)-(\d+)/.exec(arq || '');
+    return m ? parseInt(m[2], 10) * 1000 + parseInt(m[1], 10) : -1;
+  };
+  let ultArq = ''; let ultLink: string | null = null; let ultData = '';
+  for (const a of CACHE as any[]) {
+    const arq = a.arquivo || '';
+    if (chaveBol(arq) > chaveBol(ultArq)) { ultArq = arq; ultLink = a.linkBoletim || null; ultData = a.dataAssinatura || ''; }
+    else if (arq === ultArq && (a.dataAssinatura || '') > ultData) ultData = a.dataAssinatura;
+  }
+  const m = /^(\d+)-(\d+)/.exec(ultArq);
+  return {
+    total: CACHE.length, vigentes: c.Ativo || 0, revogados: c.Revogado || 0,
+    alterados: c.Alterado || 0, orgaos: orgs.size, comSei: sei, boletins: bols.size,
+    ultimaAtualizacao: ultData || null,
+    ultimoBoletim: ultArq ? { arquivo: ultArq, numero: m ? m[1] : ultArq, ano: m ? 2000 + parseInt(m[2], 10) : 0, link: ultLink } : null,
+  };
 }
 
 // ---------- CHEFIAS (titular atual por unidade + cargo) -------------------

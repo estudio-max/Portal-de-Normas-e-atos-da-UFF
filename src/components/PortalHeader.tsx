@@ -4,7 +4,12 @@ import { UffAct } from '../types';
 
 interface PortalHeaderProps {
   acts: UffAct[];
-  stats?: { total: number; vigentes: number; revogados: number; alterados: number; orgaos: number; comSei: number; boletins: number } | null;
+  stats?: {
+    total: number; vigentes: number; revogados: number; alterados: number;
+    orgaos: number; comSei: number; boletins: number;
+    ultimaAtualizacao?: string | null;
+    ultimoBoletim?: { arquivo: string; numero: string; ano: number; link: string | null } | null;
+  } | null;
   apiMode?: boolean;
   onResetData: () => void;
   activeTab: string;
@@ -136,6 +141,32 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
             </div>
           </div>
         </div>
+
+        {/* Última atualização: quando o último ato NOVO entrou no banco + link
+            do boletim mais recente indexado. Dá visibilidade imediata de
+            atraso na rotina de importação diária. */}
+        {stats?.ultimaAtualizacao && (
+          <div id="ultima-atualizacao" className="flex justify-end mt-1.5">
+            <span className="text-[11px] text-blue-200 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+              Atualização mais recente em <strong className="text-white font-bold">
+                {stats.ultimaAtualizacao.slice(0, 10).split('-').reverse().join('/')}</strong>
+              {stats.ultimoBoletim && (
+                <>
+                  {' · '}
+                  {stats.ultimoBoletim.link ? (
+                    <a href={stats.ultimoBoletim.link} target="_blank" referrerPolicy="no-referrer"
+                       className="underline decoration-blue-400/50 hover:text-yellow-300 font-semibold">
+                      BS nº {stats.ultimoBoletim.numero}/{stats.ultimoBoletim.ano} (PDF)
+                    </a>
+                  ) : (
+                    <span className="font-semibold">BS nº {stats.ultimoBoletim.numero}/{stats.ultimoBoletim.ano}</span>
+                  )}
+                </>
+              )}
+            </span>
+          </div>
+        )}
 
         {/* Tab Selection Navigation */}
         <div className="flex border-b border-blue-950/60 mt-4 gap-1 overflow-x-auto scrollbar-none">

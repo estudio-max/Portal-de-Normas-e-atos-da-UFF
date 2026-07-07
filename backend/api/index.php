@@ -209,11 +209,32 @@ function stats(PDO $pdo): void {
         SUM(processo_sei IS NOT NULL AND processo_sei<>'') com_sei
       FROM atos")->fetch();
     $boletins = (int)$pdo->query("SELECT COUNT(*) FROM boletins")->fetchColumn();
+    // "Atualização mais recente": dá visibilidade de atraso na rotina diária.
+    // A data é MAX(atos.criado_em) — gravado só no INSERT, então marca quando
+    // o último ato NOVO entrou (reimportação de ato existente não conta).
+    // O link é o boletim de numeração mais alta já indexado (data_pub e
+    // importado_em não servem: um é NULL, o outro é carimbado em massa).
+    $ultData = $pdo->query("SELECT DATE(MAX(criado_em)) FROM atos")->fetchColumn();
+    $ult = $pdo->query("
+        SELECT b.arquivo, b.numero, b.ano,
+               COALESCE(b.url_pdf, (SELECT a.link_boletim FROM atos a
+                                    WHERE a.boletim_id = b.id
+                                      AND a.link_boletim IS NOT NULL LIMIT 1)) AS link
+        FROM boletins b
+        ORDER BY b.ano DESC, CAST(b.numero AS UNSIGNED) DESC
+        LIMIT 1")->fetch();
     responder_json([
         'total' => (int)$row['total'], 'vigentes' => (int)$row['vigentes'],
         'revogados' => (int)$row['revogados'], 'alterados' => (int)$row['alterados'],
         'orgaos' => (int)$row['orgaos'], 'comSei' => (int)$row['com_sei'],
         'boletins' => $boletins,
+        'ultimaAtualizacao' => $ultData ?: null,
+        'ultimoBoletim' => $ult ? [
+            'arquivo' => $ult['arquivo'],
+            'numero'  => $ult['numero'],
+            'ano'     => (int)$ult['ano'],
+            'link'    => $ult['link'],
+        ] : null,
     ]);
 }
 
