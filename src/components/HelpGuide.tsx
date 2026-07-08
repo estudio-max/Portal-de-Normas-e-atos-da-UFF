@@ -30,9 +30,12 @@ export default function HelpGuide() {
           <Info className="w-5 h-5 text-yellow-400" /> Como usar o Portal de Normas e Atos
         </h2>
         <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          Este guia explica, em linguagem simples, tudo o que o portal faz. Você não precisa
-          ser da área jurídica nem de tecnologia para usar — é como pesquisar numa planilha
-          inteligente dos atos publicados no Boletim de Serviço da UFF.
+          Este portal é uma <strong>camada de consulta</strong> construída sobre um acervo de
+          arquivos <strong>PDF</strong>: os <strong>Boletins de Serviço da UFF</strong>, que são a
+          <strong> fonte primária</strong> de tudo o que aparece aqui. O sistema lê esses PDFs,
+          identifica cada ato (portarias, DTS, resoluções…) e organiza tudo numa planilha
+          pesquisável — mas o documento oficial continua sendo o boletim, e cada ato traz o
+          link para o PDF de origem.
         </p>
       </div>
 
@@ -91,10 +94,11 @@ export default function HelpGuide() {
       <Secao icon={<LinkIcon className="w-4 h-4" />} titulo="Chegar ao processo no SEI">
         <p>
           Quando o ato tem processo SEI, a Ficha mostra os botões <strong>🔎 Abrir processo no SEI</strong> e
-          <strong> 📄 Documento</strong>. A aba <strong>🔗 Integração e Busca no SEI</strong> traz um passo a passo
-          (com a parte do CAPTCHA) para consultar o processo público.
+          <strong> 📄 Documento</strong>. A consulta pública do SEI é do próprio sistema da UFF:
+          se o link direto não resolver, copie o número do processo na Ficha e cole na
+          pesquisa pública do SEI (ela pede um CAPTCHA).
         </p>
-        <p className="text-slate-500 text-xs">Cada ato também traz o link do <strong>PDF original do Boletim</strong> na UFF — a fonte oficial.</p>
+        <p className="text-slate-500 text-xs">Cada ato também traz o link do <strong>PDF original do Boletim</strong> na UFF — a fonte primária.</p>
       </Secao>
 
       {/* Para quem indexa */}
@@ -109,17 +113,23 @@ export default function HelpGuide() {
       {/* De onde vêm os dados */}
       <Secao icon={<RefreshCw className="w-4 h-4" />} titulo="De onde vêm os dados (e atualização automática)">
         <p>
-          Todo dia, de forma automática, o sistema lê os boletins novos publicados no site da UFF,
-          identifica os atos, suas relações e processos, e atualiza o portal sozinho — <strong>sem
-          ninguém precisar mexer</strong>. Por isso os números no topo (total de atos, vigentes,
-          revogados…) refletem sempre o estado mais recente.
+          A <strong>fonte primária</strong> são os <strong>Boletins de Serviço da UFF</strong> —
+          os PDFs oficiais publicados no site da universidade. Todo dia, de forma automática,
+          o sistema baixa os boletins novos, lê o texto de cada PDF, identifica os atos, suas
+          relações e processos, e atualiza o portal sozinho — <strong>sem ninguém precisar
+          mexer</strong>. Por isso os números no topo (total de atos, vigentes, revogados…)
+          refletem sempre o estado mais recente do acervo.
+        </p>
+        <p className="text-slate-500 text-xs">
+          O portal não cria nem altera norma nenhuma: ele só indexa o que já foi publicado.
+          Para citar um ato oficialmente, use o PDF do boletim (link em cada ato).
         </p>
       </Secao>
 
       {/* Avisos */}
       <Secao icon={<ShieldAlert className="w-4 h-4" />} titulo="Importante">
         <ul className="space-y-1">
-          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O portal é uma <strong>ferramenta de consulta</strong>. Em decisões oficiais, confira sempre o <strong>PDF oficial</strong> do Boletim (link em cada ato).</li>
+          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O portal é uma <strong>camada de consulta</strong> sobre o acervo de PDFs — a <strong>fonte primária</strong> são os Boletins de Serviço. Em decisões oficiais, confira sempre o <strong>PDF oficial</strong> do Boletim (link em cada ato).</li>
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> A indexação é automática e pode ter imperfeições em casos raros — por isso o original prevalece.</li>
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Os dados são informação <strong>pública</strong> do Boletim de Serviço da UFF.</li>
         </ul>

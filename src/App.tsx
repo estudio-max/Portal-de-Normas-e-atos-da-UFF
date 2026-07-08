@@ -11,7 +11,6 @@ import ActRelationships from './components/ActRelationships';
 import ActRelationsApi from './components/ActRelationsApi';
 import ChefiasApi from './components/ChefiasApi';
 import ActParser from './components/ActParser';
-import SeiIntegration from './components/SeiIntegration';
 import HelpGuide from './components/HelpGuide';
 
 export default function App() {
@@ -122,7 +121,6 @@ export default function App() {
 
           {activeTab === 'chefias' && <div id="painel-chefias"><ChefiasApi /></div>}
 
-          {activeTab === 'sei' && <div id="painel-sei"><SeiIntegration /></div>}
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 
         </div>
