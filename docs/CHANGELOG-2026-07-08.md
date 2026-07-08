@@ -113,6 +113,18 @@ reapareciam como setor-fantasma (o ato histórico continua indexado e buscável)
 oficial — 7/7 Pró-Reitores, as 7 Superintendências + Centro de Artes, e o
 Vice-Reitor.
 
+## 5. Interface — remoção da aba SEI e nova área de ajuda — `6bc03a1`
+
+- **Removida a aba “🔗 Integração e Busca no SEI”**: era um passo a passo de
+  busca manual (copiar/colar com CAPTCHA), de pouca utilidade. Os links
+  diretos de processo/documento SEI continuam na **Ficha do Ato**, e o atalho
+  “Pesquisa Pública SEI” segue no cabeçalho.
+- **Área de ajuda reescrita** para deixar claro o que o portal é: uma
+  **camada de consulta** construída sobre um acervo de arquivos **PDF** — os
+  **Boletins de Serviço da UFF**, que são a **fonte primária**. O portal só
+  indexa o que já foi publicado; para citação oficial vale o PDF do boletim
+  (link em cada ato).
+
 ---
 
 ## Como publicar (HostGator)
@@ -121,7 +133,9 @@ As mudanças de projeção (itens 3.3 e 4-curadoria) exigem apenas subir o
 `backend/api/index.php`. As de extração (itens 1, 2, 3.2 e 4-bugs) exigem
 **reimportar** os dados regenerados:
 
-1. Subir `backend/api/index.php` para `.../api/`.
+1. Subir `backend/api/index.php` para `.../api/` e o app recompilado
+   (conteúdo de `dist/` após `npm run build`) para a raiz do site — a
+   remoção da aba SEI e a nova ajuda estão no bundle do front-end.
 2. Importar no phpMyAdmin, do mais novo disponível:
    - `out/carga_2023.sql.gz` … `carga_2026.sql.gz` (APPEND, idempotente por ano);
    - `chefias/chefias_TODAS.sql.gz`;
