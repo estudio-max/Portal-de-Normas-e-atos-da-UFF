@@ -138,7 +138,12 @@ with open(OUT, "w", encoding="utf-8") as f:
     pad = f"'^[0-9]+-{suf_ano}[^0-9]'" if suf_ano else None
     if args.so_chefias:
         # só limpa as chefias deste lote; NÃO toca em atos/boletins/relações.
-        f.write(f"DELETE FROM `ato_funcoes` WHERE ato_id REGEXP {pad};\n" if (args.append and pad)
+        # Limpeza por ANO sempre que o sufixo for detectável, mesmo sem --append:
+        # o chefias_TODAS é a concatenação dos anos, e um DELETE global em cada
+        # bloco deixava na tabela só o ÚLTIMO ano (aconteceu em 08/07/2026 —
+        # a aba Chefias ficou só com atos de 2026). DELETE global apenas quando
+        # o lote não tem ano identificável (carga full de corpus inteiro).
+        f.write(f"DELETE FROM `ato_funcoes` WHERE ato_id REGEXP {pad};\n" if pad
                 else "DELETE FROM `ato_funcoes`;\n")
     elif args.append and suf_ano:
         # limpa só ESTE ano (idempotente), via padrão do id

@@ -972,7 +972,12 @@ _CONECT_CU = r"(?:d[oae]s?|d')"
 # Gatilho do dispositivo. Cobre "função de", "função gratificada de",
 # "cargo de", "cargo de direção de", "exercício do cargo de"... (toda chefia
 # é função gratificada/CD, então a qualificação pode aparecer no meio).
-_TRIG_FUNC = (r"(?P<prep>d[ao]s?|para\s+(?:as?|os?)|pel[ao]|a|as|o|os)\s+"
+# O lookbehind exige fronteira de palavra antes da preposição: sem ele o "o"
+# colado em "nO cargo de..." casava, e menção DESCRITIVA virava designação
+# ("A vaga está vinculada à atuação da professora X no cargo de direção de
+# Pró-Reitora da PROPPI" gerava um designar-Pró-Reitor a partir da DTS de
+# uma banca de concurso).
+_TRIG_FUNC = (r"(?<![A-Za-zÀ-ÿ])(?P<prep>d[ao]s?|para\s+(?:as?|os?)|pel[ao]|a|as|o|os)\s+"
               r"(?:exerc[íi]cio\s+d[ao]\s+)?"
               r"(?:fun[çc](?:[ãa]o|[õo]es)|cargo)\s+"
               r"(?:(?:gratificad|comissionad)[ao]s?\s+|de\s+confian[çc]a\s+|em\s+comiss[ãa]o\s+)?"

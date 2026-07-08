@@ -345,9 +345,16 @@ function chefias(PDO $pdo): void {
     // mudado de grafia entre boletins (o mesmo problema do caso Nóbrega) do
     // que a pessoa seguir de fato no posto há tantos anos sem qualquer
     // republicação — melhor omitir do que arriscar mostrar um titular errado.
+    // EXCEÇÃO — alta administração (Pró-Reitor, Superintendente, Vice-Reitor):
+    // o titular fica o mandato da gestão inteira, que passa fácil de 4 anos
+    // (SOMA tem superintendente designado em 2015 até hoje, cf. página oficial
+    // de dirigentes da UFF). Aí o corte escondia titular real; a proteção
+    // contra fantasma continua sendo o último-evento-por-pessoa acima.
     $limiteMandato = date('Y-m-d', strtotime('-4 years'));
     $chefiasFiltradas = array_values(array_filter(
-        $chefiasFiltradas, fn($c) => $c['desde'] >= $limiteMandato
+        $chefiasFiltradas,
+        fn($c) => $c['desde'] >= $limiteMandato
+                  || preg_match('/pró-?reitor|superintendente|vice-?reitor/iu', $c['cargo'])
     ));
 
     // Reitor é nomeado por ato externo (decreto presidencial no DOU), nunca
