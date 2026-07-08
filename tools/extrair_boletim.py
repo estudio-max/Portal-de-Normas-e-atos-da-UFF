@@ -299,6 +299,51 @@ def normaliza_proc(s):
     return s.strip()
 
 
+def _data_valida(iso):
+    try:
+        datetime.strptime(iso, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
+def corrige_ano_futuro(data_ato, ano_ato, bs_data):
+    """Typo de ano na fonte ("DE 03 DE DEZEMBRO DE 2026" num BS de 2025;
+    "Nº 047/2209") deixa o ato datado do futuro — impossível, o boletim só
+    publica ato já assinado. A âncora é a data do PRÓPRIO boletim, que vale
+    também nos anos antigos do backfill (a data corrente não denunciaria um
+    "2022" digitado num boletim de 2021).
+    - data_ato depois do BS: tenta o ano do BS e o anterior (ato de dezembro
+      publicado em janeiro); fica com o primeiro que não seja futuro. Sem
+      candidato válido, descarta a data (vazio é melhor que futuro).
+    - ano do número: edital numera legitimamente para o ano SEGUINTE
+      ("Edital POSLING nº 1/2024" sai em 2023) — só corrige se > BS+1.
+    Devolve (data_ato, ano_ato) corrigidos."""
+    m = re.match(r"(\d{2})/(\d{2})/(\d{4})$", bs_data or "")
+    if not m:
+        return data_ato, ano_ato
+    bs_iso = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+    bs_ano = int(m.group(3))
+    ano_da_data = data_ato[:4] if data_ato else ""
+    if data_ato and data_ato > bs_iso:
+        # ano-1 só quando o ano estava claramente typado (difere do ano do BS);
+        # se o ano já é o do BS, o typo está no dia/mês — não dá pra inferir,
+        # e empurrar o ato p/ um ano atrás fabricaria dado errado.
+        candidatos = [bs_ano] + ([bs_ano - 1] if ano_da_data != str(bs_ano) else [])
+        for cand in candidatos:
+            novo = f"{cand:04d}{data_ato[4:]}"
+            if novo <= bs_iso and _data_valida(novo):
+                data_ato = novo
+                break
+        else:
+            data_ato = ""
+        if ano_ato == ano_da_data:        # ano do título veio da mesma data typada
+            ano_ato = data_ato[:4] if data_ato else str(bs_ano)
+    if ano_ato.isdigit() and int(ano_ato) > bs_ano + 1:
+        ano_ato = str(bs_ano)
+    return data_ato, ano_ato
+
+
 def data_iso(dia, mes_nome, ano):
     m = MESES.get(mes_nome.lower().strip())
     if not m:
@@ -498,6 +543,7 @@ def parse_pdf(caminho):
         numero = limpar(m.group("numero"))
         data_ato = data_iso(m.group("dia"), m.group("mes"), m.group("ano"))
         ano_ato = m.group("ano")
+        data_ato, ano_ato = corrige_ano_futuro(data_ato, ano_ato, bs_data)
 
         # Ementa: texto entre o fim do título e o "RESOLVE"/"O REITOR"/etc.
         pos_resto = m.end()
