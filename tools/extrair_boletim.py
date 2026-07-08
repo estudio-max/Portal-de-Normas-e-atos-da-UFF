@@ -989,8 +989,11 @@ _TRIG_FUNC = (r"(?<![A-Za-zÀ-ÿ])(?P<prep>d[ao]s?|para\s+(?:as?|os?)|pel[ao]|a|
 # Vírgula seguida de minúscula ("Divisão X, da Superintendência...") continua
 # encerrando (o que vem depois é o órgão-pai, não parte do nome).
 # O traço opcional antes dos marcadores cobre "... e Inovação - Código CD-2".
+# O sufixo de gênero "(a)"/"(A)" colado no cargo ("Pró-Reitor(a) da...",
+# "Coordenador(a) do...", comum em portarias de nomeação) impedia o casamento
+# do conector logo depois do cargo — a designação inteira era perdida.
 FUNCAO_RE = re.compile(
-    _TRIG_FUNC + _CARGO_G + r"\s+" + _CONECT_CU + r"\s+"
+    _TRIG_FUNC + _CARGO_G + r"(?:\s*\([aA]\))?\s+" + _CONECT_CU + r"\s+"
     r"(?P<unidade>[A-ZÀ-Úa-zà-ú(][^;:.]{2,90}?)"
     r"(?=\s*(?:[-–—]\s*)?(?:,(?!\s*(?-i:[A-ZÀ-Ú][a-zà-ú]))|;|\.|:|\bc[óo]digo\b|\bc[óo]d\b|\bs[íi]mbolo\b|\bFG[- ]?\d|\bCD[- ]?\d|"
     r"\bFCC\b|\bFUC\b|\bn[.ºo°]|\ba partir\b|\bpelo per|\bno per[íi]odo\b|\bcom valid|"
@@ -1013,7 +1016,11 @@ _ANAFORA_UNID = re.compile(r"\b(referid|mesm|respectiv|citad|aludid|supracitad|p
 # token começa com maiúscula e o resto pode ser maiúsculo ("MARINA") ou
 # minúsculo ("Marina"); conectores de/da/dos entre os tokens em qualquer caixa.
 _NOME_PROP = r"[A-ZÀ-Ú][A-ZÀ-Úa-zà-ú]+(?:\s+(?:d[aeo]s?\s+|D[AEO]S?\s+)?[A-ZÀ-Ú][A-ZÀ-Úa-zà-ú]+){1,4}"
-_NOMEIA_EXT = re.compile(r"\b[Nn]omear\s+(?P<nome>" + _NOME_PROP + r")\s*,\s*para\s+exercer\b")
+# A vírgula depois do nome é opcional: portarias de convidado externo tanto
+# escrevem "Nomear FULANO, para exercer" quanto "Nomear FULANO para exercer"
+# (ex.: Vera Cajazeiras, Pró-Reitora de Administração convidada). O "para
+# exercer" logo após o nome já é âncora forte o bastante.
+_NOMEIA_EXT = re.compile(r"\b[Nn]omear\s+(?P<nome>" + _NOME_PROP + r")\s*,?\s*para\s+exercer\b")
 # Palavras que denunciam que o "nome" é na verdade um coletivo/genérico.
 _NAO_NOME = re.compile(r"\b(comiss|membro|docente|servidor|professor|grupo|equipe|"
                        r"seguinte|abaixo|relacionad)", re.I)

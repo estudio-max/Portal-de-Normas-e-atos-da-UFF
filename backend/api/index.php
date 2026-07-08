@@ -366,6 +366,37 @@ function chefias(PDO $pdo): void {
         $chefiasFiltradas, fn($c) => mb_strtolower(trim($c['cargo'])) !== 'reitor'
     ));
 
+    // --- Curadoria da alta administração (fonte: página oficial de dirigentes,
+    // uff.br/sobre/dirigentes-da-uff). Corrige dois casos que a projeção a
+    // partir do Boletim não resolve sozinha:
+    //
+    //  (a) Designação ÓRFÃ de 2011 de unidade depois RENOMEADA: o titular saiu
+    //      por ato não capturado e a unidade hoje tem outro nome, com titular
+    //      atual já projetado corretamente. A designação velha, isenta do corte
+    //      de mandato por ser alta administração, sobrava como setor-fantasma.
+    //      Removida por ato_id (o ato histórico continua indexado e buscável;
+    //      só deixa de ser projetado como titular vigente):
+    //        - "Tecnologia da Informação" (Superintendente, 2011)
+    //          -> Superintendência de Tecnologia da Informação (Douglas, 2026)
+    //        - "Planejamento da Pró-Reitoria de Planejamento" (Pró-Reitor, 2011)
+    //          -> Pró-Reitoria de Planejamento (Julio, 2022)
+    //        - "Engenharia e Projetos - SUEP" (Superintendente, 2011)
+    //          -> Superintendência de Arquitetura, Engenharia e Patrimônio
+    //             (Renata, 2024)
+    $suprimir = [
+        '094-2011-portaria-ato-44-558-2011' => 1,
+        '147-2011-portaria-ato-43-984-2011' => 1,
+        '147-2011-portaria-ato-43-991-2011' => 1,
+    ];
+    $chefiasFiltradas = array_values(array_filter(
+        $chefiasFiltradas, fn($c) => empty($suprimir[$c['atoId'] ?? ''])
+    ));
+    // Vera Cajazeiras (PROAD, Portaria 62.922/2019) e Aline da Silva Marques
+    // (PROGEPE, Portaria 1.149/2021) NÃO precisam de cadastro manual: eram
+    // perdidas por dois bugs de extração já corrigidos (sufixo "(a)" no cargo
+    // e nomeação de convidado sem vírgula) e agora entram do ato real após o
+    // reprocessamento dos blocos de backfill.
+
     usort($chefiasFiltradas, fn($a, $b) => strcmp($a['unidade'] ?? '', $b['unidade'] ?? ''));
     $chefias = $chefiasFiltradas;
 
