@@ -194,7 +194,18 @@ _BLOCK_NOME = set((
     "neurologia ortopedia radiologia anestesiologia dermatologia oftalmologia urologia patologia "
     "psiquiatria geriatria traumatologia bucomaxilofacial bucomaxilofaciais buco maxilo facial geral "
     # ruído de cabeçalho de tabela ("Nome:") e abreviação de "Matrícula" que colam no nome
-    "nome mat"
+    "nome mat "
+    # referências a outros atos coladas no nome ("Revogar a DTS GGE/UFF Nº 1..."
+    # deixava "Dts Gge" como nome)
+    "dts portaria determinacao resolucao edital comunicado instrucao normativa "
+    # cabeçalho de quebra de página no meio do ato ("...BOLETIM DE SERVIÇO
+    # ANO LX... SEÇÃO IV PÁG." virava "Serviço Ano Lx", "Seção Iv")
+    "boletim servico ano secao pag "
+    # rótulos de tabela/edital eleitoral e áreas que colam no nome
+    "chapa titular titulares suplente suplentes eleitoral local prox analitica "
+    "instituto faculdade escola desenvolvimento regional monitoria genetica "
+    "ac aa "           # tipo de bolsa (Ampla Concorrência/Ação Afirmativa) em tabelas
+    "superintenente"   # typo recorrente de "superintendente" nas DTS da SAEP
 ).split())
 # Classes de letras Latin-1 COMPLETAS: a faixa antiga "à-ú" não cobria ü/û/ý/ÿ
 # nem Ü/Þ, o que truncava sobrenomes germânicos ("Frühauf"->"Fr", "SCHMÜTZ"->
@@ -211,9 +222,15 @@ _PALAVRA_NOME = r"[%s][%s]*(?:[%s][%s]+)*" % (_UP, _LET, _AP, _LET)
 # ("WASSERMAn" -> "Wasserman").
 _PALAVRA_CAPS = r"[%s]{2,}[%s]*(?:[%s][%s]+)*" % (_UP, _LET, _AP, _LET)
 # Conector: inclui "d'Aquino"/"d'Ávila" inteiros (senão o "d'" corta o sobrenome).
-_CONN = r"(?:de|da|do|das|dos|e|d[%s][%s]*)" % (_AP, _LET)
+# "d[aeo]s?" e não "de|da|do|das|dos": na alternância, "do" casa antes e
+# esconde "dos" (o motor não volta atrás), partindo "Lenin dos Santos Pires"
+# em "Lenin do" + "Santos Pires".
+_CONN = r"(?:d[aeo]s?|e|d[%s][%s]*)" % (_AP, _LET)
 NOME_RE = re.compile(r"%s(?:\s+(?:%s|%s)){1,6}" % (_PALAVRA_NOME, _CONN, _PALAVRA_NOME))
-NOME_CAPS_RE = re.compile(r"%s(?:\s+(?:%s|%s)){1,6}" % (_PALAVRA_CAPS, _CONN, _PALAVRA_CAPS))
+# Run de CAIXA ALTA não aceita conector minúsculo: nome oficial em caps usa
+# "DOS/DE" também em caps (casam como palavra), e o minúsculo no meio denuncia
+# sigla/rótulo ("Comissão CG/PROX do PPGQ"), que virava nome.
+NOME_CAPS_RE = re.compile(r"%s(?:\s+%s){1,6}" % (_PALAVRA_CAPS, _PALAVRA_CAPS))
 
 # Linha de cabeçalho repetida em cada página do ato
 HEADER_BS_RE = re.compile(
@@ -830,27 +847,50 @@ def _titlecase_nome(s):
 
 
 def _limpa_nome(run):
-    """Tira verbo/cargo/conector colado nas pontas; exige nome com 2+ palavras."""
+    """Tira verbo/cargo/conector colado nas pontas; exige nome com 2+ palavras.
+    Letra solta na ponta também cai ("SEÇÃO IV P.013" gerava "Iv P")."""
     p = run.split()
-    while p and (_fold(p[0]) in _BLOCK_NOME or _fold(p[0]) in _CONNECT):
+    while p and (_fold(p[0]) in _BLOCK_NOME or _fold(p[0]) in _CONNECT or len(p[0]) == 1):
         p.pop(0)
-    while p and (_fold(p[-1]) in _BLOCK_NOME or _fold(p[-1]) in _CONNECT):
+    while p and (_fold(p[-1]) in _BLOCK_NOME or _fold(p[-1]) in _CONNECT or len(p[-1]) == 1):
         p.pop()
     return _titlecase_nome(" ".join(p)) if len(p) >= 2 else ""
 
 
-def nome_antes_siape(texto, pos):
-    """Nome mais próximo ANTES da matrícula (posição pos), pulando cargos/verbos."""
-    janela = texto[max(0, pos - 170): pos]
+_RESOLVE_CORTE = re.compile(r"(?i)\bR\s*E\s*S\s*O\s*L\s*V\s*E")
+
+
+def nome_antes_siape(texto, pos, ignora=None):
+    """Nome mais próximo ANTES da matrícula (posição pos), pulando cargos/verbos.
+    `ignora(nome)`, opcional, descarta um candidato e deixa a busca seguir para
+    o anterior (p.ex. nome que é pedaço do nome da unidade)."""
+    # 230 (era 170): com o corte no RESOLVE segurando o preâmbulo, a janela
+    # maior deixa de decapitar nomes longe da matrícula ("Lenin dos Santos
+    # Pires (SIAPE..." a 172 chars virava "Santos Pires").
+    ini = max(0, pos - 230)
+    janela = texto[ini:pos]
+    # A janela não pode começar no meio de palavra: um corte dentro de
+    # "SUBCHEFE" virava "HEFE", que escapa do _BLOCK_NOME e era devolvido
+    # como nome ("Hefe do Departamento de Letras Estrangeiras Modernas").
+    if ini > 0 and texto[ini - 1].isalnum():
+        janela = re.sub(r"^\S+\s*", "", janela, count=1)
+    # O designado vem sempre DEPOIS do "RESOLVE"; antes dele fica o preâmbulo
+    # com a autoridade em caixa alta ("O CHEFE DO DEPARTAMENTO..."), que nas
+    # DTS ganhava do nome verdadeiro (em title-case) na prioridade de caixa alta.
+    corte = None
+    for corte in _RESOLVE_CORTE.finditer(janela):
+        pass
+    if corte:
+        janela = janela[corte.end():]
     # Portaria padrão: nomes em CAIXA ALTA, cargos/ocupação em title-case.
     # Tenta primeiro sequências totalmente em maiúsculas para evitar capturar o cargo.
     for m in reversed(list(NOME_CAPS_RE.finditer(janela))):
         nome = _limpa_nome(m.group(0))
-        if nome:
+        if nome and not (ignora and ignora(nome)):
             return nome
     for m in reversed(list(NOME_RE.finditer(janela))):
         nome = _limpa_nome(m.group(0))
-        if nome:
+        if nome and not (ignora and ignora(nome)):
             return nome
     return ""
 
@@ -1022,13 +1062,13 @@ def _acao_func(trecho, pos, prep):
     return "dispensar" if re.match(r"d[ao]s?$", _fold(prep).strip()) else "designar"
 
 
-def _pessoa_antes(trecho, pos):
+def _pessoa_antes(trecho, pos, ignora=None):
     achou = None
     for m in SIAPE_RE.finditer(trecho[:pos]):
         achou = m
     if achou and pos - achou.start() < 220:
-        return achou.group(1), nome_antes_siape(trecho, achou.start())
-    return "", nome_antes_siape(trecho, pos)
+        return achou.group(1), nome_antes_siape(trecho, achou.start(), ignora)
+    return "", nome_antes_siape(trecho, pos, ignora)
 
 
 def extrai_funcoes(trecho):
@@ -1041,7 +1081,11 @@ def extrai_funcoes(trecho):
         unid = _limpa_unid(m.group("unidade"))
         if not _unid_ok(unid):
             continue
-        siape, nome = _pessoa_antes(trecho, m.start("cargo"))
+        # Candidato a nome que é pedaço do nome da unidade é lixo ("Mica Ii"
+        # em "...Disciplina de MICA II"): rejeitar DURANTE a busca deixa o
+        # fallback achar o nome verdadeiro, em vez de só zerar no fim.
+        lixo_unid = lambda n: _fold(n) in _fold(unid)
+        siape, nome = _pessoa_antes(trecho, m.start("cargo"), lixo_unid)
         if not siape:
             # Sem SIAPE: só segue se for nomeação de convidado externo (nome próprio).
             nome = _nome_externo_antes(trecho, m.start())
