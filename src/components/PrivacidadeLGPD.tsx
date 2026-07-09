@@ -32,7 +32,7 @@ export default function PrivacidadeLGPD() {
       <Secao icon={<FileText className="w-4 h-4" />} titulo="Responsável pelo tratamento">
         <p>
           Este portal é mantido por João Fanara, de forma independente da UFF, como ferramenta de
-          consulta aos boletins públicos da universidade. Contato: <a href="mailto:estudio@fanara.com.br" className="text-blue-700 underline font-semibold">estudio@fanara.com.br</a>.
+          consulta aos boletins públicos da universidade. Contato: <a href="mailto:joaofanara@id.uff.br" className="text-blue-700 underline font-semibold">joaofanara@id.uff.br</a>.
         </p>
       </Secao>
 
@@ -67,7 +67,7 @@ export default function PrivacidadeLGPD() {
         <p>
           Se você aparece em algum ato indexado aqui e quer corrigir uma informação, ou pedir a
           remoção do seu nome de um trecho específico (por exemplo, uma ementa que cita um
-          processo disciplinar), escreva para <a href="mailto:estudio@fanara.com.br" className="text-blue-700 underline font-semibold">estudio@fanara.com.br</a>.
+          processo disciplinar), escreva para <a href="mailto:joaofanara@id.uff.br" className="text-blue-700 underline font-semibold">joaofanara@id.uff.br</a>.
           Cada pedido é avaliado caso a caso. Quando dá para resolver removendo só o nome do
           trecho, preferimos isso a apagar o ato inteiro — o ato em si continua existindo no
           boletim oficial da UFF de qualquer forma, com ou sem este portal.
