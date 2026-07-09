@@ -16,6 +16,32 @@ import argparse
 import unicodedata
 from datetime import datetime
 
+# Mascaramento de CPF (LGPD art. 6º, III — minimização) ------------------------
+# Formato pontuado padrão: mascarado sempre, é um padrão específico o bastante
+# (3-3-3-2 com pontos/hífen) pra não colidir com outros números do boletim.
+_CPF_RE = re.compile(r"\d{3}\.\d{3}\.\d{3}-\d{2}")
+# Variantes sem pontuação/mal formatadas: só mascaradas quando rotuladas por
+# "CPF" nas proximidades, pra não confundir com SIAPE/processo/telefone.
+_CPF_ROTULADO_RE = re.compile(
+    r"(?i)(cpf\.?\s*n?[ºo°]?\.?\s*[:\-]?\s*)(\d{3}\.?\d{3}\.?\d{3}[-.]?\d{2})"
+)
+
+
+def _mascara(cpf_str):
+    d = re.sub(r"\D", "", cpf_str)
+    return f"***.{d[3:6]}.{d[6:9]}-**" if len(d) == 11 else cpf_str
+
+
+def mascarar_cpfs(texto):
+    """Mascara CPF em texto livre, mantendo os 6 dígitos centrais visíveis
+    (mesma convenção que a UFF já usa nos boletins de 2026: ***.123.456-**)."""
+    if not texto:
+        return texto
+    texto = _CPF_RE.sub(lambda m: _mascara(m.group(0)), texto)
+    texto = _CPF_ROTULADO_RE.sub(lambda m: m.group(1) + _mascara(m.group(2)), texto)
+    return texto
+
+
 # Mapas de tradução para o esquema do app -------------------------------------
 TIPO_MAP = {
     "PORTARIA": "Portaria",
@@ -138,8 +164,8 @@ def converter(dados, urls=None):
         ano_pub = ano_bs.get(a.get("arquivo"), "2026")
         # Ementa: oficial > resumo inferido > placeholder. ementaInferida sinaliza
         # ao front-end que o texto é um "resumo automático" (não a ementa oficial).
-        ementa_oficial = (a.get("ementa") or "").strip()
-        ementa_resumo = (a.get("ementa_resumo") or "").strip()
+        ementa_oficial = mascarar_cpfs((a.get("ementa") or "").strip())
+        ementa_resumo = mascarar_cpfs((a.get("ementa_resumo") or "").strip())
         ementa_inferida = bool(ementa_resumo) and not ementa_oficial
         ementa_disp = ementa_oficial or ementa_resumo or "(sem ementa formal no boletim)"
         saida.append({
@@ -161,7 +187,7 @@ def converter(dados, urls=None):
             "siapes": a.get("siapes", []),
             "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
             "funcoes": a.get("funcoes", []),  # [{acao,cargo,unidade,unidade_chave,nome,siape}] p/ Chefias
-            "textoBusca": a.get("corpo_busca", ""),  # corpo p/ busca por nome/SIAPE
+            "textoBusca": mascarar_cpfs(a.get("corpo_busca", "")),  # corpo p/ busca por nome/SIAPE
             "conteudoResumido": ementa_disp if ementa_disp[:1] != "(" else "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo
             "boletimNumero": f"BS nº {a.get('bs_numero','')}/{ano_pub}",
@@ -170,7 +196,7 @@ def converter(dados, urls=None):
             "secao": a.get("secao", ""),
             "pagina": a.get("pagina", ""),
             "arquivo": a.get("arquivo", ""),
-            "notasInternas": (f"Extraído de {a.get('arquivo','')}."
+            "notasInternas": mascarar_cpfs(f"Extraído de {a.get('arquivo','')}."
                               + (f" Assinante: {a['signatario']}." if a.get("signatario") else "")),
             # data estável (a do próprio ato) — evita commits diários sem mudança
             "dataCriacao": a.get("data_ato") or "",

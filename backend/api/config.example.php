@@ -21,4 +21,10 @@ return [
 
     // CORS: domínios autorizados a consumir a API ('*' = qualquer; uso interno)
     'cors_origin' => '*',
+
+    // Segredo exigido em ?token=... pelos endpoints de importação/correção
+    // (api-importar/, importar/corrigir_siapes.php, importar/resolver_relacoes.php).
+    // Gere um valor forte (ex.: `openssl rand -base64 32` ou um gerenciador de senhas)
+    // e preencha só no servidor — nunca reaproveite o exemplo abaixo.
+    'import_token' => 'SEU_TOKEN_FORTE_AQUI',
 ];

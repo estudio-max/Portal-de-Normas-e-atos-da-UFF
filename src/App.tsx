@@ -12,6 +12,7 @@ import ActRelationsApi from './components/ActRelationsApi';
 import ChefiasApi from './components/ChefiasApi';
 import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
+import PrivacidadeLGPD from './components/PrivacidadeLGPD';
 
 export default function App() {
   const [acts, setActs] = useState<UffAct[]>([]);
@@ -123,15 +124,26 @@ export default function App() {
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 
+          {activeTab === 'privacidade' && <div id="painel-privacidade"><PrivacidadeLGPD /></div>}
+
         </div>
       </main>
 
       <footer className="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-400 font-semibold">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Universidade Federal Fluminense (UFF) - Criado por João Fanara - joafanara@id.uff.br</span>
-          <span className="flex items-center gap-1 text-[11px] text-slate-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Portal de Normas e Atos • {apiMode ? 'banco de dados' : 'modo estático'} • 2026
+          <span className="flex items-center gap-2 text-[11px] text-slate-500">
+            <button
+              id="link-privacidade-rodape"
+              onClick={() => setActiveTab('privacidade')}
+              className="underline decoration-slate-300 hover:text-[#003366] font-semibold"
+            >
+              Privacidade (LGPD)
+            </button>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Portal de Normas e Atos • {apiMode ? 'banco de dados' : 'modo estático'} • 2026
+            </span>
           </span>
         </div>
       </footer>

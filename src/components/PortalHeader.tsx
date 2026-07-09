@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Search, ExternalLink, Database, AlertCircle, RefreshCw } from 'lucide-react';
+import { FileText, Search, ExternalLink, Database, AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { UffAct } from '../types';
 
 interface PortalHeaderProps {
@@ -228,6 +228,18 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
             }`}
           >
             ❓ Ajuda
+          </button>
+
+          <button
+            id="tab-privacidade"
+            onClick={() => setActiveTab('privacidade')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+              activeTab === 'privacidade'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" /> Privacidade
           </button>
         </div>
       </div>
