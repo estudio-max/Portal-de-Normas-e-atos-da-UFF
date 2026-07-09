@@ -131,7 +131,7 @@ export default function App() {
 
       <footer className="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-400 font-semibold">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Universidade Federal Fluminense (UFF) - Criado por João Fanara - joafanara@id.uff.br</span>
+          <span>Universidade Federal Fluminense (UFF) - Criado por João Fanara - joaofanara@id.uff.br</span>
           <span className="flex items-center gap-2 text-[11px] text-slate-500">
             <button
               id="link-privacidade-rodape"
