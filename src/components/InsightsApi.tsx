@@ -195,6 +195,24 @@ export default function InsightsApi() {
             </Card>
           </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Card titulo="Aposentadorias concedidas por ano" icone={<Users className="w-4 h-4 text-yellow-500" />}
+              sub="Concessões publicadas no Boletim, detectadas pelo dispositivo do ato (“Concede aposentadoria…”): voluntárias × compulsórias.">
+              <div className="flex items-center gap-4 mb-2 text-[11px] text-slate-500 font-medium">
+                <Legenda cor={P.bar} texto="voluntária" />
+                <Legenda cor={P.vig.revogado} texto="compulsória" />
+              </div>
+              <SerieAnual dados={(an?.seriesRh || []).map(s => ({ ano: s.ano, a: s.vol, b: s.comp }))}
+                corA={P.bar} corB={P.vig.revogado} rotuloA="voluntárias" rotuloB="compulsórias" P={P} />
+            </Card>
+
+            <Card titulo="Saídas para outro cargo público" icone={<TrendingUp className="w-4 h-4 text-yellow-500" />}
+              sub="Vacâncias declaradas por posse em outro cargo inacumulável (art. 33, VIII da Lei 8.112/90) — servidores que passaram em outro concurso.">
+              <SerieAnual dados={(an?.seriesRh || []).map(s => ({ ano: s.ano, a: s.vac8 }))}
+                corA={P.tipo} rotuloA="vacâncias art. 33, VIII" P={P} />
+            </Card>
+          </div>
+
           {/* Meia-vida: adiada até haver revogações suficientes (backfill) */}
           {an?.mortalidade && (
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-start gap-2.5">
@@ -216,6 +234,9 @@ export default function InsightsApi() {
             A rotatividade conta só permanências <strong>concluídas</strong> (o titular atual, ainda no cargo, não entra na média).
             Nem toda “citação a norma revogada” é erro — pode ser menção histórica, regra de transição ou o ato reger fato
             anterior à revogação (<em>tempus regit actum</em>); por isso é um <strong>alerta para conferência</strong>, não um veredito.
+            As séries de aposentadorias e vacâncias são detectadas pelo <strong>texto do dispositivo</strong> e contam o que foi
+            <strong> publicado no Boletim</strong> — em alguns períodos parte das concessões saiu apenas no DOU, e o ano de 2020
+            quase não trouxe atos de pessoal; quedas bruscas podem refletir a prática de publicação, não o fato em si.
           </p>
         </>
       )}
@@ -497,6 +518,61 @@ function Zumbis({ lista }: { lista?: ds.Zumbi[] }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---- Série anual (1 ou 2 séries de colunas por ano) ------------------------
+// Usada pelos painéis de RH. Duas séries = colunas lado a lado por ano.
+function SerieAnual({ dados, corA, corB, rotuloA, rotuloB, P }: {
+  dados: { ano: number; a: number; b?: number }[];
+  corA: string; corB?: string; rotuloA: string; rotuloB?: string; P: ReturnType<typeof paleta>;
+}) {
+  const uteis = dados.filter(d => d.a > 0 || (d.b || 0) > 0);
+  if (!uteis.length) {
+    return (
+      <p className="text-xs text-slate-500 leading-relaxed">
+        Nenhum ato desse tipo detectado no período indexado. A série ganha corpo
+        conforme o legado entra na base (no banco completo ela cobre décadas).
+      </p>
+    );
+  }
+  const max = Math.max(1, ...uteis.map(d => Math.max(d.a, d.b || 0)));
+  const W = 340, H = 160, PADB = 24, PADL = 6, PADT = 14;
+  const gw = (W - PADL) / uteis.length;                    // largura do grupo/ano
+  const duas = corB != null;
+  const bw = duas ? gw * 0.36 : gw * 0.62;                 // largura de cada coluna
+  const alt = (n: number) => ((H - PADB - PADT) * n) / max;
+  const total = (k: 'a' | 'b') => uteis.reduce((s, d) => s + (d[k] || 0), 0);
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
+          aria-label={`Série anual: ${rotuloA}${rotuloB ? ' e ' + rotuloB : ''}, máximo ${max} num ano.`}>
+          <line x1={PADL} y1={H - PADB} x2={W} y2={H - PADB} stroke={P.grid} strokeWidth="1" />
+          {uteis.map((d, i) => {
+            const x0 = PADL + i * gw;
+            const rot = uteis.length > 14 ? String(d.ano).slice(2) : String(d.ano);
+            return (
+              <g key={d.ano}>
+                <rect x={x0 + (duas ? gw * 0.10 : gw * 0.19)} y={H - PADB - alt(d.a)} width={bw} height={alt(d.a)} rx={1.5} fill={corA}>
+                  <title>{`${d.ano}: ${fmtN(d.a)} ${rotuloA}`}</title>
+                </rect>
+                {duas && (
+                  <rect x={x0 + gw * 0.52} y={H - PADB - alt(d.b || 0)} width={bw} height={alt(d.b || 0)} rx={1.5} fill={corB}>
+                    <title>{`${d.ano}: ${fmtN(d.b || 0)} ${rotuloB || ''}`}</title>
+                  </rect>
+                )}
+                <text x={x0 + gw / 2} y={H - PADB + 12} fontSize="8.5" textAnchor="middle" fill={P.axis}>{rot}</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <p className="text-[11px] text-slate-500 mt-1.5">
+        Total no período indexado: <strong className="text-slate-700">{fmtN(total('a'))}</strong> {rotuloA}
+        {duas && <> · <strong className="text-slate-700">{fmtN(total('b'))}</strong> {rotuloB}</>}.
+      </p>
     </div>
   );
 }

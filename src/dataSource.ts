@@ -320,6 +320,11 @@ export interface Zumbi {
   alvoLabel: string; alvoSigla: string;  // a norma já revogada
   revogadoEm: string | null;             // data da revogação (YYYY-MM-DD)
 }
+// Série anual de RH detectada pelo dispositivo do texto: aposentadorias
+// concedidas (voluntárias/compulsórias) e vacâncias por posse em outro cargo
+// inacumulável (art. 33, VIII da Lei 8.112/90 — servidor que passou em outro
+// concurso). Conta o que foi PUBLICADO no BS.
+export interface SerieRh { ano: number; vol: number; comp: number; vac8: number; }
 export interface Analitico {
   rotatividade: {
     posicoesComTroca: number | null; totalEventos: number;
@@ -327,6 +332,7 @@ export interface Analitico {
   };
   zumbis: Zumbi[];
   mortalidade: { total: number; mexidos: number };
+  seriesRh: SerieRh[];
 }
 
 const mesesEntre = (a: string, b: string) =>
@@ -411,6 +417,30 @@ export async function getAnalitico(): Promise<Analitico> {
   zumbis.sort((a, b) => (a.citData! < b.citData! ? 1 : -1));
   zumbis.splice(60);
 
+  // Série RH (mesma detecção dispositiva do PHP, sobre o texto minúsculo):
+  // aposentadorias concedidas e vacâncias art. 33 VIII, por ano do ato.
+  const reVol = /conced\w*\s+(?:a\s+)?aposentadoria\s+volunt/;
+  const reComp = /conced\w*\s+(?:a\s+)?aposentadoria\s+compuls/;
+  const reVago = /declara\w*\s+(?:vago|(?:a\s+)?vac[aâ]ncia)/;
+  const reCausa8 = /inciso viii,? do artigo 33|posse em outro cargo inacumul|tendo em vista a posse/;
+  const rhAno = new Map<number, { vol: number; comp: number; vac8: number }>();
+  for (const a of CACHE as any[]) {
+    const ano = Number(a.ano);
+    if (!ano || ano < 1990 || ano > 2100) continue;
+    const t = `${a.ementa || ''} ${a.conteudoResumido || ''} ${a.textoBusca || ''}`.toLowerCase();
+    const vol = reVol.test(t), comp = reComp.test(t);
+    const vac8 = reVago.test(t) && reCausa8.test(t);
+    if (!vol && !comp && !vac8) continue;
+    const s = rhAno.get(ano) || { vol: 0, comp: 0, vac8: 0 };
+    if (vol) s.vol++;
+    if (comp) s.comp++;
+    if (vac8) s.vac8++;
+    rhAno.set(ano, s);
+  }
+  const seriesRh: SerieRh[] = [...rhAno.entries()]
+    .map(([ano, s]) => ({ ano, ...s }))
+    .sort((a, b) => a.ano - b.ano);
+
   return {
     rotatividade: {
       posicoesComTroca: nCad < 15 ? nCad : null, totalEventos,
@@ -418,6 +448,7 @@ export async function getAnalitico(): Promise<Analitico> {
     },
     zumbis,
     mortalidade: { total: CACHE.length, mexidos: (CACHE as any[]).filter(a => a.status !== 'Ativo').length },
+    seriesRh,
   };
 }
 

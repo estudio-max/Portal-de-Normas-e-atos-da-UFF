@@ -598,6 +598,65 @@ function analitico(PDO $pdo): void {
     // --- Mortalidade (evidência do porquê a meia-vida ainda não vale) ---
     $m = $pdo->query("SELECT COUNT(*) total, SUM(status<>'Ativo') mexidos FROM atos")->fetch();
 
+    // --- RH: aposentadorias concedidas + vacâncias por posse em outro cargo --
+    // Detecção pelo DISPOSITIVO no corpo do ato (texto minúsculo), calibrada no
+    // acervo 2015-2026: concessão = "conced… aposentadoria voluntária/compulsória"
+    // adjacentes; vacância art. 33 VIII = "declarar vago/vacância" E a causa
+    // (inciso viii | posse em outro cargo inacumulável | tendo em vista a posse
+    // — o inciso IX/falecimento fica de fora por não casar nenhuma das três).
+    // FULLTEXT é só pré-filtro barato; o LIKE decide. Série = ano do ATO.
+    // Conta o que foi PUBLICADO NO BS (parte das concessões sai só no DOU).
+    $rh = [];
+    try {
+        $apos = $pdo->query("
+            SELECT a.ano,
+                   SUM(c.texto LIKE '%concede aposentadoria volunt%'
+                    OR c.texto LIKE '%conceder aposentadoria volunt%'
+                    OR c.texto LIKE '%concede a aposentadoria volunt%'
+                    OR c.texto LIKE '%conceder a aposentadoria volunt%'
+                    OR c.texto LIKE '%concedida aposentadoria volunt%') AS vol,
+                   SUM(c.texto LIKE '%concede aposentadoria compuls%'
+                    OR c.texto LIKE '%conceder aposentadoria compuls%'
+                    OR c.texto LIKE '%concede a aposentadoria compuls%'
+                    OR c.texto LIKE '%conceder a aposentadoria compuls%'
+                    OR c.texto LIKE '%concedida aposentadoria compuls%') AS comp
+            FROM atos a
+            JOIN ato_corpo c ON c.ato_id = a.id
+            WHERE a.ano BETWEEN 1990 AND 2100
+              AND MATCH(c.texto) AGAINST('+aposentadoria' IN BOOLEAN MODE)
+            GROUP BY a.ano
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $vac = $pdo->query("
+            SELECT a.ano, COUNT(*) AS n
+            FROM atos a
+            JOIN ato_corpo c ON c.ato_id = a.id
+            WHERE a.ano BETWEEN 1990 AND 2100
+              AND MATCH(c.texto) AGAINST('vago vacância' IN BOOLEAN MODE)
+              AND (c.texto LIKE '%declarar vago%'  OR c.texto LIKE '%declara vago%'
+                OR c.texto LIKE '%declarar a vacância%' OR c.texto LIKE '%declarada a vacância%')
+              AND (c.texto LIKE '%inciso viii, do artigo 33%'
+                OR c.texto LIKE '%inciso viii do artigo 33%'
+                OR c.texto LIKE '%posse em outro cargo inacumul%'
+                OR c.texto LIKE '%tendo em vista a posse%')
+            GROUP BY a.ano
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $porAno = [];
+        foreach ($apos as $r) {
+            $porAno[(int)$r['ano']] = ['vol' => (int)$r['vol'], 'comp' => (int)$r['comp'], 'vac8' => 0];
+        }
+        foreach ($vac as $r) {
+            $y = (int)$r['ano'];
+            $porAno[$y] = ($porAno[$y] ?? ['vol' => 0, 'comp' => 0, 'vac8' => 0]);
+            $porAno[$y]['vac8'] = (int)$r['n'];
+        }
+        ksort($porAno);
+        foreach ($porAno as $y => $v) {
+            $rh[] = ['ano' => $y, 'vol' => $v['vol'], 'comp' => $v['comp'], 'vac8' => $v['vac8']];
+        }
+    } catch (Throwable $e) { /* sem ato_corpo/FULLTEXT: painel fica vazio */ }
+
     responder_json([
         'rotatividade' => [
             'posicoesComTroca' => count($cadeiras) < 15 ? count($cadeiras) : null, // null = truncado no top 15
@@ -620,6 +679,7 @@ function analitico(PDO $pdo): void {
             'total'   => (int)$m['total'],
             'mexidos' => (int)$m['mexidos'],
         ],
+        'seriesRh' => $rh,
     ]);
 }
 
