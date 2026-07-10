@@ -504,11 +504,13 @@ function insights(PDO $pdo): void {
     ]);
 }
 
-// ---- ANALÍTICO / FASE 2 (rotatividade de chefias + normas zumbis) ---------
+// ---- ANALÍTICO / FASE 2 (rotatividade de chefias + citações defasadas) -----
 // Cross-tempo (não usa recorte de ano). Rotatividade projeta a SEQUÊNCIA de
 // titulares por posição (dedup por SIAPE p/ não contar republicação/retificação
-// como troca) e mede a permanência entre titulares sucessivos. Zumbis = normas
-// revogadas/alteradas que outros atos ainda referenciam (relação resolvida).
+// como troca) e mede a permanência entre titulares sucessivos. Citações
+// defasadas = atos que referenciam uma norma DEPOIS de ela ter sido revogada
+// (compara a data do citante com a data da revogação; exclui a própria relação
+// que revogou). São candidatos a citação a norma sem efeito — não veredito.
 function analitico(PDO $pdo): void {
     // --- Rotatividade ---
     $existe = false;
@@ -560,15 +562,37 @@ function analitico(PDO $pdo): void {
     sort($permanencias);
     $mediana = $permanencias ? round($permanencias[intdiv(count($permanencias), 2)], 1) : null;
 
-    // --- Zumbis: normas revogadas/alteradas ainda referenciadas ---
+    // --- Citações defasadas: atos que referenciam uma norma DEPOIS da
+    // revogação dela. Pivota no ATO CITANTE (o item acionável). A data de
+    // revogação é a data_ato do ato que a revogou (a mais antiga, se houver
+    // mais de um). Exclui a própria relação 'Revoga' e citantes sem data.
     $zumbis = $pdo->query("
-        SELECT a.id, a.tipo, a.numero, a.ano, a.sigla, a.status, a.link_boletim,
-               (SELECT COUNT(*) FROM ato_relacoes r WHERE r.ato_destino_id = a.id) AS cita
-        FROM atos a
-        WHERE a.status <> 'Ativo'
-          AND EXISTS (SELECT 1 FROM ato_relacoes r WHERE r.ato_destino_id = a.id)
-        ORDER BY cita DESC, a.data_ato DESC
-        LIMIT 40
+        SELECT cit.id AS cit_id, cit.tipo AS cit_tipo, cit.numero AS cit_numero,
+               cit.ano AS cit_ano, cit.sigla AS cit_sigla, cit.data_ato AS cit_data,
+               cit.link_boletim AS cit_link, r.tipo_relacao AS relacao,
+               alvo.tipo AS alvo_tipo, alvo.numero AS alvo_numero,
+               alvo.ano AS alvo_ano, alvo.sigla AS alvo_sigla,
+               rev.revogado_em AS revogado_em
+        FROM ato_relacoes r
+        JOIN atos cit  ON cit.id  = r.ato_id
+        JOIN atos alvo ON alvo.id = r.ato_destino_id
+        JOIN (
+            SELECT rr.ato_destino_id AS alvo_id, MIN(o.data_ato) AS revogado_em
+            FROM ato_relacoes rr
+            JOIN atos o ON o.id = rr.ato_id
+            WHERE rr.tipo_relacao = 'Revoga'
+              AND rr.ato_destino_id IS NOT NULL
+              AND o.data_ato IS NOT NULL
+            GROUP BY rr.ato_destino_id
+        ) rev ON rev.alvo_id = alvo.id
+        WHERE alvo.status = 'Revogado'
+          AND r.tipo_relacao <> 'Revoga'
+          AND r.ato_destino_id IS NOT NULL
+          AND cit.data_ato IS NOT NULL
+          AND cit.id <> alvo.id
+          AND cit.data_ato > rev.revogado_em
+        ORDER BY cit.data_ato DESC
+        LIMIT 60
     ")->fetchAll(PDO::FETCH_ASSOC);
 
     // --- Mortalidade (evidência do porquê a meia-vida ainda não vale) ---
@@ -586,9 +610,11 @@ function analitico(PDO $pdo): void {
             ], $cadeiras),
         ],
         'zumbis' => array_map(fn($z) => [
-            'label' => trim("{$z['tipo']} nº {$z['numero']}/{$z['ano']}"),
-            'sigla' => $z['sigla'], 'status' => $z['status'],
-            'cita' => (int)$z['cita'], 'linkBoletim' => $z['link_boletim'],
+            'citLabel' => trim("{$z['cit_tipo']} nº {$z['cit_numero']}/{$z['cit_ano']}"),
+            'citSigla' => $z['cit_sigla'], 'citData' => $z['cit_data'],
+            'citLink'  => $z['cit_link'], 'relacao' => $z['relacao'],
+            'alvoLabel' => trim("{$z['alvo_tipo']} nº {$z['alvo_numero']}/{$z['alvo_ano']}"),
+            'alvoSigla' => $z['alvo_sigla'], 'revogadoEm' => $z['revogado_em'],
         ], $zumbis),
         'mortalidade' => [
             'total'   => (int)$m['total'],

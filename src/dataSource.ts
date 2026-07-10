@@ -311,7 +311,15 @@ export async function getInsights(ano?: string | number): Promise<Insights> {
 
 // ---------- ANALÍTICO / FASE 2 (rotatividade + zumbis) --------------------
 export interface Cadeira { unidade: string; cargo: string; titulares: number; permMedia: number; }
-export interface Zumbi { label: string; sigla: string; status: string; cita: number; linkBoletim: string | null; }
+// Uma "citação defasada": um ato que referencia uma norma DEPOIS da revogação
+// dela. Pivota no ato citante (citX) — o item acionável; a norma revogada (alvo)
+// é o contexto.
+export interface Zumbi {
+  citLabel: string; citSigla: string; citData: string | null; citLink: string | null;
+  relacao: string;                       // como o citante referencia (Altera/Complementa/…)
+  alvoLabel: string; alvoSigla: string;  // a norma já revogada
+  revogadoEm: string | null;             // data da revogação (YYYY-MM-DD)
+}
 export interface Analitico {
   rotatividade: {
     posicoesComTroca: number | null; totalEventos: number;
@@ -372,13 +380,36 @@ export async function getAnalitico(): Promise<Analitico> {
   cadeiras.sort((a, b) => b.titulares - a.titulares || a.permMedia - b.permMedia);
   cadeiras = cadeiras.slice(0, 15);
 
-  const zumbis: Zumbi[] = (CACHE as any[])
-    .filter(a => a.status !== 'Ativo' && (a.referenciadoPor || []).length > 0)
-    .map(a => ({
-      label: `${a.tipoAto} nº ${a.numero}/${a.ano}`, sigla: a.orgaoEmissor || '',
-      status: a.status, cita: (a.referenciadoPor || []).length, linkBoletim: a.linkBoletim || null,
-    }))
-    .sort((a, b) => b.cita - a.cita).slice(0, 40);
+  // Citações defasadas: só normas REVOGADAS referenciadas por atos DATADOS
+  // DEPOIS da revogação. A data de revogação = data do ato que a revogou (a
+  // mais antiga). Exclui a própria relação 'Revoga'. Pivota no citante.
+  const porId = new Map((CACHE as any[]).map(a => [a.id, a]));
+  const zumbis: Zumbi[] = [];
+  for (const alvo of CACHE as any[]) {
+    if (alvo.status !== 'Revogado') continue;
+    const refs = alvo.referenciadoPor || [];
+    const datasRev = refs
+      .filter((r: any) => r.relacao === 'Revoga')
+      .map((r: any) => porId.get(r.porId)?.dataAssinatura)
+      .filter(Boolean)
+      .sort();
+    const revogadoEm = datasRev[0] || null;
+    if (!revogadoEm) continue;                       // sem data de revogação, não dá p/ comparar
+    const alvoLabel = `${alvo.tipoAto} nº ${alvo.numero}/${alvo.ano}`;
+    for (const ref of refs) {
+      if (ref.relacao === 'Revoga') continue;        // não conta a própria revogação
+      const cit = porId.get(ref.porId);
+      if (!cit || !cit.dataAssinatura || cit.id === alvo.id) continue;
+      if (cit.dataAssinatura <= revogadoEm) continue; // só citações POSTERIORES à revogação
+      zumbis.push({
+        citLabel: `${cit.tipoAto} nº ${cit.numero}/${cit.ano}`, citSigla: cit.orgaoEmissor || '',
+        citData: cit.dataAssinatura || null, citLink: cit.linkBoletim || null,
+        relacao: ref.relacao || '', alvoLabel, alvoSigla: alvo.orgaoEmissor || '', revogadoEm,
+      });
+    }
+  }
+  zumbis.sort((a, b) => (a.citData! < b.citData! ? 1 : -1));
+  zumbis.splice(60);
 
   return {
     rotatividade: {

@@ -189,8 +189,8 @@ export default function InsightsApi() {
               <Rotatividade rot={an?.rotatividade} P={P} />
             </Card>
 
-            <Card titulo="Normas revisadas ainda citadas" icone={<AlertTriangle className="w-4 h-4 text-yellow-500" />}
-              sub="Auditoria: atos revogados/alterados que outros ainda referenciam — candidatos a citação desatualizada.">
+            <Card titulo="Citações a normas já revogadas" icone={<AlertTriangle className="w-4 h-4 text-yellow-500" />}
+              sub="Auditoria: atos que referenciam uma norma DEPOIS de ela ter sido revogada — possível citação a norma sem efeito. Confira o ato.">
               <Zumbis lista={an?.zumbis} />
             </Card>
           </div>
@@ -214,6 +214,8 @@ export default function InsightsApi() {
             A “atividade por dia” usa a <strong>data de assinatura</strong> do ato (não a de publicação no boletim). Os recortes
             refletem apenas o período <strong>já indexado</strong>; a série cresce conforme novos boletins (e o legado) entram na base.
             A rotatividade conta só permanências <strong>concluídas</strong> (o titular atual, ainda no cargo, não entra na média).
+            Nem toda “citação a norma revogada” é erro — pode ser menção histórica, regra de transição ou o ato reger fato
+            anterior à revogação (<em>tempus regit actum</em>); por isso é um <strong>alerta para conferência</strong>, não um veredito.
           </p>
         </>
       )}
@@ -451,29 +453,50 @@ function Rotatividade({ rot, P }: { rot?: ds.Analitico['rotatividade']; P: Retur
   );
 }
 
-// ---- Normas zumbis (revogadas/alteradas ainda citadas) --------------------
+// ---- Citações defasadas (ato cita norma já revogada) ----------------------
+// Pivota no ATO CITANTE (o item acionável). Linha 1 = o ato que cita; linha 2 =
+// a norma revogada apontada e quando morreu. Borda vermelha = sinal de alarme.
 function Zumbis({ lista }: { lista?: ds.Zumbi[] }) {
   if (!lista) return <p className="text-xs text-slate-400 italic">Carregando…</p>;
   if (!lista.length) {
-    return <p className="text-xs text-slate-500 leading-relaxed">Nenhuma norma revogada/alterada é referenciada por outro ato no período indexado. Isso é bom — sem citações a normas defasadas.</p>;
+    return (
+      <p className="text-xs text-slate-500 leading-relaxed">
+        Nenhum ato referencia uma norma <strong>depois</strong> de ela ter sido revogada, no período
+        indexado — o resultado esperado. Este radar acende conforme o legado entra na base e surgem
+        citações a normas já sem efeito.
+      </p>
+    );
   }
-  const cor = (s: string) => s === 'Revogado' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+  const normas = new Set(lista.map(z => z.alvoLabel)).size;
   return (
-    <div className="space-y-1 max-h-72 overflow-y-auto">
-      {lista.map((z, i) => (
-        <div key={i} className="flex items-center gap-2 text-[11px] py-1 border-b border-slate-50 last:border-0">
-          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border shrink-0 ${cor(z.status)}`}>{z.status}</span>
-          <span className="flex-1 min-w-0">
-            {z.linkBoletim ? (
-              <a href={z.linkBoletim} target="_blank" referrerPolicy="no-referrer" className="text-blue-700 hover:underline font-semibold inline-flex items-center gap-0.5">
-                {z.label} <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : <span className="font-semibold text-slate-700">{z.label}</span>}
-            <span className="text-slate-400"> · {z.sigla}</span>
-          </span>
-          <span className="text-slate-500 shrink-0 whitespace-nowrap">citada por <strong className="text-slate-700">{z.cita}</strong></span>
-        </div>
-      ))}
+    <div>
+      <p className="text-[11px] text-slate-500 mb-2">
+        <strong className="text-red-600">{fmtN(lista.length)}</strong> referência(s) a <strong>{fmtN(normas)}</strong> norma(s)
+        já revogada(s){lista.length >= 60 ? ' — mostrando as 60 mais recentes' : ''}.
+      </p>
+      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+        {lista.map((z, i) => (
+          <div key={i} className="text-[11px] py-1 pl-2 border-l-2 border-red-300">
+            <div className="flex items-baseline gap-2">
+              <span className="flex-1 min-w-0 truncate">
+                {z.citLink ? (
+                  <a href={z.citLink} target="_blank" referrerPolicy="no-referrer" className="text-blue-700 hover:underline font-semibold inline-flex items-center gap-0.5">
+                    {z.citLabel} <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                ) : <span className="font-semibold text-slate-700">{z.citLabel}</span>}
+                <span className="text-slate-400"> · {z.citSigla}</span>
+              </span>
+              {z.citData && <span className="text-slate-400 shrink-0 whitespace-nowrap">{brData(z.citData)}</span>}
+            </div>
+            <div className="text-slate-500 mt-0.5">
+              <span className="lowercase">{z.relacao || 'refere'}</span>{' '}
+              <strong className="text-slate-700">{z.alvoLabel}</strong>
+              <span className="text-slate-400"> · {z.alvoSigla}</span>
+              {z.revogadoEm && <span className="text-red-600 font-medium"> — revogada em {brData(z.revogadoEm)}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
