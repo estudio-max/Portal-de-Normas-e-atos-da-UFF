@@ -339,7 +339,13 @@ def corrige_ano_futuro(data_ato, ano_ato, bs_data):
             data_ato = ""
         if ano_ato == ano_da_data:        # ano do título veio da mesma data typada
             ano_ato = data_ato[:4] if data_ato else str(bs_ano)
-    if ano_ato.isdigit() and int(ano_ato) > bs_ano + 1:
+    if not (ano_ato.isdigit() and len(ano_ato) == 4):
+        # Ano abreviado ("064/17") ou corrompido por typo/OCR ("026/211", só
+        # 3 dígitos) — a fonte não tem padrão fixo, então não dá pra saber com
+        # segurança qual dígito reconstruir. Usa o ano do próprio Boletim (a
+        # única data certa que temos) em vez de arriscar um chute de século.
+        ano_ato = str(bs_ano)
+    elif int(ano_ato) > bs_ano + 1:
         ano_ato = str(bs_ano)
     return data_ato, ano_ato
 
