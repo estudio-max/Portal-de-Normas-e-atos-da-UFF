@@ -34,10 +34,13 @@ if ($path !== '') {
 }
 
 switch ($recurso) {
-    case 'stats':   stats($pdo); break;
-    case 'filtros': filtros($pdo); break;
-    case 'chefias': chefias($pdo); break;
-    case 'ato':     ficha($pdo, $id); break;
+    case 'stats':    stats($pdo); break;
+    case 'filtros':  filtros($pdo); break;
+    case 'chefias':  chefias($pdo); break;
+    case 'insights': insights($pdo); break;
+    case 'analitico': analitico($pdo); break;
+    case 'prazos':   prazos($pdo); break;
+    case 'ato':      ficha($pdo, $id); break;
     case 'atos':
     default:        listar($pdo); break;
 }
@@ -405,4 +408,236 @@ function chefias(PDO $pdo): void {
         'atualizadoEm' => date('Y-m-d'),
         'chefias' => $chefias,
     ]);
+}
+
+// ---- INSIGHTS (agregações para a aba de painéis) --------------------------
+// Tudo é computado ao vivo sobre índices já existentes (ix_sigla, ix_data,
+// ix_ano, ix_status, ix_proc). Aceita ?ano=YYYY para recortar por ano; sem o
+// parâmetro (ou ?ano=todos) agrega o acervo inteiro. A lista de anos volta
+// sempre completa, para alimentar o seletor no front.
+function insights(PDO $pdo): void {
+    $anoParam = trim($_GET['ano'] ?? '');
+    $temAno   = ($anoParam !== '' && $anoParam !== 'todos');
+    $anoInt   = (int)$anoParam;
+
+    // executa uma consulta ligando :ano só quando há recorte de ano
+    $rodar = function (string $sql) use ($pdo, $temAno, $anoInt) {
+        $st = $pdo->prepare($sql);
+        if ($temAno && strpos($sql, ':ano') !== false) {
+            $st->bindValue(':ano', $anoInt, PDO::PARAM_INT);
+        }
+        $st->execute();
+        return $st;
+    };
+    $wAtos = $temAno ? 'WHERE ano = :ano' : '';                 // p/ tabela atos
+    $andData = $temAno ? 'AND ano = :ano' : '';                 // após "data_ato IS NOT NULL"
+
+    // KPIs
+    $k = $rodar("SELECT
+        COUNT(*) total,
+        SUM(processo_sei IS NOT NULL AND processo_sei<>'') com_sei,
+        SUM(status='Revogado') revogados,
+        SUM(status='Alterado') alterados,
+        COUNT(DISTINCT NULLIF(sigla,'')) orgaos,
+        MIN(data_ato) dmin, MAX(data_ato) dmax
+      FROM atos $wAtos")->fetch();
+
+    // relações cujo ATO DE ORIGEM cai no recorte
+    $relacoes = (int)$rodar(
+        "SELECT COUNT(*) FROM ato_relacoes r JOIN atos a ON a.id = r.ato_id "
+        . ($temAno ? 'WHERE a.ano = :ano' : '')
+    )->fetchColumn();
+
+    // atividade por dia (data do ato) -> heatmap
+    $porDia = $rodar(
+        "SELECT data_ato d, COUNT(*) n FROM atos
+         WHERE data_ato IS NOT NULL $andData GROUP BY data_ato ORDER BY data_ato"
+    )->fetchAll(PDO::FETCH_ASSOC);
+
+    // volume por mês -> série temporal
+    $porMes = $rodar(
+        "SELECT DATE_FORMAT(data_ato,'%Y-%m') ym, COUNT(*) n FROM atos
+         WHERE data_ato IS NOT NULL $andData GROUP BY ym ORDER BY ym"
+    )->fetchAll(PDO::FETCH_ASSOC);
+
+    // ranking de órgãos emissores (top 12) + fatia com vínculo SEI
+    $porOrgao = $rodar(
+        "SELECT sigla, COUNT(*) n,
+                SUM(processo_sei IS NOT NULL AND processo_sei<>'') com_sei
+         FROM atos WHERE sigla<>'' $andData
+         GROUP BY sigla ORDER BY n DESC LIMIT 12"
+    )->fetchAll(PDO::FETCH_ASSOC);
+
+    // composição por tipo de ato
+    $porTipo = $rodar(
+        "SELECT tipo, COUNT(*) n FROM atos $wAtos GROUP BY tipo ORDER BY n DESC"
+    )->fetchAll(PDO::FETCH_ASSOC);
+
+    // anos disponíveis (sempre global) p/ o seletor
+    $anos = array_map('intval', array_column(
+        $pdo->query("SELECT DISTINCT ano FROM atos WHERE ano IS NOT NULL ORDER BY ano DESC")->fetchAll(),
+        'ano'
+    ));
+
+    $total = (int)$k['total'];
+    $revog = (int)$k['revogados'];
+    $alter = (int)$k['alterados'];
+
+    responder_json([
+        'ano'  => $temAno ? $anoInt : null,
+        'anos' => $anos,
+        'kpis' => [
+            'total'     => $total,
+            'comSei'    => (int)$k['com_sei'],
+            'revogados' => $revog,
+            'alterados' => $alter,
+            'vigentes'  => $total - $revog - $alter,
+            'orgaos'    => (int)$k['orgaos'],
+            'relacoes'  => $relacoes,
+            'dataMin'   => $k['dmin'],
+            'dataMax'   => $k['dmax'],
+        ],
+        'porDia'   => array_map(fn($r) => ['d' => $r['d'], 'n' => (int)$r['n']], $porDia),
+        'porMes'   => array_map(fn($r) => ['ym' => $r['ym'], 'n' => (int)$r['n']], $porMes),
+        'porOrgao' => array_map(fn($r) => ['sigla' => $r['sigla'], 'n' => (int)$r['n'], 'comSei' => (int)$r['com_sei']], $porOrgao),
+        'porTipo'  => array_map(fn($r) => ['tipo' => $r['tipo'], 'n' => (int)$r['n']], $porTipo),
+    ]);
+}
+
+// ---- ANALÍTICO / FASE 2 (rotatividade de chefias + normas zumbis) ---------
+// Cross-tempo (não usa recorte de ano). Rotatividade projeta a SEQUÊNCIA de
+// titulares por posição (dedup por SIAPE p/ não contar republicação/retificação
+// como troca) e mede a permanência entre titulares sucessivos. Zumbis = normas
+// revogadas/alteradas que outros atos ainda referenciam (relação resolvida).
+function analitico(PDO $pdo): void {
+    // --- Rotatividade ---
+    $existe = false;
+    try { $existe = (bool)$pdo->query("SHOW TABLES LIKE 'ato_funcoes'")->fetch(); } catch (Throwable $e) {}
+    $cadeiras = [];
+    $permanencias = [];   // em meses, entre titulares sucessivos
+    $totalEventos = 0;
+    if ($existe) {
+        $rows = $pdo->query("
+            SELECT f.unidade_chave, f.cargo, f.unidade, f.acao, f.siape,
+                   COALESCE(NULLIF(f.nome,''), s.nome) AS nome, a.data_ato
+            FROM ato_funcoes f
+            JOIN atos a ON a.id = f.ato_id
+            LEFT JOIN ato_siapes s ON s.ato_id = f.ato_id AND s.siape = f.siape
+            WHERE a.data_ato IS NOT NULL
+            ORDER BY f.unidade_chave, f.cargo, a.data_ato
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        $totalEventos = count($rows);
+        $pos = [];
+        foreach ($rows as $r) {
+            $k = $r['unidade_chave'] . '|' . mb_strtolower($r['cargo']);
+            $pos[$k] = $pos[$k] ?? ['cargo' => $r['cargo'], 'unidade' => $r['unidade'], 'ev' => []];
+            $pos[$k]['ev'][] = $r;
+        }
+        foreach ($pos as $p) {
+            // sequência de titulares (colapsa designações do mesmo SIAPE/nome)
+            $titulares = [];
+            foreach ($p['ev'] as $e) {
+                if ($e['acao'] !== 'designar') continue;
+                $ident = $e['siape'] !== '' ? $e['siape'] : mb_strtolower($e['nome'] ?? '');
+                $ult = end($titulares);
+                if (!$ult || $ident !== $ult['ident']) $titulares[] = ['ident' => $ident, 'inicio' => $e['data_ato']];
+            }
+            if (count($titulares) < 2) continue;
+            $durs = [];
+            for ($i = 0; $i < count($titulares) - 1; $i++) {
+                $m = meses_entre($titulares[$i]['inicio'], $titulares[$i + 1]['inicio']);
+                $durs[] = $m; $permanencias[] = $m;
+            }
+            $cadeiras[] = [
+                'unidade' => $p['unidade'], 'cargo' => $p['cargo'],
+                'titulares' => count($titulares),
+                'permMedia' => round(array_sum($durs) / count($durs), 1),
+            ];
+        }
+        usort($cadeiras, fn($a, $b) => $b['titulares'] <=> $a['titulares'] ?: $a['permMedia'] <=> $b['permMedia']);
+        $cadeiras = array_slice($cadeiras, 0, 15);
+    }
+    sort($permanencias);
+    $mediana = $permanencias ? round($permanencias[intdiv(count($permanencias), 2)], 1) : null;
+
+    // --- Zumbis: normas revogadas/alteradas ainda referenciadas ---
+    $zumbis = $pdo->query("
+        SELECT a.id, a.tipo, a.numero, a.ano, a.sigla, a.status, a.link_boletim,
+               (SELECT COUNT(*) FROM ato_relacoes r WHERE r.ato_destino_id = a.id) AS cita
+        FROM atos a
+        WHERE a.status <> 'Ativo'
+          AND EXISTS (SELECT 1 FROM ato_relacoes r WHERE r.ato_destino_id = a.id)
+        ORDER BY cita DESC, a.data_ato DESC
+        LIMIT 40
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // --- Mortalidade (evidência do porquê a meia-vida ainda não vale) ---
+    $m = $pdo->query("SELECT COUNT(*) total, SUM(status<>'Ativo') mexidos FROM atos")->fetch();
+
+    responder_json([
+        'rotatividade' => [
+            'posicoesComTroca' => count($cadeiras) < 15 ? count($cadeiras) : null, // null = truncado no top 15
+            'totalEventos'     => $totalEventos,
+            'permanenciasMedidas' => count($permanencias),
+            'medianaMeses'     => $mediana,
+            'cadeiras'         => array_map(fn($c) => [
+                'unidade' => $c['unidade'], 'cargo' => $c['cargo'],
+                'titulares' => $c['titulares'], 'permMedia' => $c['permMedia'],
+            ], $cadeiras),
+        ],
+        'zumbis' => array_map(fn($z) => [
+            'label' => trim("{$z['tipo']} nº {$z['numero']}/{$z['ano']}"),
+            'sigla' => $z['sigla'], 'status' => $z['status'],
+            'cita' => (int)$z['cita'], 'linkBoletim' => $z['link_boletim'],
+        ], $zumbis),
+        'mortalidade' => [
+            'total'   => (int)$m['total'],
+            'mexidos' => (int)$m['mexidos'],
+        ],
+    ]);
+}
+
+// meses entre duas datas YYYY-MM-DD (aproximação por 30.44 dias)
+function meses_entre(string $a, string $b): float {
+    $ta = strtotime($a); $tb = strtotime($b);
+    if (!$ta || !$tb) return 0.0;
+    return round(($tb - $ta) / (86400 * 30.44), 1);
+}
+
+// ---- PRAZOS (radar de datas-limite) ---------------------------------------
+// O PHP só ENTREGA os atos-candidatos (que têm sinais de prazo no corpo, via
+// FULLTEXT). A EXTRAÇÃO das datas roda no cliente (mesma lógica do modo
+// estático). O corpo é curto (≤ ~7 KB): mandamos INTEIRO — truncar em 2800
+// perdia >60% dos prazos (o cronograma de editais vem no fim do texto).
+//
+// IMPORTANTE: o acervo já cobre o legado inteiro (2001-2026, 127 mil+ atos).
+// Sem filtro de data, o LIMIT pega uma fatia ARBITRÁRIA de 25 anos de história
+// (MATCH sem ORDER BY não garante ordem) — na prática, quase só atos antigos,
+// cujos prazos (se houver) já venceram há muito. Resultado: zero prazo futuro.
+// Fix: restringe a atos assinados nos últimos 3 anos (cobre até os prazos
+// relativos mais longos vistos no corpo, tipo "5 anos a contar da assinatura")
+// e ordena do mais recente — o candidato relevante nunca fica de fora do LIMIT.
+function prazos(PDO $pdo): void {
+    // termos-âncora de prazo; NATURAL LANGUAGE traz os atos que os contêm.
+    $termos = 'inscrição inscrições recurso recursos prazo requerimento impugnação credenciamento matrícula contar entrega';
+    $st = $pdo->prepare("
+        SELECT a.id, a.tipo, a.numero, a.ano, a.sigla, a.data_ato, a.link_boletim, a.status,
+               a.ementa, LEFT(COALESCE(c.texto,''), 12000) AS texto,
+               EXISTS(SELECT 1 FROM ato_relacoes r
+                      WHERE r.ato_destino_id = a.id AND r.tipo_relacao IN ('Altera','Revoga')) AS mexido
+        FROM atos a
+        JOIN ato_corpo c ON c.ato_id = a.id
+        WHERE MATCH(c.texto) AGAINST(:termos IN NATURAL LANGUAGE MODE)
+          AND a.data_ato >= DATE_SUB(CURDATE(), INTERVAL 3 YEAR)
+        ORDER BY a.data_ato DESC
+        LIMIT 3000");
+    $st->bindValue(':termos', $termos);
+    $st->execute();
+    $cand = array_map(fn($r) => [
+        'id' => $r['id'], 'tipo' => $r['tipo'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+        'sigla' => $r['sigla'], 'dataAto' => $r['data_ato'], 'linkBoletim' => $r['link_boletim'],
+        'status' => $r['status'], 'ementa' => $r['ementa'], 'texto' => $r['texto'],
+        'mexidoDepois' => (bool)$r['mexido'],
+    ], $st->fetchAll(PDO::FETCH_ASSOC));
+    responder_json(['candidatos' => $cand]);
 }
