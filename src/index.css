@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* Modo escuro (conforto p/ fotofobia): classe alternada em <html> por App.tsx.
+   Inverte as cores da UI inteira em vez de reescrever cada componente com
+   variantes dark: (o app nao tem <img>/fotos, so texto/SVG, entao inverter
+   tudo com seguranca reduz o brilho sem distorcer nada). */
+html.fotofobia {
+  filter: invert(1) hue-rotate(180deg);
+}
