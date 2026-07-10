@@ -187,6 +187,7 @@ def converter(dados, urls=None):
             "siapes": a.get("siapes", []),
             "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
             "funcoes": a.get("funcoes", []),  # [{acao,cargo,unidade,unidade_chave,nome,siape}] p/ Chefias
+            "aposentadoria": a.get("aposentadoria"),  # {tipo,baseLegal} | None — p/ Insights
             "textoBusca": mascarar_cpfs(a.get("corpo_busca", "")),  # corpo p/ busca por nome/SIAPE
             "conteudoResumido": ementa_disp if ementa_disp[:1] != "(" else "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo

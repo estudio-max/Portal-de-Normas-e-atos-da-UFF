@@ -630,6 +630,7 @@ def parse_pdf(caminho):
             "siapes": siapes,
             "pessoas": extrai_pessoas(trecho),
             "funcoes": extrai_funcoes(trecho),
+            "aposentadoria": extrai_aposentadoria(trecho),
             "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
@@ -1166,6 +1167,65 @@ def extrai_funcoes(trecho):
         ev.append({"acao": k[0], "cargo": cargo, "unidade": _titulo_unidade(unid),
                    "unidade_chave": chave, "nome": nome, "siape": siape})
     return ev
+
+
+# Aposentadorias: classifica pelo DISPOSITIVO de concessão, nunca por menção
+# solta — desde 2023 é comum a Portaria de nomeação/vacância dizer "a vacância
+# corresponde à aposentadoria voluntária de fulano, publicada pela Portaria
+# nº X" (retrospecto da vaga, não uma concessão nova); contar isso dobra o
+# número e não tem nada a ver com o ato em questão.
+# O RÓTULO mudou de forma ao longo dos anos: "Concede aposentadoria
+# compulsória" (fraseado recente) e "Declara aposentado(a), compulsoriamente"
+# (legado 2014-2015, verbo "declarar" + advérbio, não "compulsória" como
+# adjetivo) são o MESMO ato — sem os dois padrões a compulsória do legado
+# ficava quase invisível (achado real: 2016-2019 caíam a ~0/ano só por causa
+# do fraseado antigo, enquanto voluntária continuava na casa de centenas).
+# Quando não há rótulo nenhum, cai pra BASE LEGAL: art. 40 da Constituição,
+# §1º, inciso I=invalidez / II=compulsória / III=voluntária (Regime Próprio
+# de Previdência) — cobre concessões que só citam o dispositivo legal.
+# Sem nenhum dos dois sinais: 'Indefinida' (não desaparece — fica visível
+# como não-classificada, mesmo espírito dos "ambíguos" em resolver_relacoes).
+_APOSENT_RETRO_RE = re.compile(
+    r"c[oó]digo\s+de\s+vaga|origem\s+da\s+vaga|decorrente\s+da\s+(?:posse|aposentadoria)|"
+    r"oriund[ao]\s+de\s+vac[aâ]ncia|vac[aâ]ncia\s+corresponde|corresponde\s+[aà]\s+aposentadoria",
+    re.I,
+)
+_APOSENT_DISPOSITIVO_RE = re.compile(
+    r"conced\w*\s+(?:a\s+)?aposentadoria|declara\w*\s+aposentad[oa](?:\s*\([aA]\))?\b", re.I,
+)
+_APOSENT_COMPULSORIA_RE = re.compile(r"aposentadoria\s+compuls[oó]ria|compulsoriamente", re.I)
+_APOSENT_VOLUNTARIA_RE = re.compile(r"aposentadoria\s+volunt[aá]ria", re.I)
+_APOSENT_INVALIDEZ_RE = re.compile(r"aposentadoria\s+por\s+(?:invalidez|incapacidade)", re.I)
+_ART40_RE = re.compile(r"art(?:igo)?\.?\s*40\b", re.I)
+_INCISO_ART40_RE = re.compile(r"inciso\s+(i{1,3})\b|§\s*1[ºo]?[^.;]{0,15}?\b(i{1,3})\b", re.I)
+
+
+def extrai_aposentadoria(trecho):
+    """{'tipo': 'Voluntária'|'Compulsória'|'Invalidez'|'Indefinida', 'baseLegal': str}
+    ou None se o ato não CONCEDE aposentadoria (mera menção/retrospecto não conta)."""
+    if not _APOSENT_DISPOSITIVO_RE.search(trecho):
+        return None
+    pos_disp = [m.start() for m in _APOSENT_DISPOSITIVO_RE.finditer(trecho)]
+    if all(_APOSENT_RETRO_RE.search(trecho[max(0, p - 60):p + 60]) for p in pos_disp):
+        return None
+    if _APOSENT_COMPULSORIA_RE.search(trecho):
+        return {"tipo": "Compulsória", "baseLegal": ""}
+    if _APOSENT_VOLUNTARIA_RE.search(trecho):
+        return {"tipo": "Voluntária", "baseLegal": ""}
+    if _APOSENT_INVALIDEZ_RE.search(trecho):
+        return {"tipo": "Invalidez", "baseLegal": ""}
+    for ap in (m.start() for m in _ART40_RE.finditer(trecho)):
+        im = _INCISO_ART40_RE.search(trecho[max(0, ap - 100):ap + 100])
+        if not im:
+            continue
+        romano = (im.group(1) or im.group(2) or "").lower()
+        if romano == "iii":
+            return {"tipo": "Voluntária", "baseLegal": "art. 40, §1º, III, CF"}
+        if romano == "ii":
+            return {"tipo": "Compulsória", "baseLegal": "art. 40, §1º, II, CF"}
+        if romano == "i":
+            return {"tipo": "Invalidez", "baseLegal": "art. 40, §1º, I, CF"}
+    return {"tipo": "Indefinida", "baseLegal": ""}
 
 
 # --------------------------------------------------------------------------- #
