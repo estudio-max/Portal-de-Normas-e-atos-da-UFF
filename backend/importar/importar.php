@@ -36,6 +36,11 @@ if (!$pdo->query("SHOW COLUMNS FROM ato_siapes LIKE 'nome'")->fetch()) {
 if (!$pdo->query("SHOW COLUMNS FROM atos LIKE 'ementa_inferida'")->fetch()) {
     $pdo->exec("ALTER TABLE atos ADD COLUMN ementa_inferida TINYINT(1) NOT NULL DEFAULT 0 AFTER ementa");
 }
+// Garante as colunas de aposentadoria em atos (classificação pelo dispositivo).
+if (!$pdo->query("SHOW COLUMNS FROM atos LIKE 'aposentadoria_tipo'")->fetch()) {
+    $pdo->exec("ALTER TABLE atos ADD COLUMN aposentadoria_tipo VARCHAR(20) NULL AFTER pagina,
+                ADD COLUMN aposentadoria_base_legal VARCHAR(60) NULL AFTER aposentadoria_tipo");
+}
 // Garante a tabela de chefias (mesma DDL do gerar_sql.py; bases antigas não a têm).
 $pdo->exec("CREATE TABLE IF NOT EXISTS ato_funcoes (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -63,9 +68,9 @@ try {
     $upAto = $pdo->prepare(
         "INSERT INTO atos (id,boletim_id,tipo,sigla,numero,ano,data_ato,identificador,
             tipo_acao,ementa,ementa_inferida,conteudo_resumido,signatario,status,processo_sei,sei_documento,
-            link_sei_processo,link_sei_documento,link_boletim,secao,pagina)
+            link_sei_processo,link_sei_documento,link_boletim,secao,pagina,aposentadoria_tipo,aposentadoria_base_legal)
          VALUES (:id,:bol,:tipo,:sigla,:numero,:ano,:data,:ident,:acao,:ementa,:einf,:resumo,:sign,
-            :status,:proc,:seidoc,:lproc,:ldoc,:lbol,:secao,:pagina)
+            :status,:proc,:seidoc,:lproc,:ldoc,:lbol,:secao,:pagina,:apostipo,:aposbase)
          ON DUPLICATE KEY UPDATE boletim_id=VALUES(boletim_id),tipo=VALUES(tipo),sigla=VALUES(sigla),
             numero=VALUES(numero),ano=VALUES(ano),data_ato=VALUES(data_ato),identificador=VALUES(identificador),
             tipo_acao=VALUES(tipo_acao),ementa=VALUES(ementa),ementa_inferida=VALUES(ementa_inferida),
@@ -73,7 +78,8 @@ try {
             signatario=VALUES(signatario),status=VALUES(status),processo_sei=VALUES(processo_sei),
             sei_documento=VALUES(sei_documento),link_sei_processo=VALUES(link_sei_processo),
             link_sei_documento=VALUES(link_sei_documento),link_boletim=VALUES(link_boletim),
-            secao=VALUES(secao),pagina=VALUES(pagina)");
+            secao=VALUES(secao),pagina=VALUES(pagina),aposentadoria_tipo=VALUES(aposentadoria_tipo),
+            aposentadoria_base_legal=VALUES(aposentadoria_base_legal)");
     $upCorpo = $pdo->prepare("INSERT INTO ato_corpo (ato_id,texto) VALUES (:id,:t)
                               ON DUPLICATE KEY UPDATE texto=VALUES(texto)");
     $delSiape = $pdo->prepare("DELETE FROM ato_siapes WHERE ato_id=:id");
@@ -99,6 +105,8 @@ try {
             ':proc' => $a['processoSei'] ?? null, ':seidoc' => $a['seiDocumento'] ?? null,
             ':lproc' => $a['linkSeiProcesso'] ?? null, ':ldoc' => $a['linkSeiDocumento'] ?? null,
             ':lbol' => $a['linkBoletim'] ?? null, ':secao' => $a['secao'] ?? null, ':pagina' => $a['pagina'] ?? null,
+            ':apostipo' => $a['aposentadoria']['tipo'] ?? null,
+            ':aposbase' => $a['aposentadoria']['baseLegal'] ?? null,
         ]);
         $upCorpo->execute([':id' => $a['id'], ':t' => $a['textoBusca'] ?? '']);
         $delSiape->execute([':id' => $a['id']]);

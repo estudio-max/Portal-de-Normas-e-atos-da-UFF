@@ -60,6 +60,8 @@ CREATE TABLE `atos` (
   `link_boletim`       VARCHAR(255) NULL,
   `secao`              VARCHAR(8)   NULL,
   `pagina`             VARCHAR(8)   NULL,
+  `aposentadoria_tipo`       VARCHAR(20) NULL,  -- Voluntária/Compulsória/Invalidez/Indefinida; NULL = não concede
+  `aposentadoria_base_legal` VARCHAR(60) NULL,  -- ex. "art. 40, §1º, II, CF" quando não há rótulo no texto
   `criado_em`          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em`      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP,

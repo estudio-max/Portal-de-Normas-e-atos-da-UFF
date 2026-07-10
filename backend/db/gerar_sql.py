@@ -122,6 +122,15 @@ with open(OUT, "w", encoding="utf-8") as f:
         "'ALTER TABLE `atos` ADD COLUMN `ementa_inferida` TINYINT(1) NOT NULL DEFAULT 0 AFTER `ementa`', 'DO 0');\n"
         "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
 
+    # Garante atos.aposentadoria_tipo/base_legal (idempotente).
+    f.write(
+        "SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='atos' AND COLUMN_NAME='aposentadoria_tipo');\n"
+        "SET @ddl := IF(@c=0, "
+        "'ALTER TABLE `atos` ADD COLUMN `aposentadoria_tipo` VARCHAR(20) NULL AFTER `pagina`, "
+        "ADD COLUMN `aposentadoria_base_legal` VARCHAR(60) NULL AFTER `aposentadoria_tipo`', 'DO 0');\n"
+        "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
+
     # Tabela de chefias (idempotente): criada aqui p/ bases que ainda não a têm.
     f.write(
         "CREATE TABLE IF NOT EXISTS `ato_funcoes` ("
@@ -165,6 +174,7 @@ with open(OUT, "w", encoding="utf-8") as f:
         aid = a["id"]
         st = a.get("status", "Ativo")
         st = st if st in ("Ativo", "Alterado", "Revogado") else "Ativo"
+        apos = a.get("aposentadoria") or {}
         atos_rows.append([
             esc(aid), esc(bol_id.get(a.get("arquivo", ""))), esc(a.get("tipoAto", "")),
             esc(a.get("orgaoEmissor", "")), esc(a.get("numero", "")), esc(a.get("ano")),
@@ -174,6 +184,7 @@ with open(OUT, "w", encoding="utf-8") as f:
             esc(a.get("signatario")), esc(st), esc(a.get("processoSei")), esc(a.get("seiDocumento")),
             esc(a.get("linkSeiProcesso")), esc(a.get("linkSeiDocumento")), esc(a.get("linkBoletim")),
             esc(a.get("secao")), esc(a.get("pagina")),
+            esc(apos.get("tipo")), esc(apos.get("baseLegal")),
         ])
         if a.get("textoBusca"):
             corpo_rows.append([esc(aid), esc(a["textoBusca"])])
@@ -200,7 +211,8 @@ with open(OUT, "w", encoding="utf-8") as f:
         insere(f, "atos", ["id", "boletim_id", "tipo", "sigla", "numero", "ano", "data_ato",
                            "identificador", "tipo_acao", "ementa", "ementa_inferida", "conteudo_resumido",
                            "signatario", "status", "processo_sei", "sei_documento", "link_sei_processo",
-                           "link_sei_documento", "link_boletim", "secao", "pagina"], atos_rows, 100,
+                           "link_sei_documento", "link_boletim", "secao", "pagina",
+                           "aposentadoria_tipo", "aposentadoria_base_legal"], atos_rows, 100,
                upsert_em=("id",) if args.append else None)
         insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50,
                upsert_em=("ato_id",) if args.append else None)
