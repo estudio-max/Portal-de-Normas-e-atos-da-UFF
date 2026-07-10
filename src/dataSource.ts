@@ -320,11 +320,12 @@ export interface Zumbi {
   alvoLabel: string; alvoSigla: string;  // a norma já revogada
   revogadoEm: string | null;             // data da revogação (YYYY-MM-DD)
 }
-// Série anual de RH detectada pelo dispositivo do texto: aposentadorias
-// concedidas (voluntárias/compulsórias) e vacâncias por posse em outro cargo
-// inacumulável (art. 33, VIII da Lei 8.112/90 — servidor que passou em outro
-// concurso). Conta o que foi PUBLICADO no BS.
-export interface SerieRh { ano: number; vol: number; comp: number; vac8: number; }
+// Série anual de RH: aposentadorias concedidas (voluntária/compulsória/
+// invalidez/indefinida — classificadas na EXTRAÇÃO pelo dispositivo, campo
+// UffAct.aposentadoria) e vacâncias por posse em outro cargo inacumulável
+// (art. 33, VIII da Lei 8.112/90 — servidor que passou em outro concurso,
+// ainda detectado por regex no fallback). Conta o que foi PUBLICADO no BS.
+export interface SerieRh { ano: number; vol: number; comp: number; inval: number; indef: number; vac8: number; }
 export interface Analitico {
   rotatividade: {
     posicoesComTroca: number | null; totalEventos: number;
@@ -417,23 +418,29 @@ export async function getAnalitico(): Promise<Analitico> {
   zumbis.sort((a, b) => (a.citData! < b.citData! ? 1 : -1));
   zumbis.splice(60);
 
-  // Série RH (mesma detecção dispositiva do PHP, sobre o texto minúsculo):
-  // aposentadorias concedidas e vacâncias art. 33 VIII, por ano do ato.
-  const reVol = /conced\w*\s+(?:a\s+)?aposentadoria\s+volunt/;
-  const reComp = /conced\w*\s+(?:a\s+)?aposentadoria\s+compuls/;
+  // Série RH — aposentadoria lê o campo ESTRUTURADO (a.aposentadoria, já
+  // classificado na extração por extrai_aposentadoria(); ver extrair_boletim.py).
+  // Só popula depois que o portal-data.json for regenerado pela extração com
+  // esse campo — até lá esta série fica em 0, igual a qualquer painel que
+  // depende de dado ainda não reprocessado (mesmo espírito da meia-vida/
+  // rotatividade, que "ativam sozinhos" conforme a base cresce).
+  // Vacância art. 33 VIII segue por regex (fraseado estável, sem esse problema).
   const reVago = /declara\w*\s+(?:vago|(?:a\s+)?vac[aâ]ncia)/;
   const reCausa8 = /inciso viii,? do artigo 33|posse em outro cargo inacumul|tendo em vista a posse/;
-  const rhAno = new Map<number, { vol: number; comp: number; vac8: number }>();
+  const vazioRh = { vol: 0, comp: 0, inval: 0, indef: 0, vac8: 0 };
+  const rhAno = new Map<number, typeof vazioRh>();
   for (const a of CACHE as any[]) {
     const ano = Number(a.ano);
     if (!ano || ano < 1990 || ano > 2100) continue;
+    const tipoApos: string | undefined = a.aposentadoria?.tipo;
     const t = `${a.ementa || ''} ${a.conteudoResumido || ''} ${a.textoBusca || ''}`.toLowerCase();
-    const vol = reVol.test(t), comp = reComp.test(t);
     const vac8 = reVago.test(t) && reCausa8.test(t);
-    if (!vol && !comp && !vac8) continue;
-    const s = rhAno.get(ano) || { vol: 0, comp: 0, vac8: 0 };
-    if (vol) s.vol++;
-    if (comp) s.comp++;
+    if (!tipoApos && !vac8) continue;
+    const s = rhAno.get(ano) || { ...vazioRh };
+    if (tipoApos === 'Voluntária') s.vol++;
+    else if (tipoApos === 'Compulsória') s.comp++;
+    else if (tipoApos === 'Invalidez') s.inval++;
+    else if (tipoApos === 'Indefinida') s.indef++;
     if (vac8) s.vac8++;
     rhAno.set(ano, s);
   }

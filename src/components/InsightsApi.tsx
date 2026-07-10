@@ -18,6 +18,7 @@ function paleta() {
     heat: ['#cde2fb', '#86b6ef', '#3987e5', '#104281'],
     track: '#eceef2',
     tipo: '#1d9e75',
+    apos3: '#8a5fc4',
     vig: { ativo: '#1d9e75', alterado: '#2a6fc4', revogado: '#c0392b' },
     col: '#3266ad',
     axis: '#8a93a3', grid: '#e6e8ee',
@@ -197,13 +198,23 @@ export default function InsightsApi() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <Card titulo="Aposentadorias concedidas por ano" icone={<Users className="w-4 h-4 text-yellow-500" />}
-              sub="Concessões publicadas no Boletim, detectadas pelo dispositivo do ato (“Concede aposentadoria…”): voluntárias × compulsórias.">
+              sub="Concessões publicadas no Boletim, classificadas pelo dispositivo do ato (rótulo direto ou, na ausência dele, a base legal do art. 40 da Constituição).">
               <div className="flex items-center gap-4 mb-2 text-[11px] text-slate-500 font-medium">
                 <Legenda cor={P.bar} texto="voluntária" />
                 <Legenda cor={P.vig.revogado} texto="compulsória" />
+                <Legenda cor={P.apos3} texto="invalidez" />
               </div>
-              <SerieAnual dados={(an?.seriesRh || []).map(s => ({ ano: s.ano, a: s.vol, b: s.comp }))}
-                corA={P.bar} corB={P.vig.revogado} rotuloA="voluntárias" rotuloB="compulsórias" P={P} />
+              <SerieAnual dados={(an?.seriesRh || []).map(s => ({ ano: s.ano, a: s.vol, b: s.comp, c: s.inval }))}
+                corA={P.bar} corB={P.vig.revogado} corC={P.apos3}
+                rotuloA="voluntárias" rotuloB="compulsórias" rotuloC="por invalidez" P={P} />
+              {(() => {
+                const indef = (an?.seriesRh || []).reduce((s, r) => s + r.indef, 0);
+                return indef > 0 ? (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    +{fmtN(indef)} concessão(ões) detectada(s) sem tipo identificável no texto — confira o ato.
+                  </p>
+                ) : null;
+              })()}
             </Card>
 
             <Card titulo="Saídas para outro cargo público" icone={<TrendingUp className="w-4 h-4 text-yellow-500" />}
@@ -522,13 +533,14 @@ function Zumbis({ lista }: { lista?: ds.Zumbi[] }) {
   );
 }
 
-// ---- Série anual (1 ou 2 séries de colunas por ano) ------------------------
-// Usada pelos painéis de RH. Duas séries = colunas lado a lado por ano.
-function SerieAnual({ dados, corA, corB, rotuloA, rotuloB, P }: {
-  dados: { ano: number; a: number; b?: number }[];
-  corA: string; corB?: string; rotuloA: string; rotuloB?: string; P: ReturnType<typeof paleta>;
+// ---- Série anual (1 a 3 séries de colunas por ano) -------------------------
+// Usada pelos painéis de RH. 2-3 séries = colunas lado a lado por ano.
+function SerieAnual({ dados, corA, corB, corC, rotuloA, rotuloB, rotuloC, P }: {
+  dados: { ano: number; a: number; b?: number; c?: number }[];
+  corA: string; corB?: string; corC?: string;
+  rotuloA: string; rotuloB?: string; rotuloC?: string; P: ReturnType<typeof paleta>;
 }) {
-  const uteis = dados.filter(d => d.a > 0 || (d.b || 0) > 0);
+  const uteis = dados.filter(d => d.a > 0 || (d.b || 0) > 0 || (d.c || 0) > 0);
   if (!uteis.length) {
     return (
       <p className="text-xs text-slate-500 leading-relaxed">
@@ -537,30 +549,37 @@ function SerieAnual({ dados, corA, corB, rotuloA, rotuloB, P }: {
       </p>
     );
   }
-  const max = Math.max(1, ...uteis.map(d => Math.max(d.a, d.b || 0)));
+  const n = corC != null ? 3 : corB != null ? 2 : 1;
+  const max = Math.max(1, ...uteis.map(d => Math.max(d.a, d.b || 0, d.c || 0)));
   const W = 340, H = 160, PADB = 24, PADL = 6, PADT = 14;
   const gw = (W - PADL) / uteis.length;                    // largura do grupo/ano
-  const duas = corB != null;
-  const bw = duas ? gw * 0.36 : gw * 0.62;                 // largura de cada coluna
-  const alt = (n: number) => ((H - PADB - PADT) * n) / max;
-  const total = (k: 'a' | 'b') => uteis.reduce((s, d) => s + (d[k] || 0), 0);
+  const bw = n === 3 ? gw * 0.26 : n === 2 ? gw * 0.36 : gw * 0.62;  // largura de cada coluna
+  const offs = n === 3 ? [gw * 0.06, gw * 0.37, gw * 0.68] : n === 2 ? [gw * 0.10, gw * 0.52] : [gw * 0.19];
+  const alt = (v: number) => ((H - PADB - PADT) * v) / max;
+  const total = (k: 'a' | 'b' | 'c') => uteis.reduce((s, d) => s + (d[k] || 0), 0);
+  const rotuloTotal = [rotuloA, rotuloB, rotuloC].filter(Boolean).join(' e ');
   return (
     <div>
       <div className="overflow-x-auto">
         <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
-          aria-label={`Série anual: ${rotuloA}${rotuloB ? ' e ' + rotuloB : ''}, máximo ${max} num ano.`}>
+          aria-label={`Série anual: ${rotuloTotal}, máximo ${max} num ano.`}>
           <line x1={PADL} y1={H - PADB} x2={W} y2={H - PADB} stroke={P.grid} strokeWidth="1" />
           {uteis.map((d, i) => {
             const x0 = PADL + i * gw;
             const rot = uteis.length > 14 ? String(d.ano).slice(2) : String(d.ano);
             return (
               <g key={d.ano}>
-                <rect x={x0 + (duas ? gw * 0.10 : gw * 0.19)} y={H - PADB - alt(d.a)} width={bw} height={alt(d.a)} rx={1.5} fill={corA}>
+                <rect x={x0 + offs[0]} y={H - PADB - alt(d.a)} width={bw} height={alt(d.a)} rx={1.5} fill={corA}>
                   <title>{`${d.ano}: ${fmtN(d.a)} ${rotuloA}`}</title>
                 </rect>
-                {duas && (
-                  <rect x={x0 + gw * 0.52} y={H - PADB - alt(d.b || 0)} width={bw} height={alt(d.b || 0)} rx={1.5} fill={corB}>
+                {n >= 2 && (
+                  <rect x={x0 + offs[1]} y={H - PADB - alt(d.b || 0)} width={bw} height={alt(d.b || 0)} rx={1.5} fill={corB}>
                     <title>{`${d.ano}: ${fmtN(d.b || 0)} ${rotuloB || ''}`}</title>
+                  </rect>
+                )}
+                {n >= 3 && (
+                  <rect x={x0 + offs[2]} y={H - PADB - alt(d.c || 0)} width={bw} height={alt(d.c || 0)} rx={1.5} fill={corC}>
+                    <title>{`${d.ano}: ${fmtN(d.c || 0)} ${rotuloC || ''}`}</title>
                   </rect>
                 )}
                 <text x={x0 + gw / 2} y={H - PADB + 12} fontSize="8.5" textAnchor="middle" fill={P.axis}>{rot}</text>
@@ -571,7 +590,8 @@ function SerieAnual({ dados, corA, corB, rotuloA, rotuloB, P }: {
       </div>
       <p className="text-[11px] text-slate-500 mt-1.5">
         Total no período indexado: <strong className="text-slate-700">{fmtN(total('a'))}</strong> {rotuloA}
-        {duas && <> · <strong className="text-slate-700">{fmtN(total('b'))}</strong> {rotuloB}</>}.
+        {n >= 2 && <> · <strong className="text-slate-700">{fmtN(total('b'))}</strong> {rotuloB}</>}
+        {n >= 3 && <> · <strong className="text-slate-700">{fmtN(total('c'))}</strong> {rotuloC}</>}.
       </p>
     </div>
   );

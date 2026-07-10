@@ -599,32 +599,30 @@ function analitico(PDO $pdo): void {
     $m = $pdo->query("SELECT COUNT(*) total, SUM(status<>'Ativo') mexidos FROM atos")->fetch();
 
     // --- RH: aposentadorias concedidas + vacâncias por posse em outro cargo --
-    // Detecção pelo DISPOSITIVO no corpo do ato (texto minúsculo), calibrada no
-    // acervo 2015-2026: concessão = "conced… aposentadoria voluntária/compulsória"
-    // adjacentes; vacância art. 33 VIII = "declarar vago/vacância" E a causa
-    // (inciso viii | posse em outro cargo inacumulável | tendo em vista a posse
-    // — o inciso IX/falecimento fica de fora por não casar nenhuma das três).
-    // FULLTEXT é só pré-filtro barato; o LIKE decide. Série = ano do ATO.
-    // Conta o que foi PUBLICADO NO BS (parte das concessões sai só no DOU).
+    // Aposentadoria: lê a coluna ESTRUTURADA aposentadoria_tipo (classificada na
+    // EXTRAÇÃO por extrai_aposentadoria() — dispositivo "conced.../declara...
+    // aposentad[oa]" + rótulo voluntária/compulsória/invalidez, com fallback pra
+    // base legal art. 40 §1º I/II/III CF quando o ato só cita o dispositivo legal;
+    // exclui menção retrospectiva tipo "a vacância corresponde à aposentadoria
+    // voluntária de fulano"). Um LIKE textual aqui subestimava a compulsória do
+    // legado (2014-2015 escrevia "declara aposentado, compulsoriamente" — verbo+
+    // advérbio, não "aposentadoria compulsória" — e ficava quase invisível).
+    // Vacância art. 33 VIII segue por LIKE (fraseado estável, sem esse problema):
+    // "declarar vago/vacância" + causa (inciso viii | posse em outro cargo
+    // inacumulável | tendo em vista a posse); inciso IX/falecimento fica de fora.
+    // Série = ano do ATO. Conta o que foi PUBLICADO NO BS (parte das concessões
+    // antigas saía só no DOU).
     $rh = [];
     try {
         $apos = $pdo->query("
-            SELECT a.ano,
-                   SUM(c.texto LIKE '%concede aposentadoria volunt%'
-                    OR c.texto LIKE '%conceder aposentadoria volunt%'
-                    OR c.texto LIKE '%concede a aposentadoria volunt%'
-                    OR c.texto LIKE '%conceder a aposentadoria volunt%'
-                    OR c.texto LIKE '%concedida aposentadoria volunt%') AS vol,
-                   SUM(c.texto LIKE '%concede aposentadoria compuls%'
-                    OR c.texto LIKE '%conceder aposentadoria compuls%'
-                    OR c.texto LIKE '%concede a aposentadoria compuls%'
-                    OR c.texto LIKE '%conceder a aposentadoria compuls%'
-                    OR c.texto LIKE '%concedida aposentadoria compuls%') AS comp
-            FROM atos a
-            JOIN ato_corpo c ON c.ato_id = a.id
-            WHERE a.ano BETWEEN 1990 AND 2100
-              AND MATCH(c.texto) AGAINST('+aposentadoria' IN BOOLEAN MODE)
-            GROUP BY a.ano
+            SELECT ano,
+                   SUM(aposentadoria_tipo = 'Voluntária')  AS vol,
+                   SUM(aposentadoria_tipo = 'Compulsória') AS comp,
+                   SUM(aposentadoria_tipo = 'Invalidez')   AS inval,
+                   SUM(aposentadoria_tipo = 'Indefinida')  AS indef
+            FROM atos
+            WHERE aposentadoria_tipo IS NOT NULL AND ano BETWEEN 1990 AND 2100
+            GROUP BY ano
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         $vac = $pdo->query("
@@ -642,20 +640,22 @@ function analitico(PDO $pdo): void {
             GROUP BY a.ano
         ")->fetchAll(PDO::FETCH_ASSOC);
 
+        $vazio = ['vol' => 0, 'comp' => 0, 'inval' => 0, 'indef' => 0, 'vac8' => 0];
         $porAno = [];
         foreach ($apos as $r) {
-            $porAno[(int)$r['ano']] = ['vol' => (int)$r['vol'], 'comp' => (int)$r['comp'], 'vac8' => 0];
+            $porAno[(int)$r['ano']] = ['vol' => (int)$r['vol'], 'comp' => (int)$r['comp'],
+                'inval' => (int)$r['inval'], 'indef' => (int)$r['indef'], 'vac8' => 0];
         }
         foreach ($vac as $r) {
             $y = (int)$r['ano'];
-            $porAno[$y] = ($porAno[$y] ?? ['vol' => 0, 'comp' => 0, 'vac8' => 0]);
+            $porAno[$y] = ($porAno[$y] ?? $vazio);
             $porAno[$y]['vac8'] = (int)$r['n'];
         }
         ksort($porAno);
         foreach ($porAno as $y => $v) {
-            $rh[] = ['ano' => $y, 'vol' => $v['vol'], 'comp' => $v['comp'], 'vac8' => $v['vac8']];
+            $rh[] = ['ano' => $y] + $v;
         }
-    } catch (Throwable $e) { /* sem ato_corpo/FULLTEXT: painel fica vazio */ }
+    } catch (Throwable $e) { /* sem ato_corpo/coluna ainda migrada: painel fica vazio */ }
 
     responder_json([
         'rotatividade' => [

@@ -39,6 +39,9 @@ export interface UffAct {
   arquivo?: string;
   // Atos posteriores que alteram/revogam este (índice reverso pré-calculado)
   referenciadoPor?: { relacao: string; porId: string; porLabel: string; detalhes?: string }[];
+  // Concessão de aposentadoria pelo DISPOSITIVO do ato (não menção solta) —
+  // null quando o ato não concede aposentadoria a ninguém.
+  aposentadoria?: { tipo: 'Voluntária' | 'Compulsória' | 'Invalidez' | 'Indefinida'; baseLegal?: string } | null;
   // Pessoas/matrículas para o filtro por servidor
   siapes?: string[];        // matrículas SIAPE citadas no ato
   pessoas?: { nome: string; siape: string }[];  // nome + matrícula p/ a Ficha
