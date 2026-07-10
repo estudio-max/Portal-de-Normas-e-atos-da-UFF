@@ -233,6 +233,288 @@ export async function getChefias(): Promise<ChefiasResp> {
   return { total: chefias.length, atualizadoEm: new Date().toISOString().slice(0, 10), chefias };
 }
 
+// ---------- INSIGHTS (agregações para a aba de painéis) -------------------
+export interface OrgaoStat { sigla: string; n: number; comSei: number; }
+export interface Insights {
+  ano: number | null;
+  anos: number[];
+  kpis: {
+    total: number; comSei: number; revogados: number; alterados: number;
+    vigentes: number; orgaos: number; relacoes: number;
+    dataMin: string | null; dataMax: string | null;
+  };
+  porDia: { d: string; n: number }[];
+  porMes: { ym: string; n: number }[];
+  porOrgao: OrgaoStat[];
+  porTipo: { tipo: string; n: number }[];
+}
+
+export async function getInsights(ano?: string | number): Promise<Insights> {
+  const recorte = ano !== undefined && ano !== '' && ano !== 'todos';
+  if (MODO === 'api') {
+    const qs = recorte ? `?ano=${encodeURIComponent(String(ano))}` : '';
+    return (await fetch(`${API_BASE}/insights${qs}`)).json();
+  }
+  // ESTÁTICO: computa do CACHE (mesmo formato do endpoint).
+  const anoSel = recorte ? Number(ano) : null;
+  const base = anoSel ? CACHE.filter(a => a.ano === anoSel) : CACHE;
+  const temSei = (a: UffAct) => !!(a.processoSei && a.processoSei !== '');
+
+  let comSei = 0, revogados = 0, alterados = 0, relacoes = 0;
+  let dataMin: string | null = null, dataMax: string | null = null;
+  const orgaos = new Set<string>();
+  const porDiaM = new Map<string, number>();
+  const porMesM = new Map<string, number>();
+  const porOrgaoM = new Map<string, { n: number; comSei: number }>();
+  const porTipoM = new Map<string, number>();
+
+  for (const a of base) {
+    if (temSei(a)) comSei++;
+    if (a.status === 'Revogado') revogados++;
+    else if (a.status === 'Alterado') alterados++;
+    relacoes += (a.relacoes || []).length;
+    if (a.orgaoEmissor) orgaos.add(a.orgaoEmissor);
+    porTipoM.set(a.tipoAto, (porTipoM.get(a.tipoAto) || 0) + 1);
+    const d = a.dataAssinatura;
+    if (d && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+      const dia = d.slice(0, 10);
+      porDiaM.set(dia, (porDiaM.get(dia) || 0) + 1);
+      const ym = dia.slice(0, 7);
+      porMesM.set(ym, (porMesM.get(ym) || 0) + 1);
+      if (!dataMin || dia < dataMin) dataMin = dia;
+      if (!dataMax || dia > dataMax) dataMax = dia;
+    }
+    if (a.orgaoEmissor) {
+      const o = porOrgaoM.get(a.orgaoEmissor) || { n: 0, comSei: 0 };
+      o.n++; if (temSei(a)) o.comSei++;
+      porOrgaoM.set(a.orgaoEmissor, o);
+    }
+  }
+
+  const anos = Array.from(new Set(CACHE.map(a => a.ano).filter(Boolean))).sort((x, y) => y - x);
+  const total = base.length;
+  return {
+    ano: anoSel,
+    anos,
+    kpis: {
+      total, comSei, revogados, alterados,
+      vigentes: total - revogados - alterados,
+      orgaos: orgaos.size, relacoes, dataMin, dataMax,
+    },
+    porDia: [...porDiaM.entries()].map(([d, n]) => ({ d, n })).sort((a, b) => a.d < b.d ? -1 : 1),
+    porMes: [...porMesM.entries()].map(([ym, n]) => ({ ym, n })).sort((a, b) => a.ym < b.ym ? -1 : 1),
+    porOrgao: [...porOrgaoM.entries()].map(([sigla, o]) => ({ sigla, n: o.n, comSei: o.comSei }))
+      .sort((a, b) => b.n - a.n).slice(0, 12),
+    porTipo: [...porTipoM.entries()].map(([tipo, n]) => ({ tipo, n })).sort((a, b) => b.n - a.n),
+  };
+}
+
+// ---------- ANALÍTICO / FASE 2 (rotatividade + zumbis) --------------------
+export interface Cadeira { unidade: string; cargo: string; titulares: number; permMedia: number; }
+export interface Zumbi { label: string; sigla: string; status: string; cita: number; linkBoletim: string | null; }
+export interface Analitico {
+  rotatividade: {
+    posicoesComTroca: number | null; totalEventos: number;
+    permanenciasMedidas: number; medianaMeses: number | null; cadeiras: Cadeira[];
+  };
+  zumbis: Zumbi[];
+  mortalidade: { total: number; mexidos: number };
+}
+
+const mesesEntre = (a: string, b: string) =>
+  Math.round(((new Date(b).getTime() - new Date(a).getTime()) / (86400000 * 30.44)) * 10) / 10;
+
+export async function getAnalitico(): Promise<Analitico> {
+  if (MODO === 'api') return (await fetch(`${API_BASE}/analitico`)).json();
+
+  // ESTÁTICO: computa do CACHE (fino — na produção o banco tem muito mais).
+  const pos: Record<string, { cargo: string; unidade: string; ev: { acao: string; data: string; ident: string }[] }> = {};
+  let totalEventos = 0;
+  for (const a of CACHE as any[]) {
+    for (const f of (a.funcoes || [])) {
+      const chave = f.unidade_chave || f.unidadeChave || '';
+      const data = a.dataAssinatura || '';
+      if (!chave || !data) continue;
+      totalEventos++;
+      let nome = (f.nome || '').toLowerCase();
+      if (!nome && f.siape) nome = ((a.pessoas || []).find((x: any) => x.siape === f.siape)?.nome || '').toLowerCase();
+      const k = `${chave}|${(f.cargo || '').toLowerCase()}`;
+      (pos[k] = pos[k] || { cargo: f.cargo, unidade: f.unidade, ev: [] }).ev.push({
+        acao: f.acao, data, ident: f.siape || nome,
+      });
+    }
+  }
+  const permanencias: number[] = [];
+  let cadeiras: Cadeira[] = [];
+  for (const k of Object.keys(pos)) {
+    const p = pos[k];
+    p.ev.sort((a, b) => a.data < b.data ? -1 : 1);
+    const titulares: { ident: string; inicio: string }[] = [];
+    for (const e of p.ev) {
+      if (e.acao !== 'designar') continue;
+      const ult = titulares[titulares.length - 1];
+      if (!ult || e.ident !== ult.ident) titulares.push({ ident: e.ident, inicio: e.data });
+    }
+    if (titulares.length < 2) continue;
+    const durs: number[] = [];
+    for (let i = 0; i < titulares.length - 1; i++) {
+      const m = mesesEntre(titulares[i].inicio, titulares[i + 1].inicio);
+      durs.push(m); permanencias.push(m);
+    }
+    cadeiras.push({
+      unidade: p.unidade, cargo: p.cargo, titulares: titulares.length,
+      permMedia: Math.round(durs.reduce((a, b) => a + b, 0) / durs.length * 10) / 10,
+    });
+  }
+  permanencias.sort((a, b) => a - b);
+  const mediana = permanencias.length ? Math.round(permanencias[Math.floor(permanencias.length / 2)] * 10) / 10 : null;
+  const nCad = cadeiras.length;
+  cadeiras.sort((a, b) => b.titulares - a.titulares || a.permMedia - b.permMedia);
+  cadeiras = cadeiras.slice(0, 15);
+
+  const zumbis: Zumbi[] = (CACHE as any[])
+    .filter(a => a.status !== 'Ativo' && (a.referenciadoPor || []).length > 0)
+    .map(a => ({
+      label: `${a.tipoAto} nº ${a.numero}/${a.ano}`, sigla: a.orgaoEmissor || '',
+      status: a.status, cita: (a.referenciadoPor || []).length, linkBoletim: a.linkBoletim || null,
+    }))
+    .sort((a, b) => b.cita - a.cita).slice(0, 40);
+
+  return {
+    rotatividade: {
+      posicoesComTroca: nCad < 15 ? nCad : null, totalEventos,
+      permanenciasMedidas: permanencias.length, medianaMeses: mediana, cadeiras,
+    },
+    zumbis,
+    mortalidade: { total: CACHE.length, mexidos: (CACHE as any[]).filter(a => a.status !== 'Ativo').length },
+  };
+}
+
+// ---------- RADAR DE PRAZOS (datas-limite extraídas do texto) -------------
+export interface Prazo {
+  atoId: string; atoLabel: string; sigla: string; tipo: string;
+  dataLimite: string; conf: 'alta' | 'média'; base: string;
+  textoOrigem: string; linkBoletim: string | null; dataAto: string | null;
+  mexidoDepois: boolean; status: string; ementa: string; publico: string;
+}
+interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
+
+// Infere PARA QUEM serve o prazo (o público que precisa agir), a partir de
+// texto FOCADO (ementa + contexto ao redor da data) — nunca do corpo inteiro,
+// que gera ruído. Devolve UM rótulo claro, com qualificador de domínio.
+export function inferirPublico(ementa: string, contexto: string): string {
+  const f = `${ementa || ''} ${contexto || ''}`.toLowerCase();
+  const has = (re: RegExp) => re.test(f);
+  if (has(/licitaç|pregão|contrataç|fornecedor|termo de referência|dispensa de licit|cotaç.o de preç|chamamento públic/)) return 'Fornecedores';
+  if (has(/eleiç|consulta eleitoral|\bchapa|votaç|urna|escrutín|diretório acadêmic/)) return 'Comunidade (eleição)';
+  const dom =
+    has(/monitoria/) ? 'monitoria' :
+    has(/mestrad|doutorad|pós-?gradua|\bppg|stricto sensu|lato sensu|resid.ncia médic|especializaç/) ? 'pós-graduação' :
+    has(/docente|professor|magistério|magisterio|processo seletivo simplificado|\bpss\b|concurso públic/) ? 'seleção docente' :
+    has(/pibic|pibid|iniciaç.o cient|\bbolsa/) ? 'bolsa' :
+    has(/estági/) ? 'estágio' :
+    has(/graduaç|graduand|discente|\balun[oa]s?\b|estudante/) ? 'graduação' : null;
+  const selec = has(/inscriç|processo seletivo|seleç.o|candidat|concurso|\bedital|\bprova\b|classificaç/);
+  if (selec) return dom ? `Candidatos · ${dom}` : 'Candidatos';
+  if (dom) return dom === 'seleção docente' ? 'Docentes' : `Discentes · ${dom}`;
+  if (has(/servidor|técnico-?administrativ|\btae\b/)) return 'Servidores';
+  return 'Comunidade acadêmica';
+}
+
+const _MES: Record<string, number> = { janeiro:1,fevereiro:2,'março':3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12 };
+const _iso = (y: number, m: number, dd: number) => `${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+const _addDias = (b: string, n: number) => { const t = new Date(b + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0,10); };
+const _addMeses = (b: string, n: number) => { const t = new Date(b + 'T00:00:00Z'); t.setUTCMonth(t.getUTCMonth() + n); return t.toISOString().slice(0,10); };
+const _y4 = (y: string) => { const n = +y; return n < 100 ? 2000 + n : n; };
+const _validaData = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && +s.slice(0,4) >= 2015 && +s.slice(0,4) <= 2035;
+
+const _EXCLUI = /(período\s+aquisitivo|aquisitivo|ônus\s+limitad|afastament|licença|capacitaç|suspens|penalidade|advertência|retroativ|\bfaltas?\b|ausência|puniç|apenad|designaç|designad|exercício\s+financeiro|mandato)/;
+const _INSCR = /(inscriç|matrícul|requeriment|candidatur)/;
+const _RECURSO = /(recurso|impugnaç|interpos|contestaç)/;
+const _ENTREGA = /(entrega|envio|encaminh|apresentaç|protocol|submet|remess|preenchiment|manifestaç)/;
+const _VIGENCIA = /(comissã|banca|edital|credenciament|cadastr|chapa|portaria)/;
+
+// Extrai datas-limite de um texto. Espelha proto validado no corpus real.
+// Bias em PRECISÃO: só extrai data perto de uma intenção de prazo.
+export function extrairPrazos(texto: string, dataAto: string | null): PrazoBruto[] {
+  if (!texto) return [];
+  const t = texto.toLowerCase();
+  const out: PrazoBruto[] = [];
+  const jaTem = (dl: string) => out.some(o => o.dataLimite === dl);
+  const win = (i: number, w = 95) => t.slice(Math.max(0, i - w), i + w);
+  const snip = (i: number) => '…' + t.slice(Math.max(0, i - 48), i + 55).replace(/\s+/g, ' ').trim() + '…';
+  const push = (dl: string, tipo: string, conf: 'alta' | 'média', base: string, i: number) => {
+    if (_validaData(dl) && !jaTem(dl)) out.push({ dataLimite: dl, tipo, conf, base, origem: snip(i), ctx: t.slice(Math.max(0, i - 170), i + 170) });
+  };
+  let m: RegExpExecArray | null;
+
+  // 1) janela "de X a Y" — só com intenção de inscrição/recurso
+  const reJan = /de\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s+a\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g;
+  while ((m = reJan.exec(t))) { const c = win(m.index, 110); if (_EXCLUI.test(c)) continue;
+    const intent = _INSCR.test(c) ? 'inscrição' : _RECURSO.test(c) ? 'recurso' : null; if (!intent) continue;
+    push(_iso(_y4(m[6]), +m[5], +m[4]), intent, 'alta', 'data no texto', m.index);
+  }
+  // 2) "até DD/MM/AAAA" com intenção
+  const reAteN = /até\s+(?:o\s+dia\s+|as?\s+\d{1,2}h?\s+de\s+)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g;
+  while ((m = reAteN.exec(t))) { const c = win(m.index); if (_EXCLUI.test(c)) continue;
+    const intent = _INSCR.test(c) ? 'inscrição' : _RECURSO.test(c) ? 'recurso' : _ENTREGA.test(c) ? 'entrega/requerimento' : _VIGENCIA.test(c) ? 'vigência/validade' : null;
+    if (!intent) continue; push(_iso(_y4(m[3]), +m[2], +m[1]), intent, intent === 'vigência/validade' ? 'média' : 'alta', 'data no texto', m.index);
+  }
+  // 3) "até DD de MÊS (de AAAA)?" com intenção
+  const reAteE = /até\s+(?:o\s+dia\s+)?(\d{1,2})\s+de\s+([a-zç]+)(?:\s+de\s+(\d{4}))?/g;
+  while ((m = reAteE.exec(t))) { if (!_MES[m[2]]) continue; const c = win(m.index); if (_EXCLUI.test(c)) continue;
+    const intent = _INSCR.test(c) ? 'inscrição' : _RECURSO.test(c) ? 'recurso' : _ENTREGA.test(c) ? 'entrega/requerimento' : null; if (!intent) continue;
+    const ano = m[3] ? +m[3] : (dataAto ? +dataAto.slice(0, 4) : NaN); if (!ano) continue;
+    push(_iso(ano, _MES[m[2]], +m[1]), intent, 'alta', 'data no texto', m.index);
+  }
+  // 4) relativo em DIAS "N dias ... a contar/partir da (publicação|assinatura|...)"
+  const reDias = /(\d{1,3})\s*(?:\([^)]*\)\s*)?dias?\s+(?:úteis\s+)?(?:,?\s*)?(?:a\s+contar|contad[oa]s?|a\s+partir)\s+d[ae]\s+(?:sua\s+)?(public|assinatura|data|receb|notific|ciênc)/g;
+  while ((m = reDias.exec(t))) { const c = win(m.index); if (_EXCLUI.test(c)) continue;
+    if (dataAto) push(_addDias(dataAto, +m[1]), `prazo (${m[1]} dias)`, 'média', 'assinatura+N', m.index);
+  }
+  // 5) relativo MESES/ANOS "N (meses|anos) a contar/partir da (assinatura|...)"
+  const reMes = /(\d{1,2})\s*(?:\([^)]*\)\s*)?(mês|meses|anos?)\s+(?:a\s+contar|a\s+partir)\s+d[ae]\s+(?:sua\s+)?(assinatura|data|public)/g;
+  while ((m = reMes.exec(t))) { const c = win(m.index); if (_EXCLUI.test(c)) continue;
+    const mult = /ano/.test(m[2]) ? 12 : 1; if (dataAto) push(_addMeses(dataAto, +m[1] * mult), `prazo (${m[1]} ${m[2]})`, 'média', 'assinatura+N', m.index);
+  }
+  return out;
+}
+
+function _montaPrazos(meta: { id: string; label: string; sigla: string; ementa: string; texto: string; dataAto: string | null; link: string | null; mexido: boolean; status: string }): Prazo[] {
+  return extrairPrazos(meta.texto, meta.dataAto).map(p => ({
+    atoId: meta.id, atoLabel: meta.label, sigla: meta.sigla, tipo: p.tipo,
+    dataLimite: p.dataLimite, conf: p.conf, base: p.base, textoOrigem: p.origem,
+    linkBoletim: meta.link, dataAto: meta.dataAto, mexidoDepois: meta.mexido, status: meta.status,
+    ementa: meta.ementa, publico: inferirPublico(meta.ementa, p.ctx),
+  }));
+}
+
+export async function getPrazos(): Promise<Prazo[]> {
+  let prazos: Prazo[] = [];
+  if (MODO === 'api') {
+    const r = await fetch(`${API_BASE}/prazos`);
+    const j = await r.json();
+    for (const c of (j.candidatos || [])) {
+      prazos.push(..._montaPrazos({
+        id: c.id, label: `${c.tipo} nº ${c.numero}/${c.ano}`, sigla: c.sigla || '', ementa: c.ementa || '',
+        texto: `${c.ementa || ''} . ${c.texto || ''}`, dataAto: c.dataAto || null,
+        link: c.linkBoletim || null, mexido: !!c.mexidoDepois, status: c.status || 'Ativo',
+      }));
+    }
+  } else {
+    for (const a of CACHE as any[]) {
+      const mexido = (a.referenciadoPor || []).some((x: any) => x.relacao === 'Altera' || x.relacao === 'Revoga');
+      prazos.push(..._montaPrazos({
+        id: a.id, label: `${a.tipoAto} nº ${a.numero}/${a.ano}`, sigla: a.orgaoEmissor || '', ementa: a.ementa || '',
+        texto: `${a.ementa || ''} . ${a.conteudoResumido || ''} . ${a.textoBusca || ''}`,
+        dataAto: a.dataAssinatura || null, link: a.linkBoletim || null, mexido, status: a.status || 'Ativo',
+      }));
+    }
+  }
+  prazos.sort((a, b) => a.dataLimite < b.dataLimite ? -1 : a.dataLimite > b.dataLimite ? 1 : 0);
+  return prazos;
+}
+
 export async function getFiltros(): Promise<{ tipos: string[]; orgaos: string[]; anos: number[] }> {
   if (MODO === 'api') return (await fetch(`${API_BASE}/filtros`)).json();
   const tipos = new Set<string>(); const orgaos = new Set<string>(); const anos = new Set<number>();

@@ -10,6 +10,8 @@ import ActTable from './components/ActTable';
 import ActRelationships from './components/ActRelationships';
 import ActRelationsApi from './components/ActRelationsApi';
 import ChefiasApi from './components/ChefiasApi';
+import InsightsApi from './components/InsightsApi';
+import PrazosApi from './components/PrazosApi';
 import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
 import PrivacidadeLGPD from './components/PrivacidadeLGPD';
@@ -121,6 +123,10 @@ export default function App() {
           )}
 
           {activeTab === 'chefias' && <div id="painel-chefias"><ChefiasApi /></div>}
+
+          {activeTab === 'insights' && <div id="painel-insights"><InsightsApi /></div>}
+
+          {activeTab === 'prazos' && <div id="painel-prazos-wrap"><PrazosApi /></div>}
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 

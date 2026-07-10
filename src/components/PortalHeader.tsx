@@ -207,6 +207,30 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
           </button>
 
           <button
+            id="tab-prazos"
+            onClick={() => setActiveTab('prazos')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'prazos'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            📅 Prazos
+          </button>
+
+          <button
+            id="tab-insights"
+            onClick={() => setActiveTab('insights')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'insights'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            📈 Insights
+          </button>
+
+          <button
             id="tab-ia-parser"
             onClick={() => setActiveTab('ia-parser')}
             className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
