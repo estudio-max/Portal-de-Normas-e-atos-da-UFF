@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Search, GitBranch, Sparkles, Link as LinkIcon, Database, ShieldCheck,
   ShieldAlert, GitBranch as Branch, FileText, Filter, User, Info, CheckCircle2,
-  ArrowRight, MousePointerClick, RefreshCw
+  ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle
 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
@@ -90,6 +90,63 @@ export default function HelpGuide() {
         </p>
       </Secao>
 
+      {/* Chefias */}
+      <Secao icon={<Users className="w-4 h-4" />} titulo="👥 Chefias da UFF — quem chefia cada setor">
+        <p>
+          A aba <strong>Chefias</strong> mostra o <strong>titular atual</strong> de cada função (Chefe,
+          Coordenador, Diretor, Pró-Reitor…), montado a partir das <strong>designações e dispensas
+          publicadas no Boletim</strong>. Vale sempre a designação mais recente de cada setor, e cada
+          linha aponta a portaria de origem.
+        </p>
+        <p className="text-slate-500 text-xs">
+          <strong>Ponderação:</strong> aparece só o que foi <strong>publicado como designação</strong> no
+          período indexado. Se a última movimentação de um cargo foi uma dispensa sem sucessor publicado,
+          ele não aparece. Sempre confira a <strong>data</strong> e a <strong>portaria</strong> mostradas.
+        </p>
+      </Secao>
+
+      {/* Insights */}
+      <Secao icon={<BarChart3 className="w-4 h-4" />} titulo="📈 Insights — o acervo em números">
+        <p>
+          A aba <strong>Insights</strong> transforma a base em painéis visuais: <strong>ritmo de publicação</strong>
+          (calendário por dia), órgãos que mais publicam, <strong>cobertura de processos SEI</strong>, composição
+          por tipo e situação de vigência. Traz ainda a <strong>rotatividade de chefias</strong> (quais cadeiras mais
+          trocam de titular) e as <strong>normas revisadas ainda citadas</strong>.
+        </p>
+        <p className="text-slate-500 text-xs">
+          <strong>Ponderação:</strong> os números refletem <strong>apenas o que já está indexado</strong>. Como a base
+          ainda é recente, algumas análises (como a <em>meia-vida das normas</em>) só ganham sentido quando os anos
+          anteriores forem carregados — por isso elas se <strong>ativam sozinhas</strong> com o tempo.
+        </p>
+      </Secao>
+
+      {/* Prazos */}
+      <Secao icon={<CalendarClock className="w-4 h-4" />} titulo="📅 Prazos e datas-limite — o radar">
+        <p>
+          A aba <strong>Prazos</strong> reúne, numa agenda, as datas-limite encontradas no <em>texto</em> dos atos —
+          <strong> inscrições, recursos, entregas, prazos de contrato e validades</strong>. Cada prazo mostra:
+        </p>
+        <ul className="space-y-1 mt-1 ml-5 list-disc">
+          <li><strong>Para quem serve</strong> — o público que deve se preocupar (candidatos, discentes, docentes, fornecedores, comunidade…).</li>
+          <li>O <strong>assunto</strong> (a ementa do ato) e o <strong>trecho exato</strong> de onde a data foi tirada.</li>
+          <li>A <strong>contagem regressiva</strong> (“faltam 11 dias”) e a cor de urgência.</li>
+        </ul>
+        <p>
+          Filtre por <strong>janela</strong> (esta semana, 30/90 dias…), por <strong>público</strong> ou por tipo, e use
+          o botão <strong>Imprimir / PDF</strong> para uma lista limpa e fácil de ler no papel.
+        </p>
+        <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-xs text-amber-900 flex gap-1.5">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Como ler com cautela (importante):</strong> é um <strong>apoio para não perder prazos</strong>, não uma
+            agenda oficial. A detecção da data e o <strong>“para quem”</strong> são <strong>automáticos</strong> e podem falhar
+            ou classificar errado. Prazos relativos (“30 dias a contar da assinatura”) usam a <strong>data do ato</strong> como
+            referência. O selo <Badge cor="bg-amber-100 text-amber-800 border-amber-200">revisado depois</Badge> avisa que um
+            ato posterior mexeu naquele — nesses casos o prazo pode ter mudado. <strong>Sempre confirme no ato de origem.</strong>
+          </span>
+        </div>
+      </Secao>
+
       {/* SEI */}
       <Secao icon={<LinkIcon className="w-4 h-4" />} titulo="Chegar ao processo no SEI">
         <p>
@@ -131,6 +188,7 @@ export default function HelpGuide() {
         <ul className="space-y-1">
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O portal é uma <strong>camada de consulta</strong> sobre o acervo de PDFs — a <strong>fonte primária</strong> são os Boletins de Serviço. Em decisões oficiais, confira sempre o <strong>PDF oficial</strong> do Boletim (link em cada ato).</li>
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> A indexação é automática e pode ter imperfeições em casos raros — por isso o original prevalece.</li>
+          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O <strong>radar de Prazos</strong> e os <strong>Insights</strong> são apoios derivados do texto — ótimos como lembrete e panorama, mas o <strong>ato de origem sempre prevalece</strong>.</li>
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Os dados são informação <strong>pública</strong> do Boletim de Serviço da UFF.</li>
         </ul>
       </Secao>
@@ -142,6 +200,8 @@ export default function HelpGuide() {
           <p><strong>A lista mostra “exibindo os primeiros 300”.</strong> É só para a tela ficar rápida — refine a busca/filtros e o ato aparece.</p>
           <p><strong>Esse ato ainda vale?</strong> Olhe o selo de status e, na Ficha, a seção “Referenciado por”. Se houver “Revogado por…”, não vale mais.</p>
           <p><strong>Como compartilho um ato?</strong> Abra a Ficha e copie o número do processo SEI ou use o link do PDF do Boletim.</p>
+          <p><strong>Posso confiar na data que aparece no radar de Prazos?</strong> Use como <strong>lembrete</strong> para não perder o prazo, mas <strong>confirme sempre no ato de origem</strong> — a data é lida automaticamente do texto e um ato posterior pode tê-la alterado (fique atento ao selo “revisado depois”).</p>
+          <p><strong>O “para quem” de um prazo veio errado.</strong> O público é inferido automaticamente e pode escorregar no detalhe. Use o filtro de público como aproximação e confirme no ato.</p>
         </div>
       </Secao>
 
