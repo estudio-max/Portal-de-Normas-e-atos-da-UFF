@@ -326,6 +326,15 @@ export interface Zumbi {
 // (art. 33, VIII da Lei 8.112/90 — servidor que passou em outro concurso,
 // ainda detectado por regex no fallback). Conta o que foi PUBLICADO no BS.
 export interface SerieRh { ano: number; vol: number; comp: number; inval: number; indef: number; vac8: number; }
+// Deslocamento de servidor (classificado na extração, campo UffAct.deslocamento).
+// serie = remoção (interna) × redistribuição entrada/saída por ano; motivos e
+// setores são só da remoção (a redistribuição de saída é sub-registrada no BS).
+export interface SerieDesl { ano: number; remocao: number; redEntra: number; redSaida: number; }
+export interface Deslocamento {
+  serie: SerieDesl[];
+  motivos: { motivo: string; n: number }[];
+  setores: { setor: string; n: number }[];
+}
 export interface Analitico {
   rotatividade: {
     posicoesComTroca: number | null; totalEventos: number;
@@ -334,6 +343,7 @@ export interface Analitico {
   zumbis: Zumbi[];
   mortalidade: { total: number; mexidos: number };
   seriesRh: SerieRh[];
+  deslocamento: Deslocamento;
 }
 
 const mesesEntre = (a: string, b: string) =>
@@ -448,6 +458,33 @@ export async function getAnalitico(): Promise<Analitico> {
     .map(([ano, s]) => ({ ano, ...s }))
     .sort((a, b) => a.ano - b.ano);
 
+  // Deslocamento (campo estruturado a.deslocamento, classificado na extração).
+  const dAno = new Map<number, { remocao: number; redEntra: number; redSaida: number }>();
+  const motMap = new Map<string, number>();
+  const setMap = new Map<string, number>();
+  for (const a of CACHE as any[]) {
+    const d = a.deslocamento;
+    if (!d) continue;
+    const ano = Number(a.ano);
+    if (ano && ano >= 1990 && ano <= 2100) {
+      const s = dAno.get(ano) || { remocao: 0, redEntra: 0, redSaida: 0 };
+      if (d.tipo === 'Remoção') s.remocao++;
+      else if (d.tipo === 'Redistribuição' && d.direcao === 'Entrada') s.redEntra++;
+      else if (d.tipo === 'Redistribuição' && d.direcao === 'Saída') s.redSaida++;
+      dAno.set(ano, s);
+    }
+    if (d.tipo === 'Remoção') {
+      const mot = d.motivo || 'Não especificado';
+      motMap.set(mot, (motMap.get(mot) || 0) + 1);
+      if (d.setor) setMap.set(d.setor, (setMap.get(d.setor) || 0) + 1);
+    }
+  }
+  const deslocamento: Deslocamento = {
+    serie: [...dAno.entries()].map(([ano, s]) => ({ ano, ...s })).sort((a, b) => a.ano - b.ano),
+    motivos: [...motMap.entries()].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n),
+    setores: [...setMap.entries()].map(([setor, n]) => ({ setor, n })).sort((a, b) => b.n - a.n).slice(0, 15),
+  };
+
   return {
     rotatividade: {
       posicoesComTroca: nCad < 15 ? nCad : null, totalEventos,
@@ -456,6 +493,7 @@ export async function getAnalitico(): Promise<Analitico> {
     zumbis,
     mortalidade: { total: CACHE.length, mexidos: (CACHE as any[]).filter(a => a.status !== 'Ativo').length },
     seriesRh,
+    deslocamento,
   };
 }
 

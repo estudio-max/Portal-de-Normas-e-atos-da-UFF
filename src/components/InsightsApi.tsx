@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays, Link2, Users, AlertTriangle, Hourglass, ExternalLink } from 'lucide-react';
+import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays, Link2, Users, AlertTriangle, Hourglass, ExternalLink, ArrowRightLeft, MapPin } from 'lucide-react';
 import * as ds from '../dataSource';
 
 // Aba "Insights": painéis analíticos sobre o acervo indexado do Boletim de
@@ -221,6 +221,36 @@ export default function InsightsApi() {
               sub="Vacâncias declaradas por posse em outro cargo inacumulável (art. 33, VIII da Lei 8.112/90) — servidores que passaram em outro concurso.">
               <SerieAnual dados={(an?.seriesRh || []).map(s => ({ ano: s.ano, a: s.vac8 }))}
                 corA={P.tipo} rotuloA="vacâncias art. 33, VIII" P={P} />
+            </Card>
+          </div>
+
+          {/* ---- Movimentação de servidores (remoção × redistribuição) ---- */}
+          <div className="flex items-center gap-2 pt-2 pb-0.5">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Movimentação de servidores</span>
+            <span className="flex-1 h-px bg-slate-200" />
+            <span className="text-[10px] text-slate-400">deslocamentos · Lei 8.112/90</span>
+          </div>
+
+          <Card titulo="Remoção × Redistribuição por ano" icone={<ArrowRightLeft className="w-4 h-4 text-yellow-500" />}
+            sub="Remoção = servidor muda de setor DENTRO da UFF (art. 36). Redistribuição = cargo entra na UFF vindo de outro órgão (art. 37).">
+            <div className="flex items-center gap-4 mb-2 text-[11px] text-slate-500 font-medium">
+              <Legenda cor={P.bar} texto="remoções (internas)" />
+              <Legenda cor={P.tipo} texto="redistribuições para a UFF (entrada)" />
+            </div>
+            <SerieAnual dados={(an?.deslocamento?.serie || []).map(s => ({ ano: s.ano, a: s.remocao, b: s.redEntra }))}
+              corA={P.bar} corB={P.tipo} rotuloA="remoções" rotuloB="entradas por redistribuição" P={P} />
+            <DiagnosticoRedistribuicao serie={an?.deslocamento?.serie} />
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Card titulo="Por que os servidores são removidos" icone={<Info className="w-4 h-4 text-yellow-500" />}
+              sub="Motivo da remoção pelo dispositivo do ato (art. 36): a pedido, de ofício (interesse da Administração) ou casos específicos.">
+              <MotivosRemocao motivos={an?.deslocamento?.motivos} P={P} />
+            </Card>
+
+            <Card titulo="Setores que mais recebem remoções" icone={<MapPin className="w-4 h-4 text-yellow-500" />}
+              sub="Unidades de destino com mais servidores chegando por remoção — proxy de rotatividade interna.">
+              <SetoresRemocao setores={an?.deslocamento?.setores} P={P} />
             </Card>
           </div>
 
@@ -595,6 +625,41 @@ function SerieAnual({ dados, corA, corB, corC, rotuloA, rotuloB, rotuloC, P }: {
       </p>
     </div>
   );
+}
+
+// ---- Diagnóstico de força de trabalho via redistribuição ------------------
+// A assimetria é REAL, não um bug: o Boletim da UFF registra bem a entrada
+// (provimento/lotação de quem chegou), mas a saída se consuma no DOU (portaria
+// do MEC) — só as solicitações da CEPEX vazam pra cá. Por isso: sem saldo.
+function DiagnosticoRedistribuicao({ serie }: { serie?: ds.SerieDesl[] }) {
+  if (!serie || !serie.length) return null;
+  const entra = serie.reduce((s, r) => s + r.redEntra, 0);
+  const sai = serie.reduce((s, r) => s + r.redSaida, 0);
+  if (!entra && !sai) return null;
+  return (
+    <div className="mt-2 text-[11px] text-slate-600 leading-relaxed bg-emerald-50 border border-emerald-100 rounded-md p-2">
+      <strong className="text-emerald-700">{fmtN(entra)}</strong> cargos/servidores <strong>entraram</strong> na UFF por
+      redistribuição no período indexado{sai > 0 && <> · <strong>{fmtN(sai)}</strong> solicitação(ões) de saída registrada(s)</>}.
+      <span className="text-slate-400"> A <strong>saída</strong> se consuma em portaria do MEC no <strong>DOU</strong>, não no
+      Boletim — é sub-registrada aqui, então não dá para um saldo líquido confiável. A entrada, o Boletim registra bem.</span>
+    </div>
+  );
+}
+
+// ---- Motivos da remoção (art. 36) -----------------------------------------
+function MotivosRemocao({ motivos, P }: { motivos?: { motivo: string; n: number }[]; P: ReturnType<typeof paleta> }) {
+  if (!motivos) return <p className="text-xs text-slate-400 italic">Carregando…</p>;
+  if (!motivos.length) return <p className="text-xs text-slate-500 leading-relaxed">Nenhuma remoção detectada no período indexado.</p>;
+  const total = motivos.reduce((s, m) => s + m.n, 0);
+  return <BarrasSimples dados={motivos.map(m => ({ rotulo: m.motivo, n: m.n }))} cor={P.col} total={total} />;
+}
+
+// ---- Setores que mais recebem remoções ------------------------------------
+function SetoresRemocao({ setores, P }: { setores?: { setor: string; n: number }[]; P: ReturnType<typeof paleta> }) {
+  if (!setores) return <p className="text-xs text-slate-400 italic">Carregando…</p>;
+  if (!setores.length) return <p className="text-xs text-slate-500 leading-relaxed">Nenhum setor de destino identificado no período indexado.</p>;
+  const total = setores.reduce((s, x) => s + x.n, 0);
+  return <BarrasSimples dados={setores.map(s => ({ rotulo: s.setor, n: s.n }))} cor={P.tipo} total={total} />;
 }
 
 // ---- Vigência (barra empilhada única + legenda) ---------------------------

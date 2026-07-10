@@ -131,6 +131,17 @@ with open(OUT, "w", encoding="utf-8") as f:
         "ADD COLUMN `aposentadoria_base_legal` VARCHAR(60) NULL AFTER `aposentadoria_tipo`', 'DO 0');\n"
         "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
 
+    # Garante atos.deslocamento_* (idempotente): remoção/redistribuição.
+    f.write(
+        "SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='atos' AND COLUMN_NAME='deslocamento_tipo');\n"
+        "SET @ddl := IF(@c=0, "
+        "'ALTER TABLE `atos` ADD COLUMN `deslocamento_tipo` VARCHAR(20) NULL AFTER `aposentadoria_base_legal`, "
+        "ADD COLUMN `deslocamento_dir` VARCHAR(12) NULL AFTER `deslocamento_tipo`, "
+        "ADD COLUMN `deslocamento_motivo` VARCHAR(30) NULL AFTER `deslocamento_dir`, "
+        "ADD COLUMN `deslocamento_setor` VARCHAR(60) NULL AFTER `deslocamento_motivo`', 'DO 0');\n"
+        "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
+
     # Tabela de chefias (idempotente): criada aqui p/ bases que ainda não a têm.
     f.write(
         "CREATE TABLE IF NOT EXISTS `ato_funcoes` ("
@@ -175,6 +186,7 @@ with open(OUT, "w", encoding="utf-8") as f:
         st = a.get("status", "Ativo")
         st = st if st in ("Ativo", "Alterado", "Revogado") else "Ativo"
         apos = a.get("aposentadoria") or {}
+        desl = a.get("deslocamento") or {}
         atos_rows.append([
             esc(aid), esc(bol_id.get(a.get("arquivo", ""))), esc(a.get("tipoAto", "")),
             esc(a.get("orgaoEmissor", "")), esc(a.get("numero", "")), esc(a.get("ano")),
@@ -185,6 +197,7 @@ with open(OUT, "w", encoding="utf-8") as f:
             esc(a.get("linkSeiProcesso")), esc(a.get("linkSeiDocumento")), esc(a.get("linkBoletim")),
             esc(a.get("secao")), esc(a.get("pagina")),
             esc(apos.get("tipo")), esc(apos.get("baseLegal")),
+            esc(desl.get("tipo")), esc(desl.get("direcao")), esc(desl.get("motivo")), esc(desl.get("setor")),
         ])
         if a.get("textoBusca"):
             corpo_rows.append([esc(aid), esc(a["textoBusca"])])
@@ -212,7 +225,9 @@ with open(OUT, "w", encoding="utf-8") as f:
                            "identificador", "tipo_acao", "ementa", "ementa_inferida", "conteudo_resumido",
                            "signatario", "status", "processo_sei", "sei_documento", "link_sei_processo",
                            "link_sei_documento", "link_boletim", "secao", "pagina",
-                           "aposentadoria_tipo", "aposentadoria_base_legal"], atos_rows, 100,
+                           "aposentadoria_tipo", "aposentadoria_base_legal",
+                           "deslocamento_tipo", "deslocamento_dir", "deslocamento_motivo", "deslocamento_setor"],
+               atos_rows, 100,
                upsert_em=("id",) if args.append else None)
         insere(f, "ato_corpo", ["ato_id", "texto"], corpo_rows, 50,
                upsert_em=("ato_id",) if args.append else None)

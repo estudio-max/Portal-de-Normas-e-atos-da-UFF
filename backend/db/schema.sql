@@ -62,6 +62,10 @@ CREATE TABLE `atos` (
   `pagina`             VARCHAR(8)   NULL,
   `aposentadoria_tipo`       VARCHAR(20) NULL,  -- Voluntária/Compulsória/Invalidez/Indefinida; NULL = não concede
   `aposentadoria_base_legal` VARCHAR(60) NULL,  -- ex. "art. 40, §1º, II, CF" quando não há rótulo no texto
+  `deslocamento_tipo`   VARCHAR(20) NULL,  -- Remoção (interna) / Redistribuição (entre órgãos); NULL = não desloca
+  `deslocamento_dir`    VARCHAR(12) NULL,  -- Interna (remoção) / Entrada / Saída (redistribuição)
+  `deslocamento_motivo` VARCHAR(30) NULL,  -- remoção: A pedido / De ofício / Saúde / Acompanhar cônjuge / Permuta
+  `deslocamento_setor`  VARCHAR(60) NULL,  -- remoção: unidade de destino (sigla p/ ranking de rotatividade)
   `criado_em`          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em`      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP,

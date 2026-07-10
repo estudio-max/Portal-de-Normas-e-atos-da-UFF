@@ -657,6 +657,43 @@ function analitico(PDO $pdo): void {
         }
     } catch (Throwable $e) { /* sem ato_corpo/coluna ainda migrada: painel fica vazio */ }
 
+    // --- Deslocamento de servidor: remoção (interna) × redistribuição -------
+    // Lê as colunas ESTRUTURADAS deslocamento_* (classificadas na extração por
+    // extrai_deslocamento()). Série anual + motivos da remoção + setores de
+    // destino (rotatividade). A redistribuição de SAÍDA é sub-registrada nesta
+    // fonte (consuma-se em portaria do MEC no DOU) — por isso entrada e saída
+    // vêm separadas, sem fingir um saldo líquido.
+    $desl = ['serie' => [], 'motivos' => [], 'setores' => []];
+    try {
+        $ds = $pdo->query("
+            SELECT ano,
+                   SUM(deslocamento_tipo = 'Remoção') AS remocao,
+                   SUM(deslocamento_tipo = 'Redistribuição' AND deslocamento_dir = 'Entrada') AS red_entra,
+                   SUM(deslocamento_tipo = 'Redistribuição' AND deslocamento_dir = 'Saída')   AS red_saida
+            FROM atos
+            WHERE deslocamento_tipo IS NOT NULL AND ano BETWEEN 1990 AND 2100
+            GROUP BY ano ORDER BY ano
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        $desl['serie'] = array_map(fn($r) => [
+            'ano' => (int)$r['ano'], 'remocao' => (int)$r['remocao'],
+            'redEntra' => (int)$r['red_entra'], 'redSaida' => (int)$r['red_saida'],
+        ], $ds);
+
+        $mv = $pdo->query("
+            SELECT COALESCE(NULLIF(deslocamento_motivo, ''), 'Não especificado') AS motivo, COUNT(*) AS n
+            FROM atos WHERE deslocamento_tipo = 'Remoção'
+            GROUP BY motivo ORDER BY n DESC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        $desl['motivos'] = array_map(fn($r) => ['motivo' => $r['motivo'], 'n' => (int)$r['n']], $mv);
+
+        $st = $pdo->query("
+            SELECT deslocamento_setor AS setor, COUNT(*) AS n
+            FROM atos WHERE deslocamento_tipo = 'Remoção' AND deslocamento_setor <> ''
+            GROUP BY deslocamento_setor ORDER BY n DESC LIMIT 15
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        $desl['setores'] = array_map(fn($r) => ['setor' => $r['setor'], 'n' => (int)$r['n']], $st);
+    } catch (Throwable $e) { /* colunas ainda não migradas: painel fica vazio */ }
+
     responder_json([
         'rotatividade' => [
             'posicoesComTroca' => count($cadeiras) < 15 ? count($cadeiras) : null, // null = truncado no top 15
@@ -680,6 +717,7 @@ function analitico(PDO $pdo): void {
             'mexidos' => (int)$m['mexidos'],
         ],
         'seriesRh' => $rh,
+        'deslocamento' => $desl,
     ]);
 }
 

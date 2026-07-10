@@ -631,6 +631,7 @@ def parse_pdf(caminho):
             "pessoas": extrai_pessoas(trecho),
             "funcoes": extrai_funcoes(trecho),
             "aposentadoria": extrai_aposentadoria(trecho),
+            "deslocamento": extrai_deslocamento(trecho),
             "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
@@ -1226,6 +1227,81 @@ def extrai_aposentadoria(trecho):
         if romano == "i":
             return {"tipo": "Invalidez", "baseLegal": "art. 40, §1º, I, CF"}
     return {"tipo": "Indefinida", "baseLegal": ""}
+
+
+# Deslocamento de servidor (Lei 8.112/90): REMOÇÃO = dentro da própria UFF
+# (art. 36); REDISTRIBUIÇÃO = cargo entra/sai da UFF p/ outro órgão (art. 37).
+# A fonte (Boletim da UFF) registra bem a redistribuição de ENTRADA (o servidor
+# de outro órgão chegando, via o ato de provimento/lotação que descreve o cargo
+# "redistribuído à UFF"); a SAÍDA se consuma numa portaria do MEC no DOU, então
+# aqui só aparecem as SOLICITAÇÕES da CEPEX — sub-registrada de propósito, não
+# por bug. Menção retrospectiva não conta (mesmo cuidado das aposentadorias).
+_RED_ENTRA = re.compile(
+    r"redistribu\w+.{0,90}?(?:para\s+o\s+desta\s+universidade"
+    r"|[àa]\s+universidade\s+federal\s+fluminense"
+    r"|para\s+a\s+universidade\s+federal\s+fluminense)", re.I)
+_RED_SAI = re.compile(
+    r"desta\s+universidade\s+para\s+a\s+universidade\s+federal"
+    r"|d[eo]\s+departamento\s+[^.]{0,60}?\s+para\s+a\s+universidade\s+federal", re.I)
+_RED_EXCL = re.compile(
+    r"redistribuiç[ãa]o\s+de\s+cargos\s+de\s+direç"       # CD/FG genérico do MEC
+    r"|funç[õo]es\s+gratificadas\s+do\s+minist"
+    r"|vagas?\s+.{0,30}?redistribu"                        # vaga de edital/bolsa
+    r"|redistribu\w+\s+os?\s+dados"                        # IN sobre dados
+    r"|redistribu\w+\s+para\s+recredenciamento", re.I)
+_RED_QQ = re.compile(r"redistribu", re.I)
+# Remoção: "remover" ancorado num servidor/matrícula na MESMA frase (sem ponto).
+# Cobre "remover o(a) servidor(a)", "remover, em caráter provisório, a servidora",
+# "remover os servidores abaixo". A âncora descarta "remover" de outros contextos.
+_REMOVER = re.compile(
+    r"\bremover\b[^.]{0,60}?\b(?:servidor|servidora|professor|docente|"
+    r"matr[íi]cula\s+siape|siape\s+n)", re.I)
+_M_SAUDE = re.compile(r"motivos?\s+de\s+sa[úu]de", re.I)
+_M_CONJ = re.compile(r"acompanhar\s+c[ôo]njuge|acompanhar\s+companheir", re.I)
+_M_PERMUTA = re.compile(r"permuta", re.I)
+_M_OFICIO = re.compile(r"de\s+of[íi]cio|interesse\s+d[ao]\s+administraç", re.I)
+_M_PEDIDO = re.compile(r"a\s+pedido", re.I)
+# Unidade de DESTINO ("para a UNIDADE - SIGLA[, uorg N]"): prefere a SIGLA (chave
+# estável), última ocorrência (a origem vem antes); sem sigla, nome curto.
+_DEST_SIGLA = re.compile(
+    r"para\s+[oa]s?\s+[^.;:]{3,90}?\s[-–]\s*([a-zà-ú]+(?:/[a-zà-ú]+){0,2})\s*"
+    r"(?:[,-–]\s*uorg|\.|:|$)", re.I)
+_DEST_NOME = re.compile(
+    r"para\s+[oa]s?\s+((?:departamento|instituto|faculdade|escola|coordena\w+|"
+    r"divis[ãa]o|superintend\w+|pró-?reitoria|reitoria|hospital|n[úu]cleo|"
+    r"setor|se[çc][ãa]o|ger[êe]ncia|diretoria|secretaria|centro)"
+    r"[^.;:]{2,55}?)(?:,\s*por\b|,?\s*uorg|\.|$)", re.I)
+
+
+def extrai_deslocamento(trecho):
+    """{'tipo': 'Remoção'|'Redistribuição', 'direcao': 'Interna'|'Entrada'|'Saída',
+    'motivo': str, 'setor': str} ou None se o ato não desloca servidor."""
+    t = trecho
+    if _RED_QQ.search(t) and not _RED_EXCL.search(t):
+        if _RED_ENTRA.search(t):
+            return {"tipo": "Redistribuição", "direcao": "Entrada", "motivo": "", "setor": ""}
+        if _RED_SAI.search(t):
+            return {"tipo": "Redistribuição", "direcao": "Saída", "motivo": "", "setor": ""}
+    if _REMOVER.search(t):
+        if _M_SAUDE.search(t): motivo = "Saúde"
+        elif _M_CONJ.search(t): motivo = "Acompanhar cônjuge"
+        elif _M_PERMUTA.search(t): motivo = "Permuta"
+        elif _M_OFICIO.search(t): motivo = "De ofício"
+        elif _M_PEDIDO.search(t): motivo = "A pedido"
+        else: motivo = ""
+        setor = ""
+        ms = list(_DEST_SIGLA.finditer(t))
+        cand = ms[-1].group(1).upper().strip("/") if ms else ""
+        if cand and cand != "UORG" and 2 <= len(cand.replace("/", "")) <= 12:
+            setor = cand
+        else:
+            mn = None
+            for mn in _DEST_NOME.finditer(t):
+                pass
+            if mn:
+                setor = re.sub(r"\s+", " ", mn.group(1)).strip().rstrip(" -–").title()[:45]
+        return {"tipo": "Remoção", "direcao": "Interna", "motivo": motivo, "setor": setor}
+    return None
 
 
 # --------------------------------------------------------------------------- #

@@ -42,6 +42,9 @@ export interface UffAct {
   // Concessão de aposentadoria pelo DISPOSITIVO do ato (não menção solta) —
   // null quando o ato não concede aposentadoria a ninguém.
   aposentadoria?: { tipo: 'Voluntária' | 'Compulsória' | 'Invalidez' | 'Indefinida'; baseLegal?: string } | null;
+  // Deslocamento de servidor (Lei 8.112): Remoção (interna) / Redistribuição
+  // (entre órgãos). null quando o ato não desloca ninguém.
+  deslocamento?: { tipo: 'Remoção' | 'Redistribuição'; direcao: 'Interna' | 'Entrada' | 'Saída'; motivo?: string; setor?: string } | null;
   // Pessoas/matrículas para o filtro por servidor
   siapes?: string[];        // matrículas SIAPE citadas no ato
   pessoas?: { nome: string; siape: string }[];  // nome + matrícula p/ a Ficha
