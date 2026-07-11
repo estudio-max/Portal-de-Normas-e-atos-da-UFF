@@ -267,9 +267,23 @@ ACAO_EMENTA_RE = re.compile(
 #   "Resolução CUV nº 026 de 18 de abril de 2017"
 REF_TIPOS = (r"Portaria|Resolução|Determinação de Serviço|DTS|Norma de Serviço|"
              r"Instrução Normativa|Decisão|Edital|Ordem de Serviço|Deliberação")
+# Aceita as DUAS grafias do número do ato citado:
+#   • com marcador "nº":  "DTS GES/INF/UFF nº 16, de 22/08/2025"  (ano opcional /AAAA)
+#   • forma COMPACTA sem "nº":  "DTS GHT 07/2023"  (sigla + NN/AAAA) — muito usada
+#     em revogações ("Revoga a DTS GHT 07/2023"). Exige "/AAAA" p/ NÃO capturar
+#     número solto (artigo, processo, "Lei 8.112/90"); o tipo já vem da whitelist
+#     REF_TIPOS e a relação só é registrada se houver verbo (revoga/altera/...).
+# Órgão: cada token COMEÇA com letra — senão, na forma compacta "GHT 07/2023" o
+# órgão (que aceita dígitos p/ siglas tipo "GES/INF/UFF") engoliria o "0" do
+# número ("GHT 0" + "7/2023"). Exigir letra inicial deixa o número intacto.
 REF_RE = re.compile(
-    r"(?P<tipo>(?i:%s))\s+(?P<orgao>[A-ZÀ-Ú0-9/().]{1,25}(?:\s[A-ZÀ-Ú0-9/().]{1,15}){0,3})?\s*"
-    r"n%s\s*(?P<numero>\d[\d\.]*(?:\s*[A-Z]{1,4})?)" % (REF_TIPOS, _ORD))
+    r"(?P<tipo>(?i:%s))\s+"
+    r"(?P<orgao>[A-ZÀ-Ú][A-ZÀ-Ú0-9/().]{0,24}(?:\s[A-ZÀ-Ú][A-ZÀ-Ú0-9/().]{0,14}){0,3})?\s*"
+    r"(?:"
+    r"n%s\s*(?P<numero>\d[\d\.]*(?:\s*[A-Z]{1,4})?)(?:\s*/\s*(?P<ano>\d{4}))?"
+    r"|"
+    r"(?P<numero2>\d{1,4})\s*/\s*(?P<ano2>\d{4})"
+    r")" % (REF_TIPOS, _ORD))
 
 # Referência a outro Boletim: "publicada no BS nº 102, de 01/09/2025"
 BS_REF_RE = re.compile(r"BS\s*n%s\s*(\d+)\s*,?\s*de\s*(\d{2}/\d{2}/\d{4})" % _ORD, re.I)
@@ -434,7 +448,7 @@ def detecta_relacoes(ementa, corpo, sigla_atual, numero_atual):
         if not ato_citado:
             continue
         # ignora autorreferência (mesma sigla + mesmo número)
-        num_ref = re.sub(r"\D", "", rm.group("numero"))
+        num_ref = re.sub(r"\D", "", rm.group("numero") or rm.group("numero2") or "")
         if num_ref and num_ref == re.sub(r"\D", "", numero_atual) and \
            (sigla_atual and sigla_atual.lower() in ato_citado.lower()):
             continue
@@ -472,13 +486,15 @@ def monta_ref(rm):
     tipo = limpar(rm.group("tipo")).title()
     tipo = ACRONIMOS.get(tipo, tipo)
     orgao = re.sub(r"\s+", " ", limpar(rm.group("orgao") or "")).strip(" /.,-()")
-    num = limpar(rm.group("numero"))
+    g = rm.groupdict()
+    num = limpar(g.get("numero") or g.get("numero2") or "")
+    ano = g.get("ano") or g.get("ano2") or ""
     if not re.search(r"\d", num):
         return ""
     partes = [tipo]
     if orgao:
         partes.append(orgao)
-    partes.append("nº " + num)
+    partes.append("nº " + num + ("/" + ano if ano else ""))
     return " ".join(partes)
 
 
