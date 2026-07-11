@@ -280,7 +280,7 @@ REF_RE = re.compile(
     r"(?P<tipo>(?i:%s))\s+"
     r"(?P<orgao>[A-ZÀ-Ú][A-ZÀ-Ú0-9/().]{0,24}(?:\s[A-ZÀ-Ú][A-ZÀ-Ú0-9/().]{0,14}){0,3})?\s*"
     r"(?:"
-    r"n%s\s*(?P<numero>\d[\d\.]*(?:\s*[A-Z]{1,4})?)(?:\s*/\s*(?P<ano>\d{4}))?"
+    r"[nN]%s\s*(?P<numero>\d[\d\.]*(?:\s*[A-Z]{1,4})?)(?:\s*/\s*(?P<ano>\d{4}))?"
     r"|"
     r"(?P<numero2>\d{1,4})\s*/\s*(?P<ano2>\d{4})"
     r")" % (REF_TIPOS, _ORD))
