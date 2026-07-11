@@ -686,12 +686,16 @@ function analitico(PDO $pdo): void {
         ")->fetchAll(PDO::FETCH_ASSOC);
         $desl['motivos'] = array_map(fn($r) => ['motivo' => $r['motivo'], 'n' => (int)$r['n']], $mv);
 
+        // Setores CRUS e POR ANO, sem LIMIT: o front unifica sigla × nome por
+        // extenso (setorCanonico, ex.: HUAP = Hospital Universitário Antônio
+        // Pedro) e filtra pelo slider de intervalo de anos — dedup num lugar só.
         $st = $pdo->query("
-            SELECT deslocamento_setor AS setor, COUNT(*) AS n
+            SELECT deslocamento_setor AS setor, ano, COUNT(*) AS n
             FROM atos WHERE deslocamento_tipo = 'Remoção' AND deslocamento_setor <> ''
-            GROUP BY deslocamento_setor ORDER BY n DESC LIMIT 15
+              AND ano BETWEEN 1990 AND 2100
+            GROUP BY deslocamento_setor, ano
         ")->fetchAll(PDO::FETCH_ASSOC);
-        $desl['setores'] = array_map(fn($r) => ['setor' => $r['setor'], 'n' => (int)$r['n']], $st);
+        $desl['setores'] = array_map(fn($r) => ['setor' => $r['setor'], 'ano' => (int)$r['ano'], 'n' => (int)$r['n']], $st);
     } catch (Throwable $e) { /* colunas ainda não migradas: painel fica vazio */ }
 
     responder_json([

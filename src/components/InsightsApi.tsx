@@ -655,11 +655,87 @@ function MotivosRemocao({ motivos, P }: { motivos?: { motivo: string; n: number 
 }
 
 // ---- Setores que mais recebem remoções ------------------------------------
-function SetoresRemocao({ setores, P }: { setores?: { setor: string; n: number }[]; P: ReturnType<typeof paleta> }) {
+// Recebe linhas CRUAS {setor, ano, n}: unifica sigla × nome por extenso via
+// setorCanonico (ex.: HUAP + "Hospital Universitário Antônio Pedro" = uma
+// barra só) e deixa recortar o período com um slider de duas alças.
+function SetoresRemocao({ setores, P }: { setores?: ds.SetorAno[]; P: ReturnType<typeof paleta> }) {
+  const anos = useMemo(() => [...new Set((setores || []).map(s => s.ano))].sort((a, b) => a - b), [setores]);
+  const min = anos[0] ?? 0, max = anos[anos.length - 1] ?? 0;
+  const [faixa, setFaixa] = useState<[number, number] | null>(null); // null = período completo
+  const de = faixa ? Math.max(min, Math.min(faixa[0], max)) : min;
+  const ate = faixa ? Math.min(max, Math.max(faixa[1], min)) : max;
+  const dados = useMemo(() => {
+    const m = new Map<string, { rotulo: string; n: number }>();
+    for (const s of setores || []) {
+      if (s.ano < de || s.ano > ate) continue;
+      const nome = ds.setorCanonico(s.setor);
+      const r = m.get(nome) || { rotulo: nome, n: 0 };
+      r.n += s.n;
+      m.set(nome, r);
+    }
+    return [...m.values()].sort((a, b) => b.n - a.n);
+  }, [setores, de, ate]);
+
   if (!setores) return <p className="text-xs text-slate-400 italic">Carregando…</p>;
   if (!setores.length) return <p className="text-xs text-slate-500 leading-relaxed">Nenhum setor de destino identificado no período indexado.</p>;
-  const total = setores.reduce((s, x) => s + x.n, 0);
-  return <BarrasSimples dados={setores.map(s => ({ rotulo: s.setor, n: s.n }))} cor={P.tipo} total={total} />;
+
+  const total = dados.reduce((s, x) => s + x.n, 0);
+  const top = dados.slice(0, 15);
+  return (
+    <div>
+      {max > min && <FaixaAnos min={min} max={max} de={de} ate={ate} cor={P.tipo} onChange={(a, b) => setFaixa([a, b])} />}
+      {top.length ? (
+        <BarrasSimples dados={top} cor={P.tipo} total={total} />
+      ) : (
+        <p className="text-xs text-slate-500 leading-relaxed">Nenhuma remoção com setor identificado entre {de} e {ate}.</p>
+      )}
+      <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+        {de === min && ate === max
+          ? <>Período completo indexado</>
+          : <>De <strong className="text-slate-600">{de}</strong> a <strong className="text-slate-600">{ate}</strong></>}
+        : <strong className="text-slate-600">{fmtN(total)}</strong> remoção(ões) com destino identificado
+        {dados.length > top.length && <> · top {top.length} de {fmtN(dados.length)} setores</>}.
+        Sigla e nome por extenso da mesma unidade contam juntos (ex.: HUAP = Hospital Universitário Antônio Pedro).
+      </p>
+    </div>
+  );
+}
+
+// ---- Slider de intervalo de anos (duas alças sobrepostas) ------------------
+// Dois <input type=range> empilhados: o trilho não captura ponteiro (só as
+// alças), e a alça mais próxima da metade cheia fica por cima para nunca
+// travar quando as duas coincidem.
+function FaixaAnos({ min, max, de, ate, cor, onChange }:
+  { min: number; max: number; de: number; ate: number; cor: string; onChange: (de: number, ate: number) => void }) {
+  const pos = (v: number) => ((v - min) / (max - min)) * 100;
+  const deEmCima = de > (min + max) / 2;
+  return (
+    <div className="faixa-anos mb-3 select-none print:hidden">
+      <style>{`
+        .faixa-anos input[type=range]{-webkit-appearance:none;appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;background:none;pointer-events:none;}
+        .faixa-anos input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:14px;height:14px;border-radius:9999px;background:#fff;border:2px solid ${cor};box-shadow:0 1px 2px rgba(15,23,42,.3);cursor:ew-resize;}
+        .faixa-anos input[type=range]::-moz-range-thumb{pointer-events:auto;width:10px;height:10px;border-radius:9999px;background:#fff;border:2px solid ${cor};cursor:ew-resize;}
+        .faixa-anos input[type=range]::-moz-range-track{background:none;}
+      `}</style>
+      <div className="flex items-center justify-between text-[10px] font-bold text-slate-600">
+        <span>{de}</span>
+        <span className="font-medium text-slate-400 uppercase tracking-wide">arraste para recortar o período</span>
+        <span>{ate}</span>
+      </div>
+      <div className="relative h-5 mt-0.5">
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-slate-200" />
+        <div className="absolute top-1/2 -translate-y-1/2 h-1 rounded-full"
+          style={{ left: `${pos(de)}%`, width: `${pos(ate) - pos(de)}%`, background: cor }} />
+        <input type="range" min={min} max={max} step={1} value={de} aria-label="Ano inicial"
+          style={{ zIndex: deEmCima ? 3 : 2 }}
+          onChange={e => onChange(Math.min(Number(e.target.value), ate), ate)} />
+        <input type="range" min={min} max={max} step={1} value={ate} aria-label="Ano final"
+          style={{ zIndex: deEmCima ? 2 : 3 }}
+          onChange={e => onChange(de, Math.max(Number(e.target.value), de))} />
+      </div>
+      <div className="flex justify-between text-[9px] text-slate-400 -mt-1"><span>{min}</span><span>{max}</span></div>
+    </div>
+  );
 }
 
 // ---- Vigência (barra empilhada única + legenda) ---------------------------

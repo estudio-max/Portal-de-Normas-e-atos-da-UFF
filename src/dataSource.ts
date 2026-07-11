@@ -329,11 +329,14 @@ export interface SerieRh { ano: number; vol: number; comp: number; inval: number
 // Deslocamento de servidor (classificado na extração, campo UffAct.deslocamento).
 // serie = remoção (interna) × redistribuição entrada/saída por ano; motivos e
 // setores são só da remoção (a redistribuição de saída é sub-registrada no BS).
+// setores vem CRU e POR ANO (setor como está no ato, sem dedup): o painel
+// agrega no cliente via setorCanonico() e filtra pelo intervalo de anos.
 export interface SerieDesl { ano: number; remocao: number; redEntra: number; redSaida: number; }
+export interface SetorAno { setor: string; ano: number; n: number; }
 export interface Deslocamento {
   serie: SerieDesl[];
   motivos: { motivo: string; n: number }[];
-  setores: { setor: string; n: number }[];
+  setores: SetorAno[];
 }
 export interface Analitico {
   rotatividade: {
@@ -344,6 +347,50 @@ export interface Analitico {
   mortalidade: { total: number; mexidos: number };
   seriesRh: SerieRh[];
   deslocamento: Deslocamento;
+}
+
+// ---- Nome canônico de setor (destino de remoção) ---------------------------
+// O texto dos atos ora traz a SIGLA, ora o NOME por extenso (e o extrator corta
+// nomes longos em 45 chars) — sem isto, a mesma unidade vira 2-3 barras no
+// ranking (ex.: "HUAP" ≠ "Hospital Universitário Antônio Pedro"). Só entram
+// pares comprovados no corpus e inequívocos; o resto passa intacto.
+const SETOR_ALIAS: Record<string, string> = (() => {
+  const grupos: [string, string[]][] = [
+    ['Hospital Universitário Antônio Pedro', ['huap', 'hospital universitario antonio pedro']],
+    ['Pró-Reitoria De Administração', ['proad', 'pro-reitoria de administracao', 'pro-reitoria de administracao (proad)']],
+    ['Pró-Reitoria De Graduação', ['prograd', 'pro-reitoria de graduacao']],
+    ['Pró-Reitoria De Extensão', ['proex', 'pro-reitoria de extensao']],
+    ['Pró-Reitoria De Assuntos Estudantis', ['proaes', 'pro-reitoria de assuntos estudantis']],
+    ['Pró-Reitoria De Gestão De Pessoas', ['progepe', 'pro-reitoria de gestao de pessoas']],
+    ['Pró-Reitoria De Planejamento', ['proplan', 'pro-reitoria de planejamento']],
+    // PROPPI absorve o nome antigo da mesma unidade (Pesquisa e Pós-Graduação)
+    // e as formas truncadas — é a mesma pró-reitoria renomeada.
+    ['Pró-Reitoria De Pesquisa, Pós-Graduação E Inovação', [
+      'proppi', 'pro-reitoria de pesquisa, pos-graduacao e inovacao',
+      'pro-reitoria de pesquisa, pos-graduacao e ino', 'pro-reitoria de pesquisa, pos-graduacao e in',
+      'pro-reitoria de pesquisa e pos-graduacao', 'pro-reitoria de pesquisa e pos graduacao',
+    ]],
+    ['Instituto De Arte E Comunicação Social', ['iacs', 'instituto de arte e comunicacao social']],
+    ['Departamento De Desenvolvimento De Recursos Humanos', [
+      'departamento de desenvolvimento de recursos humanos', 'departamento de desenvolvimento de recursos h',
+    ]],
+    ['Núcleo De Comunicação Social', [
+      'nucleo de comunicacao social', 'nucleo de comunicacao social do gabinete do r',
+      'nucleo de comunicacao social, vinculado ao ga',
+    ]],
+  ];
+  const m: Record<string, string> = {};
+  for (const [canon, chaves] of grupos) for (const k of chaves) m[k] = canon;
+  return m;
+})();
+
+// dobra p/ comparação: minúsculas, sem acento, hífen sem espaços em volta
+const dobraSetor = (s: string) => s
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
+
+export function setorCanonico(setor: string): string {
+  return SETOR_ALIAS[dobraSetor(setor)] || setor;
 }
 
 const mesesEntre = (a: string, b: string) =>
@@ -461,7 +508,7 @@ export async function getAnalitico(): Promise<Analitico> {
   // Deslocamento (campo estruturado a.deslocamento, classificado na extração).
   const dAno = new Map<number, { remocao: number; redEntra: number; redSaida: number }>();
   const motMap = new Map<string, number>();
-  const setMap = new Map<string, number>();
+  const setMap = new Map<string, SetorAno>();  // chave setor|ano — cru; painel agrega
   for (const a of CACHE as any[]) {
     const d = a.deslocamento;
     if (!d) continue;
@@ -476,13 +523,18 @@ export async function getAnalitico(): Promise<Analitico> {
     if (d.tipo === 'Remoção') {
       const mot = d.motivo || 'Não especificado';
       motMap.set(mot, (motMap.get(mot) || 0) + 1);
-      if (d.setor) setMap.set(d.setor, (setMap.get(d.setor) || 0) + 1);
+      if (d.setor && ano) {
+        const k = `${d.setor}|${ano}`;
+        const r = setMap.get(k) || { setor: d.setor, ano, n: 0 };
+        r.n++;
+        setMap.set(k, r);
+      }
     }
   }
   const deslocamento: Deslocamento = {
     serie: [...dAno.entries()].map(([ano, s]) => ({ ano, ...s })).sort((a, b) => a.ano - b.ano),
     motivos: [...motMap.entries()].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n),
-    setores: [...setMap.entries()].map(([setor, n]) => ({ setor, n })).sort((a, b) => b.n - a.n).slice(0, 15),
+    setores: [...setMap.values()],
   };
 
   return {
