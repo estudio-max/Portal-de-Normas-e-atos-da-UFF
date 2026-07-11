@@ -1199,15 +1199,27 @@ _APOSENT_VOLUNTARIA_RE = re.compile(r"aposentadoria\s+volunt[aá]ria", re.I)
 _APOSENT_INVALIDEZ_RE = re.compile(r"aposentadoria\s+por\s+(?:invalidez|incapacidade)", re.I)
 _ART40_RE = re.compile(r"art(?:igo)?\.?\s*40\b", re.I)
 _INCISO_ART40_RE = re.compile(r"inciso\s+(i{1,3})\b|§\s*1[ºo]?[^.;]{0,15}?\b(i{1,3})\b", re.I)
+# Retificação que CITA uma concessão anterior: "...a portaria nº X de DD/MM/AAAA,
+# publicada no DOU..., QUE concedeu aposentadoria a fulano..." — "que" logo antes
+# do verbo é oração relativa (descreve a portaria REFERENCIADA), não o dispositivo
+# deste ato (cujo verbo real é "alterar/retificar", visto no início do "resolve:").
+# Achado real: sem isso, retificações de fundamentação legal/proporcionalidade
+# eram contadas como concessões novas — 34% dos casos no legado 2001-2014,
+# 11% em 2015-2022 (a compulsória "quase 0" nunca foi por causa disso, mas a
+# poluição existia e inflava as contagens).
+_QUE_ANTES_RE = re.compile(r"\bque\s*$", re.I)
 
 
 def extrai_aposentadoria(trecho):
     """{'tipo': 'Voluntária'|'Compulsória'|'Invalidez'|'Indefinida', 'baseLegal': str}
-    ou None se o ato não CONCEDE aposentadoria (mera menção/retrospecto não conta)."""
-    if not _APOSENT_DISPOSITIVO_RE.search(trecho):
-        return None
-    pos_disp = [m.start() for m in _APOSENT_DISPOSITIVO_RE.finditer(trecho)]
-    if all(_APOSENT_RETRO_RE.search(trecho[max(0, p - 60):p + 60]) for p in pos_disp):
+    ou None se o ato não CONCEDE aposentadoria (mera menção/retrospecto/retificação
+    de ato anterior não conta)."""
+    pos_disp = [
+        m.start() for m in _APOSENT_DISPOSITIVO_RE.finditer(trecho)
+        if not _APOSENT_RETRO_RE.search(trecho[max(0, m.start() - 60):m.start() + 60])
+        and not _QUE_ANTES_RE.search(trecho[max(0, m.start() - 10):m.start()])
+    ]
+    if not pos_disp:
         return None
     if _APOSENT_COMPULSORIA_RE.search(trecho):
         return {"tipo": "Compulsória", "baseLegal": ""}
