@@ -1,0 +1,24 @@
+# ============================================================================
+#  Cache-Control do Portal de Normas (SPA com assets versionados por hash).
+#  Fica em public/ -> o Vite copia para a raiz do dist/ a cada build, então
+#  acompanha todo deploy. Objetivo: um novo deploy aparecer NA HORA para todos,
+#  sem quebrar o cache eficiente dos arquivos grandes.
+#
+#  Regra: o index.html é o único arquivo cujo NOME não muda entre versões, então
+#  ele NUNCA pode ficar em cache longo (senão o usuário continua baixando um
+#  index.html velho que aponta para um bundle .js que já não existe / mudou de
+#  contrato). Já os assets têm hash no nome (index-QhgF3dM3.js) — o nome muda a
+#  cada build, então podem ser cacheados "para sempre" com segurança.
+# ============================================================================
+
+<IfModule mod_headers.c>
+  # index.html (e qualquer .html): sempre revalida — deploy novo aparece na hora
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+  </FilesMatch>
+
+  # Bundles com hash no nome (index-XXXXXXXX.js / .css): imutáveis, cache de 1 ano
+  <FilesMatch "-[A-Za-z0-9_-]{6,}\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

@@ -1,0 +1,427 @@
+{
+ "_fonte": "Organograma UFF (Fig. 2.5 do RGI 2021, Portaria 68.235/06-06-2021) + lista oficial de Unidades Administrativas da UFF (uff.br, nomes e links dos organogramas por unidade).",
+ "_nota": "Backbone AUTORITATIVO da dimensão orgao (sigla + nome + tipo + pai). As siglas do corpus mapeiam nestes órgãos canônicos via orgao_alias. _org_url = organograma detalhado da unidade (Fase B: subunidades/departamentos).",
+ "orgaos": {
+  "UFF": {
+   "nome": "Universidade Federal Fluminense",
+   "tipo": "outro",
+   "parent": null
+  },
+  "CUV": {
+   "nome": "Conselho Universitário",
+   "tipo": "deliberacao",
+   "parent": "UFF"
+  },
+  "CEPEx": {
+   "nome": "Conselho de Ensino, Pesquisa e Extensão",
+   "tipo": "deliberacao",
+   "parent": "UFF"
+  },
+  "CUR": {
+   "nome": "Conselho de Curadores",
+   "tipo": "fiscalizacao",
+   "parent": "UFF"
+  },
+  "AUD.TEC.": {
+   "nome": "Auditoria Técnica",
+   "tipo": "fiscalizacao",
+   "parent": "CUR",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/aud._tec.pdf",
+   "_obs": "Corresponde ao 'AT/CUR' do organograma."
+  },
+  "Reitoria": {
+   "nome": "Reitoria",
+   "tipo": "reitoria",
+   "parent": "UFF",
+   "_obs": "Reitor + Vice-Reitor. NÃO é pai de CUV/CEPEx/CUR (superiores/paralelos, presididos mas não subordinados)."
+  },
+  "GAR/RET": {
+   "nome": "Chefia de Gabinete da Reitoria",
+   "tipo": "reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2025/12/Organograma-GAR.pdf"
+  },
+  "PROGER": {
+   "nome": "Procuradoria Geral",
+   "tipo": "assessoramento",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/proger.pdf"
+  },
+  "Ouvidoria": {
+   "nome": "Ouvidoria",
+   "tipo": "assessoramento",
+   "parent": "Reitoria"
+  },
+  "SGCS": {
+   "nome": null,
+   "tipo": "assessoramento",
+   "parent": "Reitoria"
+  },
+  "PROGRAD": {
+   "nome": "Pró-Reitoria de Graduação",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/06/Doc.03_Organograma_PROGRAD.pdf"
+  },
+  "PROPPI": {
+   "nome": "Pró-Reitoria de Pesquisa, Pós-Graduação e Inovação",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/07/Organograma-PROPPI.xlsx"
+  },
+  "PROEX": {
+   "nome": "Pró-Reitoria de Extensão",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/organograma_proex.pdf"
+  },
+  "PROAES": {
+   "nome": "Pró-Reitoria de Assuntos Estudantis",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/proaes.pdf"
+  },
+  "PROAD": {
+   "nome": "Pró-Reitoria de Administração",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/proad_.pdf"
+  },
+  "PROGEPE": {
+   "nome": "Pró-Reitoria de Gestão de Pessoas",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/10/ORGAN-PROGEPE.pdf"
+  },
+  "PROPLAN": {
+   "nome": "Pró-Reitoria de Planejamento",
+   "tipo": "pro_reitoria",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2025/12/Organograma-PROPLAN-30.12.25.pdf"
+  },
+  "SRI": {
+   "nome": "Superintendência de Relações Internacionais",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/sri.pdf"
+  },
+  "SDC": {
+   "nome": "Superintendência de Documentação",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/sdc.pdf"
+  },
+  "SCS": {
+   "nome": "Superintendência de Comunicação Social",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/scs_1.pdf"
+  },
+  "CEART": {
+   "nome": "Centro de Artes da UFF",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ceart.pdf"
+  },
+  "SAEP": {
+   "nome": "Superintendência de Arquitetura, Engenharia e Patrimônio",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2025/12/Organograma-SAEP.pdf"
+  },
+  "STI": {
+   "nome": "Superintendência de Tecnologia da Informação",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/sti.pdf"
+  },
+  "SOMA": {
+   "nome": "Superintendência de Operações e Manutenção",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/07/Organograma-SOMA.xlsx"
+  },
+  "SEPAD": {
+   "nome": "Superintendência de Equidade, Políticas Afirmativas e Diversidade",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2026/02/Organograma-SEPAD.pdf",
+   "_obs": "Criada em 2026."
+  },
+  "EDUFF": {
+   "nome": "Editora da Universidade Federal Fluminense",
+   "tipo": "suplementar",
+   "parent": "Reitoria",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/08/Organograma-EDUFF.xlsx"
+  },
+  "HUAP": {
+   "nome": "Hospital Universitário Antônio Pedro",
+   "tipo": "suplementar",
+   "parent": "Reitoria"
+  },
+  "CGIRC": {
+   "nome": "Comitê de Governança, Integridade, Riscos e Controles",
+   "tipo": "comite_comissao",
+   "parent": "Reitoria",
+   "_obs": "Comitê ligado ao Gabinete do Reitor; presidido pelo Reitor. Signatário=Reitor NÃO implica órgão=Reitoria."
+  },
+  "CPAD": {
+   "nome": "Comissão Permanente de Avaliação de Documentos",
+   "tipo": "comite_comissao",
+   "parent": "Reitoria",
+   "_obs": "Extraída errada como 'CIÊNCIA DE ELIMINAÇÃO DE DOCUMENTOS'."
+  },
+  "CMB": {
+   "nome": "Instituto Biomédico",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cmb.xlsx"
+  },
+  "CME": {
+   "nome": "Escola de Enfermagem",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cme.xlsx"
+  },
+  "CMF": {
+   "nome": "Faculdade de Farmácia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cmf.xlsx"
+  },
+  "CMM": {
+   "nome": "Faculdade de Medicina",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cmm_2023.xlsx"
+  },
+  "CMN": {
+   "nome": "Faculdade de Nutrição",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cmn.xlsx"
+  },
+  "CMO": {
+   "nome": "Faculdade de Odontologia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cmo.xlsx"
+  },
+  "CMV": {
+   "nome": "Faculdade de Veterinária",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/cmv.xlsx"
+  },
+  "EGA": {
+   "nome": "Instituto de Arte e Comunicação Social",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ega.xlsx"
+  },
+  "EGB": {
+   "nome": "Instituto de Biologia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/egb.xlsx"
+  },
+  "EGF": {
+   "nome": "Instituto de Física",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/egf.xlsx"
+  },
+  "EGG": {
+   "nome": "Instituto de Geociências",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/07/Drive-Organograma-EGG.xlsx"
+  },
+  "EGH": {
+   "nome": "Instituto de Ciências Humanas e Filosofia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/12/Organograma_EGH.pdf"
+  },
+  "EGL": {
+   "nome": "Instituto de Letras",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/egl.xlsx"
+  },
+  "EGQ": {
+   "nome": "Instituto de Química",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/egq.xlsx"
+  },
+  "ESC": {
+   "nome": "Faculdade de Economia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/esc.xlsx"
+  },
+  "ESD": {
+   "nome": "Faculdade de Direito",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/organograma_-_esd.xlsx"
+  },
+  "ESE": {
+   "nome": "Faculdade de Educação",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ese.xlsx"
+  },
+  "ESR": {
+   "nome": "Instituto de Ciências da Sociedade e Desenvolvimento Regional (Campos dos Goytacazes)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/12/Organograma_ESR.pdf"
+  },
+  "ESS": {
+   "nome": "Escola de Serviço Social",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ess.xlsx"
+  },
+  "EST": {
+   "nome": "Faculdade de Administração e Ciências Contábeis",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/est.xlsx"
+  },
+  "FTH": {
+   "nome": "Faculdade de Turismo e Hotelaria",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/fth.xlsx"
+  },
+  "IAC": {
+   "nome": "Instituto de Estudos Comparados em Administração de Conflitos",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/iac.xlsx"
+  },
+  "ICM": {
+   "nome": "Instituto de Ciências da Sociedade (Macaé)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2025/05/Organograma_ICM_03_12_2024.pdf"
+  },
+  "IEAR": {
+   "nome": "Instituto de Educação de Angra dos Reis",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/07/Organograma-IEAR.xlsx"
+  },
+  "IEF": {
+   "nome": "Instituto de Educação Física",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ief.xlsx"
+  },
+  "IET": {
+   "nome": "Instituto de Estudos Estratégicos",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/iet.xlsx"
+  },
+  "IHT": {
+   "nome": "Instituto de História",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/10/ORGAN-IHT.pdf"
+  },
+  "IME": {
+   "nome": "Instituto de Matemática e Estatística",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ime.xlsx"
+  },
+  "INF": {
+   "nome": "Instituto do Noroeste Fluminense de Educação Superior (Santo Antônio de Pádua)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/inf.xlsx"
+  },
+  "IPS": {
+   "nome": "Instituto de Psicologia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ips.xlsx"
+  },
+  "ISC": {
+   "nome": "Instituto de Saúde Coletiva",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/isc.xlsx"
+  },
+  "ISNF": {
+   "nome": "Instituto de Saúde de Nova Friburgo",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/isnf.xlsx"
+  },
+  "PEP": {
+   "nome": "Escola de Engenharia de Petrópolis",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/pep.xlsx"
+  },
+  "RHS": {
+   "nome": "Instituto de Humanidades e Saúde (Rio das Ostras)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/rhs.xlsx"
+  },
+  "RIC": {
+   "nome": "Instituto de Ciência e Tecnologia (Rio das Ostras)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/ric.xlsx"
+  },
+  "TCA": {
+   "nome": "Escola de Arquitetura e Urbanismo",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/tca.xlsx"
+  },
+  "TCE": {
+   "nome": "Escola de Engenharia",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/tce.xlsx"
+  },
+  "TDT": {
+   "nome": "Departamento de Design e Tecnologia (Volta Redonda)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/08/Organograma-TDT-1.xlsx"
+  },
+  "TIC": {
+   "nome": "Instituto de Computação",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/12/Organograma_Instituto_de_Computacao.pdf"
+  },
+  "VCH": {
+   "nome": "Instituto de Ciências Humanas de Volta Redonda",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/vch_2021.xlsx"
+  },
+  "VCX": {
+   "nome": "Instituto de Ciências Exatas (Volta Redonda)",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/vcx.xlsx"
+  },
+  "VEI": {
+   "nome": "Escola de Engenharia Industrial e Metalúrgica de Volta Redonda",
+   "tipo": "unidade",
+   "parent": "UFF",
+   "_org_url": "https://www.uff.br/wp-content/uploads/2024/02/vei.xlsx"
+  }
+ }
+}

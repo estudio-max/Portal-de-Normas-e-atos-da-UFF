@@ -651,15 +651,11 @@ function _montaPrazos(meta: { id: string; label: string; sigla: string; ementa: 
 export async function getPrazos(): Promise<Prazo[]> {
   let prazos: Prazo[] = [];
   if (MODO === 'api') {
+    // v2: a API já entrega os prazos EXTRAÍDOS (tabela `prazo`), no formato Prazo —
+    // sem extração no cliente, sem baixar texto cru, sem ponto cego de janela.
     const r = await fetch(`${API_BASE}/prazos`);
     const j = await r.json();
-    for (const c of (j.candidatos || [])) {
-      prazos.push(..._montaPrazos({
-        id: c.id, label: `${c.tipo} nº ${c.numero}/${c.ano}`, sigla: c.sigla || '', ementa: c.ementa || '',
-        texto: `${c.ementa || ''} . ${c.texto || ''}`, dataAto: c.dataAto || null,
-        link: c.linkBoletim || null, mexido: !!c.mexidoDepois, status: c.status || 'Ativo',
-      }));
-    }
+    prazos = (j.prazos as Prazo[]) || [];
   } else {
     for (const a of CACHE as any[]) {
       const mexido = (a.referenciadoPor || []).some((x: any) => x.relacao === 'Altera' || x.relacao === 'Revoga');
