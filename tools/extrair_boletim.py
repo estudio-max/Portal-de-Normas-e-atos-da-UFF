@@ -141,6 +141,22 @@ TITULO_CURTO_RE = re.compile(
     % (_ATO_BOUNDARY, _ORD)
 )
 
+# Cabeçalhos de documentos publicados no BS que NÃO são "atos" no vocabulário
+# do app (extrato de contrato/convênio, termo de homologação/adesão, ata de
+# registro de preços — não têm tipo_ato próprio) mas SÃO um documento novo
+# começando. Sem reconhecê-los, o corpo do ATO ANTERIOR "engolia" o documento
+# inteiro até o próximo título REAL (achado 12/07/2026: DTS PROAD 61/2025
+# ganhou um "prazo de 12 meses" que pertencia a um Extrato de Instrumento
+# Convenial sobre um terminal portuário, publicado logo depois no boletim —
+# 557 atos afetados no corpus, 91% só de "Extrato de Instrumento Convenial").
+# Só serve de FRONTEIRA (corta o corpo do ato anterior aqui); não vira ato
+# próprio — ver uso de BOUNDARY_NAO_ATO_RE em parse_pdf().
+BOUNDARY_NAO_ATO_RE = re.compile(
+    r"(?P<tipo>EXTRATO DE INSTRUMENTO CONVENIAL|EXTRATO DE CONTRATO|EXTRATO DE TERMO ADITIVO"
+    r"|EXTRATO DE CONV[ÊE]NIO|TERMO DE HOMOLOGA[ÇC][ÃA]O|TERMO DE ADES[ÃA]O"
+    r"|ATA DE REGISTRO DE PRE[ÇC]OS)"
+)
+
 # Processo SEI: 23069.166342/2026-40  (aceita espaços no lugar de . / -)
 PROC_RE = re.compile(r"23069[.\s]\d{6}[/\s]\d{4}[-\s]\d{2}")
 # Código verificador SEI: "SEI nº 3441183"  ou  "(3442574)"
@@ -532,8 +548,10 @@ def parse_pdf(caminho):
     # Title Case (ancoradas no marcador "UFFPOR...") e o de títulos curtos sem
     # data por extenso (ancorados no separador "# # # # # #"), ordena por
     # posição e descarta sobreposições (um SIGA em CAIXA ALTA casa nos dois).
+    # BOUNDARY_NAO_ATO_RE entra na MESMA lista (define onde o ato anterior
+    # termina) mas é filtrado abaixo antes de virar um "ato" de saída.
     brutos = sorted(list(TITULO_RE.finditer(full)) + list(TITULO_SIGA_RE.finditer(full))
-                     + list(TITULO_CURTO_RE.finditer(full)),
+                     + list(TITULO_CURTO_RE.finditer(full)) + list(BOUNDARY_NAO_ATO_RE.finditer(full)),
                     key=lambda m: m.start())
     titulos = []
     for m in brutos:
@@ -547,6 +565,8 @@ def parse_pdf(caminho):
 
     atos = []
     for idx, m in enumerate(titulos):
+        if m.re is BOUNDARY_NAO_ATO_RE:
+            continue                      # só fronteira: já cortou o ato anterior, não vira ato
         ini = m.start()
         fim = titulos[idx + 1].start() if idx + 1 < len(titulos) else len(full)
         trecho = full[ini:fim]

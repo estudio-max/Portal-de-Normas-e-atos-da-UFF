@@ -263,7 +263,14 @@ function upsert_ato(PDO $pdo, int $boletimId, int $tipoId, string $tipoNome, int
 // ---------------------------------------------------------------------------
 // 1) Carrega o JSON
 // ---------------------------------------------------------------------------
-$origem = ($cli && isset($argv[1])) ? $argv[1] : ($cfg['fonte_json'] ?? '');
+if ($cli && isset($argv[1])) {
+    $origem = $argv[1];
+} elseif (!$cli && isset($_GET['arquivo'])) {
+    // modo navegador: só arquivo local por nome (sem caminho), na própria pasta
+    $origem = __DIR__ . '/' . basename($_GET['arquivo']);
+} else {
+    $origem = $cfg['fonte_json'] ?? '';
+}
 log_("Lendo dados de: $origem");
 $bruto = ler_origem($origem);
 $dados = json_decode($bruto, true);
