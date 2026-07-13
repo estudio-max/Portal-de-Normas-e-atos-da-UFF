@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users, Scale } from 'lucide-react';
+import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users, Scale, GitBranch, ChevronDown, ChevronRight } from 'lucide-react';
 import * as ds from '../dataSource';
 
 // Aba "Prazos": radar de datas-limite extraídas do texto dos atos (inscrições,
@@ -308,6 +308,20 @@ function Linha({ filtrada, janela }: { filtrada: ds.Prazo[]; janela: string }) {
 function PrazoCard({ p }: { p: ds.Prazo }) {
   const d = diasAte(p.dataLimite);
   const u = urgDe(d);
+  const temCadeia = ehPadSinve(p) && !!p.processoSei && (p.cadeiaTotal ?? 0) > 1;
+  const [aberta, setAberta] = useState(false);
+  const [cadeia, setCadeia] = useState<ds.PadCadeia | null>(null);
+  const [carregando, setCarregando] = useState(false);
+
+  const alternar = () => {
+    const nova = !aberta;
+    setAberta(nova);
+    if (nova && !cadeia && p.processoSei) {
+      setCarregando(true);
+      ds.getPadCadeia(p.processoSei).then(c => setCadeia(c)).finally(() => setCarregando(false));
+    }
+  };
+
   return (
     <div className={`bg-white rounded-lg border border-slate-200 border-l-4 ${URG[u].card} shadow-xs p-3`}>
       <div className="flex items-start gap-3 flex-wrap">
@@ -349,8 +363,80 @@ function PrazoCard({ p }: { p: ds.Prazo }) {
             <Clock className="w-3 h-3 mt-0.5 shrink-0 text-slate-300" />
             <span className="italic">{p.textoOrigem}</span>
           </div>
+
+          {temCadeia && (
+            <button onClick={alternar}
+              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline">
+              {aberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              <GitBranch className="w-3.5 h-3.5" /> ver cadeia do processo ({p.cadeiaTotal} atos)
+            </button>
+          )}
         </div>
       </div>
+
+      {temCadeia && aberta && (
+        <div className="mt-2 ml-1 border-t border-slate-100 pt-2">
+          {carregando ? (
+            <div className="flex items-center gap-2 text-[11px] text-slate-400 py-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> carregando a cadeia…
+            </div>
+          ) : cadeia && cadeia.atos.length ? (
+            <CadeiaPad cadeia={cadeia} atualId={p.atoId} />
+          ) : (
+            <div className="text-[11px] text-slate-400 py-1">Não foi possível carregar a cadeia.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Cadeia PAD/SINVE: linha do tempo instauração -> prorrogações ----------
+function CadeiaPad({ cadeia, atualId }: { cadeia: ds.PadCadeia; atualId: string }) {
+  const corPapel = (papel: string) =>
+    /instaura/i.test(papel) ? 'bg-rose-100 text-rose-800 border-rose-200'
+    : /sobrest/i.test(papel) ? 'bg-slate-200 text-slate-700 border-slate-300'
+    : 'bg-amber-100 text-amber-800 border-amber-200';   // prorrogação/recondução
+  return (
+    <div>
+      <div className="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
+        <GitBranch className="w-3.5 h-3.5 text-rose-600" />
+        Cadeia do processo <span className="font-mono text-slate-500">{cadeia.processo}</span>
+        <span className="text-slate-400 font-normal">· {cadeia.total} ato{cadeia.total === 1 ? '' : 's'}</span>
+      </div>
+      <ol className="relative ml-1.5 border-l-2 border-slate-200 space-y-2.5">
+        {cadeia.atos.map((a, i) => {
+          const ehAtual = a.id === atualId;
+          const dl = diasAte(a.dataLimite);
+          return (
+            <li key={a.id + i} className="relative pl-4">
+              <span className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-white ${a.vigente ? 'bg-rose-600' : 'bg-slate-300'}`} />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${corPapel(a.papel)}`}>{a.papel}</span>
+                <span className="text-[11px] font-semibold text-slate-700">{fmtBR(a.dataAto || '')}</span>
+                {a.vigente && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-rose-600 text-white border-rose-700">
+                    prazo vigente · {contagem(dl)}
+                  </span>
+                )}
+                {ehAtual && !a.vigente && <span className="text-[9px] text-slate-400 italic">(este card)</span>}
+              </div>
+              <div className="text-[12px] mt-0.5">
+                {a.linkBoletim ? (
+                  <a href={a.linkBoletim} target="_blank" referrerPolicy="no-referrer"
+                    className={`hover:underline font-semibold inline-flex items-center gap-0.5 ${ehAtual ? 'text-rose-800' : 'text-blue-700'}`}>
+                    {a.atoLabel} <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : <span className="font-semibold text-slate-700">{a.atoLabel}</span>}
+                <span className="text-slate-400 text-[11px]"> · {a.sigla} · vence {fmtBR(a.dataLimite)}</span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="text-[10px] text-slate-400 mt-2 leading-snug">
+        Encadeado pelo <strong>processo SEI</strong>. Vale o prazo do <strong>ato mais recente</strong>. Sempre confira o ato de origem.
+      </p>
     </div>
   );
 }

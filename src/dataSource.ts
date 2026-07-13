@@ -555,6 +555,26 @@ export interface Prazo {
   dataLimite: string; conf: 'alta' | 'média'; base: string;
   textoOrigem: string; linkBoletim: string | null; dataAto: string | null;
   mexidoDepois: boolean; status: string; ementa: string; publico: string;
+  processoSei?: string; cadeiaTotal?: number;   // PAD/SINVE: nº de atos do mesmo processo
+}
+
+// Um nó da cadeia PAD/SINVE (instauração -> prorrogações/reconduções).
+export interface PadCadeiaAto {
+  id: string; atoLabel: string; sigla: string; tipo: string; papel: string;
+  dataAto: string | null; dataLimite: string; ementa: string; status: string;
+  textoOrigem: string; linkBoletim: string | null; vigente: boolean;
+}
+export interface PadCadeia { processo: string; total: number; atos: PadCadeiaAto[]; }
+
+// Busca a cadeia completa (todos os atos PAD/SINVE do mesmo processo SEI).
+// Só existe no modo API (os prazos PAD/SINVE são materializados no servidor).
+export async function getPadCadeia(processo: string): Promise<PadCadeia | null> {
+  if (MODO !== 'api' || !processo) return null;
+  try {
+    const r = await fetch(`${API_BASE}/pad_cadeia?processo=${encodeURIComponent(processo)}`);
+    if (!r.ok) return null;
+    return await r.json() as PadCadeia;
+  } catch { return null; }
 }
 interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
 

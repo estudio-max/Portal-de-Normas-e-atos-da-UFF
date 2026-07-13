@@ -56,6 +56,7 @@ switch ($recurso) {
     case 'insights': insights($pdo); break;
     case 'analitico': analitico($pdo); break;
     case 'prazos':   prazos($pdo); break;
+    case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'ato':      ficha($pdo, $id); break;
     case 'atos':
     default:        listar($pdo); break;
@@ -685,11 +686,16 @@ function meses_entre(string $a, string $b): float {
 // Janela: >= hoje-90d (todos os futuros, de qualquer idade + vencidos recentes
 // p/ o toggle "incluir vencidos"). Retorno já no formato Prazo do frontend.
 function prazos(PDO $pdo): void {
+    // cc = quantos atos PAD/SINVE compartilham o mesmo processo SEI (tamanho da
+    // cadeia instauração→prorrogações). Derivado sobre a `prazo` (pequena),
+    // ligado só às linhas base='PAD_SINVE'.
     $st = $pdo->query("
         SELECT a.uid AS ato_id,
                CONCAT(t.nome, ' nº ', a.numero, '/', a.ano) AS ato_label,
                o.sigla, p.tipo, p.data_limite, p.conf, p.base, p.publico,
                p.trecho, b.url_pdf AS link_boletim, a.data_ato, a.status, a.ementa,
+               a.processo_sei,
+               COALESCE(cc.c, 0) AS cadeia_total,
                EXISTS(SELECT 1 FROM relacao r
                       WHERE r.destino_ato_id = a.id AND r.tipo IN ('Altera','Revoga')) AS mexido
         FROM prazo p
@@ -697,6 +703,13 @@ function prazos(PDO $pdo): void {
         JOIN tipo_ato t     ON t.id = a.tipo_id
         JOIN orgao o        ON o.id = a.orgao_id
         LEFT JOIN boletim b ON b.id = a.boletim_id
+        LEFT JOIN (
+            SELECT a2.processo_sei AS sei,
+                   COUNT(DISTINCT a2.tipo_id, COALESCE(a2.sigla_orig,''), a2.numero_norm, a2.ano) AS c
+            FROM prazo p2 JOIN ato a2 ON a2.id = p2.ato_id
+            WHERE p2.base='PAD_SINVE' AND a2.processo_sei IS NOT NULL AND a2.processo_sei <> ''
+            GROUP BY a2.processo_sei
+        ) cc ON cc.sei = a.processo_sei AND p.base = 'PAD_SINVE'
         WHERE p.data_limite >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
         ORDER BY p.data_limite ASC");
     $prazos = array_map(fn($r) => [
@@ -705,6 +718,55 @@ function prazos(PDO $pdo): void {
         'base' => $r['base'], 'textoOrigem' => $r['trecho'], 'linkBoletim' => $r['link_boletim'],
         'dataAto' => $r['data_ato'], 'mexidoDepois' => (bool)$r['mexido'],
         'status' => $r['status'], 'ementa' => $r['ementa'] ?? '', 'publico' => $r['publico'] ?? '',
+        'processoSei' => $r['processo_sei'] ?? '', 'cadeiaTotal' => (int)$r['cadeia_total'],
     ], $st->fetchAll(PDO::FETCH_ASSOC));
     responder_json(['prazos' => $prazos]);
+}
+
+// ---- CADEIA de um processo PAD/SINVE (instauração -> prorrogações) ---------
+// Âncora = processo SEI: agrupa TODOS os atos PAD/SINVE do mesmo processo, em
+// ordem cronológica. Sem filtro de data (mostra o histórico completo). Cada nó
+// é um ato_id real (uid), clicável. O papel vem do trecho já materializado.
+function pad_cadeia(PDO $pdo, string $proc): void {
+    $proc = trim($proc);
+    if ($proc === '') responder_json(['erro' => 'processo ausente'], 400);
+    $st = $pdo->prepare("
+        SELECT a.uid, CONCAT(t.nome, ' nº ', a.numero, '/', a.ano) AS ato_label,
+               o.sigla, a.data_ato, a.ementa, a.status,
+               p.tipo, p.data_limite, p.publico, p.trecho, b.url_pdf AS link_boletim
+        FROM prazo p
+        JOIN ato a          ON a.id = p.ato_id
+        JOIN tipo_ato t     ON t.id = a.tipo_id
+        JOIN orgao o        ON o.id = a.orgao_id
+        LEFT JOIN boletim b ON b.id = a.boletim_id
+        WHERE p.base = 'PAD_SINVE' AND a.processo_sei = :proc
+        ORDER BY a.data_ato ASC, a.id ASC");
+    $st->execute([':proc' => $proc]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    // Colapsa duplicatas de chave natural (mesma portaria republicada em mais de
+    // um boletim => uids -2/-3): é um só ato lógico na cadeia.
+    $vistos = [];
+    $rows = array_values(array_filter($rows, function ($r) use (&$vistos) {
+        $sig = ($r['ato_label'] ?? '') . '|' . ($r['sigla'] ?? '') . '|' . ($r['data_ato'] ?? '');
+        if (isset($vistos[$sig])) return false;
+        $vistos[$sig] = true;
+        return true;
+    }));
+    $n = count($rows);
+    $atos = [];
+    foreach ($rows as $idx => $r) {
+        $tr = mb_strtolower((string)($r['trecho'] ?? ''), 'UTF-8');
+        $papel = strpos($tr, 'sobrest') !== false ? 'Sobrestamento'
+               : ((strpos($tr, 'prorrog') !== false || strpos($tr, 'recondu') !== false) ? 'Prorrogação/recondução'
+               : (strpos($tr, 'instaura') !== false ? 'Instauração' : '—'));
+        $atos[] = [
+            'id' => $r['uid'], 'atoLabel' => $r['ato_label'], 'sigla' => $r['sigla'] ?? '',
+            'tipo' => $r['tipo'], 'papel' => $papel,
+            'dataAto' => $r['data_ato'], 'dataLimite' => $r['data_limite'],
+            'ementa' => $r['ementa'] ?? '', 'status' => $r['status'],
+            'textoOrigem' => $r['trecho'], 'linkBoletim' => $r['link_boletim'],
+            'vigente' => ($idx === $n - 1),   // o mais recente carrega o prazo vigente
+        ];
+    }
+    responder_json(['processo' => $proc, 'total' => $n, 'atos' => $atos]);
 }
