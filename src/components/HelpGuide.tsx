@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Search, GitBranch, Sparkles, Link as LinkIcon, Database, ShieldCheck,
   ShieldAlert, GitBranch as Branch, FileText, Filter, User, Info, CheckCircle2,
-  ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle
+  ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle, Scale
 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
@@ -131,9 +131,24 @@ export default function HelpGuide() {
           <li>O <strong>assunto</strong> (a ementa do ato) e o <strong>trecho exato</strong> de onde a data foi tirada.</li>
           <li>A <strong>contagem regressiva</strong> (“faltam 11 dias”) e a cor de urgência.</li>
         </ul>
+
+        <div className="bg-rose-50 border border-rose-200 rounded p-2.5 text-xs text-rose-900 flex gap-1.5 mt-1">
+          <Scale className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Prazos de comissão disciplinar (categoria de alta confiança).</strong> Os prazos de
+            <strong> Processo Administrativo Disciplinar (PAD)</strong>, <strong>PAD Sumário</strong> e
+            <strong> Sindicância Investigativa</strong> ganham um selo{' '}
+            <Badge cor="bg-rose-600 text-white border-rose-700">Prazo legal</Badge> e uma categoria própria.
+            São mais confiáveis que os demais porque o <strong>número de dias é lido literalmente do próprio ato</strong>{' '}
+            (ex.: “prazo de 30 (trinta) dias”), incluindo as <strong>prorrogações e reconduções</strong> de comissão.
+            Use o botão <Badge cor="bg-rose-100 text-rose-800 border-rose-200">⚖ PAD/Sindicância</Badge> logo acima da lista
+            para ver só esses, ou <strong>Gerais</strong> para o resto.
+          </span>
+        </div>
+
         <p>
-          Filtre por <strong>janela</strong> (esta semana, 30/90 dias…), por <strong>público</strong> ou por tipo, e use
-          o botão <strong>Imprimir / PDF</strong> para uma lista limpa e fácil de ler no papel.
+          Filtre por <strong>janela</strong> (esta semana, 30/90 dias…), por <strong>categoria</strong> (PAD/Sindicância × Gerais),
+          por <strong>público</strong> ou por tipo, e use o botão <strong>Imprimir / PDF</strong> para uma lista limpa e fácil de ler no papel.
         </p>
         <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-xs text-amber-900 flex gap-1.5">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -142,7 +157,9 @@ export default function HelpGuide() {
             agenda oficial. A detecção da data e o <strong>“para quem”</strong> são <strong>automáticos</strong> e podem falhar
             ou classificar errado. Prazos relativos (“30 dias a contar da assinatura”) usam a <strong>data do ato</strong> como
             referência. O selo <Badge cor="bg-amber-100 text-amber-800 border-amber-200">revisado depois</Badge> avisa que um
-            ato posterior mexeu naquele — nesses casos o prazo pode ter mudado. <strong>Sempre confirme no ato de origem.</strong>
+            ato posterior mexeu naquele — nesses casos o prazo pode ter mudado. Em PAD/Sindicância, cada
+            <strong> prorrogação/recondução é um novo prazo</strong>: vale sempre o do <strong>ato mais recente</strong> do processo.
+            <strong> Sempre confirme no ato de origem.</strong>
           </span>
         </div>
       </Secao>
