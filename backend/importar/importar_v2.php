@@ -24,7 +24,8 @@
 
 $raiz = dirname(__DIR__);
 require $raiz . '/api/db.php';
-require_once __DIR__ . '/extrair_prazos.php';   // Radar de Prazos (popula tabela `prazo`)
+require_once __DIR__ . '/extrair_prazos.php';                // Radar genérico
+require_once __DIR__ . '/extrair_prazos_pad_sinve.php';      // PAD/SINVE (alta confiança)
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
@@ -398,7 +399,19 @@ try {
         $ementaP = (string)($a['ementa'] ?? '');
         $textoP = $ementaP . ' . ' . mb_substr($texto, 0, 12000, 'UTF-8');
         $dataP = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($a['dataAssinatura'] ?? '')) ? $a['dataAssinatura'] : null;
+
+        // 1) Prazos genéricos (padrão)
         foreach (extrair_prazos($textoP, $dataP) as $pz) {
+            $insPrazo->execute([
+                ':id' => $atoId, ':tp' => mb_substr($pz['tipo'], 0, 30, 'UTF-8'),
+                ':dl' => $pz['dataLimite'], ':cf' => $pz['conf'], ':bs' => $pz['base'],
+                ':pb' => mb_substr(inferir_publico($ementaP, $pz['ctx']), 0, 60, 'UTF-8'),
+                ':tr' => mb_substr($pz['origem'], 0, 255, 'UTF-8'),
+            ]);
+        }
+
+        // 2) Prazos PAD/SINVE (alta confiança, estruturados por lei)
+        foreach (extrair_prazos_pad_sinve($ementaP, $texto, $dataP) as $pz) {
             $insPrazo->execute([
                 ':id' => $atoId, ':tp' => mb_substr($pz['tipo'], 0, 30, 'UTF-8'),
                 ':dl' => $pz['dataLimite'], ':cf' => $pz['conf'], ':bs' => $pz['base'],
