@@ -83,16 +83,21 @@ function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_a
         'EXTENSAO'      => 'prorrogação/recondução',
         'SOBRESTAMENTO' => 'sobrestamento',
     ][$papel] ?? $papel;
+    $tipo_label = [
+        'PAD'         => 'PAD',
+        'PAD_SUMARIO' => 'PAD Sumário',
+        'SINVE'       => 'Sindicância Investigativa',
+    ][$tipo] ?? $tipo;
 
     // Resultado: um "prazo" de alta confiança
     return [[
-        'tipo' => $tipo,           // PAD, PAD_SUMARIO, SINVE
+        'tipo' => $tipo,           // PAD, PAD_SUMARIO, SINVE (código; o front rotula)
         'papel' => $papel,         // INSTAURACAO, EXTENSAO, SOBRESTAMENTO
         'dias' => $dias,
         'dataLimite' => $data_limite,
-        'conf' => 'Alta',
+        'conf' => 'alta',   // minúsculo: casa com o filtro do front (p.conf==='alta')
         'base' => 'PAD_SINVE',
         'publico' => $publico,
-        'origem' => "{$tipo} · {$papel_label} · prazo de {$dias} dias",
+        'origem' => "{$tipo_label} · {$papel_label} · prazo de {$dias} dias",
     ]];
 }

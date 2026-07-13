@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users } from 'lucide-react';
+import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users, Scale } from 'lucide-react';
 import * as ds from '../dataSource';
 
 // Aba "Prazos": radar de datas-limite extraídas do texto dos atos (inscrições,
@@ -22,15 +22,25 @@ const URG: Record<Urg, { rotulo: string; card: string; ponto: string; texto: str
   adiante:   { rotulo: 'Mais adiante',     card: 'border-l-slate-400',  ponto: '#8a93a3', texto: 'text-slate-600' },
   vencido:   { rotulo: 'Vencidos',         card: 'border-l-slate-300',  ponto: '#b6bcc7', texto: 'text-slate-500' },
 };
+// prazos disciplinares (PAD/Sindicância Investigativa): categoria de ALTA
+// confiança, extração estruturada por lei — distinta dos prazos heurísticos.
+const ehPadSinve = (p: ds.Prazo) => p.base === 'PAD_SINVE';
+// rótulo legível do tipo (o banco guarda códigos: PAD, PAD_SUMARIO, SINVE)
+const rotuloTipo = (t: string) =>
+  t === 'PAD_SUMARIO' ? 'PAD Sumário'
+  : t === 'SINVE' ? 'Sindicância Investigativa'
+  : t;
 const corTipo = (t: string) =>
-  /inscri/.test(t) ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+  /^(PAD|SINVE)/.test(t) ? 'bg-rose-50 text-rose-700 border-rose-200'
+  : /inscri/.test(t) ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
   : /recurso/.test(t) ? 'bg-purple-50 text-purple-700 border-purple-200'
   : /entrega/.test(t) ? 'bg-teal-50 text-teal-700 border-teal-200'
   : /vigência/.test(t) ? 'bg-amber-50 text-amber-700 border-amber-200'
   : 'bg-slate-100 text-slate-600 border-slate-200';
 // cor do chip de PÚBLICO (para quem serve o prazo)
 const corPublico = (p: string) =>
-  /candidat/i.test(p) ? 'bg-blue-100 text-blue-800 border-blue-200'
+  /comiss/i.test(p) ? 'bg-rose-100 text-rose-800 border-rose-200'
+  : /candidat/i.test(p) ? 'bg-blue-100 text-blue-800 border-blue-200'
   : /discente/i.test(p) ? 'bg-teal-100 text-teal-800 border-teal-200'
   : /docente/i.test(p) ? 'bg-purple-100 text-purple-800 border-purple-200'
   : /fornecedor/i.test(p) ? 'bg-amber-100 text-amber-800 border-amber-200'
@@ -51,6 +61,7 @@ export default function PrazosApi() {
   const [lista, setLista] = useState<ds.Prazo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [janela, setJanela] = useState<string>('fut');   // padrão: todos os futuros (não esconder prazos > 90 dias)
+  const [cat, setCat] = useState<'todos' | 'padsinve' | 'gerais'>('todos');
   const [tipo, setTipo] = useState('todos');
   const [pub, setPub] = useState('todos');
   const [soAlta, setSoAlta] = useState(false);
@@ -65,6 +76,7 @@ export default function PrazosApi() {
   const tipos = useMemo(() => Array.from(new Set(lista.map(p => p.tipo.replace(/\s*\(.*/, '')))).sort(), [lista]);
   // públicos disponíveis, agrupados pela família (antes do "·") p/ o filtro
   const publicos = useMemo(() => Array.from(new Set(lista.map(p => p.publico.split(' · ')[0]))).sort(), [lista]);
+  const temPadSinve = useMemo(() => lista.some(ehPadSinve), [lista]);
 
   const filtrada = useMemo(() => {
     const q = busca.toLowerCase().trim();
@@ -75,13 +87,15 @@ export default function PrazosApi() {
       if (janela === '90' && (d < 0 || d > 90)) return false;
       if (janela === 'fut' && d < 0) return false;
       // 'all' = tudo
+      if (cat === 'padsinve' && !ehPadSinve(p)) return false;
+      if (cat === 'gerais' && ehPadSinve(p)) return false;
       if (tipo !== 'todos' && !p.tipo.startsWith(tipo)) return false;
       if (pub !== 'todos' && !p.publico.startsWith(pub)) return false;
-      if (soAlta && p.conf !== 'alta') return false;
+      if (soAlta && (p.conf || '').toLowerCase() !== 'alta') return false;
       if (q && !`${p.atoLabel} ${p.sigla} ${p.textoOrigem} ${p.tipo} ${p.publico} ${p.ementa}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [lista, janela, tipo, pub, soAlta, busca]);
+  }, [lista, janela, cat, tipo, pub, soAlta, busca]);
 
   // agrupa por urgência, na ordem
   const grupos = useMemo(() => {
@@ -107,7 +121,7 @@ export default function PrazosApi() {
         const d = diasAte(p.dataLimite);
         const em = ementaLimpa(p.ementa);
         return `<tr><td class="dt">${fmtBR(p.dataLimite)}</td><td>${esc(contagem(d))}</td>` +
-          `<td><b>${esc(p.publico)}</b></td><td>${esc(p.tipo)}</td>` +
+          `<td><b>${esc(p.publico)}</b></td><td>${esc(rotuloTipo(p.tipo))}</td>` +
           `<td>${esc(p.atoLabel)} <span class="sig">${esc(p.sigla)}</span>${p.mexidoDepois ? ' <b>[revisado depois — confira]</b>' : ''}` +
           `${em ? `<div class="em">${esc(em)}</div>` : ''}</td>` +
           `<td class="org">${esc(p.textoOrigem)}</td></tr>`;
@@ -141,7 +155,8 @@ export default function PrazosApi() {
               <CalendarClock className="w-4 h-4 text-yellow-500" /> Prazos e datas-limite
             </h3>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-              Radar de <strong>inscrições, recursos, entregas, prazos de contrato e validades</strong> detectados no texto dos atos —
+              Radar de prazos de <strong>comissões disciplinares (PAD e Sindicância Investigativa)</strong> e de
+              <strong> inscrições, recursos, entregas, contratos e validades</strong> detectados no texto dos atos —
               cada prazo mostra <strong>para quem serve</strong>, o assunto e o trecho que o gerou. É um <strong>apoio</strong>: <strong>sempre confira o ato de origem</strong>.
             </p>
           </div>
@@ -177,6 +192,16 @@ export default function PrazosApi() {
               </button>
             ))}
           </div>
+          {temPadSinve && (
+            <div className="flex rounded-md border border-slate-200 overflow-hidden" title="Categoria do prazo">
+              {([['todos', 'Todos'], ['padsinve', '⚖ PAD/Sindicância'], ['gerais', 'Gerais']] as const).map(([k, rot]) => (
+                <button key={k} onClick={() => setCat(k)}
+                  className={`px-2.5 py-1.5 text-[11px] font-bold border-r border-slate-200 last:border-0 ${cat === k ? (k === 'padsinve' ? 'bg-rose-700 text-white' : 'bg-[#003366] text-white') : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                  {rot}
+                </button>
+              ))}
+            </div>
+          )}
           <select value={pub} onChange={e => setPub(e.target.value)}
             className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 bg-white font-medium text-slate-700" title="Para quem serve o prazo">
             <option value="todos">Qualquer público</option>
@@ -185,7 +210,7 @@ export default function PrazosApi() {
           <select value={tipo} onChange={e => setTipo(e.target.value)}
             className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 bg-white font-medium text-slate-700">
             <option value="todos">Todos os tipos</option>
-            {tipos.map(t => <option key={t} value={t}>{t}</option>)}
+            {tipos.map(t => <option key={t} value={t}>{rotuloTipo(t)}</option>)}
           </select>
           <button onClick={() => setSoAlta(v => !v)}
             className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold border ${soAlta ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-600 border-slate-200'}`}>
@@ -293,11 +318,16 @@ function PrazoCard({ p }: { p: ds.Prazo }) {
         </div>
         <div className="flex-1 min-w-[180px]">
           <div className="flex items-center gap-2 flex-wrap">
+            {ehPadSinve(p) && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-rose-600 text-white border-rose-700" title="Prazo de comissão disciplinar — extração estruturada por lei (alta confiança)">
+                <Scale className="w-3 h-3" /> Prazo legal
+              </span>
+            )}
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${corPublico(p.publico)}`}>
               <Users className="w-3 h-3" /> {p.publico}
             </span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${corTipo(p.tipo)}`}>{p.tipo}</span>
-            {p.conf === 'média' && <span className="text-[10px] text-slate-400 italic">confiança média</span>}
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${corTipo(p.tipo)}`}>{rotuloTipo(p.tipo)}</span>
+            {(p.conf || '').toLowerCase() === 'média' && <span className="text-[10px] text-slate-400 italic">confiança média</span>}
             {p.mexidoDepois && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
                 <AlertTriangle className="w-3 h-3" /> revisado depois

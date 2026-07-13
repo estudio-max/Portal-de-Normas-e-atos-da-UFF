@@ -131,6 +131,11 @@ def processa_atos(atos_json_list):
             "EXTENSAO": "prorrogação/recondução",
             "SOBRESTAMENTO": "sobrestamento",
         }.get(papel, papel)
+        tipo_label = {
+            "PAD": "PAD",
+            "PAD_SUMARIO": "PAD Sumário",
+            "SINVE": "Sindicância Investigativa",
+        }.get(tipo, tipo)
 
         p = {
             "uid": a["uid"],
@@ -140,7 +145,7 @@ def processa_atos(atos_json_list):
             "processo_sei": sei,
             "data_ato": data_ato,
             "publico": publico,
-            "origem": f"{tipo} · {papel_label} · prazo de {dias} dias",
+            "origem": f"{tipo_label} · {papel_label} · prazo de {dias} dias",
         }
 
         # Se é extensão, tenta extrair citação ao originário
