@@ -11,11 +11,15 @@
 //      php dump_pad_sinve.php > pad_sinve.json
 // ============================================================================
 
+set_time_limit(0);
+
 $raiz = dirname(__DIR__);
 require $raiz . '/api/db.php';
 $cfg = carregar_config();
 $pdo = conectar($cfg);
 
+// FULLTEXT (usa o índice ft_busca) em vez de LIKE '%...%' -- um scan completo
+// do MEDIUMTEXT em 128 mil linhas estourava o tempo de execução via navegador.
 $sql = "
     SELECT a.uid, t.nome AS tipo, o.sigla, a.numero, a.numero_norm, a.ano, a.data_ato,
            a.ementa, a.processo_sei, a.status, b.arquivo AS boletim_arquivo,
@@ -25,9 +29,9 @@ $sql = "
     JOIN orgao o      ON o.id = a.orgao_id
     JOIN ato_texto tx ON tx.ato_id = a.id
     LEFT JOIN boletim b ON b.id = a.boletim_id
-    WHERE tx.texto_busca LIKE '%processo administrativo disciplinar%'
-       OR tx.texto_busca LIKE '%sindicancia investigat%'
-       OR tx.texto_busca LIKE '%sindicância investigat%'
+    WHERE MATCH(tx.texto_busca) AGAINST('+processo +administrativo +disciplinar' IN BOOLEAN MODE)
+       OR MATCH(tx.texto_busca) AGAINST('+sindicancia +investigat*' IN BOOLEAN MODE)
+       OR MATCH(tx.texto_busca) AGAINST('+sindicância +investigat*' IN BOOLEAN MODE)
        OR a.ementa LIKE '%processo administrativo disciplinar%'
        OR a.ementa LIKE '%sindic%investigat%'
     ORDER BY a.data_ato ASC, a.id ASC
@@ -35,5 +39,9 @@ $sql = "
 $st = $pdo->query($sql);
 $linhas = $st->fetchAll();
 
-fwrite(STDERR, "encontrados: " . count($linhas) . "\n");
+if (PHP_SAPI === 'cli') {
+    fwrite(STDERR, "encontrados: " . count($linhas) . "\n");
+} else {
+    header('Content-Type: application/json; charset=utf-8');
+}
 echo json_encode($linhas, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
