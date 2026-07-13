@@ -410,12 +410,14 @@ try {
             ]);
         }
 
-        // 2) Prazos PAD/SINVE (alta confiança, estruturados por lei)
+        // 2) Prazos PAD/SINVE (alta confiança, estruturados por lei). `publico` é
+        //    determinístico (vem do extrator), garantindo que o import diário e o
+        //    backfill (backfill_prazos_pad_sinve.php) gerem linhas idênticas.
         foreach (extrair_prazos_pad_sinve($ementaP, $texto, $dataP) as $pz) {
             $insPrazo->execute([
                 ':id' => $atoId, ':tp' => mb_substr($pz['tipo'], 0, 30, 'UTF-8'),
                 ':dl' => $pz['dataLimite'], ':cf' => $pz['conf'], ':bs' => $pz['base'],
-                ':pb' => mb_substr(inferir_publico($ementaP, $pz['ctx']), 0, 60, 'UTF-8'),
+                ':pb' => mb_substr($pz['publico'], 0, 60, 'UTF-8'),
                 ':tr' => mb_substr($pz['origem'], 0, 255, 'UTF-8'),
             ]);
         }

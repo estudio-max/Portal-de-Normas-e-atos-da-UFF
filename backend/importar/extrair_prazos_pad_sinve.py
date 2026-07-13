@@ -34,7 +34,7 @@ SOBRESTA_RE = re.compile(r"\bsobrest\w*\b", re.I)
 
 # Extração de dias declarados: "prazo de 30 (trinta) dias" ou "prorrogar por mais 60 (sessenta) dias"
 PRAZO_DIAS_RE = re.compile(
-    r"prazo\s+(?:\w+\s+){0,2}?de\s+(\d{1,3})\s*\([^)]{0,25}\)?\s*dias",
+    r"prazo\s+(?:\S+\s+){0,2}?de\s+(\d{1,3})\s*\([^)]{0,25}\)?\s*dias",
     re.I
 )
 PRORROGA_POR_RE = re.compile(
@@ -52,13 +52,19 @@ CITA_ORIGINARIO_RE = re.compile(
 )
 
 def classifica_tipo(txt):
-    """Retorna 'PAD_SUMARIO', 'PAD', 'SINVE', ou None."""
+    """Retorna 'SINVE', 'PAD_SUMARIO', 'PAD', ou None.
+
+    SINVE é checado PRIMEIRO: 'sindicância investigativa' é o termo mais
+    específico e distintivo. Uma SINVE costuma citar 'processo administrativo
+    disciplinar' como possível desdobramento — se checássemos PAD antes, esses
+    atos seriam rotulados PAD por engano.
+    """
+    if SINVE_RE.search(txt):
+        return "SINVE"
     if PAD_SUM_RE.search(txt):
         return "PAD_SUMARIO"
     if PAD_RE.search(txt):
         return "PAD"
-    if SINVE_RE.search(txt):
-        return "SINVE"
     return None
 
 def classifica_papel(txt):
@@ -115,6 +121,17 @@ def processa_atos(atos_json_list):
         sei = a.get("processo_sei")
         data_ato = a.get("data_ato")
 
+        publico = {
+            "PAD": "Comissão de PAD",
+            "PAD_SUMARIO": "Comissão de PAD Sumário",
+            "SINVE": "Comissão de Sindicância",
+        }.get(tipo, "Comissão")
+        papel_label = {
+            "INSTAURACAO": "instauração",
+            "EXTENSAO": "prorrogação/recondução",
+            "SOBRESTAMENTO": "sobrestamento",
+        }.get(papel, papel)
+
         p = {
             "uid": a["uid"],
             "tipo_ato": tipo,
@@ -122,6 +139,8 @@ def processa_atos(atos_json_list):
             "dias": dias,
             "processo_sei": sei,
             "data_ato": data_ato,
+            "publico": publico,
+            "origem": f"{tipo} · {papel_label} · prazo de {dias} dias",
         }
 
         # Se é extensão, tenta extrair citação ao originário

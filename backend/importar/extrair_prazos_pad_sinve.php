@@ -16,16 +16,18 @@
 // ============================================================================
 
 function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_ato): array {
-    $resultado = [];
-    $blob = mb_strtolower($ementa . " " . $texto);
+    $blob = mb_strtolower($ementa . " " . $texto, 'UTF-8');
 
-    // Classificação por tipo
-    if (preg_match('/processo\s+administrativo\s+disciplinar\s+sum[aá]rio/', $blob)) {
-        $tipo = 'PAD_SUMARIO';
-    } elseif (preg_match('/processo\s+administrativo\s+disciplinar/', $blob)) {
-        $tipo = 'PAD';
-    } elseif (preg_match('/sindic[âa]ncia\s+investigat[óo]ria|sindic[âa]ncia\s+investigativa/', $blob)) {
+    // Classificação por tipo. SINVE é checado PRIMEIRO: é o termo mais
+    // específico; uma SINVE costuma citar "processo administrativo disciplinar"
+    // como possível desdobramento e seria rotulada PAD por engano se PAD viesse
+    // antes. (Espelha classifica_tipo em extrair_prazos_pad_sinve.py.)
+    if (preg_match('/sindic[âa]ncia\s+investigat[óo]ria|sindic[âa]ncia\s+investigativa/u', $blob)) {
         $tipo = 'SINVE';
+    } elseif (preg_match('/processo\s+administrativo\s+disciplinar\s+sum[aá]rio/u', $blob)) {
+        $tipo = 'PAD_SUMARIO';
+    } elseif (preg_match('/processo\s+administrativo\s+disciplinar/u', $blob)) {
+        $tipo = 'PAD';
     } else {
         return [];  // fora do escopo PAD/SINVE
     }
@@ -44,9 +46,9 @@ function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_a
 
     // Extração de dias: "prazo de 30 (trinta) dias" ou "prorrogar por 60 dias"
     $dias = null;
-    if (preg_match('/prazo\s+(?:\w+\s+){0,2}?de\s+(\d{1,3})\s*\([^)]{0,25}\)?\s*dias/i', $blob, $m)) {
+    if (preg_match('/prazo\s+(?:\S+\s+){0,2}?de\s+(\d{1,3})\s*\([^)]{0,25}\)?\s*dias/iu', $blob, $m)) {
         $dias = (int)$m[1];
-    } elseif (preg_match('/prorroga\w*\s+(?:o\s+prazo\s+)?por\s+(?:mais\s+)?(\d{1,3})\s*\(?[^)]{0,25}\)?\s*dias/i', $blob, $m)) {
+    } elseif (preg_match('/prorroga\w*\s+(?:o\s+prazo\s+)?por\s+(?:mais\s+)?(\d{1,3})\s*\(?[^)]{0,25}\)?\s*dias/iu', $blob, $m)) {
         $dias = (int)$m[1];
     }
 
@@ -68,6 +70,20 @@ function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_a
         $data_limite = null;
     }
 
+    // Rótulo "público" determinístico (mesmo no backfill e no import diário)
+    $publico_map = [
+        'PAD'         => 'Comissão de PAD',
+        'PAD_SUMARIO' => 'Comissão de PAD Sumário',
+        'SINVE'       => 'Comissão de Sindicância',
+    ];
+    $publico = $publico_map[$tipo] ?? 'Comissão';
+
+    $papel_label = [
+        'INSTAURACAO'   => 'instauração',
+        'EXTENSAO'      => 'prorrogação/recondução',
+        'SOBRESTAMENTO' => 'sobrestamento',
+    ][$papel] ?? $papel;
+
     // Resultado: um "prazo" de alta confiança
     return [[
         'tipo' => $tipo,           // PAD, PAD_SUMARIO, SINVE
@@ -76,7 +92,7 @@ function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_a
         'dataLimite' => $data_limite,
         'conf' => 'Alta',
         'base' => 'PAD_SINVE',
-        'ctx' => '',  // sem contexto (já é estruturado o suficiente)
-        'origem' => "({$tipo}, {$papel}, {$dias} dias)",
+        'publico' => $publico,
+        'origem' => "{$tipo} · {$papel_label} · prazo de {$dias} dias",
     ]];
 }
