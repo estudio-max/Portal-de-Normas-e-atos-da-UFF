@@ -36,6 +36,17 @@ if (!$cli) {
         http_response_code(403);
         exit("Acesso negado. Configure 'import_token' e use ?token=...\n");
     }
+    // O caminho rotineiro (feed diário do ano corrente, ~3,2k atos / 11 MB)
+    // cabe folgado nos limites padrão. Um backfill via ?arquivo= sobe um lote
+    // maior e pode raspar o teto — sem SSH, o navegador é o único jeito de
+    // rodar isto, então vale pedir a folga. @ e sem checar retorno de
+    // propósito: hospedagem compartilhada pode recusar, e aí seguimos com o
+    // que houver (é por isso que os lotes são fatiados no tamanho que o feed
+    // diário já prova todo dia, em vez de depender destas linhas).
+    @set_time_limit(0);
+    @ini_set('memory_limit', '512M');
+    @ini_set('zlib.output_compression', '0');
+    @ob_implicit_flush(true);
 }
 function log_($m) { echo $m . "\n"; @flush(); }
 

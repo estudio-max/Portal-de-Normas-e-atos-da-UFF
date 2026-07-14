@@ -56,24 +56,56 @@ def main():
     pdata, dump, saida = sys.argv[1], sys.argv[2], sys.argv[3]
     os.makedirs(saida, exist_ok=True)
 
-    # ---- 1. fatia o portal-data.json por ano do boletim --------------------
+    # ---- 1. fatia o portal-data.json em lotes ------------------------------
+    # Tamanho do lote = o do feed DIÁRIO (~3,2k atos / 11 MB), que a produção
+    # processa todo dia por HTTP sem reclamar. Não há SSH: o importador roda
+    # pelo navegador, sujeito a max_execution_time/memory_limit da hospedagem
+    # compartilhada. Fatiar por ANO daria lotes de até 8k atos / 29 MB (2,5× o
+    # provado) — não vale arriscar meio import estourado.
+    LOTE = 3000
     dados = json.load(open(pdata, encoding="utf-8"))
     por_ano = collections.defaultdict(list)
     for a in dados:
         m = re.search(r"/(\d{4})$", a.get("boletimNumero") or "")
         if m:
             por_ano[m.group(1)].append(a)
-    print(f"portal-data.json: {len(dados)} atos -> {len(por_ano)} anos")
-    print(f"{'ano':6}{'atos':>7}{'MB':>8}")
-    total = 0
+
+    # Não misturar anos num lote: se um falhar, o usuário sabe exatamente o que
+    # refazer, e pode conferir a aba ano a ano.
+    lotes = []
     for ano in sorted(por_ano):
-        p = os.path.join(saida, f"portal-data-{ano}.json")
+        atos = por_ano[ano]
+        partes = (len(atos) + LOTE - 1) // LOTE
+        for i in range(partes):
+            nome = (f"portal-data-{ano}.json" if partes == 1
+                    else f"portal-data-{ano}-{i+1}de{partes}.json")
+            lotes.append((nome, atos[i * LOTE:(i + 1) * LOTE]))
+
+    print(f"portal-data.json: {len(dados)} atos -> {len(lotes)} lotes "
+          f"(<= {LOTE} atos cada)\n")
+    print(f"{'arquivo':34}{'atos':>7}{'MB':>7}")
+    total = 0
+    for nome, atos in lotes:
+        p = os.path.join(saida, nome)
         with open(p, "w", encoding="utf-8") as fh:
-            json.dump(por_ano[ano], fh, ensure_ascii=False)
+            json.dump(atos, fh, ensure_ascii=False)
         mb = os.path.getsize(p) / 1048576
         total += mb
-        print(f"{ano:6}{len(por_ano[ano]):7}{mb:8.1f}")
-    print(f"{'':6}{sum(len(v) for v in por_ano.values()):7}{total:8.1f}")
+        print(f"{nome:34}{len(atos):7}{mb:7.1f}")
+    print(f"{'':34}{sum(len(a) for _, a in lotes):7}{total:7.1f}")
+
+    # lista de URLs prontas p/ colar no navegador (sem SSH, é o caminho)
+    p3 = os.path.join(saida, "URLS-IMPORTAR.txt")
+    with open(p3, "w", encoding="utf-8") as fh:
+        fh.write("# Rodar UMA POR VEZ, na ordem, esperando cada uma terminar.\n"
+                 "# Troque SEU_TOKEN pelo import_token de backend/api/config.php.\n"
+                 "# Cada uma deve terminar com 'Banco com NNNNN atos'.\n"
+                 "# Os arquivos precisam estar em /importar/ no servidor.\n\n")
+        for nome, atos in lotes:
+            fh.write(f"# {len(atos)} atos\n"
+                     f"https://inteligencia.fanara.com.br/importar/importar_v2.php"
+                     f"?token=SEU_TOKEN&arquivo={nome}\n")
+    print(f"\n  -> {p3}  ({len(lotes)} URLs)")
 
     # ---- 2. fix dos números de boletim ------------------------------------
     bol = extrair_tabela(dump, "boletim")   # (id, numero, ano, data_pub, arquivo, ...)
