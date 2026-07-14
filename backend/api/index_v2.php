@@ -417,11 +417,19 @@ function chefias(PDO $pdo): void {
 // que o ato disse. Gravar 24 meses num ato que não declarou nada apagaria para
 // sempre a diferença entre lei e dedução, e a próxima sincronização
 // reescreveria a dedução como se fosse fato.
-const REGRA_MANDATO = [
-    'chefe' => 24, 'subchefe' => 24,
-    'coordenador' => 48, 'vice-coordenador' => 48,
-    'diretor' => 48, 'vice-diretor' => 48,
-];
+//
+// Função, não `const` de topo de arquivo: um `const` no nível do script roda
+// na ordem em que a instrução aparece — não é "hoisted" como função. O roteador
+// (`switch`) fica no topo do arquivo e chama mandatos() antes de o interpretador
+// alcançar esta linha, então o `const` ainda não existiria quando a função
+// precisasse dele. Foi exatamente esse o erro em produção (undefined constant).
+function regra_mandato(): array {
+    return [
+        'chefe' => 24, 'subchefe' => 24,
+        'coordenador' => 48, 'vice-coordenador' => 48,
+        'diretor' => 48, 'vice-diretor' => 48,
+    ];
+}
 
 // Cobertura do Boletim. O painel afirma "o setor X está sem chefia desde D" —
 // isso só se sustenta se a base cobriu o BS INTEIRO de D até hoje: da beirada
@@ -470,8 +478,9 @@ function janela_coberta(array $cob, string $desde): bool {
 }
 
 function mandatos(PDO $pdo): void {
+    $regra = regra_mandato();
     $cob = cobertura_por_ano($pdo);
-    $cargos = "'" . implode("','", array_keys(REGRA_MANDATO)) . "'";
+    $cargos = "'" . implode("','", array_keys($regra)) . "'";
 
     // Mesma projeção da aba Chefias: vale a designação MAIS RECENTE de cada
     // (unidade_chave, cargo) — a chave normalizada, não o texto cru, senão a
@@ -537,7 +546,7 @@ function mandatos(PDO $pdo): void {
             if ($ult[$s]['k'] !== $c['_k']) continue;
         }
         $declarado = (int)($c['prazo_meses'] ?? 0);
-        $prazo = $declarado ?: (REGRA_MANDATO[mb_strtolower(trim($c['cargo']))] ?? 0);
+        $prazo = $declarado ?: ($regra[mb_strtolower(trim($c['cargo']))] ?? 0);
         if (!$prazo) continue;
         $inicio = $c['data_inicio'] ?: $c['data_ato'];
         if (!$inicio) continue;
