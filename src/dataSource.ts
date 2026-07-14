@@ -233,6 +233,170 @@ export async function getChefias(): Promise<ChefiasResp> {
   return { total: chefias.length, atualizadoEm: new Date().toISOString().slice(0, 10), chefias };
 }
 
+// ---------- MANDATOS (setores sem chefia formalmente constituída) ---------
+export type SituacaoMandato = 'sem_chefia' | 'em_dia' | 'sem_cobertura';
+export interface Mandato {
+  unidade: string; cargo: string; nome: string | null; siape: string | null;
+  inicio: string; inicioOrigem: string;
+  prazoMeses: number; prazoOrigem: 'declarado' | 'presumido_cargo';
+  fim: string; diasVago: number; situacao: SituacaoMandato;
+  atoId: string; atoLabel: string; linkBoletim: string | null;
+}
+export interface CoberturaAno {
+  ano: number; carregados: number; publicados: number; pct: number; confiavel: boolean;
+}
+export interface MandatosResp {
+  total: number; atualizadoEm: string;
+  resumo: { semChefia: number; emDia: number; semCobertura: number };
+  cobertura: CoberturaAno[]; setores: Mandato[];
+}
+
+// Regra de mandato da UFF, confirmada no corpus (5.555 designações, 2001-2026):
+// o CARGO decide o prazo. Onde o ato declara, a pureza é 100% (Chefe 898/898
+// em 2 anos; Coordenador 897/897 em 4) e em 128 mil atos não existe um único
+// mandato que não seja 2 ou 4 anos. Pró-Reitor/Superintendente/Gerente ficam
+// fora de propósito: 181 designações, ZERO com prazo — servem a gestão, não a
+// mandato fixo. Espelha REGRA_MANDATO do index.php.
+const REGRA_MANDATO: Record<string, number> = {
+  'chefe': 24, 'subchefe': 24,
+  'coordenador': 48, 'vice-coordenador': 48,
+  'diretor': 48, 'vice-diretor': 48,
+};
+
+function somaMeses(iso: string, meses: number): string {
+  const [a, m, d] = iso.slice(0, 10).split('-').map(Number);
+  const alvo = new Date(Date.UTC(a, m - 1 + meses, d));
+  // 29/02 + N anos cai em 01/03 no ano comum; volta p/ o último dia de fev,
+  // que é o fim de mandato que a UFF de fato conta.
+  if (alvo.getUTCDate() !== d) alvo.setUTCDate(0);
+  return alvo.toISOString().slice(0, 10);
+}
+
+export async function getMandatos(): Promise<MandatosResp> {
+  const vazio: MandatosResp = {
+    total: 0, atualizadoEm: '', resumo: { semChefia: 0, emDia: 0, semCobertura: 0 },
+    cobertura: [], setores: [],
+  };
+  if (MODO === 'api') {
+    try {
+      const r = await fetch(`${API_BASE}/mandatos`);
+      if (r.ok) {
+        const j = await r.json();
+        if (j && Array.isArray(j.setores)) return j as MandatosResp;
+      }
+    } catch { /* API antiga/fora: cai p/ vazio sem quebrar a aba */ }
+    return vazio;
+  }
+
+  // ---- Estático: projeta do CACHE, mesma regra do SQL.
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  // Cobertura: a numeração do BS é sequencial no ano, então o MAIOR número do
+  // ano diz quantos boletins existiram — auto-calibra, sem constante mágica.
+  // Sem este guarda o painel acusaria de acefalia setores que só estão mal
+  // indexados: da beirada de dentro, ano mal carregado é indistinguível de ano
+  // sem designação nenhuma.
+  const bol: Record<number, { arq: Set<string>; ult: number }> = {};
+  for (const a of CACHE as any[]) {
+    const m = /(\d{1,3})\s*\/\s*(\d{4})/.exec(a.boletimNumero || '');
+    if (!m) continue;
+    const ano = +m[2], num = +m[1];
+    if (ano < 2001 || ano > new Date().getFullYear() || num < 1 || num > 300) continue;
+    (bol[ano] ||= { arq: new Set(), ult: 0 });
+    bol[ano].arq.add(a.arquivo || String(num));
+    bol[ano].ult = Math.max(bol[ano].ult, num);
+  }
+  const cobertura: CoberturaAno[] = Object.entries(bol).map(([ano, v]) => ({
+    ano: +ano, carregados: v.arq.size, publicados: v.ult,
+    pct: v.ult ? Math.round(100 * v.arq.size / v.ult) : 0,
+    // Ano corrente ainda está sendo publicado: o último número é o de agora,
+    // não o do fim do ano — nunca marcar de incompleto por isso.
+    confiavel: (v.ult >= 100 || +ano >= new Date().getFullYear()) && v.arq.size >= 0.9 * v.ult,
+  })).sort((x, y) => x.ano - y.ano);
+  const okAno: Record<number, boolean> = {};
+  for (const c of cobertura) okAno[c.ano] = c.confiavel;
+  const janelaCoberta = (desde: string) => {
+    for (let a = +desde.slice(0, 4); a <= new Date().getFullYear(); a++) if (!okAno[a]) return false;
+    return true;
+  };
+
+  type Ev = {
+    acao: string; cargo: string; unidade: string; chave: string; nome: string; siape: string;
+    data: string; prazo: number | null; inicio: string; org: string;
+    atoId: string; atoLabel: string; link: string | null;
+  };
+  const todos: Ev[] = [];
+  for (const a of CACHE as any[]) {
+    const data = a.dataAssinatura || '';
+    if (!data) continue;
+    for (const f of (a.funcoes || [])) {
+      const chave = f.unidade_chave || f.unidadeChave || '';
+      if (!chave) continue;
+      let nome = f.nome || '';
+      if (!nome && f.siape) nome = ((a.pessoas || []).find((x: any) => x.siape === f.siape)?.nome) || '';
+      todos.push({
+        acao: f.acao, cargo: (f.cargo || '').trim(), unidade: f.unidade, chave, nome,
+        siape: (f.siape || '').trim(), data, prazo: f.prazo_meses ?? null,
+        inicio: f.data_inicio || data, org: f.inicio_origem || 'data_ato',
+        atoId: a.id, atoLabel: `${a.tipoAto} nº ${a.numero}/${a.ano}`, link: a.linkBoletim || null,
+      });
+    }
+  }
+
+  // Vale a designação MAIS RECENTE de cada (unidade_chave, cargo). Sem o corte
+  // de 4 anos da aba Chefias: lá ele evita mostrar titular fantasma, aqui a
+  // posição vencida é justamente o que se procura — cortá-la esconderia o achado.
+  const porPos: Record<string, Ev> = {};
+  for (const e of todos) {
+    if (e.acao !== 'designar') continue;
+    if (!(e.cargo.toLowerCase() in REGRA_MANDATO)) continue;
+    const k = `${e.chave}|${e.cargo.toLowerCase()}`;
+    const c = porPos[k];
+    if (!c || e.data > c.data || (e.data === c.data && e.atoId > c.atoId)) porPos[k] = e;
+  }
+  // Situação atual da PESSOA: só permanece se o último evento dela for
+  // exatamente esta designação. Resolve unidade renomeada e quem mudou de cargo.
+  const ult: Record<string, Ev> = {};
+  for (const e of todos) {
+    if (!e.siape) continue;
+    const m = ult[e.siape];
+    if (!m || e.data > m.data || (e.data === m.data && e.acao === 'designar')) ult[e.siape] = e;
+  }
+
+  const setores: Mandato[] = [];
+  for (const [k, e] of Object.entries(porPos)) {
+    const u = e.siape ? ult[e.siape] : null;
+    if (u && (u.acao !== 'designar' || `${u.chave}|${u.cargo.toLowerCase()}` !== k)) continue;
+    const declarado = e.prazo || 0;
+    const prazo = declarado || REGRA_MANDATO[e.cargo.toLowerCase()];
+    if (!prazo) continue;
+    const fim = somaMeses(e.inicio, prazo);
+    const situacao: SituacaoMandato =
+      fim >= hoje ? 'em_dia' : !janelaCoberta(fim) ? 'sem_cobertura' : 'sem_chefia';
+    setores.push({
+      unidade: e.unidade, cargo: e.cargo, nome: e.nome || null, siape: e.siape || null,
+      inicio: e.inicio, inicioOrigem: e.org, prazoMeses: prazo,
+      // O gabinete tem que ver, na linha, se o prazo é o que o ato disse ou o
+      // que a regra do cargo deduziu — senão lê uma data sem saber se é lei.
+      prazoOrigem: declarado ? 'declarado' : 'presumido_cargo',
+      fim, situacao,
+      diasVago: situacao === 'sem_chefia'
+        ? Math.floor((Date.parse(hoje) - Date.parse(fim)) / 86400000) : 0,
+      atoId: e.atoId, atoLabel: e.atoLabel, linkBoletim: e.link,
+    });
+  }
+  setores.sort((a, b) => a.fim.localeCompare(b.fim));
+  return {
+    total: setores.length, atualizadoEm: hoje,
+    resumo: {
+      semChefia: setores.filter(s => s.situacao === 'sem_chefia').length,
+      emDia: setores.filter(s => s.situacao === 'em_dia').length,
+      semCobertura: setores.filter(s => s.situacao === 'sem_cobertura').length,
+    },
+    cobertura, setores,
+  };
+}
+
 // ---------- INSIGHTS (agregações para a aba de painéis) -------------------
 export interface OrgaoStat { sigla: string; n: number; comSei: number; }
 export interface Insights {

@@ -12,6 +12,7 @@ import ActRelationsApi from './components/ActRelationsApi';
 import ChefiasApi from './components/ChefiasApi';
 import InsightsApi from './components/InsightsApi';
 import PrazosApi from './components/PrazosApi';
+import MandatosApi from './components/MandatosApi';
 import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
 import PrivacidadeLGPD from './components/PrivacidadeLGPD';
@@ -126,6 +127,7 @@ export default function App() {
 
           {activeTab === 'insights' && <div id="painel-insights"><InsightsApi /></div>}
 
+          {activeTab === 'mandatos' && <div id="painel-mandatos-wrap"><MandatosApi /></div>}
           {activeTab === 'prazos' && <div id="painel-prazos-wrap"><PrazosApi /></div>}
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}

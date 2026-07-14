@@ -126,15 +126,39 @@ def tags_de(a):
     return [t for t in tags if t][:6]
 
 
+# (?![0-9]) e não \b: o acervo tem "02-26_RETIFICADO.pdf", e \b não casa entre
+# "6" e "_" (underscore é caractere de palavra) — o ano sumia justo nos
+# retificados.
+_ANO_ARQ_4 = re.compile(r"-(\d{4})(?![0-9])")
+_ANO_ARQ_2 = re.compile(r"-(\d{2})(?![0-9])")
+
+
+def _ano_do_arquivo(arq):
+    """Ano do BS pelo nome do arquivo, quando o bs_data não veio.
+
+    Os dois padrões convivem no acervo: '120-2016.pdf' (legado, ano com 4
+    dígitos) e '01-26.pdf' / '101-21 RETIFICADO.pdf' (recente, 2 dígitos).
+    """
+    m = _ANO_ARQ_4.search(arq or "")
+    if m:
+        return m.group(1)
+    m = _ANO_ARQ_2.search(arq or "")
+    return str(2000 + int(m.group(1))) if m else ""
+
+
 def converter(dados, urls=None):
     """urls: dict opcional {arquivo.pdf: url_oficial_uff} para linkar o PDF
     de origem na UFF (sem hospedar cópia)."""
     urls = urls or {}
     atos = dados["atos"]
+    # O ANO vem do nome do arquivo, não do bs_data: o nome é o que a UFF
+    # controla ("027-2001.pdf"), enquanto bs_data é OCR do cabeçalho do PDF e
+    # erra — há boletim de 2001 cuja data lida diz 1998, e outros com 2091.
+    # O bs_data só entra quando o nome não diz o ano.
     ano_bs = {}
     for m in dados.get("boletins", []):
         d = m.get("bs_data", "")
-        ano_bs[m["arquivo"]] = d.split("/")[-1] if "/" in d else "2026"
+        ano_bs[m["arquivo"]] = _ano_do_arquivo(m["arquivo"]) or (d.split("/")[-1] if "/" in d else "")
 
     # índice reverso: marca status de vigência (Revogado/Alterado) a partir
     # de atos que revogam/alteram outro com mesmo número+ano e tipo compatível
@@ -161,7 +185,13 @@ def converter(dados, urls=None):
             })
 
         orgao = norm_sigla(a.get("sigla")) or ("Reitoria" if a.get("tipo") == "PORTARIA" else "UFF")
-        ano_pub = ano_bs.get(a.get("arquivo"), "2026")
+        # Cascata: bs_data > nome do arquivo > ano do próprio ato. O default
+        # antigo era "2026" fixo — inofensivo enquanto o pipeline só rodava o
+        # ano corrente, mas sobre o legado ele carimbava 2026 em boletim de
+        # 2012/2016 (os 30 cujo bs_data não parseia), inventando "BS nº
+        # 120/2026" e estragando qualquer contagem por ano.
+        ano_pub = (ano_bs.get(a.get("arquivo")) or _ano_do_arquivo(a.get("arquivo", ""))
+                   or (a.get("data_ato") or "")[:4] or "")
         # Ementa: oficial > resumo inferido > placeholder. ementaInferida sinaliza
         # ao front-end que o texto é um "resumo automático" (não a ementa oficial).
         ementa_oficial = mascarar_cpfs((a.get("ementa") or "").strip())

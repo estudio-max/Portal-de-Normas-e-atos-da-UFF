@@ -207,6 +207,18 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
           </button>
 
           <button
+            id="tab-mandatos"
+            onClick={() => setActiveTab('mandatos')}
+            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'mandatos'
+                ? 'text-yellow-400 border-yellow-400'
+                : 'text-blue-200 border-transparent hover:text-white'
+            }`}
+          >
+            ⏳ Mandatos
+          </button>
+
+          <button
             id="tab-prazos"
             onClick={() => setActiveTab('prazos')}
             className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
