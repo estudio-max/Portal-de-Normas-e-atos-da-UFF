@@ -294,8 +294,10 @@ try {
     $insRel = $pdo->prepare("INSERT INTO relacao (ato_id,tipo,destino_ato_id,destino_texto,destino_norm,externo,trecho,metodo,extracao_id)
                               VALUES (:id,:tipo,NULL,:dt,:dn,0,:tr,'importar-diario',:ex)");
     $delFunc = $pdo->prepare("DELETE FROM ato_funcao WHERE ato_id=:id");
-    $insFunc = $pdo->prepare("INSERT INTO ato_funcao (ato_id,acao,cargo,unidade,orgao_id,pessoa_id)
-                               VALUES (:id,:ac,:ca,:un,NULL,:p)");
+    $insFunc = $pdo->prepare("INSERT INTO ato_funcao
+                               (ato_id,acao,cargo,unidade,unidade_chave,orgao_id,pessoa_id,
+                                prazo_meses,data_inicio,inicio_origem)
+                               VALUES (:id,:ac,:ca,:un,:uk,NULL,:p,:pm,:di,:io)");
     $delApos = $pdo->prepare("DELETE FROM ato_aposentadoria WHERE ato_id=:id");
     $insApos = $pdo->prepare("INSERT INTO ato_aposentadoria (ato_id,tipo,base_legal) VALUES (:id,:t,:b)");
     $delDesl = $pdo->prepare("DELETE FROM ato_deslocamento WHERE ato_id=:id");
@@ -375,9 +377,20 @@ try {
         foreach (($a['funcoes'] ?? []) as $fz) {
             $acao = ($fz['acao'] ?? '') === 'dispensar' ? 'dispensar' : 'designar';
             $pid = pessoa_id($pdo, $cachePessoa, $fz['siape'] ?? null, $fz['nome'] ?? null);
+            // Mandato só na designação: a dispensa encerra o mandato de outro
+            // ato, não abre um. O extrator já respeita isso, mas o importador
+            // não deve depender disso para não gravar prazo em dispensa.
+            $desig = $acao === 'designar';
+            $ini = $desig ? ($fz['data_inicio'] ?? '') : '';
+            $org = $desig ? ($fz['inicio_origem'] ?? '') : '';
             $insFunc->execute([':id' => $atoId, ':ac' => $acao,
                 ':ca' => mb_substr((string)($fz['cargo'] ?? ''), 0, 60, 'UTF-8'),
-                ':un' => mb_substr((string)($fz['unidade'] ?? ''), 0, 180, 'UTF-8'), ':p' => $pid]);
+                ':un' => mb_substr((string)($fz['unidade'] ?? ''), 0, 180, 'UTF-8'),
+                ':uk' => mb_substr((string)($fz['unidade_chave'] ?? ''), 0, 180, 'UTF-8'),
+                ':p' => $pid,
+                ':pm' => $desig && !empty($fz['prazo_meses']) ? (int)$fz['prazo_meses'] : null,
+                ':di' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$ini) ? $ini : null,
+                ':io' => in_array($org, ['declarado', 'tampao', 'data_ato'], true) ? $org : null]);
         }
 
         // aposentadoria / deslocamento

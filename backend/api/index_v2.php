@@ -53,6 +53,7 @@ switch ($recurso) {
     case 'stats':    stats($pdo); break;
     case 'filtros':  filtros($pdo); break;
     case 'chefias':  chefias($pdo); break;
+    case 'mandatos': mandatos($pdo); break;
     case 'insights': insights($pdo); break;
     case 'analitico': analitico($pdo); break;
     case 'prazos':   prazos($pdo); break;
@@ -398,6 +399,188 @@ function chefias(PDO $pdo): void {
         'total' => count($chefias),
         'atualizadoEm' => date('Y-m-d'),
         'chefias' => $chefias,
+    ]);
+}
+
+// ---- MANDATOS: setores sem chefia formalmente constituída ------------------
+// Regra de mandato da UFF, confirmada no corpus (5.555 designações, 2001-2026):
+//   Departamento (Chefe, Subchefe) .................... 2 anos
+//   Curso/Programa e Unidade (Coordenador, Vice-
+//   Coordenador, Diretor, Vice-Diretor) ............... 4 anos
+// Não é estatística, é estrutural: o cargo decide o prazo. Onde o ato declara,
+// a pureza é 100% (Chefe 898/898 em 2 anos; Coordenador 897/897 em 4) e em
+// 128 mil atos NÃO existe um único mandato que não seja 2 ou 4 anos.
+// Pró-Reitor/Superintendente/Gerente ficam fora de propósito: 181 designações,
+// ZERO com prazo — servem a gestão, não a mandato fixo.
+//
+// A regra mora AQUI, na projeção, e não na importação: ato_funcao registra o
+// que o ato disse. Gravar 24 meses num ato que não declarou nada apagaria para
+// sempre a diferença entre lei e dedução, e a próxima sincronização
+// reescreveria a dedução como se fosse fato.
+const REGRA_MANDATO = [
+    'chefe' => 24, 'subchefe' => 24,
+    'coordenador' => 48, 'vice-coordenador' => 48,
+    'diretor' => 48, 'vice-diretor' => 48,
+];
+
+// Cobertura do Boletim. O painel afirma "o setor X está sem chefia desde D" —
+// isso só se sustenta se a base cobriu o BS INTEIRO de D até hoje: da beirada
+// de dentro, um ano mal carregado é indistinguível de um ano em que ninguém
+// foi designado. Sem este guarda o painel acusaria de acefalia setores que só
+// estão mal indexados.
+// O esperado não é constante mágica: a numeração do BS é sequencial dentro do
+// ano, então o MAIOR número do ano diz quantos existiram (auto-calibra: 2025
+// fechou em 153, 2023 em 242). Aqui a tabela `boletim` já traz numero/ano como
+// inteiros — sem depender de OCR de cabeçalho nem de nome de arquivo.
+function cobertura_por_ano(PDO $pdo): array {
+    $rows = $pdo->query("
+        SELECT ano, COUNT(*) AS carregados, MAX(numero) AS ultimo
+        FROM boletim WHERE ano > 0 GROUP BY ano ORDER BY ano")->fetchAll();
+    $anoAtual = (int)date('Y');
+    $cob = [];
+    foreach ($rows as $r) {
+        $ano = (int)$r['ano'];
+        $carregados = (int)$r['carregados'];
+        $ultimo = (int)$r['ultimo'];
+        // Ponto cego: se a base tivesse só o COMEÇO de um ano (boletins 1..16
+        // de 245), o maior seria 16 e a cobertura pareceria 100%. Nas cargas
+        // parciais reais isso não ocorre — elas pegaram o FIM do ano — mas,
+        // como é sorte e não garantia, ano FECHADO cujo maior número seja
+        // implausível (< 100, contra uma série histórica de ~150 a ~245) é
+        // dado como não-confiável: a base não sabe nem quantos existiram.
+        // O ano corrente é isento: ainda está sendo publicado.
+        $corrente = $ano >= $anoAtual;
+        $cob[$ano] = [
+            'ano' => $ano,
+            'carregados' => $carregados,
+            'publicados' => $ultimo,
+            'pct' => $ultimo > 0 ? (int)round(100 * $carregados / $ultimo) : 0,
+            'confiavel' => ($ultimo >= 100 || $corrente) && $ultimo > 0
+                           && $carregados >= 0.9 * $ultimo,
+        ];
+    }
+    return $cob;
+}
+
+function janela_coberta(array $cob, string $desde): bool {
+    for ($a = (int)substr($desde, 0, 4); $a <= (int)date('Y'); $a++) {
+        if (empty($cob[$a]['confiavel'])) return false;
+    }
+    return true;
+}
+
+function mandatos(PDO $pdo): void {
+    $cob = cobertura_por_ano($pdo);
+    $cargos = "'" . implode("','", array_keys(REGRA_MANDATO)) . "'";
+
+    // Mesma projeção da aba Chefias: vale a designação MAIS RECENTE de cada
+    // (unidade_chave, cargo) — a chave normalizada, não o texto cru, senão a
+    // unidade que mudou de grafia vira duas posições e a antiga aparece aqui
+    // como fantasma de mandato vencido.
+    $rows = $pdo->query("
+        SELECT f.cargo, f.unidade, f.unidade_chave, ps.siape, ps.nome,
+               f.prazo_meses, f.data_inicio, f.inicio_origem,
+               a.uid AS ato_id, a.data_ato, t.nome AS tipo, a.numero, a.ano,
+               b.url_pdf AS link_boletim
+        FROM ato_funcao f
+        JOIN ato a       ON a.id = f.ato_id
+        JOIN tipo_ato t  ON t.id = a.tipo_id
+        LEFT JOIN boletim b ON b.id = a.boletim_id
+        LEFT JOIN pessoa ps ON ps.id = f.pessoa_id
+        JOIN (
+            SELECT f2.unidade_chave, f2.cargo, MAX(a2.data_ato) AS dmax
+            FROM ato_funcao f2 JOIN ato a2 ON a2.id = f2.ato_id
+            WHERE a2.data_ato IS NOT NULL AND f2.acao = 'designar'
+              AND LOWER(f2.cargo) IN ($cargos)
+            GROUP BY f2.unidade_chave, f2.cargo
+        ) u ON u.unidade_chave = f.unidade_chave AND u.cargo = f.cargo
+           AND a.data_ato = u.dmax
+        WHERE f.acao = 'designar' AND LOWER(f.cargo) IN ($cargos)
+        ORDER BY f.unidade, f.cargo, a.id DESC
+    ")->fetchAll();
+
+    $vistos = [];
+    $cand = [];
+    foreach ($rows as $r) {
+        $k = $r['unidade_chave'] . '|' . mb_strtolower($r['cargo']);
+        if (isset($vistos[$k])) continue;
+        $vistos[$k] = true;
+        $r['_k'] = $k;
+        $cand[] = $r;
+    }
+
+    // Só permanece titular quem tem esta designação como ÚLTIMO evento seu, em
+    // qualquer unidade (resolve unidade renomeada e quem mudou de cargo).
+    $ult = [];
+    $ev = $pdo->query("
+        SELECT ps.siape, f.acao, f.unidade_chave, LOWER(f.cargo) AS cargo, a.data_ato
+        FROM ato_funcao f
+        JOIN ato a ON a.id = f.ato_id
+        LEFT JOIN pessoa ps ON ps.id = f.pessoa_id
+        WHERE ps.siape IS NOT NULL AND ps.siape <> '' AND a.data_ato IS NOT NULL");
+    while ($e = $ev->fetch()) {
+        $s = $e['siape'];
+        $m = $ult[$s] ?? null;
+        if (!$m || $e['data_ato'] > $m['data']
+                || ($e['data_ato'] === $m['data'] && $e['acao'] === 'designar')) {
+            $ult[$s] = ['data' => $e['data_ato'], 'acao' => $e['acao'],
+                        'k' => $e['unidade_chave'] . '|' . $e['cargo']];
+        }
+    }
+
+    $hoje = date('Y-m-d');
+    $setores = [];
+    foreach ($cand as $c) {
+        $s = $c['siape'] ?? '';
+        if ($s !== '' && isset($ult[$s])) {
+            if ($ult[$s]['acao'] !== 'designar') continue;
+            if ($ult[$s]['k'] !== $c['_k']) continue;
+        }
+        $declarado = (int)($c['prazo_meses'] ?? 0);
+        $prazo = $declarado ?: (REGRA_MANDATO[mb_strtolower(trim($c['cargo']))] ?? 0);
+        if (!$prazo) continue;
+        $inicio = $c['data_inicio'] ?: $c['data_ato'];
+        if (!$inicio) continue;
+        $fim = date('Y-m-d', strtotime("$inicio +$prazo months"));
+
+        if ($fim >= $hoje)                       $situacao = 'em_dia';
+        elseif (!janela_coberta($cob, $fim))     $situacao = 'sem_cobertura';
+        else                                     $situacao = 'sem_chefia';
+
+        $setores[] = [
+            'unidade' => $c['unidade'],
+            'cargo' => $c['cargo'],
+            'nome' => $c['nome'],
+            'siape' => $c['siape'],
+            'inicio' => $inicio,
+            'inicioOrigem' => $c['inicio_origem'] ?: 'data_ato',
+            'prazoMeses' => $prazo,
+            // Lei x dedução, na linha: sem isto o gabinete lê uma data e não
+            // sabe qual das duas está olhando.
+            'prazoOrigem' => $declarado ? 'declarado' : 'presumido_cargo',
+            'fim' => $fim,
+            'diasVago' => $situacao === 'sem_chefia'
+                ? (int)((strtotime($hoje) - strtotime($fim)) / 86400) : 0,
+            'situacao' => $situacao,
+            'atoId' => $c['ato_id'],
+            'atoLabel' => trim("{$c['tipo']} nº {$c['numero']}/{$c['ano']}"),
+            'linkBoletim' => $c['link_boletim'],
+        ];
+    }
+
+    usort($setores, fn($a, $b) => strcmp($a['fim'], $b['fim']));
+    $conta = array_count_values(array_column($setores, 'situacao'));
+
+    responder_json([
+        'total' => count($setores),
+        'atualizadoEm' => $hoje,
+        'resumo' => [
+            'semChefia' => $conta['sem_chefia'] ?? 0,
+            'emDia' => $conta['em_dia'] ?? 0,
+            'semCobertura' => $conta['sem_cobertura'] ?? 0,
+        ],
+        'cobertura' => array_values($cob),
+        'setores' => $setores,
     ]);
 }
 

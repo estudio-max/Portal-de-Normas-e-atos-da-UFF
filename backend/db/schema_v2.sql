@@ -158,11 +158,35 @@ CREATE TABLE `ato_funcao` (
   `ato_id`    BIGINT UNSIGNED NOT NULL,
   `acao`      ENUM('designar','dispensar') NOT NULL,
   `cargo`     VARCHAR(60) NOT NULL,
-  `unidade`   VARCHAR(180) NOT NULL,
+  `unidade`   VARCHAR(180) NOT NULL,          -- rótulo, como saiu do ato
+  -- Chave normalizada da unidade: casa a MESMA unidade escrita de formas
+  -- diferentes entre boletins. Sem ela a projeção agrupa pelo texto cru, e a
+  -- unidade que mudou de grafia vira duas posições — a antiga fica para trás
+  -- como titular fantasma de mandato vencido. O extrator já calcula isto
+  -- (chave_unidade) e o portal-data.json já traz; v2 vinha descartando.
+  `unidade_chave` VARCHAR(180) NOT NULL DEFAULT '',
   `orgao_id`  BIGINT UNSIGNED NULL,
   `pessoa_id` BIGINT UNSIGNED NULL,
+  -- Mandato (só na designação; a dispensa encerra o mandato de OUTRO ato).
+  -- A designação de chefia é AUTOLIMITADA: traz a própria validade ("com
+  -- mandato de 04 (quatro) anos"). É por isso que o Boletim quase nunca
+  -- publica revogação ao fim do mandato — seria redundante (medido: 83% das
+  -- dispensas saem >90 dias ANTES do fim do prazo, ou seja, dispensa é saída
+  -- ANTECIPADA). Logo o fim do mandato não existe como ato: só existe se for
+  -- calculado daqui.
+  `prazo_meses`   SMALLINT UNSIGNED NULL,     -- NULL = o ato não declarou prazo
+  `data_inicio`   DATE NULL,                  -- quando o mandato começa a correr
+  -- Proveniência de data_inicio — o painel precisa distinguir fato de
+  -- aproximação, senão o gabinete lê uma data sem saber se é lei ou dedução:
+  --   declarado -> "a partir de DD/MM/AAAA" escrito no ato
+  --   tampao    -> completa mandato do antecessor ("iniciado em ..."); o
+  --                relógio começou com ELE, não com este ato
+  --   data_ato  -> nada declarado; usa a data do ato (aproximação)
+  `inicio_origem` ENUM('declarado','tampao','data_ato') NULL,
   PRIMARY KEY (`id`),
   KEY `ix_ato` (`ato_id`), KEY `ix_cargo` (`cargo`), KEY `ix_pessoa` (`pessoa_id`),
+  KEY `ix_chave` (`unidade_chave`, `cargo`),
+  KEY `ix_mandato` (`acao`, `data_inicio`),
   CONSTRAINT `fk_func_ato`    FOREIGN KEY (`ato_id`)    REFERENCES `ato` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_func_orgao`  FOREIGN KEY (`orgao_id`)  REFERENCES `orgao` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_func_pessoa` FOREIGN KEY (`pessoa_id`) REFERENCES `pessoa` (`id`) ON DELETE SET NULL
