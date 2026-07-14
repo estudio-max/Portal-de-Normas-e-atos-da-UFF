@@ -152,8 +152,26 @@ with open(OUT, "w", encoding="utf-8") as f:
         "`unidade` VARCHAR(180) NOT NULL,"
         "`unidade_chave` VARCHAR(180) NOT NULL,"
         "`siape` VARCHAR(10) NULL,`nome` VARCHAR(120) NULL,"
-        "PRIMARY KEY (`id`),KEY `ix_chave` (`unidade_chave`,`cargo`),KEY `ix_ato` (`ato_id`)"
+        "`prazo_meses` SMALLINT UNSIGNED NULL,"
+        "`data_inicio` DATE NULL,"
+        "`inicio_origem` ENUM('declarado','tampao','data_ato') NULL,"
+        "PRIMARY KEY (`id`),KEY `ix_chave` (`unidade_chave`,`cargo`),KEY `ix_ato` (`ato_id`),"
+        "KEY `ix_mandato` (`acao`,`data_inicio`)"
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n")
+
+    # Garante ato_funcoes.prazo_meses/data_inicio/inicio_origem (idempotente).
+    # O CREATE TABLE IF NOT EXISTS acima não adiciona coluna em base que já tem
+    # a tabela — a produção cai aqui. As três nascem juntas, então um só teste
+    # (em prazo_meses) guarda o lote, como no bloco de aposentadoria.
+    f.write(
+        "SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ato_funcoes' AND COLUMN_NAME='prazo_meses');\n"
+        "SET @ddl := IF(@c=0, "
+        "'ALTER TABLE `ato_funcoes` ADD COLUMN `prazo_meses` SMALLINT UNSIGNED NULL AFTER `nome`, "
+        "ADD COLUMN `data_inicio` DATE NULL AFTER `prazo_meses`, "
+        "ADD COLUMN `inicio_origem` ENUM(\\'declarado\\',\\'tampao\\',\\'data_ato\\') NULL AFTER `data_inicio`, "
+        "ADD KEY `ix_mandato` (`acao`,`data_inicio`)', 'DO 0');\n"
+        "PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;\n")
 
     pad = f"'^[0-9]+-{suf_ano}[^0-9]'" if suf_ano else None
     if args.so_chefias:
@@ -218,7 +236,9 @@ with open(OUT, "w", encoding="utf-8") as f:
         for fz in a.get("funcoes", []):
             func_rows.append([esc(aid), esc(fz.get("acao")), esc(fz.get("cargo")),
                               esc(fz.get("unidade")), esc(fz.get("unidade_chave")),
-                              esc(fz.get("siape")), esc(fz.get("nome"))])
+                              esc(fz.get("siape")), esc(fz.get("nome")),
+                              esc(fz.get("prazo_meses")), esc(fz.get("data_inicio")),
+                              esc(fz.get("inicio_origem"))])
 
     if not args.so_chefias:
         insere(f, "atos", ["id", "boletim_id", "tipo", "sigla", "numero", "ano", "data_ato",
@@ -236,7 +256,8 @@ with open(OUT, "w", encoding="utf-8") as f:
         insere(f, "ato_relacoes", ["ato_id", "tipo_relacao", "ato_destino_texto", "ato_destino_id", "detalhes"], rel_rows)
         insere(f, "ato_tags", ["ato_id", "tag"], tag_rows)
     insere(f, "ato_funcoes",
-           ["ato_id", "acao", "cargo", "unidade", "unidade_chave", "siape", "nome"], func_rows)
+           ["ato_id", "acao", "cargo", "unidade", "unidade_chave", "siape", "nome",
+            "prazo_meses", "data_inicio", "inicio_origem"], func_rows)
     f.write("SET foreign_key_checks=1;\n")
 
 with open(OUT, "rb") as fi, gzip.open(OUT + ".gz", "wb") as fo:

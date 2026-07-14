@@ -124,9 +124,24 @@ CREATE TABLE `ato_funcoes` (
   `unidade_chave` VARCHAR(180) NOT NULL,          -- chave normalizada (casa a mesma unidade)
   `siape`         VARCHAR(10)  NULL,
   `nome`          VARCHAR(120) NULL,
+  -- Mandato (só na designação; a dispensa encerra o mandato de outro ato).
+  -- A designação de chefia é AUTOLIMITADA: traz a própria validade ("com
+  -- mandato de 04 (quatro) anos"). É por isso que o Boletim quase nunca
+  -- publica revogação ao fim do mandato — ela seria redundante. Logo, o fim
+  -- do mandato NÃO existe como ato: só existe se for calculado daqui.
+  `prazo_meses`   SMALLINT UNSIGNED NULL,         -- NULL = ato não declarou prazo
+  `data_inicio`   DATE NULL,                      -- quando o mandato começa a correr
+  -- Proveniência de data_inicio — o painel precisa saber o que é fato e o que
+  -- é aproximação, senão o gabinete vê uma data sem saber se é lei ou chute:
+  --   declarado -> "a partir de DD/MM/AAAA" escrito no ato
+  --   tampao    -> completa mandato do antecessor ("iniciado em ...");
+  --                o relógio começou com ELE, não com este ato
+  --   data_ato  -> nada declarado; usa a data do ato (aproximação)
+  `inicio_origem` ENUM('declarado','tampao','data_ato') NULL,
   PRIMARY KEY (`id`),
   KEY `ix_chave` (`unidade_chave`, `cargo`),
   KEY `ix_ato`   (`ato_id`),
+  KEY `ix_mandato` (`acao`, `data_inicio`),       -- varredura de mandatos vencidos
   CONSTRAINT `fk_func_ato` FOREIGN KEY (`ato_id`)
     REFERENCES `atos`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -186,7 +186,9 @@ def converter(dados, urls=None):
             "tags": tags_de(a),
             "siapes": a.get("siapes", []),
             "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
-            "funcoes": a.get("funcoes", []),  # [{acao,cargo,unidade,unidade_chave,nome,siape}] p/ Chefias
+            # [{acao,cargo,unidade,unidade_chave,nome,siape,prazo_meses,
+            #   data_inicio,inicio_origem}] p/ Chefias e p/ o cálculo de mandato
+            "funcoes": a.get("funcoes", []),
             "aposentadoria": a.get("aposentadoria"),  # {tipo,baseLegal} | None — p/ Insights
             "deslocamento": a.get("deslocamento"),  # {tipo,direcao,motivo,setor} | None — p/ Insights
             "textoBusca": mascarar_cpfs(a.get("corpo_busca", "")),  # corpo p/ busca por nome/SIAPE

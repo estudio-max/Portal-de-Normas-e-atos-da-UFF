@@ -29,7 +29,7 @@ import json
 import glob
 import argparse
 import unicodedata
-from datetime import datetime
+from datetime import datetime, date
 
 import fitz  # PyMuPDF
 
@@ -665,7 +665,7 @@ def parse_pdf(caminho):
             "cita": "; ".join(r["ato_citado"] for r in relacoes if r["relacao"] == "CITA"),
             "siapes": siapes,
             "pessoas": extrai_pessoas(trecho),
-            "funcoes": extrai_funcoes(trecho),
+            "funcoes": extrai_funcoes(trecho, data_ato),
             "aposentadoria": extrai_aposentadoria(trecho),
             "deslocamento": extrai_deslocamento(trecho),
             "corpo_busca": corpo_busca,
@@ -1088,6 +1088,107 @@ def _nome_externo_antes(trecho, pos_gatilho):
     return _limpa_nome(ult.group("nome"))
 
 
+# Mandato da designação: PRAZO e DATA DE INÍCIO ----------------------------- #
+# A designação de chefia é AUTOLIMITADA — ela traz a própria validade ("com
+# mandato de 04 (quatro) anos"). Por isso o Boletim quase nunca publica a
+# "revogação" ao fim do mandato: ela seria redundante. A dispensa, quando
+# aparece, é o ato de encerrar ANTES da hora (medido no corpus: 83% das
+# dispensas saem >90 dias antes do fim do prazo). Consequência prática: o fim
+# do mandato só existe como DADO se for calculado daqui — não há ato para ele.
+#
+# Ancorar em "mandato" é obrigatório, não conveniência: o corpus tem "pelo
+# prazo de 03 (três) anos" em LICENÇA para tratar de interesses particulares,
+# que não é mandato nenhum. Casar "N (extenso) anos" solto importaria isso como
+# se fosse prazo de chefia. Mesmo princípio de intent-anchoring da aba Prazos.
+_MANDATO_RE = re.compile(r"mandato\s+de\s+(?P<n>\d{1,2})\s*\(", re.I)
+# A unidade vem DEPOIS do extenso entre parênteses ("04 (quatro) anos"), então
+# tem que pular o fecha-parênteses antes de ler "anos"/"meses".
+_MANDATO_UNID_RE = re.compile(r"^[^)]{0,20}\)\s*(?P<unid>m[eê]s(?:es)?|anos?)", re.I)
+# Mandato-tampão: quem COMPLETA o mandato do antecessor. O relógio começou com
+# o ANTECESSOR, não com este ato — "complementando assim, o mandato de 04
+# (quatro) anos, iniciado em 29 de abril de 2003". Somar o prazo à data deste
+# ato daria ao substituto um mandato novo em folha, quando ele pode ter só
+# meses pela frente. São ~7% das designações com prazo, e justamente os
+# substitutos: a população mais propensa a esticar sem que ninguém veja.
+_INICIADO_RE = re.compile(
+    r"(?:iniciado|com\s+in[íi]cio)\s+em\s+(?P<d>\d{1,2})\s+de\s+(?P<m>\w+)\s+de\s+(?P<a>\d{4})", re.I)
+# Início declarado: "Designar, a partir de 30/03/2026, FULANO, ... com mandato
+# de 04 (quatro) anos, a função de ...". Sem isso o início vira a data do ato,
+# que é só a data em que o BS publicou — não a data em que o mandato corre.
+_APARTIR_RE = re.compile(r"a\s+partir\s+de\s+(?P<d>\d{1,2})[./](?P<m>\d{1,2})[./](?P<a>\d{2,4})", re.I)
+
+
+def _data_dmy(m, ano_ref):
+    """DD/MM/AA(AA) -> ISO. Ano de 2 dígitos resolve pelo século do ato."""
+    d, mes, a = int(m.group("d")), int(m.group("m")), int(m.group("a"))
+    if a < 100:
+        a = 2000 + a if ano_ref and 2000 + a <= ano_ref + 1 else 1900 + a
+    try:
+        return f"{a:04d}-{mes:02d}-{d:02d}" if date(a, mes, d) else ""
+    except ValueError:
+        return ""
+
+
+def extrai_mandato(trecho, pos_cargo, data_ato):
+    """(prazo_meses|None, data_inicio, origem) do mandato da designação.
+
+    origem: 'tampao'    -> completa mandato do antecessor (início é o dele)
+            'declarado' -> "a partir de DD/MM/AAAA" no próprio ato
+            'data_ato'  -> nada declarado; usa a data do ato (aproximação)
+
+    Janela ancorada no cargo: "com mandato de" e "a partir de" vêm ANTES do
+    gatilho do cargo; o "iniciado em" do tampão vem DEPOIS da unidade. Buscar
+    no ato inteiro pegaria prazo de um artigo e cargo de outro nos atos que
+    designam várias pessoas.
+    """
+    ini, fim = max(0, pos_cargo - 400), pos_cargo + 300
+    jan = trecho[ini:fim]
+    ano_ref = int(data_ato[:4]) if data_ato[:4].isdigit() else 0
+
+    m = _MANDATO_RE.search(jan)
+    prazo = None
+    if m:
+        n = int(m.group("n"))
+        u = _MANDATO_UNID_RE.match(jan[m.end():])
+        # "mandato de 04 (quatro)" sem a palavra "anos" existe no legado; o
+        # padrão da casa é ano, então é o default quando a unidade não vem.
+        prazo = n if (u and u.group("unid").lower().startswith("m")) else n * 12
+
+    inicio, origem = data_ato, "data_ato"
+    if m:
+        t = _INICIADO_RE.search(jan[m.start():])
+        if t:
+            d = data_iso(t.group("d"), t.group("m"), t.group("a"))
+            if d:
+                inicio, origem = d, "tampao"
+    if origem == "data_ato":
+        p = _APARTIR_RE.search(jan[:pos_cargo - ini])
+        if p:
+            d = _data_dmy(p, ano_ref)
+            if d:
+                inicio, origem = d, "declarado"
+
+    # Guarda de sanidade: início muito longe do ato é erro de captura (OCR na
+    # data, "a partir de" de outra coisa). Tampão olha até 6 anos para trás
+    # (mandato de 4 anos + folga); nada olha mais que 2 anos à frente.
+    if origem != "data_ato" and data_ato:
+        if not (_soma_anos(data_ato, -6) <= inicio <= _soma_anos(data_ato, 2)):
+            inicio, origem = data_ato, "data_ato"
+    return prazo, inicio, origem
+
+
+def _soma_anos(iso, n):
+    """ISO +- n anos, tolerante a 29/02."""
+    try:
+        a, m, d = (int(x) for x in iso[:10].split("-"))
+        try:
+            return date(a + n, m, d).isoformat()
+        except ValueError:
+            return date(a + n, m, 28).isoformat()
+    except Exception:
+        return iso
+
+
 def canon_cargo(c):
     """Normaliza a grafia do cargo, preservando Vice-/Sub."""
     low = _fold(c)
@@ -1173,9 +1274,14 @@ def _pessoa_antes(trecho, pos, ignora=None):
     return "", nome_antes_siape(trecho, pos, ignora)
 
 
-def extrai_funcoes(trecho):
-    """[{acao, cargo, unidade, unidade_chave, nome, siape}] — designações/dispensas
-    de chefia/coordenação/direção citadas no dispositivo. Sempre exige SIAPE."""
+def extrai_funcoes(trecho, data_ato=""):
+    """[{acao, cargo, unidade, unidade_chave, nome, siape, prazo_meses,
+    data_inicio, inicio_origem}] — designações/dispensas de chefia/coordenação/
+    direção citadas no dispositivo. Sempre exige SIAPE.
+
+    O mandato (prazo/início) só faz sentido na DESIGNAÇÃO — a dispensa encerra
+    o mandato de outro ato, não abre um.
+    """
     ev, vistos = [], set()
     for m in FUNCAO_RE.finditer(trecho):
         if _SUBST_FUNC.search(trecho[max(0, m.start() - 50):m.start("cargo")]):
@@ -1201,8 +1307,13 @@ def extrai_funcoes(trecho):
         if k in vistos:
             continue
         vistos.add(k)
-        ev.append({"acao": k[0], "cargo": cargo, "unidade": _titulo_unidade(unid),
-                   "unidade_chave": chave, "nome": nome, "siape": siape})
+        reg = {"acao": k[0], "cargo": cargo, "unidade": _titulo_unidade(unid),
+               "unidade_chave": chave, "nome": nome, "siape": siape,
+               "prazo_meses": None, "data_inicio": "", "inicio_origem": ""}
+        if k[0] == "designar":
+            reg["prazo_meses"], reg["data_inicio"], reg["inicio_origem"] = \
+                extrai_mandato(trecho, m.start("cargo"), data_ato)
+        ev.append(reg)
     return ev
 
 
