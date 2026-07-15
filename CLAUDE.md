@@ -100,14 +100,20 @@ defasados. **Este arquivo manda neles.**
 
 ## Pendências
 
-- **Aposentadoria/deslocamento no v2 estão incompletos e provavelmente
-  inflados.** O ETL copiou as colunas do v1 para `ato_aposentadoria` /
-  `ato_deslocamento` sem reclassificar, e o v1 nunca recebeu as correções: falta
-  o backfill de 2001-2014, e 2015-2026 carrega ~11% de retificações contadas como
-  concessão nova. Os SQLs antigos em `../out/corrigir_*.sql` **são do v1 e não
-  rodam no v2** (escrevem em `atos`/`ato_corpo`, que não existem) — precisam ser
-  regerados no formato das tabelas-fato. Confira o estado real no phpMyAdmin
-  antes de agir.
+- **Aposentadoria 2001-2014 parece ter entrado sem o fix de retificação.**
+  `/api/analitico` em produção mostra **689 "Indefinida" em 2001-2014 e ~0 de
+  2015 em diante**. O classificador corrigido (o marcador "que" antes do verbo,
+  que separa retificação de concessão) produzia **zero** indefinidas nesse
+  período — então o bloco antigo provavelmente foi gerado por uma cópia do
+  extrator sem o fix. Confirme no phpMyAdmin antes de agir; se confirmado, o
+  conserto é regerar o bloco 2001-2014 com `repo/tools/extrair_boletim.py`.
+  ⚠️ Os SQLs em `../out/corrigir_*.sql` **são do v1 e não rodam aqui** (escrevem
+  em `atos`/`ato_corpo`, que não existem no v2) — ignore-os.
+- **Existem 3 cópias de `extrair_boletim.py`** (raiz de `portal-normas-uff/`,
+  `repo/tools/`, `_DEFASADO-app-fonte/`). A canônica é a de **`repo/tools/`**.
+  `import extrair_boletim` rodando de dentro de `portal-normas-uff/` pega a da
+  raiz, que é defasada — carregue por caminho explícito. É a suspeita mais
+  provável para o item acima.
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
