@@ -1008,8 +1008,26 @@ _MINUSC = {"de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", 
 
 _HIFEN_QUEBRA = r"[-\s]*"   # tolera "Pró-" no fim de linha + "reitor" na linha seguinte
 _PFX_CARGO = r"(?:Vice%s|Sub%s)?" % (_HIFEN_QUEBRA, _HIFEN_QUEBRA)
+# Cargos de direção/assessoramento. A lista é branca de propósito: o gatilho
+# aceita "cargo de X" sem o "de direção", então qualquer nome aqui também passa
+# a casar CARGO EFETIVO. Medido no corpus antes de mexer:
+#   Assessor[ae]     — 45 "cargo de direção de" + 14 "cargo de"; os 14 são
+#                      assessoria de verdade ("assessor de pesquisa do CES").
+#   Prefeito         — 4, o Prefeito Universitário. Corregedor[ae] — 2.
+#   Secretário-Geral — 5, só na forma hifenizada.
+# FICARAM DE FORA, e não é esquecimento:
+#   Secretário (solto) — 8 de direção contra 60 de "para o cargo de secretário
+#                      EXECUTIVO, por não apresentar documentação": isso é
+#                      eliminação em concurso, cargo efetivo. Entraria como 60
+#                      designações falsas.
+#   Procurador (solto) — "aposentado no cargo de procurador federal" é efetivo;
+#                      ganho de 3 não paga o risco.
+# Mesma lógica de professor/assistente/técnico, que também não entram: são o
+# emprego da pessoa, não posição de direção.
 _NUC_CARGO = (r"(?:Chefes?|Coordenador[ae]?(?:es)?|Diretor[ae]?(?:es)?|Superintendentes?|"
-              r"Gerentes?|Decan[oa]s?|Pr[óo]%sReitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)" % _HIFEN_QUEBRA)
+              r"Gerentes?|Decan[oa]s?|Assessor[ae]?(?:es)?|Prefeit[oa]s?|Corregedor[ae]?(?:es)?|"
+              r"Secret[áa]ri[oa]%sGeral|Pr[óo]%sReitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)"
+              % (_HIFEN_QUEBRA, _HIFEN_QUEBRA))
 _CARGO_G = r"(?P<cargo>%s%s)" % (_PFX_CARGO, _NUC_CARGO)
 _CONECT_CU = r"(?:d[oae]s?|d')"
 
@@ -1046,7 +1064,22 @@ FUNCAO_RE = re.compile(
 _TIPO_SO_UNID = {"curso", "departamento", "programa", "instituto", "faculdade", "escola",
                  "divisao", "secao", "setor", "nucleo", "coordenacao", "coordenadoria",
                  "diretoria", "gerencia", "reitoria", "unidade", "polo", "colegiado"}
-_VERBO_FUNC = re.compile(r"design|dispens|exoner|destitu")
+# "nomear/nomeia" é o par de ENTRADA dos cargos de direção (CD), como
+# "designar" é o das funções — e faltava aqui, embora "exoner" (a SAÍDA do CD)
+# já estivesse. A assimetria não era inofensiva: numa portaria que exonera um e
+# nomeia outro no mesmo texto (padrão comum), a janela achava só o "Exonerar"
+# anterior e o NOMEADO entrava como dispensado — erro invertido e silencioso.
+#
+# O (?!c) é o que separa VERBO de MENÇÃO, e não é detalhe: só o VERBO conta,
+# porque é ele o dispositivo. O substantivo "nomeação" aparece em oração
+# explicativa dando o MOTIVO de uma dispensa — "dispensar, em virtude de sua
+# nomeação para diretor do Centro..." — e como _acao_func fica com o ÚLTIMO
+# verbo da janela, casar o substantivo invertia 34 dispensas reais em
+# designações (medido). Mesma regra que já vale para aposentadoria: classifique
+# pelo dispositivo, não por menção. _fold() tira o acento, então "nomeação"
+# chega aqui como "nomeacao" — daí excluir o "c" seguinte, que deixa passar
+# nomear/nomeado/nomeada. "nomei" cobre a ementa ("Nomeia").
+_VERBO_FUNC = re.compile(r"design|nomea(?!c)|nomei|dispens|exoner|destitu")
 _SUBST_FUNC = re.compile(r"(?i)substitut|eventual|pro\s*tempore|respond|interin|exerc[íi]cio eventual")
 _ANAFORA_UNID = re.compile(r"\b(referid|mesm|respectiv|citad|aludid|supracitad|present|seguinte|propri)")
 
@@ -1260,7 +1293,7 @@ def _acao_func(trecho, pos, prep):
         last = mm.group(0)
     if last in ("dispens", "exoner", "destitu"):
         return "dispensar"
-    if last == "design":
+    if last in ("design", "nomea", "nomei"):
         return "designar"
     return "dispensar" if re.match(r"d[ao]s?$", _fold(prep).strip()) else "designar"
 
