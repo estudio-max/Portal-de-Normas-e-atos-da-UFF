@@ -97,6 +97,11 @@ portal.
 
 ## Regras do domínio que já custaram retrabalho
 
+O catálogo completo, com os números e os erros que já cometemos, está em
+[`docs/DOSSIE-INCONSISTENCIAS-BS.md`](docs/DOSSIE-INCONSISTENCIAS-BS.md) — é o
+guia para quem for extrair dados do BS, e traz a lista de sugestões à equipe que
+produz o Boletim. As regras abaixo são o resumo operacional.
+
 - **CEP ≠ CEPEx.** CEP é o Comitê de Ética em Pesquisa (3 instâncias), órgão
   totalmente diferente do CEPEx. Nunca mesclar.
 - **A identidade do boletim é o ARQUIVO, não o número impresso.** O arquivo
