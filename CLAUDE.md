@@ -97,10 +97,12 @@ portal.
 
 ## Regras do domínio que já custaram retrabalho
 
-O catálogo completo, com os números e os erros que já cometemos, está em
-[`docs/DOSSIE-INCONSISTENCIAS-BS.md`](docs/DOSSIE-INCONSISTENCIAS-BS.md) — é o
-guia para quem for extrair dados do BS, e traz a lista de sugestões à equipe que
-produz o Boletim. As regras abaixo são o resumo operacional.
+O catálogo completo está em [`docs/GUIA-EXTRACAO-BS.md`](docs/GUIA-EXTRACAO-BS.md)
+— a **linha do tempo do corpus** (o BS é vários formatos em sequência: o marcador
+de fim de ato nasce em 2002 com cinco `#`, vira seis em 2004; o SIGAEx aparece em
+2018; 2020 sai em Title Case), os números de cada armadilha, os erros que já
+cometemos e as sugestões à equipe que produz o Boletim. As regras abaixo são o
+resumo operacional.
 
 - **CEP ≠ CEPEx.** CEP é o Comitê de Ética em Pesquisa (3 instâncias), órgão
   totalmente diferente do CEPEx. Nunca mesclar.
