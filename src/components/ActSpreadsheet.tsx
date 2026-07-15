@@ -4,6 +4,7 @@ import {
   ChevronDown, ChevronUp, Link, Clipboard, HelpCircle, Eye, RefreshCw, AlertCircle, Sparkles
 } from 'lucide-react';
 import { UffAct, ActType, ActRelation } from '../types';
+import { buscaCasa } from '../dataSource';
 
 interface ActSpreadsheetProps {
   acts: UffAct[];
@@ -116,13 +117,13 @@ export default function ActSpreadsheet({
   const filteredAndSortedActs = useMemo(() => {
     return acts
       .filter(act => {
-        const matchesSearch = 
-          act.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          act.ementa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (act.processoSei && act.processoSei.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          act.orgaoEmissor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          act.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          act.conteudoResumido.toLowerCase().includes(searchTerm.toLowerCase());
+        // buscaCasa: mesma sintaxe da busca principal (dataSource.ts) --
+        // "frase exata" exige adjacência literal; palavra solta (com ou sem
+        // "+") é obrigatória. Um blob só, não OR de campo por campo, senão
+        // uma frase entre aspas que atravessa dois campos nunca casaria.
+        const blob = `${act.numero} ${act.ementa} ${act.processoSei || ''} `
+          + `${act.orgaoEmissor} ${act.tags.join(' ')} ${act.conteudoResumido}`;
+        const matchesSearch = buscaCasa(blob, searchTerm);
         
         const matchesType = filterType === 'todos' || act.tipoAto === filterType;
         const matchesOrgao = filterOrgao === 'todos' || act.orgaoEmissor === filterOrgao;

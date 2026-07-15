@@ -64,9 +64,30 @@ switch ($recurso) {
 }
 
 // ===========================================================================
+// Converte a busca do usuário para a sintaxe BOOLEAN MODE do MySQL.
+//   "frase exata"  -> vira UMA unidade obrigatória, casada como frase literal
+//                      adjacente (+"frase exata"), sem wildcard — é o que
+//                      diferencia de digitar as mesmas palavras soltas, que
+//                      casam em qualquer ordem/posição.
+//   +palavra / palavra -> as duas formas são obrigatórias (E lógico). O "+"
+//                      é aceito como sintaxe explícita mas não muda o
+//                      resultado: toda palavra solta já é obrigatória por
+//                      padrão (decisão: manter o comportamento de hoje pra
+//                      quem não usa nenhum operador, sem risco de regressão).
 function booleanize(string $s): string {
-    $tokens = preg_split('/\s+/', trim($s));
     $out = [];
+    // 1) frases entre aspas primeiro — extraídas ANTES do split por palavra,
+    // senão cada palavra da frase vira um token solto e a ordem/adjacência
+    // se perde (era exatamente esse o defeito: aspas eram só ignoradas).
+    $semAspas = preg_replace_callback('/"([^"]{1,})"/u', function ($m) use (&$out) {
+        $frase = trim(preg_replace('/[+\-><()~*@]/u', '', $m[1]));
+        if ($frase !== '') $out[] = '+"' . $frase . '"';
+        return ' ';
+    }, $s);
+    // 2) o que sobra fora das aspas: palavras soltas, cada uma obrigatória
+    // (o "+" de "+palavra" já é removido por esta regex, então produz o
+    // mesmo token que a palavra sem prefixo — mesmo resultado, de propósito).
+    $tokens = preg_split('/\s+/', trim($semAspas));
     foreach ($tokens as $t) {
         $t = preg_replace('/[+\-><()~*"@]/u', '', $t);
         if (mb_strlen($t) >= 3) $out[] = '+' . $t . '*';

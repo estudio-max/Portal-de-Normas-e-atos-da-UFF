@@ -61,15 +61,47 @@ export async function init(): Promise<'api' | 'estatico'> {
   return MODO;
 }
 
+// Sintaxe de busca aceita na caixa principal (espelha booleanize() do PHP —
+// os dois têm que concordar, senão modo API e modo estático dão resultados
+// diferentes pra mesma busca):
+//   "frase exata"  -> tem que aparecer como SUBSTRING LITERAL, adjacente, na
+//                      ordem digitada (é o que difere de digitar as mesmas
+//                      palavras soltas, que casam em qualquer ordem/posição).
+//   +palavra / palavra -> as duas formas são obrigatórias (E lógico). O "+"
+//                      é aceito como sintaxe explícita mas não muda o
+//                      resultado: toda palavra solta já é obrigatória por
+//                      padrão hoje, e assim continua.
+// Sem índice FULLTEXT no navegador (é um filtro em memória), então cada
+// palavra solta casa por SUBSTRING (equivalente ao "*" de sufixo do MySQL
+// boolean mode), não por token exato.
+export function buscaCasa(blob: string, busca: string): boolean {
+  const q = busca.trim();
+  if (!q) return true;
+  const b = blob.toLowerCase();
+  const frases: string[] = [];
+  const semAspas = q.replace(/"([^"]+)"/g, (_, f) => { frases.push(f.trim().toLowerCase()); return ' '; });
+  const frasesOk = frases.filter(f => f.length > 0);
+  const palavras = semAspas.split(/\s+/)
+    .map(t => t.replace(/[+\-><()~*"@]/g, ''))
+    .filter(t => t.length >= 3);
+  // nada sobrou (só palavras curtas, ex.: "ab", ou aspas vazias) -- mesmo
+  // fallback do PHP quando booleanize() devolve vazio: substring literal da
+  // busca crua, em vez de "não exige nada" (que casaria com qualquer ato).
+  if (!frasesOk.length && !palavras.length) return b.includes(q.toLowerCase());
+  for (const f of frasesOk) if (!b.includes(f)) return false;
+  for (const t of palavras) if (!b.includes(t.toLowerCase())) return false;
+  return true;
+}
+
 // ---------- modo ESTÁTICO (mesma lógica do mock/PHP, em TS) ----------------
 function filtraEstatico(p: ListaParams): UffAct[] {
-  const busca = (p.busca || '').toLowerCase().trim();
+  const busca = (p.busca || '').trim();
   const nome = (p.nome || '').toLowerCase().trim();
   const siape = (p.siape || '').replace(/\D/g, '');
   return CACHE.filter(a => {
     if (busca) {
-      const blob = `${a.numero} ${(a as any).identificador || ''} ${a.ementa} ${a.processoSei || ''} ${a.conteudoResumido || ''}`.toLowerCase();
-      if (!blob.includes(busca)) return false;
+      const blob = `${a.numero} ${(a as any).identificador || ''} ${a.ementa} ${a.processoSei || ''} ${a.conteudoResumido || ''}`;
+      if (!buscaCasa(blob, busca)) return false;
     }
     if (p.tipo && p.tipo !== 'todos' && a.tipoAto !== p.tipo) return false;
     if (p.orgao && p.orgao !== 'todos' && a.orgaoEmissor !== p.orgao) return false;

@@ -153,6 +153,35 @@ def tokens_busca(s):
     return [t for t in re.split(r"\s+", s.strip()) if len(re.sub(r"\W", "", t)) >= 2]
 
 
+# Espelha booleanize() do PHP e buscaCasa() do dataSource.ts -- os tres tem
+# que concordar. "frase exata" = substring literal adjacente; +palavra ou
+# palavra solta = obrigatoria (o "+" nao muda o resultado, so e' aceito).
+def busca_casa(blob, busca):
+    q = busca.strip()
+    if not q:
+        return True
+    b = blob.lower()
+    frases = []
+
+    def _tira_frase(m):
+        frases.append(m.group(1).strip().lower())
+        return " "
+
+    sem_aspas = re.sub(r'"([^"]+)"', _tira_frase, q)
+    frases_ok = [f for f in frases if f]
+    palavras = [re.sub(r'[+\-><()~*"@]', "", t) for t in re.split(r"\s+", sem_aspas.strip())]
+    palavras = [t for t in palavras if len(t) >= 3]
+    if not frases_ok and not palavras:
+        return q.lower() in b
+    for f in frases_ok:
+        if f not in b:
+            return False
+    for t in palavras:
+        if t.lower() not in b:
+            return False
+    return True
+
+
 def casa_nome(a, nome):
     n = nome.lower()
     return n in (a.get("textoBusca", "") or "") or n in a.get("ementa", "").lower() \
@@ -175,8 +204,8 @@ def filtrar(q):
         if busca:
             blob = " ".join([a.get("numero", ""), a.get("identificador", ""),
                              a.get("ementa", ""), a.get("processoSei", "") or "",
-                             a.get("conteudoResumido", "")]).lower()
-            if busca not in blob:
+                             a.get("conteudoResumido", "")])
+            if not busca_casa(blob, busca):
                 continue
         if tipo and tipo != "todos" and a.get("tipoAto") != tipo:
             continue
