@@ -819,11 +819,18 @@ export interface DossieRet {
 
 // Confere a senha do dossiê sem consultar ninguém — a tela de entrada usa isto.
 // Quem decide é o servidor: o front não tem (nem pode ter) a senha para comparar.
+// NÃO basta olhar r.ok: a API ANTIGA não conhece esta rota e cai no
+// `default: listar()` do roteador, devolvendo 200 com uma lista de atos. Só o
+// status faria o gate ABRIR com qualquer senha durante um deploy pela metade —
+// autenticação tem que falhar fechada. Por isso exige a forma exata {ok:true},
+// que só a rota nova produz.
 export async function conferirSenhaDossie(senha: string): Promise<boolean> {
   if (MODO !== 'api' || !senha) return false;
   try {
     const r = await fetch(`${API_BASE}/dossie_auth`, { headers: { 'X-Dossie-Token': senha } });
-    return r.ok;
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!j && j.ok === true;
   } catch { return false; }
 }
 
@@ -841,7 +848,12 @@ export async function getDossie(siape: string, nome: string, senha: string): Pro
     if (r.status === 401) return { motivo: 'senha', dados: null };
     if (!r.ok) return { motivo: 'falha', dados: null };
     const j = await r.json();
-    if (!j || !Array.isArray(j.atos)) return { motivo: 'falha', dados: null };  // API antiga, sem a rota
+    // `atos` não distingue: a resposta de listar() (para onde a API antiga
+    // manda esta rota) também tem `atos`. `pessoas` e `chave` só existem aqui —
+    // sem isso o painel aceitaria o payload errado e quebraria ao ler r.nomes.
+    if (!j || !Array.isArray(j.atos) || !Array.isArray(j.pessoas) || typeof j.chave !== 'string') {
+      return { motivo: 'falha', dados: null };   // API antiga: rota ainda não existe
+    }
     return { motivo: 'ok', dados: j as DossieResp };
   } catch { return { motivo: 'falha', dados: null }; }
 }
