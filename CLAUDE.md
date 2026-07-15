@@ -151,6 +151,25 @@ resumo operacional.
   não está em `pessoa`/`ato_pessoa` — está só no corpo, e só o FULLTEXT de
   `ato_texto` o alcança. Buscar pessoa sem siape em `pessoa` devolve zero,
   sempre.
+- **Um ato sem cabeçalho reconhecido depois dele "engole" o que vem a seguir**
+  até o próximo título real. Achado por dois caminhos: o Extrato de Instrumento
+  Convenial (557 atos) e as seções sem cabeçalho de ato próprio — "Resumo de
+  Despachos e Decisões", "Alteração de Carga Horária", "Auxílio Funeral"
+  (2.414 atos, 3,1% do corpus; caso-prova: a Portaria 64.814/2019 nomeia 9
+  servidores e a base lhe atribuía 22). `BOUNDARY_NAO_ATO_RE` corrige isso —
+  entradas nesse regex só servem de FRONTEIRA (cortam o ato anterior), nunca
+  viram ato próprio. **Ao adicionar um marcador novo, exija caixa alta pura,
+  sempre.** É o único motivo pelo qual uma citação real em Title Case
+  ("Autorizo o cancelamento dos efeitos do **Resumo de Despachos e
+  Decisões** n° 62/2012…", achado real de 2015) não vira um corte falso no meio
+  de um ato legítimo. Duas âncoras óbvias JÁ foram tentadas e reprovadas — não
+  repita: `# # # # # #` é peça estrutural (`TITULO_CURTO_RE` já o usa),
+  somá-lo à fronteira sumiu com 7 atos e truncou 10; o bloco "Assinado com
+  senha por" do SIGAEx é carimbo de rodapé de PÁGINA, não fim de documento, e
+  decapitou um ato de várias páginas. Regressão obrigatória antes de mexer
+  aqui de novo: `tools/teste_fronteira_ato.py`, e comparar extrator velho ×
+  novo sobre uma amostra ampla do corpus (`dados/boletins/`) — não confie só
+  no PDF que motivou a mudança.
 
 ## Documentos que NÃO são confiáveis
 
@@ -160,37 +179,31 @@ manda neles.**
 
 ## Pendências
 
-- **Ato engole a seção seguinte (2.414 atos, 3,1% do corpus).** Mesma classe do
-  bug do Extrato de Instrumento Convenial (que gerou o `BOUNDARY_NAO_ATO_RE`),
-  agora com as seções **sem cabeçalho de ato**: "Resumo de Despachos e Decisões",
-  "Alteração de Carga Horária", "Auxílio Funeral", "Autoriza o afastamento no
-  exterior". Caso-prova: a **Portaria 64.814/2019** (Comissão Interna de
-  Conservação de Energia) nomeia 9 servidores e a base lhe atribui **22** — os 13
-  extras só tiveram alteração de carga horária no mesmo boletim. Num dossiê que
-  instrui RSC isso é falso positivo: a pessoa parece ter estado numa comissão que
-  nunca integrou.
-
-  **Duas âncoras tentadas e reprovadas — não repita:**
-  - `# # # # # #` fecha cada item publicado e parece a solução óbvia, mas **já é
-    peça estrutural**: `TITULO_CURTO_RE` o usa como âncora. Somá-lo ao
-    `BOUNDARY_NAO_ATO_RE` fez **7 atos sumirem e 10 perderem todas as pessoas**
-    (a DTS TCC 05/2013 caiu de 26 para 0), por sobreposição com os títulos.
-  - "Assinado com senha por" (bloco SIGAEx) é **carimbo de rodapé de PÁGINA**,
-    não fim de documento: na Portaria 68.651/2023 ele aparece depois de "Art. 3º.
-    Servidores designados para a Comissão:" e a lista continua na página
-    seguinte — cortar ali decapitou o ato (10 pessoas → 0). O `Documento Nº` do
-    carimbo também não serve: não sai em todas as páginas.
-
-  Medido na melhor variante (só SIGAEx): 0 atos perdidos, −40 pessoas de lixo,
-  mas ainda 2 atos truncados. Falta a âncora certa.
-
 - **Reprocessamento pendente do extrator.** `tools/extrair_boletim.py` já captura
   cargo de direção/assessoramento (Assessor, Prefeito, Corregedor,
-  Secretário-Geral) e o verbo `nomear` — mas **os dados importados não mudaram**.
-  A Action diária aplica isso só aos boletins novos; o histórico (ex.: a
-  nomeação de Assessor de 2022, que não aparece no Dossiê) só entra com
-  **reprocessamento + reimport**. Medido: +106 funções, 0 perdas. Este lote soma
-  aos fixes de captura anteriores que também esperam a mesma rodada.
+  Secretário-Geral), o verbo `nomear`, e não deixa mais um ato engolir a seção
+  seguinte (ver abaixo) — mas **os dados importados não mudaram**. A Action
+  diária aplica isso só aos boletins novos; o histórico (ex.: a nomeação de
+  Assessor de 2022, que não aparece no Dossiê) só entra com **reprocessamento +
+  reimport**. Este lote soma aos fixes de captura anteriores que também esperam
+  a mesma rodada.
+
+- **RDD individual não vira ato próprio (lacuna, não regressão).** O fix de
+  fronteira (abaixo) impede que um ato absorva a "Resumo de Despachos e
+  Decisões" que vem depois — mas cada decisão INDIVIDUAL dentro dessa seção
+  (uma por interessado, repetida várias vezes no boletim) ainda não vira seu
+  próprio ato: ela só deixa de contaminar o anterior. Medido: a DTS PROEX
+  Nº 06/2005 tinha 24.600 caracteres — 11 decisões de terceiros coladas nela;
+  agora ela para na primeira, e as outras 10 pessoas ficam sem registro. É
+  melhoria líquida (elas nunca foram capturadas certo antes também — só mal
+  atribuídas), mas não é o fim da história. `RDD` já está em `TIPOS` e
+  `canon_tipo()` — falta estender `TITULO_CURTO_RE` para reconhecer o formato
+  curto (sem data por extenso, `Nº ###/AAAA` bare), como já faz para
+  DECISÃO/RESOLUÇÃO. Não é trivial: o número aparece em pelo menos 3 formatos
+  (2005: cabeçalho+órgão+`PROCESSO:`+"RDD Nº X"; 2019: cabeçalho+`Nº X/AAAA`
+  direto ou inline com órgão; 2023: cabeçalho+`Nº X, de DD de MÊS de AAAA`, já
+  capturado por `TITULO_RE`). Cada formato precisa da mesma medição rigorosa
+  que o resto deste arquivo documenta.
 
 - **Aposentadoria 2001-2014 parece ter entrado sem o fix de retificação.**
   `/api/analitico` em produção mostra **689 "Indefinida" em 2001-2014 e ~0 de

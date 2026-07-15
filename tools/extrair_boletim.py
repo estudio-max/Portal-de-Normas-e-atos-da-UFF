@@ -151,10 +151,39 @@ TITULO_CURTO_RE = re.compile(
 # 557 atos afetados no corpus, 91% só de "Extrato de Instrumento Convenial").
 # Só serve de FRONTEIRA (corta o corpo do ato anterior aqui); não vira ato
 # próprio — ver uso de BOUNDARY_NAO_ATO_RE em parse_pdf().
+#
+# 15/07/2026: mesma classe de bug, achada por outro caminho — seções sem
+# cabeçalho de ato próprio ("Resumo de Despachos e Decisões", "Alteração de
+# Carga Horária", "Auxílio Funeral") ficavam penduradas no ato anterior. Caso-
+# prova: a Portaria 64.814/2019 (Comissão Interna de Conservação de Energia)
+# nomeia 9 servidores; o extrator lhe atribuía 22 — os 13 extras eram só
+# alterações de carga horária publicadas na sequência do mesmo boletim.
+# Medido nos 78.994 atos do corpus: 2.414 atos (3,1%) engolem uma dessas
+# seções. "RESUMO DE DESPACHOS E DECISÕES" sozinho cobre 2.343 (97,1%).
+#
+# SÓ este marcador entrou. "AUXÍLIO FUNERAL" e "ALTERAÇÃO DE CARGA HORÁRIA"
+# foram cogitados e DESCARTADOS — ver docs/GUIA-EXTRACAO-BS.md:
+#   - "Auxílio Funeral" às vezes imprime como "Assunto: Auxílio Funeral."
+#     (Title Case, não caixa alta), então só pega com match
+#     case-insensitive — e caiu junto lixo: "com alteração de carga
+#     horária" aparece dentro do dispositivo de atos REAIS (DTS 16/2024,
+#     sobre mudança de regime de trabalho), então case-insensitive teria
+#     decapitado atos legítimos por 2 casos a mais só.
+#   - A prova que fechou a decisão: um ato real de 2015 cita "Autorizo o
+#     cancelamento dos efeitos do Resumo de Despachos e Decisões n°
+#     62/2012" em Title Case, como referência — não como cabeçalho. Se o
+#     match fosse case-insensitive, esse ato teria sido cortado ali.
+#
+# Por isso o match é SEMPRE case-sensitive, igual às fronteiras acima:
+# "RESUMO DE DESPACHOS E DECISÕES" imprime em caixa alta pura como título de
+# seção (confirmado em amostra de 9 anos, 2005-2026, 248 ocorrências, 1 única
+# exceção — a citação Title Case acima, que o case-sensitive já rejeita
+# corretamente). Citação em prosa normal não sai em caixa alta.
 BOUNDARY_NAO_ATO_RE = re.compile(
     r"(?P<tipo>EXTRATO DE INSTRUMENTO CONVENIAL|EXTRATO DE CONTRATO|EXTRATO DE TERMO ADITIVO"
     r"|EXTRATO DE CONV[ÊE]NIO|TERMO DE HOMOLOGA[ÇC][ÃA]O|TERMO DE ADES[ÃA]O"
-    r"|ATA DE REGISTRO DE PRE[ÇC]OS)"
+    r"|ATA DE REGISTRO DE PRE[ÇC]OS"
+    r"|RESUMO DE DESPACHOS E DECIS[ÕO]ES)"
 )
 
 # Processo SEI: 23069.166342/2026-40  (aceita espaços no lugar de . / -)

@@ -137,9 +137,9 @@ análise posterior conserta.
 ### O ato engole a seção seguinte
 
 O BS publica, além dos atos, seções **sem cabeçalho de ato**: "Resumo de Despachos
-e Decisões", "Alteração de Carga Horária", "Auxílio Funeral", "Autoriza o
-afastamento no exterior". Quem corta o texto no "próximo cabeçalho reconhecido" faz
-o último ato antes dessas seções engolir todas elas.
+e Decisões", "Alteração de Carga Horária", "Auxílio Funeral". Quem corta o texto no
+"próximo cabeçalho reconhecido" faz o último ato antes dessas seções engolir todas
+elas.
 
 **Medido: 2.414 atos, 3,1% do corpus.**
 
@@ -154,30 +154,27 @@ meses" que pertencia a um Extrato de Instrumento Convenial publicado logo depois
 
 **O que funciona:** manter uma lista de *fronteiras que não são atos* — cabeçalhos
 de documentos que não viram registro próprio, mas marcam que o ato anterior
-terminou ali. É aditivo e barato.
+terminou ali. É aditivo e barato, e foi o que resolveu os dois casos.
 
 **O que não funciona:** supor que todo documento do BS comece com algo que pareça o
 título de um ato.
 
-### O marcador `# # # # # #` não fecha tudo, e não é sobra
+### Duas âncoras óbvias, e as duas falharam
 
-O marcador separa itens depois da assinatura, e é tentador usá-lo como fronteira.
-Duas ressalvas, ambas medidas:
+O primeiro instinto é usar algo que já aparece logo depois da assinatura como
+fronteira. Duas tentativas, cada uma medida contra o corpus inteiro antes de ser
+descartada:
 
-**Ele não fecha os atos assinados digitalmente.** Esses terminam no carimbo do
-SIGAEx, não no `#`.
-
-**Ele pode já estar sendo usado para outra coisa.** No nosso extrator, ele era a
-âncora que permitia reconhecer títulos curtos sem data — *"DECISÃO N.º 026/2012"*,
-*"RESOLUÇÃO 18/2002"*, comuns nos colegiados antigos, que não trazem data por
-extenso na mesma linha. Transformá-lo *também* em fronteira, ingenuamente, fez **7
+**O marcador `# # # # # #`.** Parece perfeito — separa itens depois da assinatura.
+Mas ele **já era peça estrutural**: era a âncora que permitia reconhecer títulos
+curtos sem data (*"DECISÃO N.º 026/2012"*, *"RESOLUÇÃO 18/2002"*, comuns nos
+colegiados antigos). Transformá-lo *também* em fronteira, ingenuamente, fez **7
 atos sumirem e 10 perderem todas as pessoas** (uma DTS caiu de 26 pessoas para
-zero). Um ato desaparece quando a fronteira cai logo depois do título: o corpo fica
-vazio e ele é descartado.
+zero) — por sobreposição com os próprios títulos que ele ajudava a ancorar. E ele
+também **não fecha os atos assinados digitalmente**, que terminam noutro bloco.
 
-### O bloco do SIGAEx é rodapé de página, não fim de documento
-
-Atos assinados digitalmente (de 2018 em diante) terminam assim:
+**O bloco de assinatura digital do SIGAEx.** Atos assinados digitalmente (de 2018
+em diante) terminam assim:
 
 ```
 Classif. documental 011.1
@@ -188,11 +185,71 @@ Documento Nº: 20918-1060 - consulta à autenticidade em https://app.uff.br/siga
 Parece um fim de ato perfeito. **Não é.** É um carimbo estampado **por página**. Na
 Portaria 68.651/2023 ele aparece logo depois de *"Art. 3º. Servidores designados
 para a Comissão:"*, e a lista dos 10 servidores continua na página seguinte. Cortar
-ali decapita o ato: aquele foi de 10 pessoas para zero.
+ali decapita o ato: aquele foi de 10 pessoas para zero. O `Documento Nº` do carimbo
+parecia salvar a ideia — páginas do mesmo documento compartilhariam o número — mas
+ele **não sai em todas as páginas**: a página que contém a Portaria 64.814 não tem
+`Documento Nº` nenhum.
 
-O `Documento Nº` do carimbo parecia salvar a ideia — páginas do mesmo documento
-compartilhariam o número — mas ele **não sai em todas as páginas**: a página que
-contém a Portaria 64.814 não tem `Documento Nº` nenhum.
+### A âncora que funcionou: o próprio título da seção
+
+A solução não foi um marcador de fechamento — foi o **cabeçalho da seção
+seguinte**. "RESUMO DE DESPACHOS E DECISÕES" imprime em caixa alta pura, sempre,
+como título de categoria — e cobre **97,1%** dos 2.414 casos sozinho (2.343 de
+2.414). Adicioná-lo à mesma lista de "fronteiras que não são atos" resolveu o
+problema sem precisar tocar em nenhum outro mecanismo.
+
+**O match tem que ser obrigatoriamente sensível à caixa — nunca `re.I`.** Essa não
+é uma escolha estética: um ato real de 2015 **cita** um despacho anterior em prosa
+normal, Title Case: *"Autorizo o cancelamento dos efeitos do Resumo de Despachos e
+Decisões n° 62/2012, no que se refere à situação funcional…"*. Se o match aceitasse
+qualquer caixa, esse ato real teria sido cortado no meio da própria frase. A caixa
+alta pura é o que separa **cabeçalho de seção** (sempre em maiúsculas) de
+**citação em prosa** (nunca é) — e vale para qualquer marcador novo que se pense em
+acrescentar aqui.
+
+Duas outras candidatas óbvias foram cogitadas e **descartadas**, cada uma por ter
+um caso real onde apareceria dentro do dispositivo de um ato legítimo:
+
+- **"Auxílio Funeral"** às vezes imprime como *"Assunto: Auxílio Funeral."* — Title
+  Case, não caixa alta — então só entraria com match insensível à caixa.
+- **"Alteração de Carga Horária"** aparece dentro do dispositivo de atos reais
+  (uma DTS de 2024 sobre mudança de regime de trabalho a menciona legitimamente).
+  Insensível à caixa, teria cortado esse ato no meio.
+
+O ganho de incluir as duas seria pequeno (poucos casos que "RESUMO DE DESPACHOS"
+sozinho não cobre); o risco de decapitar um ato real, não.
+
+### A lacuna que sobra: cada despacho individual ainda não vira ato próprio
+
+A seção "Resumo de Despachos e Decisões" não é um bloco único — é **uma decisão
+por interessado**, cada uma com seu próprio número, repetida várias vezes seguidas
+no boletim. A fronteira corrige a contaminação do ato anterior, mas **não** cria um
+registro para cada despacho individual: eles simplesmente deixam de ser
+capturados, em vez de serem mal-capturados.
+
+Medido: a **DTS PROEX Nº 06/2005** tinha **24.600 caracteres** de corpo — 11
+decisões de "Alteração de Nome" de pessoas totalmente alheias, coladas nela uma
+atrás da outra. Com a fronteira, ela para na primeira ("RESUMO DE DESPACHOS…"), e
+as outras 10 pessoas ficam sem nenhum registro — antes, todas as 11 apareciam
+(erradas) como se fossem da DTS PROEX. É melhoria líquida: nenhuma dessas pessoas
+estava corretamente atribuída antes também, só que agora, em vez de errada, a
+informação simplesmente não existe.
+
+Resolver isso por completo significa fazer cada despacho virar seu próprio ato —
+`RDD` já está na lista de tipos reconhecidos, só falta o mecanismo de título curto
+(sem data por extenso) reconhecê-lo, do mesmo jeito que já reconhece DECISÃO e
+RESOLUÇÃO. Não é uma extensão trivial: o número do despacho individual aparece em
+formatos diferentes conforme o ano —
+
+- **2005**: cabeçalho, depois órgão, depois `PROCESSO:`, só então "RDD Nº 06/2005".
+- **2019**: cabeçalho seguido direto de "Nº 242/2019", ou cabeçalho com o órgão
+  colado antes do número ("…DECISÕES CCPP/DAP Nº 274/2019").
+- **2023+**: cabeçalho com número **e** data por extenso ("Nº 91, de 16 de
+  novembro de 2023") — esse formato já é capturado pelo título completo, sem
+  precisar de título curto.
+
+Cada formato pede a mesma medição rigorosa que resolveu o problema da fronteira —
+fica para outra rodada.
 
 ### A identidade do boletim é o ARQUIVO, não o número impresso
 
@@ -440,6 +497,14 @@ pessoas.**
 **Confiar no bloco de assinatura digital como fim de ato.** É rodapé de página.
 Decapitou um ato de várias páginas: 10 membros viraram zero.
 
+**Achar que um marcador de fronteira precisa "fechar" o ato anterior.** As duas
+tentativas acima partiam da mesma premissa — procurar algo que apareça *depois* da
+assinatura. A solução real era o **cabeçalho da próxima coisa**: usar o início da
+seção seguinte como fronteira, não o fim da anterior. E o motivo de funcionar sem
+risco (caixa alta pura, sempre) só apareceu por acaso: um ato de 2015 citando um
+despacho anterior em Title Case, que teria sido cortado se o match aceitasse
+qualquer caixa.
+
 **Comparar um build local com outro build local achando que era produção.** Numa
 publicação do site, concluímos que o CSS "não tinha mudado" comparando dois builds
 feitos com minutos de diferença — e o arquivo no servidor tinha outro nome. O site
@@ -532,11 +597,14 @@ Se apenas o item 1 for possível, os outros sete deixam de importar.
 1. Amostre o corpus **por ano**, de ponta a ponta, antes de escrever a primeira
    regra. O BS é vários formatos em sequência, não um.
 2. Resolva a **fronteira do ato** primeiro. Todo o resto contamina a partir dela.
+   A âncora que funciona é o **cabeçalho do que vem depois**, não algo que
+   precise "fechar" o ato atual — e ela só é segura em caixa alta pura.
 3. Trate **menção** e **dispositivo** como coisas diferentes, sempre.
 4. Normalize o SIAPE tirando zeros à esquerda; guarde o nome **por ato**.
 5. Assuma que a busca por matrícula é **incompleta**, e diga isso a quem consulta.
-6. Meça antes de acrescentar; rode velho × novo depois. A intuição erra, e o corpus
-   responde.
+6. Meça antes de acrescentar; rode velho × novo depois **sobre uma amostra ampla
+   do corpus, não só o caso que motivou a mudança**. A intuição erra, o primeiro
+   PDF de teste engana, e só o corpus inteiro responde.
 
 ---
 
