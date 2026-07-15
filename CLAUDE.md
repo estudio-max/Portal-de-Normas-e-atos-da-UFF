@@ -153,6 +153,30 @@ manda neles.**
 
 ## Pendências
 
+- **Ato engole a seção seguinte (2.414 atos, 3,1% do corpus).** Mesma classe do
+  bug do Extrato de Instrumento Convenial (que gerou o `BOUNDARY_NAO_ATO_RE`),
+  agora com as seções **sem cabeçalho de ato**: "Resumo de Despachos e Decisões",
+  "Alteração de Carga Horária", "Auxílio Funeral", "Autoriza o afastamento no
+  exterior". Caso-prova: a **Portaria 64.814/2019** (Comissão Interna de
+  Conservação de Energia) nomeia 9 servidores e a base lhe atribui **22** — os 13
+  extras só tiveram alteração de carga horária no mesmo boletim. Num dossiê que
+  instrui RSC isso é falso positivo: a pessoa parece ter estado numa comissão que
+  nunca integrou.
+
+  **Duas âncoras tentadas e reprovadas — não repita:**
+  - `# # # # # #` fecha cada item publicado e parece a solução óbvia, mas **já é
+    peça estrutural**: `TITULO_CURTO_RE` o usa como âncora. Somá-lo ao
+    `BOUNDARY_NAO_ATO_RE` fez **7 atos sumirem e 10 perderem todas as pessoas**
+    (a DTS TCC 05/2013 caiu de 26 para 0), por sobreposição com os títulos.
+  - "Assinado com senha por" (bloco SIGAEx) é **carimbo de rodapé de PÁGINA**,
+    não fim de documento: na Portaria 68.651/2023 ele aparece depois de "Art. 3º.
+    Servidores designados para a Comissão:" e a lista continua na página
+    seguinte — cortar ali decapitou o ato (10 pessoas → 0). O `Documento Nº` do
+    carimbo também não serve: não sai em todas as páginas.
+
+  Medido na melhor variante (só SIGAEx): 0 atos perdidos, −40 pessoas de lixo,
+  mas ainda 2 atos truncados. Falta a âncora certa.
+
 - **Reprocessamento pendente do extrator.** `tools/extrair_boletim.py` já captura
   cargo de direção/assessoramento (Assessor, Prefeito, Corregedor,
   Secretário-Geral) e o verbo `nomear` — mas **os dados importados não mudaram**.
