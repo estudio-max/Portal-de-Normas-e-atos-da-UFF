@@ -25,6 +25,18 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
   const uniqueOrgaos = stats?.orgaos ?? new Set(acts.map(a => a.orgaoEmissor)).size;
   const withSei = stats?.comSei ?? acts.filter(a => a.processoSei).length;
 
+  const TABS: { id: string; key: string; emoji?: string; icon?: React.ReactNode; label: string }[] = [
+    { id: 'tab-planilha', key: 'planilha', emoji: '📊', label: 'Planilha e Cadastro de Atos' },
+    { id: 'tab-relacoes', key: 'relacoes', emoji: '🕸️', label: 'Mapa de Relações e Impacto' },
+    { id: 'tab-chefias', key: 'chefias', emoji: '👥', label: 'Chefias da UFF' },
+    { id: 'tab-mandatos', key: 'mandatos', emoji: '⏳', label: 'Mandatos' },
+    { id: 'tab-prazos', key: 'prazos', emoji: '📅', label: 'Prazos' },
+    { id: 'tab-insights', key: 'insights', emoji: '📈', label: 'Insights' },
+    { id: 'tab-ia-parser', key: 'ia-parser', emoji: '🧠', label: apiMode ? 'Analisar Ato (texto)' : 'Assistente IA de Indexação' },
+    { id: 'tab-ajuda', key: 'ajuda', emoji: '❓', label: 'Ajuda' },
+    { id: 'tab-privacidade', key: 'privacidade', icon: <ShieldCheck className="w-4 h-4" />, label: 'Privacidade' },
+  ];
+
   return (
     <header id="portal-header" className="bg-[#003366] text-white border-b border-blue-900 shadow-sm">
       {/* Upper Navigation & Branding Bar */}
@@ -168,115 +180,39 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
           </div>
         )}
 
-        {/* Tab Selection Navigation */}
-        <div className="flex border-b border-blue-950/60 mt-4 gap-1 overflow-x-auto scrollbar-none">
-          <button
-            id="tab-planilha"
-            onClick={() => setActiveTab('planilha')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'planilha' 
-                ? 'text-yellow-400 border-yellow-400' 
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            📊 Planilha e Cadastro de Atos
-          </button>
-          
-          <button
-            id="tab-relacoes"
-            onClick={() => setActiveTab('relacoes')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'relacoes'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            🕸️ Mapa de Relações e Impacto
-          </button>
-
-          <button
-            id="tab-chefias"
-            onClick={() => setActiveTab('chefias')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'chefias'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            👥 Chefias da UFF
-          </button>
-
-          <button
-            id="tab-mandatos"
-            onClick={() => setActiveTab('mandatos')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'mandatos'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            ⏳ Mandatos
-          </button>
-
-          <button
-            id="tab-prazos"
-            onClick={() => setActiveTab('prazos')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'prazos'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            📅 Prazos
-          </button>
-
-          <button
-            id="tab-insights"
-            onClick={() => setActiveTab('insights')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'insights'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            📈 Insights
-          </button>
-
-          <button
-            id="tab-ia-parser"
-            onClick={() => setActiveTab('ia-parser')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'ia-parser'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            🧠 {apiMode ? 'Analisar Ato (texto)' : 'Assistente IA de Indexação'}
-          </button>
-
-          <button
-            id="tab-ajuda"
-            onClick={() => setActiveTab('ajuda')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'ajuda'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            ❓ Ajuda
-          </button>
-
-          <button
-            id="tab-privacidade"
-            onClick={() => setActiveTab('privacidade')}
-            className={`px-3 py-2 font-bold text-xs uppercase tracking-wider transition-all relative border-b-2 whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-              activeTab === 'privacidade'
-                ? 'text-yellow-400 border-yellow-400'
-                : 'text-blue-200 border-transparent hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" /> Privacidade
-          </button>
+        {/* Navegação por abas. Aparência de aba de verdade (ativa em primeiro
+            plano/branca, inativas recuadas) em vez do sublinhado fino de
+            antes — e calibrada para quem tem 50+ anos: fonte maior, SEM caixa
+            alta (letras minúsculas misturadas se leem mais rápido que
+            MAIÚSCULO CONTÍNUO, que força o olho a reconhecer letra por letra
+            em vez da forma da palavra), alvo de toque de ~48px (referência de
+            acessibilidade é 44px), e quebra de linha em vez de rolagem
+            horizontal escondida — rolar a navegação lateralmente é um gesto
+            que nem todo usuário sabe que existe; melhor mostrar tudo. */}
+        <div className="flex flex-wrap gap-2 mt-5" role="tablist">
+          {TABS.map(t => {
+            const ativa = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                id={t.id}
+                role="tab"
+                aria-selected={ativa}
+                onClick={() => setActiveTab(t.key)}
+                className={`relative flex items-center gap-2 px-4 py-3.5 rounded-t-lg text-sm font-bold whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                  ativa
+                    ? 'bg-white text-[#003366] shadow-[0_-4px_10px_rgba(0,0,0,0.18)] z-10'
+                    : 'bg-blue-950/40 text-blue-100 hover:bg-blue-900/60 hover:text-white'
+                }`}
+              >
+                {/* faixa de cor no topo da aba ativa: reforça "selecionado"
+                    sem depender só da cor de fundo (contraste/daltonismo) */}
+                {ativa && <span className="absolute top-0 left-0 right-0 h-[3px] bg-yellow-400 rounded-t-lg" />}
+                {t.icon ?? <span aria-hidden>{t.emoji}</span>}
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </header>
