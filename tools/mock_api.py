@@ -288,14 +288,129 @@ def filtros_payload():
             "anos": sorted({a.get("ano") for a in ATOS if a.get("ano")}, reverse=True)}
 
 
+# ---- /dossie: atos que citam um SIAPE --------------------------------------
+# Espelha dossie() do index_v2.php. A chave é o SIAPE SEM zeros à esquerda: o
+# corpus traz o mesmo servidor como '0307221' e '307221', e sem normalizar o
+# dossiê sai pela metade. Aqui é lstrip('0'); no PHP, TRIM(LEADING '0' FROM ...)
+# — não LPAD, que trunca no MySQL e fundiria matrículas diferentes.
+def _dossie_ato(a):
+    bs = re.search(r"(\d{1,3})\s*/\s*(\d{4})", a.get("boletimNumero") or "")
+    return {"id": a.get("id"), "tipo": a.get("tipoAto"), "numero": a.get("numero", ""),
+            "ano": a.get("ano"), "sigla": a.get("orgaoEmissor", ""),
+            "dataAto": a.get("dataAssinatura"), "ementa": a.get("ementa", ""),
+            "status": a.get("status", "Ativo"), "secao": a.get("secao") or "",
+            "pagina": str(a.get("pagina") or ""),
+            "bsNumero": int(bs.group(1)) if bs else None,
+            "bsAno": int(bs.group(2)) if bs else None,
+            "linkBoletim": a.get("linkBoletim")}
+
+
+def dossie_payload(siape, nome):
+    chave = re.sub(r"\D", "", siape).lstrip("0")
+    if not chave:
+        return {"erro": "siape ausente"}, 400
+
+    def norm(s):
+        return (s or "").strip().lstrip("0")
+
+    pessoas, atos, funcoes = {}, [], []
+    for a in ATOS:
+        casou = False
+        for p in (a.get("pessoas") or []):
+            if norm(p.get("siape")) == chave:
+                # Reproduz pessoa_id() do importar_v2.php: a dimensão pessoa é
+                # chaveada por "s:<siape exato>", e pessoa.siape é UNIQUE. Logo
+                # cada GRAFIA do siape ('0307221' vs '307221') é UMA linha, com
+                # UM nome — o primeiro que apareceu. Sem isso o mock inventaria
+                # uma linha por grafia de nome, que produção não tem.
+                s = (p.get("siape") or "").strip()
+                pessoas.setdefault(s, p.get("nome") or "")
+                casou = True
+        for f in (a.get("funcoes") or []):
+            if norm(f.get("siape")) == chave:
+                funcoes.append({
+                    "acao": f.get("acao"), "cargo": f.get("cargo") or "",
+                    "unidade": f.get("unidade") or "", "prazoMeses": f.get("prazo_meses"),
+                    "dataInicio": f.get("data_inicio"), "inicioOrigem": f.get("inicio_origem"),
+                    "atoId": a.get("id"),
+                    "atoLabel": f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
+                    "sigla": a.get("orgaoEmissor", ""), "dataAto": a.get("dataAssinatura"),
+                    "status": a.get("status", "Ativo"), "linkBoletim": a.get("linkBoletim")})
+        if casou:
+            atos.append(_dossie_ato(a))
+
+    atos.sort(key=lambda x: (x["dataAto"] or ""), reverse=True)
+    funcoes.sort(key=lambda x: (x["dataAto"] or ""), reverse=True)
+    lst = [{"siape": s, "nome": n} for s, n in pessoas.items()]
+
+    # Nomes para exibir, deduplicados SEM acento/caixa — espelha o mesmo bloco
+    # em dossie() do index_v2.php (nome_ascii). "João Marcel" e "Joao Marcel"
+    # são a mesma pessoa; contá-los como dois faria o aviso de nome divergente
+    # disparar pra quase todo mundo e virar ruído. Fica a variante com acento.
+    import unicodedata
+
+    def _ascii(s):
+        return "".join(c for c in unicodedata.normalize("NFD", s or "")
+                       if unicodedata.category(c) != "Mn")
+
+    por_chave = {}
+    for p in lst:
+        n = (p["nome"] or "").strip()
+        if not n:
+            continue
+        k = re.sub(r"\s+", " ", _ascii(n).lower().strip())
+        if k not in por_chave or len(n.encode()) > len(_ascii(n)):
+            por_chave[k] = n
+    nomes = list(por_chave.values())
+
+    # Recall por nome: FULLTEXT no CORPO do ato, via casa_nome() — o mesmo
+    # caminho do filtro `nome` de listar(). Não adianta procurar em pessoa: o
+    # extrator só cria pessoa quando acha um siape, então quem não tem matrícula
+    # no ato existe só no texto. Exclui os atos já achados pelo siape.
+    por_nome = None
+    nome = (nome or "").strip()
+    if len(nome) >= 4:
+        ja = {a["id"] for a in atos}
+        vistos = [_dossie_ato(a) for a in ATOS
+                  if a.get("id") not in ja and casa_nome(a, nome)]
+        vistos.sort(key=lambda x: (x["dataAto"] or ""), reverse=True)
+        por_nome = {"termo": nome, "total": len(vistos), "atos": vistos[:300]}
+
+    return {"siape": re.sub(r"\D", "", siape), "chave": chave, "pessoas": lst,
+            "nomes": nomes, "nomesDistintos": len(nomes),
+            "linhasPessoa": len(lst), "totalAtos": len(atos),
+            "funcoes": funcoes, "atos": atos, "porNome": por_nome}, 200
+
+
+# Senha do dossiê no mock (espelha dossie_autorizado() do index_v2.php, que lê
+# 'dossie_token' do config.php). Falha fechado igual: sem DOSSIE_TOKEN no
+# ambiente, a rota responde 401 — para o dev testar o gate, não contorná-lo.
+DOSSIE_TOKEN = os.environ.get("DOSSIE_TOKEN", "")
+
+
 class H(BaseHTTPRequestHandler):
+    def _autorizado(self):
+        veio = self.headers.get("X-Dossie-Token") or ""
+        return bool(DOSSIE_TOKEN) and veio == DOSSIE_TOKEN
+
     def _send(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "X-Dossie-Token")
         self.end_headers()
         self.wfile.write(body)
+
+    # O front manda X-Dossie-Token, que é cabeçalho não-simples: o navegador faz
+    # preflight antes. Sem responder ao OPTIONS, o fetch morre no CORS e a aba
+    # parece quebrada. Em produção não há preflight (mesma origem).
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "X-Dossie-Token")
+        self.end_headers()
 
     def log_message(self, *a):
         pass
@@ -317,6 +432,15 @@ class H(BaseHTTPRequestHandler):
             self._mandatos()
         elif recurso == "filtros":
             self._send(filtros_payload())
+        elif recurso == "dossie_auth":
+            self._send({"ok": True} if self._autorizado() else {"erro": "nao_autorizado"},
+                       200 if self._autorizado() else 401)
+        elif recurso == "dossie":
+            if not self._autorizado():
+                self._send({"erro": "nao_autorizado"}, 401)
+                return
+            obj, code = dossie_payload(q.get("siape", [""])[0], q.get("nome", [""])[0])
+            self._send(obj, code)
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)

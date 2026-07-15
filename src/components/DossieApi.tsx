@@ -1,0 +1,498 @@
+import React, { useEffect, useState } from 'react';
+import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch, Lock, LogOut } from 'lucide-react';
+import * as ds from '../dataSource';
+
+// Aba "Dossiê do servidor": digite o SIAPE, receba os atos do Boletim que citam
+// aquela matrícula, com a referência do BS — para instruir processo.
+//
+// Restrita à Gestão de Pessoal, por senha. É a única aba fechada do portal, e a
+// razão é o que ela faz: as outras devolvem atos avulsos (públicos por
+// natureza), esta reúne a vida funcional de uma pessoa num lugar só. Quem
+// RECUSA é o PHP (ver dossie_autorizado() no index_v2.php) — a tela abaixo é
+// só a porta. Se a checagem vivesse aqui, /api/dossie continuaria aberto a quem
+// digitasse a URL, e a senha estaria no bundle. O gate de verdade é o do
+// servidor; este é o conforto de não mostrar a ferramenta a quem não pode usar.
+//
+// Por que esta aba existe: o Decreto 13.048/2026 (RSC do PCCTAE) pontua, no
+// Anexo I, participação em comissões, comitês, grupos de trabalho e núcleos; no
+// IV, designação para responsabilidade técnico-administrativa; no V, exercício
+// de CD/FG. Para pleitear, o servidor precisa achar os atos e dizer em que
+// boletim saíram. Achar isso lendo 25 anos de PDF é inviável.
+//
+// O que a aba afirma e o que NÃO afirma: ela afirma que EXISTE um ato publicado
+// que cita esta matrícula, e diz onde ele está. Só isso. Ela NÃO afirma que a
+// pessoa participou (ato_pessoa é menção — numa banca de progressão o avaliado
+// também é citado), NÃO afirma que a lista é completa (30–70% dos atos não
+// trazem SIAPE nenhum) e NÃO pontua: quem apura o Anexo I é a CRSC-PCCTAE. Se o
+// portal apurasse e subnotificasse, o servidor perderia ponto por erro nosso.
+// Assistiva, como Prazos e Mandatos: sempre confira o ato.
+
+const fmtData = (s: string | null) =>
+  s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10).split('-').reverse().join('/') : '—';
+
+// A referência do BS é o produto: é o que o servidor copia para o processo.
+const refBS = (a: ds.DossieAto) => {
+  const p: string[] = [];
+  if (a.bsNumero) p.push(`BS nº ${a.bsNumero}${a.bsAno ? '/' + a.bsAno : ''}`);
+  if (a.secao) p.push(`Seção ${a.secao}`);
+  if (a.pagina) p.push(`p. ${a.pagina}`);
+  return p.join(', ') || '—';
+};
+const rotuloAto = (a: ds.DossieAto) =>
+  `${a.tipo}${a.sigla ? ' ' + a.sigla : ''} nº ${a.numero}/${a.ano}`;
+
+const esc = (s: string) =>
+  (s || '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
+
+// A senha fica em sessionStorage, não em localStorage: some quando a aba fecha.
+// Numa máquina compartilhada do RH, senha que sobrevive ao fechamento do
+// navegador é senha entregue ao próximo que sentar ali.
+const CHAVE_SESSAO = 'dossie-senha';
+
+export default function DossieApi() {
+  const [senha, setSenha] = useState('');
+  const [liberado, setLiberado] = useState(false);
+  const [erroSenha, setErroSenha] = useState('');
+  const [conferindo, setConferindo] = useState(false);
+
+  const [siape, setSiape] = useState('');
+  const [nome, setNome] = useState('');
+  const [r, setR] = useState<ds.DossieResp | null>(null);
+  const [falha, setFalha] = useState<'senha' | 'falha' | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [buscou, setBuscou] = useState(false);
+
+  const apiMode = ds.modo() === 'api';
+
+  // Reaproveita a senha da sessão, mas sempre reconferindo no servidor — o
+  // "liberado" do React não vale nada sozinho, e a senha pode ter sido trocada
+  // no config.php desde que a aba abriu.
+  useEffect(() => {
+    let vivo = true;
+    const guardada = (() => { try { return sessionStorage.getItem(CHAVE_SESSAO) || ''; } catch { return ''; } })();
+    if (!guardada || !apiMode) return;
+    ds.conferirSenhaDossie(guardada).then(ok => {
+      if (!vivo) return;
+      if (ok) { setSenha(guardada); setLiberado(true); }
+      else { try { sessionStorage.removeItem(CHAVE_SESSAO); } catch { /* ignore */ } }
+    });
+    return () => { vivo = false; };
+  }, [apiMode]);
+
+  const entrar = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!senha.trim()) return;
+    setConferindo(true);
+    setErroSenha('');
+    try {
+      if (await ds.conferirSenhaDossie(senha)) {
+        setLiberado(true);
+        try { sessionStorage.setItem(CHAVE_SESSAO, senha); } catch { /* ignore */ }
+      } else {
+        setErroSenha('Senha não confere. Peça à Gestão de Pessoal.');
+      }
+    } finally {
+      setConferindo(false);
+    }
+  };
+
+  const sair = () => {
+    try { sessionStorage.removeItem(CHAVE_SESSAO); } catch { /* ignore */ }
+    setSenha(''); setLiberado(false); setR(null); setBuscou(false); setSiape(''); setNome('');
+  };
+
+  const buscar = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const s = siape.replace(/\D/g, '');
+    if (!s) return;
+    setCarregando(true);
+    setBuscou(true);
+    try {
+      const ret = await ds.getDossie(s, nome, senha);
+      setR(ret.dados);
+      setFalha(ret.motivo === 'ok' ? null : ret.motivo === 'senha' ? 'senha' : 'falha');
+      // Senha recusada no meio do uso = trocada no servidor. Volta pra porta, em
+      // vez de deixar o RH achando que o servidor não tem atos daquela pessoa.
+      if (ret.motivo === 'senha') {
+        setLiberado(false);
+        setErroSenha('A senha mudou ou expirou. Entre de novo.');
+      }
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const imprimir = () => {
+    if (!r) return;
+    const ident = `${esc(r.nomes.join(' · ') || 'nome não identificado')} (SIAPE ${esc(r.siape)})`;
+    const linhasF = r.funcoes.map(f =>
+      `<tr><td>${esc(f.acao === 'designar' ? 'Designação' : 'Dispensa')}</td><td>${esc(f.cargo)}</td>` +
+      `<td>${esc(f.unidade)}</td><td>${fmtData(f.dataAto)}</td><td>${esc(f.atoLabel)}</td></tr>`).join('');
+    const linhasA = r.atos.map(a =>
+      `<tr><td>${esc(rotuloAto(a))}</td><td>${fmtData(a.dataAto)}</td><td>${esc(a.ementa || '—')}</td>` +
+      `<td>${esc(refBS(a))}</td></tr>`).join('');
+    const html =
+      `<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Dossiê do servidor — SIAPE ${esc(r.siape)}</title>` +
+      `<style>body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#111;margin:22px}` +
+      `h1{font-size:17px;margin:0 0 2px}h2{font-size:13px;margin:18px 0 6px;color:#003366}` +
+      `.sub{color:#555;font-size:11px;margin:0 0 4px}.aviso{border:1px solid #c4c9d2;background:#f7f8fa;padding:8px;font-size:10px;color:#444;margin:10px 0 4px}` +
+      `table{border-collapse:collapse;width:100%}th,td{border:1px solid #c4c9d2;padding:4px 6px;text-align:left;vertical-align:top}` +
+      `th{background:#003366;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}` +
+      `tr:nth-child(even) td{background:#f3f5f8}@media print{@page{margin:12mm}}</style></head><body>` +
+      `<h1>Dossiê do servidor — atos do Boletim de Serviço da UFF</h1>` +
+      `<p class="sub">${ident || 'SIAPE ' + esc(r.siape)} &middot; gerado em ${fmtData(new Date().toISOString().slice(0, 10))}</p>` +
+      `<div class="aviso"><strong>Material de instrução, não decisão.</strong> Esta lista reúne atos publicados que citam esta matrícula. ` +
+      `Ela não comprova participação por si só (o ato pode citar a pessoa por outro motivo) e não é exaustiva: parte dos atos do Boletim ` +
+      `não registra SIAPE e, portanto, não é alcançada por esta busca. A fonte oficial é o Boletim de Serviço da UFF; confira sempre o ato.</div>` +
+      (linhasF
+        ? `<h2>Designações e dispensas de função (${r.funcoes.length})</h2>` +
+          `<table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th></tr></thead>` +
+          `<tbody>${linhasF}</tbody></table>`
+        : '') +
+      `<h2>Atos que citam o SIAPE ${esc(r.siape)} (${r.atos.length})</h2>` +
+      `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
+      `<tbody>${linhasA}</tbody></table>` +
+      `<script>window.onload=function(){window.print()}</script></body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+    else alert('Permita pop-ups para gerar o PDF, ou use Ctrl+P nesta página.');
+  };
+
+  const TabelaAtos = ({ atos }: { atos: ds.DossieAto[] }) => (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+            <th className="text-left font-bold px-3 py-2">Ato</th>
+            <th className="text-left font-bold px-3 py-2 whitespace-nowrap">Data</th>
+            <th className="text-left font-bold px-3 py-2">Ementa</th>
+            <th className="text-left font-bold px-3 py-2 whitespace-nowrap">Referência no BS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {atos.map((a, i) => (
+            <tr key={a.id + i} className="border-t border-slate-100 hover:bg-slate-50 align-top">
+              <td className="px-3 py-2 whitespace-nowrap">
+                {a.linkBoletim ? (
+                  <a href={a.linkBoletim} target="_blank" referrerPolicy="no-referrer"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs font-semibold">
+                    {rotuloAto(a)} <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : <span className="text-xs font-semibold text-slate-700">{rotuloAto(a)}</span>}
+                {a.status !== 'Ativo' && (
+                  <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                    {a.status}
+                  </span>
+                )}
+              </td>
+              <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{fmtData(a.dataAto)}</td>
+              <td className="px-3 py-2 text-slate-700 text-xs leading-snug">
+                {a.ementa || <span className="text-slate-400 italic">sem ementa</span>}
+              </td>
+              <td className="px-3 py-2 text-slate-500 text-[11px] font-mono whitespace-nowrap">{refBS(a)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  // Modo estático não tem a rota — nem adianta pedir senha.
+  if (!apiMode) {
+    return (
+      <div id="painel-dossie" className="bg-white p-6 rounded-lg border border-slate-200 text-center">
+        <Info className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+        <p className="text-sm font-semibold text-slate-700">Disponível apenas no modo banco de dados.</p>
+        <p className="text-xs text-slate-500 mt-1">
+          O dossiê cruza as tabelas de pessoas e designações no servidor; o modo estático não reproduz essa consulta.
+        </p>
+      </div>
+    );
+  }
+
+  // A porta. Vale repetir: quem recusa de fato é o PHP — esta tela só evita
+  // mostrar a ferramenta a quem não vai conseguir usar.
+  if (!liberado) {
+    return (
+      <div id="painel-dossie" className="max-w-lg mx-auto">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-6">
+          <div className="flex items-center gap-2 text-[#003366]">
+            <Lock className="w-5 h-5 text-yellow-500" />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Dossiê do servidor — acesso restrito</h3>
+          </div>
+          <p className="text-[13px] text-slate-600 mt-3 leading-relaxed">
+            Esta aba reúne, numa lista só, os atos do Boletim que citam a matrícula de um servidor. É a única
+            consulta do portal que <strong>consolida o histórico de uma pessoa</strong>, e por isso o acesso é
+            restrito à <strong>Gestão de Pessoal</strong>.
+          </p>
+          <p className="text-[12px] text-slate-500 mt-2 leading-relaxed">
+            O restante do portal continua aberto: os atos podem ser consultados um a um na aba de Planilha, como
+            sempre estiveram no boletim.
+          </p>
+
+          <form onSubmit={entrar} className="mt-4 flex items-center gap-2">
+            <input
+              type="password"
+              value={senha}
+              onChange={e => setSenha(e.target.value)}
+              placeholder="Senha de acesso"
+              aria-label="Senha de acesso ao dossiê"
+              autoComplete="current-password"
+              className="flex-1 px-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+            <button
+              type="submit"
+              disabled={!senha.trim() || conferindo}
+              className="px-4 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {conferindo ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Entrar'}
+            </button>
+          </form>
+
+          {erroSenha && (
+            <p className="mt-2 text-[12px] text-red-700 font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" /> {erroSenha}
+            </p>
+          )}
+
+          <p className="text-[11px] text-slate-400 mt-4 leading-relaxed">
+            A senha vale enquanto esta aba do navegador estiver aberta. Ao fechá-la, é preciso digitar de novo.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div id="painel-dossie" className="space-y-3">
+      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
+              <FolderSearch className="w-4 h-4 text-yellow-500" /> Dossiê do servidor — atos no Boletim
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+              Digite a matrícula SIAPE e veja os atos publicados que a citam, com a <strong>referência do boletim</strong> para
+              copiar no processo. Útil para instruir pedidos que exigem comprovar participação em
+              <strong> comissões, comitês, grupos de trabalho e núcleos</strong>.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={imprimir}
+              disabled={!r || (!r.atos.length && !r.funcoes.length)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              <Printer className="w-4 h-4" /> Exportar / Imprimir PDF
+            </button>
+            <button
+              onClick={sair}
+              title="Encerrar o acesso nesta aba"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-slate-300 text-slate-600 text-xs font-bold hover:bg-slate-50 whitespace-nowrap"
+            >
+              <LogOut className="w-4 h-4" /> Sair
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={buscar} className="flex items-center gap-2 mt-3 flex-wrap">
+          <div className="relative w-[190px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              value={siape}
+              onChange={e => setSiape(e.target.value)}
+              inputMode="numeric"
+              placeholder="SIAPE (só números)"
+              aria-label="Matrícula SIAPE"
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <div className="relative flex-1 min-w-[200px]">
+            <UserSearch className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              placeholder="Nome (opcional) — busca no texto dos atos que não trazem SIAPE"
+              aria-label="Nome do servidor (opcional)"
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!siape.replace(/\D/g, '') || carregando}
+            className="px-4 py-2 rounded-md bg-yellow-500 text-[#003366] text-xs font-bold hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            Buscar
+          </button>
+        </form>
+      </div>
+
+      {carregando ? (
+        <div className="flex items-center justify-center py-16 text-slate-500">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" /> Buscando atos…
+        </div>
+      ) : !buscou ? (
+        <div className="bg-white p-6 rounded-lg border border-slate-200 text-center">
+          <FolderSearch className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-slate-700">Digite um SIAPE para começar.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Zeros à esquerda não importam: <span className="font-mono">0307221</span> e <span className="font-mono">307221</span> são tratados como a mesma matrícula.
+          </p>
+        </div>
+      ) : !r ? (
+        <div className="bg-white p-6 rounded-lg border border-slate-200 text-center">
+          <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-slate-700">Não foi possível consultar agora.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {falha === 'falha'
+              ? 'A busca do dossiê não respondeu. Tente novamente em instantes.'
+              : 'Tente novamente.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Identificação: quem é este SIAPE, segundo a base. */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">SIAPE {r.siape}</span>
+              {r.pessoas.length ? (
+                <span className="text-sm font-bold text-[#003366]">
+                  {r.nomes.length ? r.nomes.join(' · ') : 'nome não identificado'}
+                </span>
+              ) : (
+                <span className="text-sm font-semibold text-slate-600">nenhuma pessoa com esta matrícula na base</span>
+              )}
+            </div>
+
+            {r.linhasPessoa > 1 && (
+              <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
+                Esta matrícula aparece no acervo em {r.linhasPessoa} grafias ({r.pessoas.map(p => p.siape).join(', ')}),
+                por causa do zero à esquerda. Os atos das duas formas estão <strong>reunidos aqui</strong>.
+              </p>
+            )}
+
+            {/* Duas grafias do siape com nomes diferentes: sinal de que a base
+                juntou gente distinta. Avisar na cara — num dossiê que instrui
+                processo, ato de outra pessoa é o pior erro possível. Isto pega
+                só a fatia detectável: o siape que carrega duas pessoas numa
+                grafia só já colapsou num nome antes de chegar aqui, e o v2 não
+                guarda o nome por ato p/ desfazer. Ver dossie() no index_v2.php. */}
+            {r.nomesDistintos > 1 && (
+              <div className="mt-2 flex items-start gap-2 p-2 rounded border border-amber-200 bg-amber-50">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  <strong>Atenção: esta matrícula está associada a mais de um nome no acervo.</strong> Isso costuma ser erro de
+                  leitura do boletim (nome trocado ou grafado de formas diferentes). <strong>Algum ato da lista abaixo pode não ser seu</strong> —
+                  confira ato por ato antes de usar.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Bloco 1: dado estruturado (cargo/unidade lidos do dispositivo). */}
+          {!!r.funcoes.length && (
+            <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+              <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+                <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+                  Designações e dispensas de função ({r.funcoes.length})
+                </span>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Cargo e unidade lidos do <strong>dispositivo do ato</strong> — é a mesma base das abas Chefias e Mandatos.
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+                      <th className="text-left font-bold px-3 py-2">Ação</th>
+                      <th className="text-left font-bold px-3 py-2">Cargo</th>
+                      <th className="text-left font-bold px-3 py-2">Unidade</th>
+                      <th className="text-left font-bold px-3 py-2 whitespace-nowrap">Data</th>
+                      <th className="text-left font-bold px-3 py-2">Ato</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {r.funcoes.map((f, i) => (
+                      <tr key={f.atoId + f.cargo + i} className="border-t border-slate-100 hover:bg-slate-50 align-top">
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                            f.acao === 'designar'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}>
+                            {f.acao === 'designar' ? 'Designação' : 'Dispensa'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-800 font-medium">{f.cargo || '—'}</td>
+                        <td className="px-3 py-2 text-slate-700 text-xs">{f.unidade || '—'}</td>
+                        <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{fmtData(f.dataAto)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {f.linkBoletim ? (
+                            <a href={f.linkBoletim} target="_blank" referrerPolicy="no-referrer"
+                              className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs font-semibold">
+                              {f.atoLabel} <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : <span className="text-xs text-slate-500">{f.atoLabel}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Bloco 2: menções. O rótulo tem que dizer que é menção, não prova. */}
+          <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+            <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+              <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+                Atos que citam este SIAPE ({r.atos.length})
+              </span>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                São atos que <strong>mencionam a matrícula</strong> — não necessariamente atos em que você foi membro. Numa banca,
+                por exemplo, o avaliado também é citado. Confira o ato antes de usar.
+              </p>
+            </div>
+            {r.atos.length ? <TabelaAtos atos={r.atos} /> : (
+              <div className="p-6 text-center">
+                <Info className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700">Nenhum ato encontrado para esta matrícula.</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto leading-relaxed">
+                  Isso <strong>não significa</strong> que não existam atos seus no Boletim: boa parte dos atos publicados não
+                  registra o SIAPE de quem cita. Tente também pelo <strong>nome</strong>, no campo acima.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Bloco 3: recall por nome — separado, porque a confiança é outra. */}
+          {r.porNome && (
+            <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+              <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+                <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+                  Outros atos que citam “{r.porNome.termo}” no texto ({r.porNome.total})
+                </span>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Busca no <strong>corpo do ato</strong>, para alcançar o que a matrícula não acha — boa parte dos atos não
+                  registra SIAPE. <strong>Pode trazer gente de nome parecido</strong>: confira se é você antes de usar. Os atos
+                  já listados acima não se repetem aqui.
+                </p>
+              </div>
+              {r.porNome.atos.length
+                ? <TabelaAtos atos={r.porNome.atos} />
+                : <div className="p-6 text-center text-sm text-slate-600 font-semibold">Nenhum outro ato cita esse nome.</div>}
+            </div>
+          )}
+        </>
+      )}
+
+      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+        <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
+        <strong>Material de instrução, não decisão.</strong> Este painel localiza atos publicados e mostra onde eles saíram;
+        ele não apura pontuação e não substitui a análise da comissão avaliadora. A lista não é exaustiva — parte dos atos do
+        Boletim não registra SIAPE. A fonte oficial é o <strong>Boletim de Serviço da UFF</strong>: confira sempre o ato de origem.
+      </p>
+    </div>
+  );
+}

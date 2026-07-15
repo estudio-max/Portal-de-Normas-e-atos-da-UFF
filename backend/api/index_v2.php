@@ -31,6 +31,10 @@ $cfg = carregar_config();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: ' . ($cfg['cors_origin'] ?? '*'));
 header('Access-Control-Allow-Methods: GET, OPTIONS');
+// X-Dossie-Token: a senha do dossiê viaja em cabeçalho, não em ?token=, pra não
+// ficar gravada no access log do servidor nem no histórico do navegador. Em
+// produção o front é da mesma origem e nem há preflight; isto é p/ o mock local.
+header('Access-Control-Allow-Headers: X-Dossie-Token');
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') { exit; }
 
 try {
@@ -58,6 +62,13 @@ switch ($recurso) {
     case 'analitico': analitico($pdo); break;
     case 'prazos':   prazos($pdo); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
+    case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
+    // Confere a senha SEM consultar ninguém — é o que a tela de entrada chama.
+    // Existe pra não precisar inventar um SIAPE-cobaia só para testar a senha.
+    case 'dossie_auth':
+        if (!dossie_autorizado($cfg)) responder_json(['erro' => 'nao_autorizado'], 401);
+        responder_json(['ok' => true]);
+        break;
     case 'ato':      ficha($pdo, $id); break;
     case 'atos':
     default:        listar($pdo); break;
@@ -93,6 +104,14 @@ function booleanize(string $s): string {
         if (mb_strlen($t) >= 3) $out[] = '+' . $t . '*';
     }
     return $out ? implode(' ', $out) : '';
+}
+
+// Tira acento p/ comparar nome (espelha strip_ac() de importar/importar_v2.php,
+// que por sua vez espelha etl_v2.py). Só para COMPARAÇÃO — o que se exibe é
+// sempre o nome como saiu do boletim.
+function nome_ascii(string $s): string {
+    $r = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+    return $r === false ? $s : $r;
 }
 
 // Links deterministicos (ver cabecalho) — replicam link_sei_processo() /
@@ -982,4 +1001,212 @@ function pad_cadeia(PDO $pdo, string $proc): void {
         ];
     }
     responder_json(['processo' => $proc, 'total' => $n, 'atos' => $atos]);
+}
+
+// Gate do dossiê. Restrito à Gestão de Pessoal: é a única rota que reúne a vida
+// funcional de UMA pessoa num lugar só — as outras devolvem atos avulsos, que
+// são públicos por natureza.
+//
+// Por que a conferência mora aqui e não no React: senha checada no front não
+// protege nada. O bundle é público (a senha estaria lá, legível), e /api/dossie
+// continuaria respondendo pra quem digitasse a URL na barra do navegador. Gate
+// no cliente é enfeite; o dado só fica fechado se o servidor recusar.
+//
+// FALHA FECHADO: sem 'dossie_token' no config.php a rota responde 401 e a aba
+// não abre. Um deploy pela metade tem que virar aba quebrada, não dossiê aberto.
+// hash_equals compara em tempo constante (não vaza a senha por cronometragem).
+function dossie_autorizado(array $cfg): bool {
+    $esperado = (string)($cfg['dossie_token'] ?? '');
+    if ($esperado === '') return false;
+    $veio = $_SERVER['HTTP_X_DOSSIE_TOKEN'] ?? '';
+    return is_string($veio) && $veio !== '' && hash_equals($esperado, $veio);
+}
+
+// ---- DOSSIÊ de um servidor (por SIAPE) ------------------------------------
+// Serve o Decreto 13.048/2026 (RSC do PCCTAE): o Anexo I pontua participação em
+// comissões, comitês, GTs e núcleos, e o servidor precisa ACHAR os atos e citar
+// o BS. Este endpoint localiza; quem pontua é a CRSC-PCCTAE. O portal não apura
+// — se subnotificasse, o servidor perderia ponto por erro nosso.
+//
+// Por que a chave é TRIM(LEADING '0'), e não LPAD:
+//   O corpus traz o mesmo servidor como '0307221' E '307221' (medido: 1.462
+//   pessoas partidas assim). Como pessoa.siape é UNIQUE, são DUAS linhas, cada
+//   uma com seus ato_pessoa — quem digita sem o zero recebe metade do dossiê e
+//   não tem como saber. LPAD(x,7,'0') resolveria, mas o LPAD do MySQL TRUNCA:
+//   LPAD('12345678',7,'0') = '1234567', o que fundiria pessoas diferentes.
+//   Tirar zeros à esquerda é seguro em qualquer comprimento.
+//   Isto normaliza a CONSULTA, não os dados. O merge das linhas duplicadas de
+//   pessoa é curadoria (como orgao_alias), não regex — não se faz por aqui.
+//
+// Sobre o aviso de nome divergente — e o que ele NÃO alcança:
+//   Ele só dispara quando as GRAFIAS do siape ('0303043' e '303043') trazem
+//   nomes diferentes. O cross-link mais comum é invisível daqui: importar_v2.php
+//   chaveia pessoa por "s:$siape" e pessoa.siape é UNIQUE, então um siape que no
+//   corpus carrega duas pessoas (medido: '3369546' = Bárbara Sena E Simone
+//   Lemos) já colapsou numa linha com UM nome — o primeiro que entrou. Os atos
+//   das duas ficam pendurados nessa linha, e o v2 não guarda o nome grafado em
+//   cada ato (ato_pessoa é só ato_id+pessoa_id), então não há como detectar isso
+//   por SQL. Quem cobre esse buraco é o rótulo "confira o ato", não este aviso.
+//   Separar essas pessoas é curadoria — Fase 2.
+function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
+    if (!dossie_autorizado($cfg)) responder_json(['erro' => 'nao_autorizado'], 401);
+
+    $siape = preg_replace('/\D/', '', $siape);
+    if ($siape === '') responder_json(['erro' => 'siape ausente'], 400);
+    $chave = ltrim($siape, '0');
+    if ($chave === '') responder_json(['erro' => 'siape inválido'], 400);
+
+    // 1) Quem é este SIAPE — todas as linhas de pessoa que colapsam na chave.
+    $st = $pdo->prepare("
+        SELECT id, siape, nome FROM pessoa
+        WHERE siape IS NOT NULL AND siape <> ''
+          AND TRIM(LEADING '0' FROM siape) = :chave
+        ORDER BY nome IS NULL, nome");
+    $st->execute([':chave' => $chave]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    $pessoas = array_map(fn($r) => ['siape' => $r['siape'], 'nome' => $r['nome'] ?? ''], $rows);
+    $ids = array_map(fn($r) => (int)$r['id'], $rows);
+
+    // Nomes para exibir: deduplicados por chave SEM acento/caixa. Sem isto,
+    // "João Marcel" e "Joao Marcel" contam como dois e o aviso de nome
+    // divergente dispara para quase todo mundo — variação de acento é o caso
+    // COMUM no corpus. Um aviso que sempre pisca é um aviso que ninguém lê, e
+    // aí ele não serve pro caso que importa (SIAPE com duas pessoas de fato).
+    // Entre as variantes, fica a mais rica (a que tem acento).
+    $porChave = [];
+    foreach ($pessoas as $p) {
+        $n = trim($p['nome']);
+        if ($n === '') continue;
+        $k = preg_replace('/\s+/', ' ', trim(mb_strtolower(nome_ascii($n), 'UTF-8')));
+        if (!isset($porChave[$k]) || strlen($n) > strlen(nome_ascii($n))) $porChave[$k] = $n;
+    }
+    $nomes = array_values($porChave);
+
+    $funcoes = [];
+    $atos = [];
+    if ($ids) {
+        // ids vêm do nosso próprio SELECT e passam por (int) — interpolar aqui é
+        // seguro e é o único jeito de um IN de tamanho variável.
+        $in = implode(',', $ids);
+
+        // 2) Funções de chefia — DADO ESTRUTURADO. É a mesma fonte que alimenta
+        // Chefias e Mandatos: o extrator identificou cargo, unidade e mandato a
+        // partir do dispositivo. Vale mais que a menção e vem separado por isso.
+        $st = $pdo->query("
+            SELECT f.acao, f.cargo, f.unidade, f.prazo_meses, f.data_inicio, f.inicio_origem,
+                   a.uid AS ato_id, CONCAT(t.nome, ' nº ', a.numero, '/', a.ano) AS ato_label,
+                   o.sigla, a.data_ato, a.status, b.url_pdf AS link_boletim
+            FROM ato_funcao f
+            JOIN ato a          ON a.id = f.ato_id
+            JOIN tipo_ato t     ON t.id = a.tipo_id
+            JOIN orgao o        ON o.id = a.orgao_id
+            LEFT JOIN boletim b ON b.id = a.boletim_id
+            WHERE f.pessoa_id IN ($in)
+            ORDER BY a.data_ato DESC, a.id DESC");
+        $funcoes = array_map(fn($r) => [
+            'acao' => $r['acao'], 'cargo' => $r['cargo'] ?? '', 'unidade' => $r['unidade'] ?? '',
+            'prazoMeses' => $r['prazo_meses'] !== null ? (int)$r['prazo_meses'] : null,
+            'dataInicio' => $r['data_inicio'], 'inicioOrigem' => $r['inicio_origem'],
+            'atoId' => $r['ato_id'], 'atoLabel' => $r['ato_label'], 'sigla' => $r['sigla'] ?? '',
+            'dataAto' => $r['data_ato'], 'status' => $r['status'],
+            'linkBoletim' => $r['link_boletim'],
+        ], $st->fetchAll(PDO::FETCH_ASSOC));
+
+        // 3) Atos que CITAM o SIAPE — DADO INDICATIVO. ato_pessoa é menção, não
+        // participação: numa banca de progressão o avaliado também é citado. O
+        // rótulo na tela precisa dizer isso; aqui não dá pra separar sem ler o
+        // dispositivo (é a Fase 2).
+        $atos = $pdo->query("
+            SELECT a.uid AS id, t.nome AS tipo, a.numero, a.ano, o.sigla,
+                   a.data_ato, a.ementa, a.status, a.secao, a.pagina,
+                   b.numero AS bs_numero, b.ano AS bs_ano, b.url_pdf AS link_boletim
+            FROM ato_pessoa ap
+            JOIN ato a          ON a.id = ap.ato_id
+            JOIN tipo_ato t     ON t.id = a.tipo_id
+            JOIN orgao o        ON o.id = a.orgao_id
+            LEFT JOIN boletim b ON b.id = a.boletim_id
+            WHERE ap.pessoa_id IN ($in)
+            ORDER BY a.data_ato DESC, a.id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $atos = array_map(fn($r) => dossie_ato($r), colapsar_republicados($atos));
+    }
+
+    // 4) Recall por nome — opcional e SEPARADO. Existe porque a busca por
+    // matrícula é incompleta por construção: 30–70% dos atos não registram SIAPE
+    // (medido: 34% de cobertura em 2001, ~65% em 2025), e o extrator só cria
+    // pessoa quando ACHA um siape — logo o nome de quem não tem matrícula no ato
+    // não está em pessoa/ato_pessoa, está só no CORPO do ato. Por isso aqui é
+    // FULLTEXT em ato_texto (mesmo mecanismo do filtro `nome` de listar()), e
+    // não JOIN em pessoa: consultar pessoa devolveria zero, sempre.
+    // Exclui os atos já listados pelo siape — o bloco é complementar, não soma.
+    $porNome = null;
+    $nome = trim($nome);
+    if ($nome !== '' && mb_strlen($nome) >= 4) {
+        $nft = booleanize($nome);
+        $cond = $nft !== ''
+            ? "MATCH(tx.texto_busca) AGAINST(:nft IN BOOLEAN MODE)"
+            : "tx.texto_busca LIKE :nlike";
+        $pn = $nft !== '' ? [':nft' => $nft] : [':nlike' => '%' . mb_strtolower($nome) . '%'];
+        $exclui = $ids ? "AND NOT EXISTS (SELECT 1 FROM ato_pessoa ap
+                                          WHERE ap.ato_id = a.id AND ap.pessoa_id IN (" . implode(',', $ids) . "))" : '';
+        $st = $pdo->prepare("
+            SELECT a.uid AS id, t.nome AS tipo, a.numero, a.ano, o.sigla,
+                   a.data_ato, a.ementa, a.status, a.secao, a.pagina,
+                   b.numero AS bs_numero, b.ano AS bs_ano, b.url_pdf AS link_boletim
+            FROM ato a
+            JOIN tipo_ato t     ON t.id = a.tipo_id
+            JOIN orgao o        ON o.id = a.orgao_id
+            LEFT JOIN boletim b ON b.id = a.boletim_id
+            WHERE EXISTS (SELECT 1 FROM ato_texto tx WHERE tx.ato_id = a.id AND $cond)
+            $exclui
+            ORDER BY a.data_ato DESC, a.id DESC
+            LIMIT 300");
+        $st->execute($pn);
+        $rowsNome = colapsar_republicados($st->fetchAll(PDO::FETCH_ASSOC));
+        $porNome = [
+            'termo' => $nome,
+            'total' => count($rowsNome),
+            'atos' => array_map(fn($r) => dossie_ato($r), $rowsNome),
+        ];
+    }
+
+    responder_json([
+        'siape' => $siape,
+        'chave' => $chave,
+        'pessoas' => $pessoas,
+        'nomes' => $nomes,
+        'nomesDistintos' => count($nomes),
+        'linhasPessoa' => count($pessoas),
+        'totalAtos' => count($atos),
+        'funcoes' => $funcoes,
+        'atos' => $atos,
+        'porNome' => $porNome,
+    ]);
+}
+
+// Mesma portaria republicada em mais de um boletim gera uids -2/-3 (é um só ato
+// lógico). No dossiê isso importa mais que nos outros painéis: o servidor
+// citaria o mesmo ato duas vezes no processo dele. Mesma chave de colapso já
+// usada em pad_cadeia().
+function colapsar_republicados(array $rows): array {
+    $vistos = [];
+    return array_values(array_filter($rows, function ($r) use (&$vistos) {
+        $sig = ($r['tipo'] ?? '') . '|' . ($r['sigla'] ?? '') . '|'
+             . ($r['numero'] ?? '') . '|' . ($r['ano'] ?? '') . '|' . ($r['data_ato'] ?? '');
+        if (isset($vistos[$sig])) return false;
+        $vistos[$sig] = true;
+        return true;
+    }));
+}
+
+function dossie_ato(array $r): array {
+    return [
+        'id' => $r['id'], 'tipo' => $r['tipo'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+        'sigla' => $r['sigla'] ?? '', 'dataAto' => $r['data_ato'],
+        'ementa' => $r['ementa'] ?? '', 'status' => $r['status'],
+        'secao' => $r['secao'] ?? '', 'pagina' => $r['pagina'] ?? '',
+        'bsNumero' => $r['bs_numero'] !== null ? (int)$r['bs_numero'] : null,
+        'bsAno' => $r['bs_ano'] !== null ? (int)$r['bs_ano'] : null,
+        'linkBoletim' => $r['link_boletim'],
+    ];
 }

@@ -10,6 +10,7 @@ import ActTable from './components/ActTable';
 import ActRelationships from './components/ActRelationships';
 import ActRelationsApi from './components/ActRelationsApi';
 import ChefiasApi from './components/ChefiasApi';
+import DossieApi from './components/DossieApi';
 import InsightsApi from './components/InsightsApi';
 import PrazosApi from './components/PrazosApi';
 import MandatosApi from './components/MandatosApi';
@@ -124,6 +125,8 @@ export default function App() {
           )}
 
           {activeTab === 'chefias' && <div id="painel-chefias"><ChefiasApi /></div>}
+
+          {activeTab === 'dossie' && <div id="painel-dossie-wrap"><DossieApi /></div>}
 
           {activeTab === 'insights' && <div id="painel-insights"><InsightsApi /></div>}
 

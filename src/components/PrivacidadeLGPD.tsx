@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, FileText, UserCheck, Lock, Scale, Database } from 'lucide-react';
+import { ShieldCheck, FileText, UserCheck, Lock, Scale, Database, FolderSearch } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -45,13 +45,45 @@ export default function PrivacidadeLGPD() {
         </p>
       </Secao>
 
+      <Secao icon={<FolderSearch className="w-4 h-4" />} titulo="A aba Dossiê do servidor é fechada">
+        <p>
+          Na maior parte do portal você consulta um ato de cada vez, e qualquer pessoa pode. A aba
+          <strong> Dossiê do servidor</strong> faz outra coisa: reúne, numa lista só, os atos que
+          citam a mesma matrícula ao longo de todos os anos indexados. Os atos são os mesmos, e
+          todos já eram públicos — mas juntar o que estava espalhado por centenas de boletins é um
+          tratamento de natureza diferente de ler um boletim, e não seria honesto tratar os dois
+          como a mesma coisa.
+        </p>
+        <p>
+          Por isso ela é a <strong>única aba restrita do portal</strong>, protegida por senha
+          entregue à Gestão de Pessoal da UFF. A recusa acontece no servidor, não na tela: sem a
+          senha, a consulta não é respondida. Ela existe porque o Decreto 13.048/2026 passou a
+          exigir a comprovação de participações antigas para o Reconhecimento de Saberes e
+          Competências, e levantar isso à mão em vinte e cinco anos de PDF não é razoável.
+        </p>
+        <p>
+          O resultado é gerado na hora, a partir da consulta digitada, e não fica guardado: o portal
+          não monta nem armazena perfil de ninguém. A aba também não pontua e não avalia conduta —
+          devolve os atos publicados e o link do boletim de origem.
+        </p>
+      </Secao>
+
       <Secao icon={<Scale className="w-4 h-4" />} titulo="Base legal">
         <p>
-          O tratamento se apoia no art. 7º, inciso IX, da LGPD (legítimo interesse): a finalidade
-          aqui — dar acesso organizado a atos administrativos que a própria UFF já publicou como
-          documento público — é a mesma finalidade que motivou a publicação original pela
-          universidade, amparada pelo princípio constitucional da publicidade dos atos
-          administrativos.
+          O tratamento se apoia no art. 7º, inciso IX, da LGPD (legítimo interesse). Para a consulta
+          ato a ato, o raciocínio é direto: a finalidade aqui — dar acesso organizado a atos
+          administrativos que a própria UFF já publicou como documento público — é a mesma
+          finalidade que motivou a publicação original pela universidade, amparada pelo princípio
+          constitucional da publicidade dos atos administrativos.
+        </p>
+        <p>
+          Para o dossiê por matrícula, esse argumento não bastaria sozinho, e é melhor dizer isso do
+          que fingir que basta: a UFF publicou atos avulsos, não históricos consolidados por pessoa.
+          O que sustenta essa aba é outra coisa — ela não é pública. O acesso fica com a Gestão de
+          Pessoal, que já trata esses dados por dever de ofício, e serve a uma finalidade estreita:
+          instruir o processo de Reconhecimento de Saberes e Competências que o Decreto 13.048/2026
+          criou. É um uso interno, sobre atos que já são públicos, que beneficia o próprio servidor
+          avaliado, sem juízo de valor sobre ele e sem guardar o resultado.
         </p>
       </Secao>
 

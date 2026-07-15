@@ -27,4 +27,17 @@ return [
     // Gere um valor forte (ex.: `openssl rand -base64 32` ou um gerenciador de senhas)
     // e preencha só no servidor — nunca reaproveite o exemplo abaixo.
     'import_token' => 'SEU_TOKEN_FORTE_AQUI',
+
+    // Senha da aba "Dossiê do servidor" (rota /api/dossie), entregue à Gestão de
+    // Pessoal. É a ÚNICA rota que reúne a vida funcional de uma pessoa num lugar
+    // só — por isso é a única fechada.
+    //
+    // Enquanto esta linha não for preenchida no servidor, a rota responde 401 e
+    // a aba não abre. É de propósito: um deploy pela metade tem que falhar
+    // fechado, não virar dossiê aberto na internet.
+    //
+    // Use um valor forte e trate como senha de verdade: quem tiver isto lê o
+    // histórico de qualquer servidor. Trocar aqui invalida a senha de todo mundo
+    // na hora (é o jeito de revogar).
+    'dossie_token' => '',
 ];

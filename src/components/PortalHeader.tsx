@@ -29,6 +29,7 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
     { id: 'tab-planilha', key: 'planilha', emoji: '📊', label: 'Planilha e Cadastro de Atos' },
     { id: 'tab-relacoes', key: 'relacoes', emoji: '🕸️', label: 'Mapa de Relações e Impacto' },
     { id: 'tab-chefias', key: 'chefias', emoji: '👥', label: 'Chefias da UFF' },
+    { id: 'tab-dossie', key: 'dossie', emoji: '🗂️', label: 'Dossiê do servidor' },
     { id: 'tab-mandatos', key: 'mandatos', emoji: '⏳', label: 'Mandatos' },
     { id: 'tab-prazos', key: 'prazos', emoji: '📅', label: 'Prazos' },
     { id: 'tab-insights', key: 'insights', emoji: '📈', label: 'Insights' },

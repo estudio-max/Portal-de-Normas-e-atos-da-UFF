@@ -775,6 +775,76 @@ export async function getPadCadeia(processo: string): Promise<PadCadeia | null> 
     return await r.json() as PadCadeia;
   } catch { return null; }
 }
+
+// ---- Dossiê do servidor (por SIAPE) --------------------------------------
+// Um ato do dossiê. Traz a referência do BS (número/ano/seção/página) porque o
+// uso final é instruir processo: o servidor precisa CITAR onde o ato saiu.
+export interface DossieAto {
+  id: string; tipo: string; numero: string; ano: number; sigla: string;
+  dataAto: string | null; ementa: string; status: string;
+  secao: string; pagina: string;
+  bsNumero: number | null; bsAno: number | null; linkBoletim: string | null;
+}
+// Designação/dispensa de chefia. Dado ESTRUTURADO (mesma fonte de Chefias e
+// Mandatos): o extrator leu cargo/unidade/mandato do dispositivo do ato.
+export interface DossieFuncao {
+  acao: 'designar' | 'dispensar'; cargo: string; unidade: string;
+  prazoMeses: number | null; dataInicio: string | null; inicioOrigem: string | null;
+  atoId: string; atoLabel: string; sigla: string;
+  dataAto: string | null; status: string; linkBoletim: string | null;
+}
+export interface DossieResp {
+  siape: string; chave: string;
+  pessoas: { siape: string; nome: string }[];   // linhas cruas da base
+  nomes: string[];             // p/ exibir: deduplicados sem acento/caixa
+  nomesDistintos: number;      // >1 = cross-link do extrator; a aba avisa
+  linhasPessoa: number;        // >1 = SIAPE fragmentado por zero à esquerda
+  totalAtos: number;
+  funcoes: DossieFuncao[];
+  atos: DossieAto[];
+  porNome: { termo: string; total: number; atos: DossieAto[] } | null;
+}
+
+// Resultado do dossiê. Diferente do resto do dataSource, aqui não dá pra
+// devolver só `null`: a aba precisa distinguir "senha errada" de "deu ruim" —
+// senão o usuário do RH fica tentando de novo achando que o portal caiu.
+// Forma achatada de propósito: o tsconfig deste projeto não liga `strict`, e
+// sem strictNullChecks a união discriminada ({ok:true}|{ok:false}) não estreita
+// no `else` — o tsc reclama de `motivo` não existir. Um objeto só, com `motivo`
+// sempre presente, dispensa narrowing e não depende da configuração.
+export interface DossieRet {
+  motivo: 'ok' | 'senha' | 'falha' | 'estatico';
+  dados: DossieResp | null;
+}
+
+// Confere a senha do dossiê sem consultar ninguém — a tela de entrada usa isto.
+// Quem decide é o servidor: o front não tem (nem pode ter) a senha para comparar.
+export async function conferirSenhaDossie(senha: string): Promise<boolean> {
+  if (MODO !== 'api' || !senha) return false;
+  try {
+    const r = await fetch(`${API_BASE}/dossie_auth`, { headers: { 'X-Dossie-Token': senha } });
+    return r.ok;
+  } catch { return false; }
+}
+
+// Busca o dossiê de um SIAPE. Só existe no modo API (análise materializada no
+// servidor, como getPadCadeia) e só responde com a senha da Gestão de Pessoal.
+// A senha vai em cabeçalho, nunca na query string: em ?token= ela ficaria no
+// access log do servidor e no histórico do navegador.
+export async function getDossie(siape: string, nome: string, senha: string): Promise<DossieRet> {
+  if (MODO !== 'api') return { motivo: 'estatico', dados: null };
+  if (!siape || !senha) return { motivo: 'senha', dados: null };
+  try {
+    const qs = new URLSearchParams({ siape });
+    if (nome && nome.trim()) qs.set('nome', nome.trim());
+    const r = await fetch(`${API_BASE}/dossie?${qs}`, { headers: { 'X-Dossie-Token': senha } });
+    if (r.status === 401) return { motivo: 'senha', dados: null };
+    if (!r.ok) return { motivo: 'falha', dados: null };
+    const j = await r.json();
+    if (!j || !Array.isArray(j.atos)) return { motivo: 'falha', dados: null };  // API antiga, sem a rota
+    return { motivo: 'ok', dados: j as DossieResp };
+  } catch { return { motivo: 'falha', dados: null }; }
+}
 interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
 
 // Infere PARA QUEM serve o prazo (o público que precisa agir), a partir de
