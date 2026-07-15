@@ -56,6 +56,10 @@ export default function MandatosApi() {
   const vagos = useMemo(() => (r?.setores || []).filter(s => s.situacao === 'sem_chefia'), [r]);
   const cargos = useMemo(() => Array.from(new Set(vagos.map(s => s.cargo))).sort(), [vagos]);
 
+  // Ordem: MENOR tempo vago primeiro. Não é só preferência de leitura — o
+  // vencido há pouco é o caso mais crível e mais acionável; quanto mais antiga
+  // a vacância, maior a chance de ser resíduo de projeção (unidade renomeada,
+  // saída sem ato registrado) e não um setor de fato acéfalo.
   const filtrada = useMemo(() => {
     const q = busca.toLowerCase().trim();
     return vagos.filter(s => {
@@ -63,7 +67,7 @@ export default function MandatosApi() {
       if (origem !== 'todas' && s.prazoOrigem !== origem) return false;
       if (!q) return true;
       return `${s.unidade} ${s.cargo} ${s.nome || ''} ${s.siape || ''}`.toLowerCase().includes(q);
-    }).sort((a, b) => b.diasVago - a.diasVago);
+    }).sort((a, b) => a.diasVago - b.diasVago);
   }, [vagos, busca, cargo, origem]);
 
   const kpis = useMemo(() => ({
