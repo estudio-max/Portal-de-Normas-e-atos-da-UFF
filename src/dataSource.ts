@@ -107,10 +107,13 @@ function filtraEstatico(p: ListaParams): UffAct[] {
     if (p.orgao && p.orgao !== 'todos' && a.orgaoEmissor !== p.orgao) return false;
     if (p.ano && p.ano !== 'todos' && String(a.ano) !== String(p.ano)) return false;
     if (p.status && p.status !== 'todos' && a.status !== p.status) return false;
+    // Mesma sintaxe da busca principal: o PHP já passa este campo por
+    // booleanize(), então sem buscaCasa() aqui os dois modos discordariam —
+    // "frase exata" funcionaria no banco e não no estático, e palavra solta
+    // casaria em qualquer ordem no banco e só adjacente aqui.
     if (nome) {
-      const ok = (a.textoBusca || '').includes(nome) || a.ementa.toLowerCase().includes(nome)
-        || (a.orgaoEmissor || '').toLowerCase().includes(nome);
-      if (!ok) return false;
+      const blobNome = `${a.textoBusca || ''} ${a.ementa} ${a.orgaoEmissor || ''}`;
+      if (!buscaCasa(blobNome, nome)) return false;
     }
     if (siape) {
       const ok = (a.siapes || []).some(s => s.includes(siape)) || (a.textoBusca || '').includes(siape);

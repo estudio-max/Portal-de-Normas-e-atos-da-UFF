@@ -182,10 +182,13 @@ def busca_casa(blob, busca):
     return True
 
 
+# Mesma sintaxe da busca principal: o PHP passa este campo por booleanize(),
+# entao sem busca_casa() aqui os modos discordariam -- "frase exata" valeria
+# no banco e nao aqui.
 def casa_nome(a, nome):
-    n = nome.lower()
-    return n in (a.get("textoBusca", "") or "") or n in a.get("ementa", "").lower() \
-        or n in (a.get("orgaoEmissor", "") or "").lower()
+    blob = " ".join([a.get("textoBusca", "") or "", a.get("ementa", "") or "",
+                     a.get("orgaoEmissor", "") or ""])
+    return busca_casa(blob, nome)
 
 
 def filtrar(q):
