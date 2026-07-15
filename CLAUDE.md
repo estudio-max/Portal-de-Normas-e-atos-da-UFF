@@ -105,7 +105,22 @@ portal.
   texto é enriquecimento, não identidade.
 - **Classifique pelo dispositivo do ato, não por menção.** Uma retificação que
   cita uma concessão anterior ("…portaria X, **que concedeu** aposentadoria…")
-  não é uma concessão nova. O marcador é o "que" antes do verbo.
+  não é uma concessão nova. O marcador é o "que" antes do verbo. Vale igual para
+  função: "dispensar, **em virtude de sua nomeação** para diretor…" é uma
+  DISPENSA — o substantivo só explica o motivo (por isso o `(?!c)` em
+  `_VERBO_FUNC`, que casa o verbo "nomear" e recusa o substantivo "nomeação").
+- **Nomear/exonerar ≠ designar/dispensar.** No serviço público, *nomeação* e
+  *exoneração* são o par dos **cargos de direção (CD)**; *designação* e
+  *dispensa*, o das funções e chefias. `ato_funcao.acao` só tem
+  `designar`/`dispensar`, então a nomeação de CD entra como `designar`.
+- **A whitelist de cargos (`_NUC_CARGO`) é branca de propósito.** O gatilho
+  aceita "cargo de X" sem o "de direção", então todo nome ali também passa a
+  casar **cargo efetivo**. `professor`, `assistente`, `técnico`, `secretário`
+  solto e `procurador` solto ficam fora: são o emprego da pessoa. "Secretário"
+  traria 60 eliminações de concurso ("para o cargo de secretário executivo, por
+  não apresentar documentação") como designações. Antes de acrescentar um cargo,
+  **meça** quantas vezes ele aparece após "cargo de direção de" versus após
+  "cargo de" solto — `tools/teste_funcoes_cd.py` fixa os casos.
 - **Collation do MySQL ≠ dedup do Python.** `DECISOES` == `DECISÕES` e
   `'001'` == `'01'` == `'1'` para o MySQL. Qualquer ETL precisa considerar isso.
 - Órgão tem ~1.162 grafias de sigla no corpus. Consolidar é **curadoria** (via
@@ -137,6 +152,14 @@ banco `fanara87_uffnormas`). Estão marcados com aviso no topo. **Este arquivo
 manda neles.**
 
 ## Pendências
+
+- **Reprocessamento pendente do extrator.** `tools/extrair_boletim.py` já captura
+  cargo de direção/assessoramento (Assessor, Prefeito, Corregedor,
+  Secretário-Geral) e o verbo `nomear` — mas **os dados importados não mudaram**.
+  A Action diária aplica isso só aos boletins novos; o histórico (ex.: a
+  nomeação de Assessor de 2022, que não aparece no Dossiê) só entra com
+  **reprocessamento + reimport**. Medido: +106 funções, 0 perdas. Este lote soma
+  aos fixes de captura anteriores que também esperam a mesma rodada.
 
 - **Aposentadoria 2001-2014 parece ter entrado sem o fix de retificação.**
   `/api/analitico` em produção mostra **689 "Indefinida" em 2001-2014 e ~0 de
