@@ -19,8 +19,15 @@ corrija a linha, não acrescente uma nota dizendo que mudou.
 ## Fonte canônica
 
 **Esta pasta (`repo/`) é a única fonte.** É um clone git de
-`estudio-max/Portal-de-Normas-e-atos-da-UFF`. Existem outras pastas ao lado com
-cópias do app — todas defasadas. Nunca edite fora daqui.
+`estudio-max/Portal-de-Normas-e-atos-da-UFF`. Nunca edite fora daqui.
+
+A pasta-mãe tem só mais dois itens, e nenhum é código vivo: `dados/` (PDFs dos
+boletins, cargas, dumps — bancada de trabalho) e `_arquivo/` (morto, não
+alimenta produção). Mapa em [`../LEIA-ME.md`](../LEIA-ME.md).
+
+A indexação diária **não roda nesta máquina** — roda no GitHub Actions
+(`.github/workflows/indexar.yml`, cron 22:10), que baixa os próprios boletins.
+Não há tarefa agendada local.
 
 Regra de fechamento: **todo trabalho termina em `git commit` + `git push`.** O
 GitHub é o espelho único; se não foi empurrado, não aconteceu.
@@ -94,9 +101,9 @@ credenciais do banco). Não versione, não imprima o conteúdo.
 
 ## Documentos que NÃO são confiáveis
 
-`README.md` (topo), `DEPLOY.md` e `backend/README.md` descrevem o mundo v1
-(Cloud Run, `app-fonte/`, banco `fanara87_uffnormas`). Estão marcados como
-defasados. **Este arquivo manda neles.**
+`DEPLOY.md` e `backend/README.md` descrevem o mundo v1 (Cloud Run, `app-fonte/`,
+banco `fanara87_uffnormas`). Estão marcados com aviso no topo. **Este arquivo
+manda neles.**
 
 ## Pendências
 
@@ -105,15 +112,11 @@ defasados. **Este arquivo manda neles.**
   2015 em diante**. O classificador corrigido (o marcador "que" antes do verbo,
   que separa retificação de concessão) produzia **zero** indefinidas nesse
   período — então o bloco antigo provavelmente foi gerado por uma cópia do
-  extrator sem o fix. Confirme no phpMyAdmin antes de agir; se confirmado, o
-  conserto é regerar o bloco 2001-2014 com `repo/tools/extrair_boletim.py`.
-  ⚠️ Os SQLs em `../out/corrigir_*.sql` **são do v1 e não rodam aqui** (escrevem
-  em `atos`/`ato_corpo`, que não existem no v2) — ignore-os.
-- **Existem 3 cópias de `extrair_boletim.py`** (raiz de `portal-normas-uff/`,
-  `repo/tools/`, `_DEFASADO-app-fonte/`). A canônica é a de **`repo/tools/`**.
-  `import extrair_boletim` rodando de dentro de `portal-normas-uff/` pega a da
-  raiz, que é defasada — carregue por caminho explícito. É a suspeita mais
-  provável para o item acima.
+  extrator sem o fix — a cópia que ficava solta na pasta-mãe estava **4 dias e
+  147 linhas atrás** desta. Confirme no phpMyAdmin antes de agir; se confirmado,
+  o conserto é regerar o bloco 2001-2014 com `tools/extrair_boletim.py` **daqui**.
+  ⚠️ Os SQLs `corrigir_*.sql` em `../dados/cargas/_out/` **são do v1 e não rodam
+  aqui** (escrevem em `atos`/`ato_corpo`, que não existem no v2) — ignore-os.
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
