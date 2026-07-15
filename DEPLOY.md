@@ -1,5 +1,14 @@
 # Deploy do Portal de Normas e Atos — UFF
 
+> ## ⚠️ DEFASADO — não siga este arquivo
+>
+> Descreve a arquitetura v1 (Cloud Run, site estático, pasta `app-fonte/`). Hoje
+> o portal roda em **HostGator com MySQL + PHP**, e o deploy é upload manual.
+>
+> **O procedimento válido está em [`CLAUDE.md`](CLAUDE.md).**
+>
+> Mantido apenas como referência histórica.
+
 O app é um site **estático** (não precisa mais de backend nem de chave Gemini —
 o "Assistente de Indexação" roda no próprio navegador). Qualquer host estático
 serve. Abaixo, do mais alinhado ao que você já usa (Cloud Run) ao mais simples.

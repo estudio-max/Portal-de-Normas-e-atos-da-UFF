@@ -1,5 +1,18 @@
 # Backend (MySQL + PHP) — instalação
 
+> ## ⚠️ DEFASADO — não siga este arquivo
+>
+> Descreve o backend v1: banco `fanara87_uffnormas`, `db/schema.sql`,
+> `api/index.php`, `importar/importar.php`. **Tudo isso está morto.**
+>
+> Hoje: banco `fanara87_governanca` (schema v2), API `api/index_v2.php`,
+> importador `importar/importar_v2.php`.
+>
+> **O que vale está em [`../CLAUDE.md`](../CLAUDE.md)** e em
+> [`../docs/ARQUITETURA-BASE-DADOS.md`](../docs/ARQUITETURA-BASE-DADOS.md).
+>
+> Mantido apenas como referência histórica.
+
 API somente-leitura + importador para o Portal de Normas e Atos da UFF.
 Arquitetura e decisões: ver [ARQUITETURA.md](ARQUITETURA.md).
 Trocar de servidor: ver [MIGRACAO.md](MIGRACAO.md).

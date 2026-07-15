@@ -1,20 +1,28 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Portal de Normas e Atos da UFF
 
-# Run and deploy your AI Studio app
+Indexa o Boletim de Serviço da UFF: baixa os PDFs, extrai os atos, carrega num
+MySQL e serve um portal de busca e análise.
 
-This contains everything you need to run your app locally.
+No ar em **https://inteligencia.fanara.com.br/**
 
-View your app in AI Studio: https://ai.studio/apps/5495e903-475b-4e17-907e-ababf8557974
+## Comece por aqui
 
-## Run Locally
+**[`CLAUDE.md`](CLAUDE.md) descreve o estado atual do projeto** — o que está no
+ar, qual arquivo é o vivo, como fazer deploy e quais são as pendências. Leia
+antes de mexer em qualquer coisa.
 
-**Prerequisites:**  Node.js
+- Arquitetura da base: [`docs/ARQUITETURA-BASE-DADOS.md`](docs/ARQUITETURA-BASE-DADOS.md)
+- Histórico: `git log` e [`docs/`](docs/)
 
+## Rodar local
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm install
+npm run dev
+```
+
+O build de produção (`npm run build`) gera `dist/`, que sobe manualmente para a
+HostGator — ver o procedimento em [`CLAUDE.md`](CLAUDE.md).
+
+> `DEPLOY.md` e `backend/README.md` descrevem a arquitetura antiga (v1) e estão
+> defasados. Valem como referência histórica apenas.
