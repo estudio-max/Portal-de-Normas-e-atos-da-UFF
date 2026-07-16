@@ -1452,25 +1452,81 @@ def extrai_aposentadoria(trecho):
 
 # Deslocamento de servidor (Lei 8.112/90): REMOÇÃO = dentro da própria UFF
 # (art. 36); REDISTRIBUIÇÃO = cargo entra/sai da UFF p/ outro órgão (art. 37).
-# A fonte (Boletim da UFF) registra bem a redistribuição de ENTRADA (o servidor
-# de outro órgão chegando, via o ato de provimento/lotação que descreve o cargo
-# "redistribuído à UFF"); a SAÍDA se consuma numa portaria do MEC no DOU, então
-# aqui só aparecem as SOLICITAÇÕES da CEPEX — sub-registrada de propósito, não
-# por bug. Menção retrospectiva não conta (mesmo cuidado das aposentadorias).
-_RED_ENTRA = re.compile(
-    r"redistribu\w+.{0,90}?(?:para\s+o\s+desta\s+universidade"
-    r"|[àa]\s+universidade\s+federal\s+fluminense"
-    r"|para\s+a\s+universidade\s+federal\s+fluminense)", re.I)
-_RED_SAI = re.compile(
-    r"desta\s+universidade\s+para\s+a\s+universidade\s+federal"
-    r"|d[eo]\s+departamento\s+[^.]{0,60}?\s+para\s+a\s+universidade\s+federal", re.I)
-_RED_EXCL = re.compile(
-    r"redistribuiç[ãa]o\s+de\s+cargos\s+de\s+direç"       # CD/FG genérico do MEC
-    r"|funç[õo]es\s+gratificadas\s+do\s+minist"
-    r"|vagas?\s+.{0,30}?redistribu"                        # vaga de edital/bolsa
-    r"|redistribu\w+\s+os?\s+dados"                        # IN sobre dados
-    r"|redistribu\w+\s+para\s+recredenciamento", re.I)
 _RED_QQ = re.compile(r"redistribu", re.I)
+_RED_EXCL = re.compile(
+    r"redistribuiç[ãa]o\s+de\s+cargos\s+de\s+direç"        # CD/FG genérico do MEC
+    r"|funç[õo]es\s+gratificadas\s+do\s+minist"
+    r"|vagas?\s+.{0,30}?redistribu"                         # vaga de edital/bolsa
+    r"|redistribu\w+\s+os?\s+dados"                         # IN sobre dados
+    r"|redistribu\w+\s+para\s+recredenciamento"
+    r"|redistribu\w+\s+.{0,40}?espaç"                       # espaço físico/interno, não servidor
+    r"|entende-se\s+por\s+redistribu"                       # definição normativa (IN), não evento
+    r"|remo[çc][ãa]o\s*/\s*redistribui"                     # cláusula de atribuição de cargo (rotina do setor)
+    r"|redistribu\w+\s+pela\s+portaria\s+mec"               # proveniência da VAGA, não do servidor deste ato
+    r"|redistribu\w+\s+por\s+meio\s+da\s+portaria"
+    r"|c[óo]digo\s+de\s+vaga.{0,30}?redistribu"
+    r"|redistribu\w+\s+(?:através\s+de\s+)?portaria\s+mec\s+n", re.I)
+# Instituição de origem/destino EXTERNA (não-UFF). "Ministério da Educação" fica
+# de fora de propósito: é o rodapé padrão de TODO ato (a UFF também é MEC), não
+# indica origem/destino externo — incluí-lo sem essa exceção derrubou casos reais
+# (medido: 9 atos de 2022-2024 viraram falso-negativo quando testado sem o
+# `(?!educaç)`, porque o rodapé "Ministério da Educação Universidade Federal
+# Fluminense" cai dentro da janela de busca do destino).
+_INST_EXTERNA = re.compile(
+    r"universidade\s+federal\s+(?!fluminense)\w[\wçãáéíóúâêô]*"
+    r"|universidade\s+estadual\s+\w+"
+    r"|universidade\s+federal\s+rural\s+\w+"
+    r"|fundaç[ãa]o\s+universidade\s+(?:de|do|federal)"
+    r"|instituto\s+federal\s+\w+"
+    r"|centro\s+federal\s+de\s+educaç[ãa]o"
+    r"|cefet\b"
+    r"|minist[ée]rio\s+d[aeo]\s+(?!educaç)\w+"
+    r"|departamento\s+nacional\s+de\s+\w+"
+    r"|instituto\s+do\s+patrim[ôo]nio\s+hist[óo]rico", re.I)
+_UFF_MARK = re.compile(r"desta\s+universidade|universidade\s+federal\s+fluminense", re.I)
+
+
+def classifica_redistribuicao(t):
+    """'Entrada', 'Saída' ou None. Não é regex único de propósito: a frase muda
+    conforme quem redige (Portaria de lotação: "redistribuído do quadro
+    permanente da X, para o desta universidade..."; Decisão do CEPEX: "aprovar
+    a redistribuição do docente Y, da X para o Departamento Z"; DTS do DAP:
+    só cita a origem, sem "para" — o destino é implícito, é o próprio DAP da
+    UFF publicando). O discriminador real é posicional: qual lado de "para" —
+    origem ou destino — nomeia uma instituição externa (`_INST_EXTERNA`).
+    Medido no corpus 2001-2026 (reprocessamento de 15/07/2026): a versão
+    anterior (só "para o desta universidade" / "a UFF por extenso" a até 90
+    caracteres de "redistribu") classificava 252 de 1.029 menções não
+    excluídas; esta versão classifica 578 (504 Entrada + 74 Saída) — o resto
+    é, na amostra revisada, legitimamente outra coisa (proveniência de vaga
+    do MEC, redistribuição de espaço físico, cláusula de rotina do setor)."""
+    if not _RED_QQ.search(t) or _RED_EXCL.search(t):
+        return None
+    m = re.search(r"redistribu\w+", t, re.I)
+    if not m:
+        return None
+    janela = t[m.end(): m.end() + 260]
+    mp = re.search(r"\bpara\b", janela, re.I)
+    if mp:
+        antes, depois = janela[:mp.start()], janela[mp.start():mp.start() + 150]
+        origem_externa = bool(_INST_EXTERNA.search(antes))
+        destino_externo = bool(_INST_EXTERNA.search(depois))
+        destino_uff = bool(_UFF_MARK.search(depois)) or (
+            re.search(r"\b(?:departamento|instituto|faculdade|escola)\s+de\b", depois, re.I)
+            and not destino_externo)
+        if origem_externa and not destino_externo:
+            return "Entrada"
+        if destino_externo and not origem_externa:
+            return "Saída"
+        if destino_uff and not origem_externa:
+            return "Entrada"
+        return None
+    # sem "para" na janela: padrão DTS do DAP ("redistribuído da/do ORIGEM",
+    # sem destino explícito — quem publica o ato já É o destino, a UFF).
+    m2 = re.match(r"\s*(?:da|do)\s+(.{0,80})", janela, re.I)
+    if m2 and _INST_EXTERNA.search(m2.group(1)):
+        return "Entrada"
+    return None
 # Remoção: "remover" ancorado num servidor/matrícula na MESMA frase (sem ponto).
 # Cobre "remover o(a) servidor(a)", "remover, em caráter provisório, a servidora",
 # "remover os servidores abaixo". A âncora descarta "remover" de outros contextos.
@@ -1498,11 +1554,9 @@ def extrai_deslocamento(trecho):
     """{'tipo': 'Remoção'|'Redistribuição', 'direcao': 'Interna'|'Entrada'|'Saída',
     'motivo': str, 'setor': str} ou None se o ato não desloca servidor."""
     t = trecho
-    if _RED_QQ.search(t) and not _RED_EXCL.search(t):
-        if _RED_ENTRA.search(t):
-            return {"tipo": "Redistribuição", "direcao": "Entrada", "motivo": "", "setor": ""}
-        if _RED_SAI.search(t):
-            return {"tipo": "Redistribuição", "direcao": "Saída", "motivo": "", "setor": ""}
+    direcao_red = classifica_redistribuicao(t)
+    if direcao_red:
+        return {"tipo": "Redistribuição", "direcao": direcao_red, "motivo": "", "setor": ""}
     if _REMOVER.search(t):
         if _M_SAUDE.search(t): motivo = "Saúde"
         elif _M_CONJ.search(t): motivo = "Acompanhar cônjuge"
