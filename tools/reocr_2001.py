@@ -37,8 +37,31 @@ zero falso positivo (HUBABN, HHRHAR, HHUNA, HHBRAA, HHHAHH, HAHNHA, HHHHA,
 HHUBUHA, HUHRHAN, HHNHH, URHHA, UNHNA, HUNUNH, UHHHA...). Esses viram
 "# # # # #" no texto de saida — cinco, que e o que 2002-2003 usam e o que o
 _HASH_SEP passou a aceitar.
+
+ESTADO (16/07/2026): NAO USAR PARA PRODUCAO AINDA. Rodado no ano inteiro, este
+re-OCR extrai MENOS atos que o OCR de epoca (520-558 vs 609), por DOIS defeitos
+ainda abertos — nenhum e do Tesseract em si, os dois sao da reconstrucao aqui:
+
+  1) LINHA EM BRANCO PERDIDA. insert_text por linha nao reproduz o espaco
+     vertical entre paragrafos, e o get_text() do fitz nao emite a linha em
+     branco. O TITULO_CURTO_RE (Decisoes/Resolucoes de colegiado) exige
+     "(?=\\n[ \\t]*\\n)" depois do numero — sem a linha em branco, esses atos
+     somem. Prova: 036-2001 rende 8 atos no original e 1 aqui; o texto TEM
+     "DECISAO No 09/2001" mas colado no corpo, sem a linha em branco que o
+     original preserva. CONSERTAR: detectar gap vertical > ~1,5x altura de
+     linha entre objetos e emitir uma linha vazia (objeto de texto com espaco
+     na posicao do gap).
+  2) DIGITO "1" FINAL VIRA "]". "de 2001" -> "de 200]", "09/2001" -> "09/2001]"
+     (1908 ocorrencias em 177 boletins). Quebra o ano no titulo. Um fix por
+     regex "[\\]|] colado a digito -> 1" recupera parte (520->558). dpi=450
+     conserta o glifo em caso isolado mas PIORA no conjunto (036: 1->0) e custa
+     132s/boletim. Melhor caminho provavel: fix por regex + validar.
+
+Ate os dois serem resolvidos e MEDIDO que supera 609, 2001 fica com o dado
+atual. O fix do separador de 5 # (2002-2003) e independente disto e ja vale.
 """
 import argparse
+import multiprocessing as mp
 import os
 import re
 import subprocess
@@ -145,11 +168,24 @@ def escreve_pdf(origem, destino):
     return n_pag, total_sep
 
 
+def _tarefa(args):
+    """Um boletim. Roda em processo separado (ver --jobs)."""
+    entrada, destino, nome = args
+    try:
+        n_pag, n_sep = escreve_pdf(entrada, destino)
+        return nome, n_pag, n_sep, None
+    except Exception as e:               # nao derruba o lote por causa de 1 PDF
+        return nome, 0, 0, str(e)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--entrada", required=True)
     ap.add_argument("--saida", required=True)
     ap.add_argument("--so", default=None, help="processa so este arquivo (teste)")
+    ap.add_argument("--jobs", type=int, default=6,
+                    help="processos em paralelo (padrao 6; medido 7,2 s/pagina "
+                         "com 1 job, ~5 h para o ano — cada PDF e independente)")
     a = ap.parse_args()
 
     os.makedirs(a.saida, exist_ok=True)
@@ -159,17 +195,24 @@ def main():
     if not os.path.exists(TESSERACT):
         sys.exit(f"Tesseract nao encontrado em {TESSERACT}")
 
-    tot_sep = 0
-    for i, nome in enumerate(pdfs, 1):
-        destino = os.path.join(a.saida, nome)
-        if os.path.exists(destino):
-            print(f"[{i}/{len(pdfs)}] {nome}: ja existe, pulando")
-            continue
-        n_pag, n_sep = escreve_pdf(os.path.join(a.entrada, nome), destino)
-        tot_sep += n_sep
-        print(f"[{i}/{len(pdfs)}] {nome}: {n_pag} pags, {n_sep} separadores restaurados",
-              flush=True)
-    print(f"\nFIM. {len(pdfs)} boletins, {tot_sep} separadores restaurados.")
+    # ja feitos ficam de fora: o lote e retomavel, basta rodar de novo
+    pendentes = [(os.path.join(a.entrada, n), os.path.join(a.saida, n), n)
+                 for n in pdfs if not os.path.exists(os.path.join(a.saida, n))]
+    print(f"{len(pdfs)} boletins, {len(pdfs) - len(pendentes)} ja prontos, "
+          f"{len(pendentes)} a fazer, {a.jobs} em paralelo", flush=True)
+
+    tot_sep = feitos = 0
+    if pendentes:
+        with mp.Pool(a.jobs) as pool:
+            for nome, n_pag, n_sep, erro in pool.imap_unordered(_tarefa, pendentes):
+                feitos += 1
+                if erro:
+                    print(f"[{feitos}/{len(pendentes)}] {nome}: ERRO {erro}", flush=True)
+                else:
+                    tot_sep += n_sep
+                    print(f"[{feitos}/{len(pendentes)}] {nome}: {n_pag} pags, "
+                          f"{n_sep} separadores", flush=True)
+    print(f"\nFIM. {feitos} boletins processados, {tot_sep} separadores restaurados.")
 
 
 if __name__ == "__main__":
