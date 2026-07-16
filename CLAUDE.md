@@ -179,30 +179,6 @@ manda neles.**
 
 ## Pendências
 
-- **Reprocessamento pendente do extrator.** `tools/extrair_boletim.py` já captura
-  cargo de direção/assessoramento (Assessor, Prefeito, Corregedor,
-  Secretário-Geral), o verbo `nomear`, e não deixa mais um ato engolir a seção
-  seguinte (ver abaixo) — mas **os dados importados não mudaram**. A Action
-  diária aplica isso só aos boletins novos; o histórico (ex.: a nomeação de
-  Assessor de 2022, que não aparece no Dossiê) só entra com **reprocessamento +
-  reimport**. Este lote soma aos fixes de captura anteriores que também esperam
-  a mesma rodada — **incluindo o bloco de aposentadoria 2001-2014** (confirmado
-  abaixo).
-
-  Mecanismo de reimport (lido em `backend/importar/importar_v2.php`): não é
-  SQL pronto — é um endpoint PHP que lê um **JSON** (schema do
-  `portal-data.json`) e faz UPSERT idempotente por chave natural. Roda via
-  navegador, `?token=...&arquivo=nome.json`, com o arquivo **subido antes** para
-  `backend/importar/` no servidor (sem SSH, sem outro jeito). É uma transação
-  única por chamada — o comentário do próprio código diz que o feed diário
-  (~3.200 atos/11 MB) "cabe folgado", e que um lote maior "pode raspar o teto"
-  do hosting compartilhado. Um reprocessamento completo (128k+ atos) precisa
-  ser **fatiado por ano** — e alguns anos sozinhos (2013: 6.929 atos, 2015:
-  7.113) já passam do que o feed diário prova ser seguro, podendo exigir
-  sub-fatiamento. Os `carga_202X.sql.gz` em `../dados/cargas/` parecem resíduo
-  da migração v1→v2 original (`etl_v2.py`), não este mecanismo — não use como
-  referência sem confirmar.
-
 - **RDD individual não vira ato próprio (lacuna, não regressão).** O fix de
   fronteira (abaixo) impede que um ato absorva a "Resumo de Despachos e
   Decisões" que vem depois — mas cada decisão INDIVIDUAL dentro dessa seção
@@ -220,33 +196,6 @@ manda neles.**
   capturado por `TITULO_RE`). Cada formato precisa da mesma medição rigorosa
   que o resto deste arquivo documenta.
 
-- **Aposentadoria 2001-2014: 689 "Indefinida", CONFIRMADO (15/07/2026).**
-  `/api/analitico` mostrava 689 "Indefinida" em 2001-2014 contra ~0 de 2015 em
-  diante. Investigado via phpMyAdmin em 3 passos: (1) a agregação por ano bateu
-  exato — soma de 2002-2014 = **689**, igual ao valor já registrado; (2) `SELECT
-  ... GROUP BY extracao_id` mostrou que **todos os 4.051 registros** de
-  `ato_aposentadoria` (2002-2026, bons e ruins juntos) vêm de **um `extracao_id`
-  só** — o `1`, "Reformatação v1→v2 sem perda", rodado em 2026-07-12. Ou seja:
-  **não é um lote de extração v2 divergente** — é a migração v1→v2 carregando,
-  fiel ao próprio nome ("sem perda"), uma classificação que já estava errada
-  **dentro do v1**, de uma época anterior a alguma correção que o v1 recebeu
-  (por volta de 2014/2015, a julgar por onde "Indefinida" despenca); (3) amostra
-  de 13 dos atos "Indefinida" de 2001-2014 confirmou visualmente: **12 são
-  retificações puras** — a ementa inteira é só *"Retifica em parte, a Portaria
-  nº X de DD/MM/AAAA"*, sem conteúdo de concessão próprio. É o caso textual da
-  regra "classifique pelo dispositivo, não por menção" — o classificador atual
-  não geraria `ato_aposentadoria` nenhum para essas. O 13º caso
-  (`dts-uff-31-2002-2`, uma DTS de **lotação** de servidor) é outlier na mesma
-  família: nada na ementa fala de aposentadoria — o corpo provavelmente
-  menciona a aposentadoria de outra pessoa em algum trecho, e o classificador
-  velho pegou a menção.
-
-  **Conserto:** regerar o bloco 2001-2014 com `tools/extrair_boletim.py`
-  **daqui** e reimportar — entra no mesmo lote do reprocessamento pendente
-  acima (cargo de direção, `nomear`, fronteira do ato). Não precisa mais
-  confirmar nada; já está confirmado.
-  ⚠️ Os SQLs `corrigir_*.sql` em `../dados/cargas/_out/` **são do v1 e não rodam
-  aqui** (escrevem em `atos`/`ato_corpo`, que não existem no v2) — ignore-os.
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
