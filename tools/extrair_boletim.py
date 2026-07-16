@@ -122,15 +122,30 @@ TITULO_SIGA_RE = re.compile(
     r"(?P<tipo>Portaria|PORTARIA)(?P<orgao>)\s+" + _TIT_NUM_DATA
 )
 
-# Marcador de fim/início de ato usado em todo o corpus: OU o separador
-# "# # # # # #" entre atos na mesma página, OU o cabeçalho/rodapé de página
+# Marcador de fim/início de ato usado em todo o corpus: OU o separador de
+# hashes entre atos na mesma página, OU o cabeçalho/rodapé de página
 # ("PÁG. 09") quando o ato começa bem no topo da página seguinte. Ancora com
 # segurança formatos CURTOS de título que não têm data por extenso na mesma
 # linha — comuns em Decisões/Resoluções de colegiados (CEP/CUV) em anos mais
 # antigos: "DECISÃO N.º 026/2012", "RESOLUÇÃO 18/2002" (às vezes sem "Nº"
 # nenhum). Como citações no corpo NUNCA vêm logo após um desses marcadores nem
 # são seguidas de linha em branco, não há risco de falso título.
-_HASH_SEP = r"#\s*#\s*#\s*#\s*#\s*#"
+#
+# O separador tem CINCO hashes em 2002-2003 e SEIS de 2004 em diante — medido
+# no corpus: 2002 tem 90 sequências de 5 contra 14 de 6; 2003, 208 de 5 e zero
+# de 6; 2004+, só 6. Exigir seis (como era até 16/07/2026) cegava o extrator
+# justamente nos anos de cinco. Aceitar 5-ou-6, medido sobre os anos INTEIROS:
+# 2002 +189 atos (+19%), 2003 +121 (+15%), 2004 +9, e ZERO atos perdidos em
+# qualquer ano de 2001 a 2026. Os recuperados são Decisões reais do CEP em
+# numeração sequencial (642, 643, 645...), que é o formato curto que este
+# regex existe para ancorar.
+# 2001 ganha ZERO aqui, e não é falha do regex: naquele ano o BS é digitalizado
+# e o OCR de época transformou todo "# # # # #" em lixo ("HNHUA", "hehe") — não
+# há hash nenhum no texto para casar. Só um re-OCR recupera aquele ano.
+# Não aceite QUATRO: as 21 sequências de 4 medidas em 2002 não foram
+# investigadas e o ganho não compensa o risco de casar coisa que não é
+# separador.
+_HASH_SEP = r"#(?:\s*#){4,5}"
 _ATO_BOUNDARY = r"(?:%s|P[ÁA]G\.?\s*0?\d+)" % _HASH_SEP
 TITULO_CURTO_RE = re.compile(
     r"%s\s*\n\s*"
@@ -602,7 +617,7 @@ def parse_pdf(caminho):
 
         # corpo sem o cabeçalho/rodapé repetido do BS
         corpo = HEADER_BS_RE.sub(" ", trecho)
-        corpo = re.sub(r"#\s*#\s*#\s*#\s*#\s*#", " ", corpo)
+        corpo = re.sub(_HASH_SEP, " ", corpo)
 
         # seção/página: procura no trecho IMEDIATAMENTE antes do título também
         ctx = full[max(0, ini - 400): ini + 200]
