@@ -58,28 +58,37 @@ def tokens(s_normalizado):
     return [t for t in s_normalizado.split("/") if len(t) >= 2]
 
 
-# Tipos de comissão que aparecem como PREFIXO no padrão COMISSÃO/UNIDADE do
-# corpus. Comissão NÃO é setor — não tem UORG (regra do usuário, 16/07/2026).
-# Então o que se casa aqui é o SETOR-PAI da comissão, não uma equivalência.
-# Medido no corpus: CEL domina (112 siglas); os outros "prefixos não-setor"
-# são artefatos (DTS/RDD/DECISÕES/DIREÇÃO = tipo de doc/cabeçalho vazado) ou
-# órgãos externos (MEC/CNE), não comissões. Dict extensível se surgirem mais.
-COMISSOES = {
-    "CEL": "Comissão Eleitoral Local",
+# Tokens que, quando aparecem como PREFIXO (1º token), NÃO são setor — são um
+# modificador. Regras de domínio do usuário (16/07/2026). Mapeiam para
+# (rótulo, papel do setor-âncora):
+#   CEL = Comissão Eleitoral Local (comissão não tem UORG; o setor é o PAI dela).
+#   AD  = "ad referendum" — decisão provisória do reitor/presidente a ratificar
+#         depois pelo plenário. É a NATUREZA do ato; o setor é quem o EMITE.
+# ⚠️ POSICIONAL: "AD" só é ad referendum como PREFIXO. Como token POSTERIOR
+# ("GRAUNI/AD", "CAF/AD") é a antiga Pró-Reitoria de Administração (hoje PROAD)
+# — e aí a lista oficial já traz a sigla composta inteira, então casa por
+# exato/token normalmente, sem regra especial.
+# Medido no corpus: CEL 112 siglas, AD-prefixo 3 (AD/CAL, AD/CEPEX, AD/CUV).
+# Os demais "prefixos não-setor" são artefatos (DTS/RDD/DECISÕES/DIREÇÃO) ou
+# externos (MEC/CNE). Dict extensível se o usuário identificar outros.
+PREFIXOS_MODIFICADORES = {
+    "CEL": ("Comissão Eleitoral Local", "setor-pai"),
+    "AD": ("Ad referendum (decisão provisória a ratificar pelo plenário)", "setor emissor"),
 }
 
 
-def tipo_comissao(sigla_normalizada):
-    """Devolve (tipo, tokens_do_setor) se a sigla é comissão; senão (None, tokens).
-    Para CEL/CMF: ('Comissão Eleitoral Local', ['CMF']) — o CEL sai, sobra o
-    setor-pai. Também pega nome por extenso ('COMISSÃO ...') que vazou como
-    sigla — aí não há setor-pai extraível."""
+def tipo_prefixo(sigla_normalizada):
+    """Devolve (rótulo, papel, tokens_do_setor). rótulo='' se não é modificador.
+    Para AD/CEPEX: ('Ad referendum...', 'setor emissor', ['CEPEX']) — o AD sai,
+    o setor emissor é CEPEX. Para CEL/CMF: ('Comissão Eleitoral Local',
+    'setor-pai', ['CMF']). Também pega nome de comissão por extenso."""
     toks = tokens(sigla_normalizada)
-    if toks and toks[0] in COMISSOES:
-        return COMISSOES[toks[0]], toks[1:]
+    if toks and toks[0] in PREFIXOS_MODIFICADORES:
+        rotulo, papel = PREFIXOS_MODIFICADORES[toks[0]]
+        return rotulo, papel, toks[1:]
     if "COMISSAO" in sigla_normalizada:
-        return "Comissão (nome por extenso)", []
-    return None, toks
+        return "Comissão (nome por extenso)", "setor-pai", []
+    return "", "equivalente", toks
 
 
 def carrega_referencia(caminho):
@@ -162,31 +171,31 @@ def main():
 
     linhas = []
     contagem = {"exato": 0, "token_exato": 0, "similaridade": 0, "sem_candidato": 0}
-    n_comissao = 0
+    n_modif = 0
     for sigla in sorted(siglas_corpus):
         alvo = normaliza(sigla)
-        tipo, toks_setor = tipo_comissao(alvo)
-        if tipo:
-            n_comissao += 1
+        rotulo, papel, toks_setor = tipo_prefixo(alvo)
+        if rotulo:
+            n_modif += 1
         cand = melhor_candidato(alvo, toks_setor, ref, por_token)
-        # rótulo do que o candidato REPRESENTA: p/ comissão é o setor-PAI,
-        # não uma equivalência; p/ sigla comum é o órgão equivalente.
-        papel = "setor-pai" if tipo else "equivalente"
+        # papel: o que o candidato REPRESENTA relativo à sigla do corpus —
+        # "setor-pai"/"setor emissor" p/ modificador, "equivalente" p/ comum.
         if cand:
             contagem[cand["motivo"]] += 1
-            linhas.append([sigla, tipo or "", papel, cand["sigla_oficial"],
+            linhas.append([sigla, rotulo, papel, cand["sigla_oficial"],
                            cand["descricao"], cand["uorg"], cand["status"],
                            cand["motivo"], f'{cand["score"]:.2f}'])
         else:
             contagem["sem_candidato"] += 1
-            linhas.append([sigla, tipo or "", papel if tipo else "", "", "", "", "",
+            linhas.append([sigla, rotulo, papel if rotulo else "", "", "", "", "",
                            "sem_candidato", ""])
 
-    print(f"  (dessas, {n_comissao} são comissões — não são setor, não têm UORG próprio)")
+    print(f"  (dessas, {n_modif} têm prefixo modificador — comissão ou 'ad referendum' — "
+          f"não são setor próprio; o candidato é o setor-pai/emissor)")
 
     with open(a.saida, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f, delimiter=";")
-        w.writerow(["sigla_corpus", "eh_comissao", "papel_do_candidato",
+        w.writerow(["sigla_corpus", "prefixo_significado", "papel_do_candidato",
                     "sigla_oficial_candidata", "descricao_oficial", "uorg",
                     "status_oficial", "motivo", "score"])
         w.writerows(linhas)
