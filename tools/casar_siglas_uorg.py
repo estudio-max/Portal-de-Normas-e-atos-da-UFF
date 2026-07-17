@@ -77,6 +77,23 @@ PREFIXOS_MODIFICADORES = {
 }
 
 
+# Sinônimos de sigla INTEIRA — o corpus usa uma grafia que a lista oficial não
+# tem, mas que o usuário confirmou apontar para uma sigla oficial. Dois tipos:
+#   RENOMEAÇÃO: "ASCOM" (antiga Assessoria de Comunicação) -> "SCS" (hoje
+#               Superintendência de Comunicação Social, UORG 1483).
+#   GRAFIA CORRIDA: "GARRETUFF" = "GAR/RET/UFF" escrito sem barras -> "GAR/RET"
+#               (Gabinete do Reitor, UORG 1787). O tokenizador não separa
+#               "GARRETUFF" sozinho, daí o mapa explícito.
+# Só entram aqui as grafias que NÃO casam por conta própria (GAR, RET, GABR,
+# GAR/RET, SCS já casam exato sozinhas). Valor = sigla oficial JÁ NORMALIZADA.
+# Estes são os mapeamentos de MAIOR confiança do relatório: vêm do usuário,
+# não de heurística. Dict extensível conforme o usuário ensina mais.
+SINONIMOS = {
+    "ASCOM": "SCS",
+    "GARRETUFF": "GAR/RET",
+}
+
+
 def tipo_prefixo(sigla_normalizada):
     """Devolve (rótulo, papel, tokens_do_setor). rótulo='' se não é modificador.
     Para AD/CEPEX: ('Ad referendum...', 'setor emissor', ['CEPEX']) — o AD sai,
@@ -170,10 +187,27 @@ def main():
           f"| {len(por_token)} tokens distintos")
 
     linhas = []
-    contagem = {"exato": 0, "token_exato": 0, "similaridade": 0, "sem_candidato": 0}
+    contagem = {"sinonimo": 0, "exato": 0, "token_exato": 0, "similaridade": 0, "sem_candidato": 0}
     n_modif = 0
     for sigla in sorted(siglas_corpus):
         alvo = normaliza(sigla)
+
+        # 1) sinônimo ensinado pelo usuário: substitui e resolve o canônico
+        if alvo in SINONIMOS:
+            canonico = SINONIMOS[alvo]
+            cand = melhor_candidato(canonico, tokens(canonico), ref, por_token)
+            rotulo = f"sinônimo conhecido: {sigla} → {canonico}"
+            if cand:
+                contagem["sinonimo"] += 1
+                linhas.append([sigla, rotulo, "equivalente", cand["sigla_oficial"],
+                               cand["descricao"], cand["uorg"], cand["status"],
+                               "sinonimo", "1.00"])
+            else:  # não deveria acontecer (o canônico é sigla oficial)
+                contagem["sem_candidato"] += 1
+                linhas.append([sigla, rotulo, "", "", "", "", "", "sem_candidato", ""])
+            continue
+
+        # 2) prefixo modificador (comissão / ad referendum) ou sigla comum
         rotulo, papel, toks_setor = tipo_prefixo(alvo)
         if rotulo:
             n_modif += 1
@@ -190,8 +224,8 @@ def main():
             linhas.append([sigla, rotulo, papel if rotulo else "", "", "", "", "",
                            "sem_candidato", ""])
 
-    print(f"  (dessas, {n_modif} têm prefixo modificador — comissão ou 'ad referendum' — "
-          f"não são setor próprio; o candidato é o setor-pai/emissor)")
+    print(f"  ({contagem['sinonimo']} por sinônimo ensinado; {n_modif} com prefixo "
+          f"modificador — comissão/ad referendum, candidato = setor-pai/emissor)")
 
     with open(a.saida, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f, delimiter=";")
