@@ -74,6 +74,12 @@ def tokens(s_normalizado):
 PREFIXOS_MODIFICADORES = {
     "CEL": ("Comissão Eleitoral Local", "setor-pai"),
     "AD": ("Ad referendum (decisão provisória a ratificar pelo plenário)", "setor emissor"),
+    # RDD e DECISÕES não são setor — são tipo de documento / cabeçalho de seção
+    # que vazaram pro campo sigla. Como prefixo, o setor real é o que vem depois
+    # (RDD/PROGEPE → PROGEPE). Se NÃO sobra setor (DECISÕES/RDD, RDD sozinho),
+    # a sigla não tem órgão válido — é artefato de extração.
+    "RDD": ("Resumo de Despacho e Decisão (tipo de documento, não setor)", "setor emissor"),
+    "DECISOES": ("cabeçalho de seção 'Decisões' vazado (não é setor)", "setor emissor"),
 }
 
 
@@ -91,18 +97,32 @@ PREFIXOS_MODIFICADORES = {
 SINONIMOS = {
     "ASCOM": "SCS",
     "GARRETUFF": "GAR/RET",
+    # Variantes não-padronizadas da unidade de saúde de Nova Friburgo → hoje
+    # ISNF (Instituto de Saúde de Nova Friburgo, UORG 2088). FOUF/FOUFF/FOUFFNF
+    # não existem na lista oficial. ⚠️ PUNF (Polo Universitário de N.F.) e FONF
+    # (Faculdade de Odontologia de N.F.) SÃO UORGs oficiais distintos — NÃO
+    # entram aqui até o usuário confirmar se devem ser fundidos no ISNF.
+    "FOUF": "ISNF",
+    "FOUFF": "ISNF",
+    "FOUFFNF": "ISNF",
 }
 
 
 def tipo_prefixo(sigla_normalizada):
     """Devolve (rótulo, papel, tokens_do_setor). rótulo='' se não é modificador.
-    Para AD/CEPEX: ('Ad referendum...', 'setor emissor', ['CEPEX']) — o AD sai,
-    o setor emissor é CEPEX. Para CEL/CMF: ('Comissão Eleitoral Local',
-    'setor-pai', ['CMF']). Também pega nome de comissão por extenso."""
+    Descasca TODOS os prefixos modificadores do início, em cadeia — DECISÕES/RDD
+    tira os dois e não sobra setor. Para AD/CEPEX: ('Ad referendum...',
+    'setor emissor', ['CEPEX']). Para CEL/CMF: ('Comissão Eleitoral Local',
+    'setor-pai', ['CMF']). AD/RDD/DECISÕES só contam como modificador no INÍCIO;
+    'AD' como token posterior (GRAUNI/AD) fica, pois ali é PROAD."""
     toks = tokens(sigla_normalizada)
-    if toks and toks[0] in PREFIXOS_MODIFICADORES:
-        rotulo, papel = PREFIXOS_MODIFICADORES[toks[0]]
-        return rotulo, papel, toks[1:]
+    rotulos, papel = [], "equivalente"
+    while toks and toks[0] in PREFIXOS_MODIFICADORES:
+        r, papel = PREFIXOS_MODIFICADORES[toks[0]]
+        rotulos.append(r)
+        toks = toks[1:]
+    if rotulos:
+        return " + ".join(rotulos), papel, toks
     if "COMISSAO" in sigla_normalizada:
         return "Comissão (nome por extenso)", "setor-pai", []
     return "", "equivalente", toks
