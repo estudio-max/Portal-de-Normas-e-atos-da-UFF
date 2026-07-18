@@ -31,8 +31,9 @@ export default function PrivacidadeLGPD() {
 
       <Secao icon={<FileText className="w-4 h-4" />} titulo="Responsável pelo tratamento">
         <p>
-          Este portal é mantido por João Fanara, de forma independente da UFF, como ferramenta de
-          consulta aos boletins públicos da universidade. Contato: <a href="mailto:nidi.gar@id.uff.br" className="text-blue-700 underline font-semibold">nidi.gar@id.uff.br</a>.
+          Este portal é mantido pelo Nidi (Núcleo Institucional de Dados Integrados), vinculado ao
+          Gabinete do Reitor da UFF, como ferramenta de consulta aos boletins públicos da
+          universidade. João Fanara, idealizador do projeto, coordena o Nidi. Contato: <a href="mailto:nidi.gar@id.uff.br" className="text-blue-700 underline font-semibold">nidi.gar@id.uff.br</a>.
         </p>
       </Secao>
 

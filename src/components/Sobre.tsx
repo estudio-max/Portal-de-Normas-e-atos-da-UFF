@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Lightbulb, Code2, Info } from 'lucide-react';
+import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -21,8 +21,9 @@ export default function Sobre() {
           <Info className="w-5 h-5 text-yellow-400" /> Sobre este projeto
         </h2>
         <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          O Portal de Normas e Atos da UFF foi idealizado e construído por João Fanara, de forma
-          independente. Esta página conta a motivação e como o projeto foi feito.
+          O Portal de Normas e Atos da UFF foi idealizado por João Fanara e é mantido pelo Nidi
+          (Núcleo Institucional de Dados Integrados), vinculado ao Gabinete do Reitor da UFF. Esta
+          página conta a motivação e como o projeto foi feito.
         </p>
       </div>
 
@@ -50,8 +51,9 @@ export default function Sobre() {
 
       <Secao icon={<Code2 className="w-4 h-4" />} titulo="Como foi construído">
         <p>
-          O portal é mantido por João Fanara, de forma independente e sem vínculo oficial com a
-          administração da UFF.
+          O portal é mantido pelo Nidi (Núcleo Institucional de Dados Integrados), vinculado ao
+          Gabinete do Reitor da UFF. João Fanara, que teve a ideia original e construiu o projeto,
+          é o coordenador do Nidi.
         </p>
         <p>
           A extração dos atos publicados nos boletins, a modelagem do banco de dados e boa parte do
@@ -61,15 +63,71 @@ export default function Sobre() {
           sentido esconder isso — foi assim que o projeto foi construído, e é isso que tornou viável
           um trabalho desse tamanho fora de uma equipe grande.
         </p>
+        <p>
+          O código-fonte é aberto:{' '}
+          <a
+            href="https://github.com/estudio-max/Portal-de-Normas-e-atos-da-UFF"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-blue-700 underline font-semibold"
+          >
+            <Github className="w-3.5 h-3.5" /> repositório no GitHub
+          </a>{' '}
+          — inclui a documentação técnica do extrator dos boletins e da arquitetura do banco de
+          dados.
+        </p>
+        <p>
+          A raspagem de 25 anos de PDF não foi trivial: o formato do boletim mudou várias vezes
+          nesse período, sem aviso, e 2001 é digitalizado com uma qualidade de OCR ruim o
+          suficiente para destruir números e datas. Os desafios encontrados — e como cada um foi
+          resolvido — estão documentados no{' '}
+          <a
+            href="https://github.com/estudio-max/Portal-de-Normas-e-atos-da-UFF/blob/main/docs/GUIA-EXTRACAO-BS.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-700 underline font-semibold"
+          >
+            guia de extração do Boletim de Serviço
+          </a>.
+        </p>
+      </Secao>
+
+      <Secao icon={<BarChart3 className="w-4 h-4" />} titulo="Números do projeto">
+        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 not-italic">
+          <div>
+            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Início</dt>
+            <dd className="font-bold text-[#003366]">25/06/2026</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Cobertura</dt>
+            <dd className="font-bold text-[#003366]">2001–2026 (26 anos)</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Atos indexados</dt>
+            <dd className="font-bold text-[#003366]">128.910</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Boletins lidos</dt>
+            <dd className="font-bold text-[#003366]">4.919</dd>
+          </div>
+        </dl>
+        <p className="pt-2">
+          Extração dos boletins em Python (com OCR via Tesseract nos PDFs digitalizados); banco de
+          dados MySQL; backend em PHP; frontend em React e TypeScript.
+        </p>
       </Secao>
 
       <Secao icon={<Sparkles className="w-4 h-4" />} titulo="O que este portal é (e o que não é)">
         <p>
           O Portal de Normas e Atos da UFF é uma camada de consulta sobre um acervo público: os
           Boletins de Serviço que a própria universidade já publica oficialmente. Ele não substitui
-          o boletim, não cria informação nova e não tem vínculo institucional formal com a UFF. É
-          uma ferramenta independente, feita para facilitar o acesso a algo que já era público, mas
-          difícil de encontrar.
+          o boletim nem cria informação nova. É mantido pelo Nidi, vinculado ao Gabinete do Reitor,
+          para facilitar o acesso a algo que já era público, mas difícil de encontrar.
+        </p>
+        <p>
+          Vale registrar: qualquer pessoa poderia ter feito um sistema assim. Os boletins são
+          documentos públicos, e o portal não acessa nada que já não estivesse disponível — só
+          organiza, num só lugar, o que estava espalhado em milhares de páginas de PDF.
         </p>
       </Secao>
 
