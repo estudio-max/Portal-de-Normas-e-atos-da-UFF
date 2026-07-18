@@ -27,33 +27,32 @@ export default function Sobre() {
         </p>
       </div>
 
-      <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="A ideia, contada por quem a teve">
-        <p className="italic">
-          "No começo dos anos 2000, integrei a equipe que produziu o Portal de Normas do BNDES. Fui
-          responsável pela arquitetura de informação, pelo design e pelo frontend do sistema. Desde
-          essa época eu queria fazer algo parecido para a UFF.
+      <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Por que este portal existe">
+        <p>
+          O Boletim de Serviço da UFF é publicado desde 2001 em PDF, um arquivo por edição, sem
+          versão estruturada. Consultar esse acervo significava abrir boletim por boletim — mais de
+          quatro mil arquivos — e procurar à mão.
         </p>
-        <p className="italic">
-          O problema é que os dois casos não são iguais. O BNDES tinha um setor que centralizava a
-          criação e a gestão das suas normas. A UFF nunca teve isso. E sem um órgão responsável por
-          organizar o conteúdo, é difícil sustentar um sistema de normas: o material está todo lá,
-          publicado boletim a boletim há mais de vinte anos, mas nunca foi produzido pensando em
-          virar uma base de dados única.
+        <p>
+          A necessidade ficou concreta com o RSC (Reconhecimento de Saberes e Competências, Decreto
+          13.048/2026): para pleitear, muitos servidores passaram a procurar seus próprios registros
+          no Boletim — designações, participações em comissões, portarias antigas. Folhear décadas
+          de PDF atrás disso não é razoável, e o portal ajuda exatamente nesse ponto.
         </p>
-        <p className="italic">
-          Só recentemente, com as ferramentas de IA que existem hoje, ficou possível fazer o que
-          faltava: ler milhares de arquivos em PDF (vários deles fruto de digitalização e OCR de
-          qualidade bem irregular) e extrair de cada um o tipo de ato, o número, a data, o órgão, as
-          pessoas citadas — com uma qualidade aceitável para virar uma ferramenta de consulta de
-          verdade."
+        <p>
+          A ideia em si é antiga: nasceu da experiência com o Portal de Normas do BNDES, no começo
+          dos anos 2000. A diferença é que o BNDES tinha um setor que centralizava a gestão das suas
+          normas, e a UFF nunca teve — sem um órgão para gerir o conteúdo, um sistema assim não se
+          sustentava. Só as ferramentas de IA atuais tornaram viável ler milhares de PDFs (vários
+          deles fruto de digitalização e OCR de qualidade irregular) com precisão aceitável para
+          virar uma ferramenta de consulta.
         </p>
       </Secao>
 
       <Secao icon={<Code2 className="w-4 h-4" />} titulo="Como foi construído">
         <p>
           O portal é mantido pelo Nidi (Núcleo Institucional de Dados Integrados), vinculado ao
-          Gabinete do Reitor da UFF. João Fanara, que teve a ideia original e construiu o projeto,
-          é o coordenador do Nidi.
+          Gabinete do Reitor da UFF.
         </p>
         <p>
           A extração dos atos publicados nos boletins, a modelagem do banco de dados e boa parte do
