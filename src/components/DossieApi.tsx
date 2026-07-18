@@ -1,17 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch, Lock, LogOut } from 'lucide-react';
+import React, { useState } from 'react';
+import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch } from 'lucide-react';
 import * as ds from '../dataSource';
 
-// Aba "Dossiê do servidor": digite o SIAPE, receba os atos do Boletim que citam
-// aquela matrícula, com a referência do BS — para instruir processo.
+// Aba "Meu SIAPE": digite a matrícula, receba os atos do Boletim que a citam,
+// com a referência do BS — para instruir processo.
 //
-// Restrita à Gestão de Pessoal, por senha. É a única aba fechada do portal, e a
-// razão é o que ela faz: as outras devolvem atos avulsos (públicos por
-// natureza), esta reúne a vida funcional de uma pessoa num lugar só. Quem
-// RECUSA é o PHP (ver dossie_autorizado() no index_v2.php) — a tela abaixo é
-// só a porta. Se a checagem vivesse aqui, /api/dossie continuaria aberto a quem
-// digitasse a URL, e a senha estaria no bundle. O gate de verdade é o do
-// servidor; este é o conforto de não mostrar a ferramenta a quem não pode usar.
+// Foi fechada por senha (Gestão de Pessoal) até 18/07/2026. Aberta por decisão
+// do mantenedor: com o RSC, o público desta consulta é o próprio servidor
+// procurando os seus registros. Os atos são os mesmos já públicos no BS; a
+// consulta é gerada na hora e nada é gravado.
 //
 // Por que esta aba existe: o Decreto 13.048/2026 (RSC do PCCTAE) pontua, no
 // Anexo I, participação em comissões, comitês, grupos de trabalho e núcleos; no
@@ -44,17 +41,7 @@ const rotuloAto = (a: ds.DossieAto) =>
 const esc = (s: string) =>
   (s || '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
 
-// A senha fica em sessionStorage, não em localStorage: some quando a aba fecha.
-// Numa máquina compartilhada do RH, senha que sobrevive ao fechamento do
-// navegador é senha entregue ao próximo que sentar ali.
-const CHAVE_SESSAO = 'dossie-senha';
-
 export default function DossieApi() {
-  const [senha, setSenha] = useState('');
-  const [liberado, setLiberado] = useState(false);
-  const [erroSenha, setErroSenha] = useState('');
-  const [conferindo, setConferindo] = useState(false);
-
   const [siape, setSiape] = useState('');
   const [nome, setNome] = useState('');
   const [r, setR] = useState<ds.DossieResp | null>(null);
@@ -64,43 +51,6 @@ export default function DossieApi() {
 
   const apiMode = ds.modo() === 'api';
 
-  // Reaproveita a senha da sessão, mas sempre reconferindo no servidor — o
-  // "liberado" do React não vale nada sozinho, e a senha pode ter sido trocada
-  // no config.php desde que a aba abriu.
-  useEffect(() => {
-    let vivo = true;
-    const guardada = (() => { try { return sessionStorage.getItem(CHAVE_SESSAO) || ''; } catch { return ''; } })();
-    if (!guardada || !apiMode) return;
-    ds.conferirSenhaDossie(guardada).then(ok => {
-      if (!vivo) return;
-      if (ok) { setSenha(guardada); setLiberado(true); }
-      else { try { sessionStorage.removeItem(CHAVE_SESSAO); } catch { /* ignore */ } }
-    });
-    return () => { vivo = false; };
-  }, [apiMode]);
-
-  const entrar = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!senha.trim()) return;
-    setConferindo(true);
-    setErroSenha('');
-    try {
-      if (await ds.conferirSenhaDossie(senha)) {
-        setLiberado(true);
-        try { sessionStorage.setItem(CHAVE_SESSAO, senha); } catch { /* ignore */ }
-      } else {
-        setErroSenha('Senha não confere. Peça à Gestão de Pessoal.');
-      }
-    } finally {
-      setConferindo(false);
-    }
-  };
-
-  const sair = () => {
-    try { sessionStorage.removeItem(CHAVE_SESSAO); } catch { /* ignore */ }
-    setSenha(''); setLiberado(false); setR(null); setBuscou(false); setSiape(''); setNome('');
-  };
-
   const buscar = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const s = siape.replace(/\D/g, '');
@@ -108,15 +58,10 @@ export default function DossieApi() {
     setCarregando(true);
     setBuscou(true);
     try {
-      const ret = await ds.getDossie(s, nome, senha);
+      const ret = await ds.getDossie(s, nome);
       setR(ret.dados);
+      // 'senha' = a API no servidor ainda é a versão antiga, que exigia senha.
       setFalha(ret.motivo === 'ok' ? null : ret.motivo === 'senha' ? 'senha' : 'falha');
-      // Senha recusada no meio do uso = trocada no servidor. Volta pra porta, em
-      // vez de deixar o RH achando que o servidor não tem atos daquela pessoa.
-      if (ret.motivo === 'senha') {
-        setLiberado(false);
-        setErroSenha('A senha mudou ou expirou. Entre de novo.');
-      }
     } finally {
       setCarregando(false);
     }
@@ -132,14 +77,14 @@ export default function DossieApi() {
       `<tr><td>${esc(rotuloAto(a))}</td><td>${fmtData(a.dataAto)}</td><td>${esc(a.ementa || '—')}</td>` +
       `<td>${esc(refBS(a))}</td></tr>`).join('');
     const html =
-      `<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Dossiê do servidor — SIAPE ${esc(r.siape)}</title>` +
+      `<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Meu SIAPE — atos do BS — SIAPE ${esc(r.siape)}</title>` +
       `<style>body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#111;margin:22px}` +
       `h1{font-size:17px;margin:0 0 2px}h2{font-size:13px;margin:18px 0 6px;color:#003366}` +
       `.sub{color:#555;font-size:11px;margin:0 0 4px}.aviso{border:1px solid #c4c9d2;background:#f7f8fa;padding:8px;font-size:10px;color:#444;margin:10px 0 4px}` +
       `table{border-collapse:collapse;width:100%}th,td{border:1px solid #c4c9d2;padding:4px 6px;text-align:left;vertical-align:top}` +
       `th{background:#003366;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}` +
       `tr:nth-child(even) td{background:#f3f5f8}@media print{@page{margin:12mm}}</style></head><body>` +
-      `<h1>Dossiê do servidor — atos do Boletim de Serviço da UFF</h1>` +
+      `<h1>Meu SIAPE — atos do Boletim de Serviço da UFF</h1>` +
       `<p class="sub">${ident || 'SIAPE ' + esc(r.siape)} &middot; gerado em ${fmtData(new Date().toISOString().slice(0, 10))}</p>` +
       `<div class="aviso"><strong>Material de instrução, não decisão.</strong> Esta lista reúne atos publicados que citam esta matrícula. ` +
       `Ela não comprova participação por si só (o ato pode citar a pessoa por outro motivo) e não é exaustiva: parte dos atos do Boletim ` +
@@ -204,61 +149,8 @@ export default function DossieApi() {
         <Info className="w-6 h-6 text-slate-400 mx-auto mb-2" />
         <p className="text-sm font-semibold text-slate-700">Disponível apenas no modo banco de dados.</p>
         <p className="text-xs text-slate-500 mt-1">
-          O dossiê cruza as tabelas de pessoas e designações no servidor; o modo estático não reproduz essa consulta.
+          O Meu SIAPE cruza as tabelas de pessoas e designações no servidor; o modo estático não reproduz essa consulta.
         </p>
-      </div>
-    );
-  }
-
-  // A porta. Vale repetir: quem recusa de fato é o PHP — esta tela só evita
-  // mostrar a ferramenta a quem não vai conseguir usar.
-  if (!liberado) {
-    return (
-      <div id="painel-dossie" className="max-w-lg mx-auto">
-        <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-6">
-          <div className="flex items-center gap-2 text-[#003366]">
-            <Lock className="w-5 h-5 text-yellow-500" />
-            <h3 className="text-sm font-bold uppercase tracking-wider">Dossiê do servidor — acesso restrito</h3>
-          </div>
-          <p className="text-[13px] text-slate-600 mt-3 leading-relaxed">
-            Esta aba reúne, numa lista só, os atos do Boletim que citam a matrícula de um servidor. É a única
-            consulta do portal que <strong>consolida o histórico de uma pessoa</strong>, e por isso o acesso é
-            restrito à <strong>Gestão de Pessoal</strong>.
-          </p>
-          <p className="text-[12px] text-slate-500 mt-2 leading-relaxed">
-            O restante do portal continua aberto: os atos podem ser consultados um a um na aba de Planilha, como
-            sempre estiveram no boletim.
-          </p>
-
-          <form onSubmit={entrar} className="mt-4 flex items-center gap-2">
-            <input
-              type="password"
-              value={senha}
-              onChange={e => setSenha(e.target.value)}
-              placeholder="Senha de acesso"
-              aria-label="Senha de acesso ao dossiê"
-              autoComplete="current-password"
-              className="flex-1 px-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-            <button
-              type="submit"
-              disabled={!senha.trim() || conferindo}
-              className="px-4 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              {conferindo ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Entrar'}
-            </button>
-          </form>
-
-          {erroSenha && (
-            <p className="mt-2 text-[12px] text-red-700 font-semibold flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" /> {erroSenha}
-            </p>
-          )}
-
-          <p className="text-[11px] text-slate-400 mt-4 leading-relaxed">
-            A senha vale enquanto esta aba do navegador estiver aberta. Ao fechá-la, é preciso digitar de novo.
-          </p>
-        </div>
       </div>
     );
   }
@@ -269,12 +161,12 @@ export default function DossieApi() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
-              <FolderSearch className="w-4 h-4 text-yellow-500" /> Dossiê do servidor — atos no Boletim
+              <FolderSearch className="w-4 h-4 text-yellow-500" /> Meu SIAPE — atos no Boletim
             </h3>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-              Digite a matrícula SIAPE e veja os atos publicados que a citam, com a <strong>referência do boletim</strong> para
+              Digite a sua matrícula SIAPE e veja os atos publicados que a citam, com a <strong>referência do boletim</strong> para
               copiar no processo. Útil para instruir pedidos que exigem comprovar participação em
-              <strong> comissões, comitês, grupos de trabalho e núcleos</strong>.
+              <strong> comissões, comitês, grupos de trabalho e núcleos</strong> — como o RSC (Decreto 13.048/2026).
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -284,13 +176,6 @@ export default function DossieApi() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Printer className="w-4 h-4" /> Exportar / Imprimir PDF
-            </button>
-            <button
-              onClick={sair}
-              title="Encerrar o acesso nesta aba"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-slate-300 text-slate-600 text-xs font-bold hover:bg-slate-50 whitespace-nowrap"
-            >
-              <LogOut className="w-4 h-4" /> Sair
             </button>
           </div>
         </div>
@@ -344,9 +229,9 @@ export default function DossieApi() {
           <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
           <p className="text-sm font-semibold text-slate-700">Não foi possível consultar agora.</p>
           <p className="text-xs text-slate-500 mt-1">
-            {falha === 'falha'
-              ? 'A busca do dossiê não respondeu. Tente novamente em instantes.'
-              : 'Tente novamente.'}
+            {falha === 'senha'
+              ? 'O servidor ainda está com a versão antiga desta consulta (que exigia senha). Tente mais tarde.'
+              : 'A busca não respondeu. Tente novamente em instantes.'}
           </p>
         </div>
       ) : (

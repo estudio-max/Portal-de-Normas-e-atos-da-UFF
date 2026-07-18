@@ -805,46 +805,30 @@ export interface DossieResp {
   porNome: { termo: string; total: number; atos: DossieAto[] } | null;
 }
 
-// Resultado do dossiê. Diferente do resto do dataSource, aqui não dá pra
-// devolver só `null`: a aba precisa distinguir "senha errada" de "deu ruim" —
-// senão o usuário do RH fica tentando de novo achando que o portal caiu.
-// Forma achatada de propósito: o tsconfig deste projeto não liga `strict`, e
-// sem strictNullChecks a união discriminada ({ok:true}|{ok:false}) não estreita
-// no `else` — o tsc reclama de `motivo` não existir. Um objeto só, com `motivo`
-// sempre presente, dispensa narrowing e não depende da configuração.
+// Resultado do Meu SIAPE. Forma achatada de propósito: o tsconfig deste
+// projeto não liga `strict`, e sem strictNullChecks a união discriminada
+// ({ok:true}|{ok:false}) não estreita no `else` — o tsc reclama de `motivo`
+// não existir. Um objeto só, com `motivo` sempre presente, dispensa narrowing.
+// O valor 'senha' sobrou da época em que a aba era fechada: hoje só aparece se
+// a API ainda for a versão antiga (deploy pela metade), que responde 401.
 export interface DossieRet {
   motivo: 'ok' | 'senha' | 'falha' | 'estatico';
   dados: DossieResp | null;
 }
 
-// Confere a senha do dossiê sem consultar ninguém — a tela de entrada usa isto.
-// Quem decide é o servidor: o front não tem (nem pode ter) a senha para comparar.
-// NÃO basta olhar r.ok: a API ANTIGA não conhece esta rota e cai no
-// `default: listar()` do roteador, devolvendo 200 com uma lista de atos. Só o
-// status faria o gate ABRIR com qualquer senha durante um deploy pela metade —
-// autenticação tem que falhar fechada. Por isso exige a forma exata {ok:true},
-// que só a rota nova produz.
-export async function conferirSenhaDossie(senha: string): Promise<boolean> {
-  if (MODO !== 'api' || !senha) return false;
-  try {
-    const r = await fetch(`${API_BASE}/dossie_auth`, { headers: { 'X-Dossie-Token': senha } });
-    if (!r.ok) return false;
-    const j = await r.json();
-    return !!j && j.ok === true;
-  } catch { return false; }
-}
-
-// Busca o dossiê de um SIAPE. Só existe no modo API (análise materializada no
-// servidor, como getPadCadeia) e só responde com a senha da Gestão de Pessoal.
-// A senha vai em cabeçalho, nunca na query string: em ?token= ela ficaria no
-// access log do servidor e no histórico do navegador.
-export async function getDossie(siape: string, nome: string, senha: string): Promise<DossieRet> {
+// Busca os atos de um SIAPE ("Meu SIAPE"). Só existe no modo API (análise
+// materializada no servidor, como getPadCadeia). A rota é aberta desde
+// 18/07/2026 — com o RSC, o público é o próprio servidor consultando os seus
+// registros, não só a Gestão de Pessoal.
+export async function getDossie(siape: string, nome: string): Promise<DossieRet> {
   if (MODO !== 'api') return { motivo: 'estatico', dados: null };
-  if (!siape || !senha) return { motivo: 'senha', dados: null };
+  if (!siape) return { motivo: 'falha', dados: null };
   try {
     const qs = new URLSearchParams({ siape });
     if (nome && nome.trim()) qs.set('nome', nome.trim());
-    const r = await fetch(`${API_BASE}/dossie?${qs}`, { headers: { 'X-Dossie-Token': senha } });
+    const r = await fetch(`${API_BASE}/dossie?${qs}`);
+    // 401 = API antiga ainda no ar (exigia senha). O painel avisa para tentar
+    // mais tarde em vez de fingir que a pessoa não tem atos.
     if (r.status === 401) return { motivo: 'senha', dados: null };
     if (!r.ok) return { motivo: 'falha', dados: null };
     const j = await r.json();
@@ -857,6 +841,34 @@ export async function getDossie(siape: string, nome: string, senha: string): Pro
     return { motivo: 'ok', dados: j as DossieResp };
   } catch { return { motivo: 'falha', dados: null }; }
 }
+// ---- Jornada de trabalho (Flexibilização × Programa de Gestão) -------------
+// Flex usa status real (entrada/saída pelo grafo de relações REVOGA — validado
+// contra planilha independente de RH, 17/07/2026, 24/24 pares corretos); PGD
+// continua por menção no texto (o modelo não segue o mesmo padrão 1
+// portaria-por-setor-revogada). Por isso as formas são diferentes.
+export interface JornadaLinhaFlex { ano: number; entradas: number; saidas: number; ativos: number }
+export interface JornadaSetorFlex { sigla: string; status: string; entrada: string; saida: string | null }
+export interface JornadaModeloFlex { serie: JornadaLinhaFlex[]; setores: JornadaSetorFlex[] }
+
+export interface JornadaLinha { ano: number; atos: number; setores: number; servidores: number }
+export interface JornadaSetor { sigla: string; atos: number; primeiro: string | null; ultimo: string | null; servidores: number }
+export interface JornadaModelo { serie: JornadaLinha[]; setores: JornadaSetor[] }
+
+export interface JornadaResp { flex: JornadaModeloFlex; pgd: JornadaModelo }
+
+// Agregado calculado no servidor (FULLTEXT sobre ato_texto) — só no modo API.
+export async function getJornada(): Promise<JornadaResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/jornada`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    // API antiga cai no default listar() e devolve outra forma — valida a shape.
+    if (!j || !j.flex || !Array.isArray(j.flex.serie) || !j.pgd) return null;
+    return j as JornadaResp;
+  } catch { return null; }
+}
+
 interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
 
 // Infere PARA QUEM serve o prazo (o público que precisa agir), a partir de

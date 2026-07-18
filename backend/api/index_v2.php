@@ -61,12 +61,13 @@ switch ($recurso) {
     case 'insights': insights($pdo); break;
     case 'analitico': analitico($pdo); break;
     case 'prazos':   prazos($pdo); break;
+    case 'jornada':  jornada($pdo); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
-    // Confere a senha SEM consultar ninguém — é o que a tela de entrada chama.
-    // Existe pra não precisar inventar um SIAPE-cobaia só para testar a senha.
+    // Resquício do tempo em que a aba (hoje "Meu SIAPE") era fechada por senha.
+    // A rota fica no ar devolvendo ok para não quebrar um bundle antigo do
+    // frontend que ainda chame a conferência antes de liberar a tela.
     case 'dossie_auth':
-        if (!dossie_autorizado($cfg)) responder_json(['erro' => 'nao_autorizado'], 401);
         responder_json(['ok' => true]);
         break;
     case 'ato':      ficha($pdo, $id); break;
@@ -1015,12 +1016,126 @@ function pad_cadeia(PDO $pdo, string $proc): void {
 // FALHA FECHADO: sem 'dossie_token' no config.php a rota responde 401 e a aba
 // não abre. Um deploy pela metade tem que virar aba quebrada, não dossiê aberto.
 // hash_equals compara em tempo constante (não vaza a senha por cronometragem).
-function dossie_autorizado(array $cfg): bool {
-    $esperado = (string)($cfg['dossie_token'] ?? '');
-    if ($esperado === '') return false;
-    $veio = $_SERVER['HTTP_X_DOSSIE_TOKEN'] ?? '';
-    return is_string($veio) && $veio !== '' && hash_equals($esperado, $veio);
+// ---- JORNADA DE TRABALHO (Flexibilização × Programa de Gestão) ------------
+// A UFF adotou dois modelos de organização da jornada, ambos registrados no BS:
+//   FLEXIBILIZAÇÃO DA JORNADA (30h, turnos contínuos) — onda a partir de 2019;
+//   PROGRAMA DE GESTÃO / PGD (teletrabalho, IN 65/2020) — explode em 2022, e
+//   a maioria dos setores flexibilizados migrou para ele.
+// Medido no corpus (extração 07/2026, linhas de corpo_busca): flexibilização
+// 2019=45, 2020=57, 2022=66, caindo depois; "programa de gestão" 2022=150,
+// 2023=283, 2024=184. Antes de 2016 a frase é ruído raro (1-3/ano, "programa
+// de gestão ambiental") — daí o piso ano>=2016.
+//
+// LADO FLEX USA STATUS REAL, NÃO SÓ MENÇÃO — validado em 17/07/2026 contra uma
+// planilha independente de RH (25 pares portaria-de-flexibilização/portaria-
+// revogadora): 24 de 24 pares válidos (1 tinha erro de digitação na própria
+// planilha) bateram exato contra o `status` e a `relacao` tipo Revoga que o
+// extrator já capturava sozinho — 100%, zero divergência. Isso deu confiança
+// pra usar o grafo de relações de verdade em vez de só contar menção: cada
+// portaria de flexibilização (a "entrada" de um setor) é ligada, via
+// `relacao.destino_ato_id`, à portaria que a revogou (a "saída"), se houver.
+// Exclui a própria revogadora do lado das entradas (ementa começa com
+// "Revoga"/"Revogar") — sem isso ela contava duas vezes: como entrada dela
+// mesma E como saída da que revogou.
+//
+// LADO PGD CONTINUA POR MENÇÃO (FULLTEXT), não por status: o Programa de
+// Gestão funciona por edital/ciclo recorrente, não por 1 portaria-por-setor
+// que se revoga uma vez só — o padrão de entrada/saída da flexibilização não
+// se aplica igual. "Servidores" aqui é piso (ato_pessoa é menção; 30-70% dos
+// atos não trazem SIAPE), não censo — a aba diz isso na tela.
+function jornada(PDO $pdo): void {
+    // ---- Flexibilização: entrada = portaria concedida; saída = data da
+    // portaria que a revogou (se houver), via o grafo de relações.
+    $st = $pdo->query("
+        SELECT a.id, o.sigla, a.status, a.data_ato AS entrada,
+               (SELECT MIN(a2.data_ato) FROM relacao r JOIN ato a2 ON a2.id = r.ato_id
+                 WHERE r.destino_ato_id = a.id AND r.tipo = 'Revoga') AS saida
+          FROM ato a
+          JOIN ato_texto t  ON t.ato_id = a.id
+          JOIN tipo_ato tt  ON tt.id = a.tipo_id
+          JOIN orgao o      ON o.id = a.orgao_id
+         WHERE MATCH(t.texto_busca) AGAINST('+flexibiliza* +jornada' IN BOOLEAN MODE)
+           AND tt.nome = 'Portaria'
+           AND a.ano BETWEEN 2016 AND 2100
+           AND a.ementa NOT LIKE 'Revog%'");
+    $concessoes = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    $porAno = [];   // ano => ['entradas'=>n, 'saidas'=>n]
+    $setoresFlex = [];
+    foreach ($concessoes as $c) {
+        $anoEntrada = (int)substr($c['entrada'], 0, 4);
+        $porAno[$anoEntrada]['entradas'] = ($porAno[$anoEntrada]['entradas'] ?? 0) + 1;
+        if ($c['saida']) {
+            $anoSaida = (int)substr($c['saida'], 0, 4);
+            $porAno[$anoSaida]['saidas'] = ($porAno[$anoSaida]['saidas'] ?? 0) + 1;
+        }
+        $setoresFlex[] = [
+            'sigla' => $c['sigla'], 'status' => $c['status'],
+            'entrada' => $c['entrada'], 'saida' => $c['saida'],
+        ];
+    }
+    ksort($porAno);
+    $serieFlex = [];
+    $acumulado = 0;
+    foreach ($porAno as $ano => $v) {
+        $acumulado += ($v['entradas'] ?? 0) - ($v['saidas'] ?? 0);
+        $serieFlex[] = ['ano' => $ano, 'entradas' => (int)($v['entradas'] ?? 0),
+                         'saidas' => (int)($v['saidas'] ?? 0), 'ativos' => $acumulado];
+    }
+    usort($setoresFlex, fn($a, $b) => strcmp($a['sigla'], $b['sigla']));
+
+    // ---- PGD: por menção, como antes.
+    $ft = '+"programa de gestão"';
+    $st = $pdo->prepare("
+        SELECT a.ano,
+               COUNT(DISTINCT a.id)        AS atos,
+               COUNT(DISTINCT a.orgao_id)  AS setores,
+               COUNT(DISTINCT ap.pessoa_id) AS servidores
+          FROM ato a
+          JOIN ato_texto t   ON t.ato_id = a.id
+          LEFT JOIN ato_pessoa ap ON ap.ato_id = a.id
+         WHERE MATCH(t.texto_busca) AGAINST(:ft IN BOOLEAN MODE)
+           AND a.ano BETWEEN 2016 AND 2100
+         GROUP BY a.ano ORDER BY a.ano");
+    $st->execute([':ft' => $ft]);
+    $seriePgd = array_map(fn($r) => [
+        'ano' => (int)$r['ano'], 'atos' => (int)$r['atos'],
+        'setores' => (int)$r['setores'], 'servidores' => (int)$r['servidores'],
+    ], $st->fetchAll(PDO::FETCH_ASSOC));
+
+    $st = $pdo->prepare("
+        SELECT o.sigla,
+               COUNT(DISTINCT a.id)        AS atos,
+               MIN(a.data_ato)             AS primeiro,
+               MAX(a.data_ato)             AS ultimo,
+               COUNT(DISTINCT ap.pessoa_id) AS servidores
+          FROM ato a
+          JOIN ato_texto t   ON t.ato_id = a.id
+          JOIN orgao o       ON o.id = a.orgao_id
+          LEFT JOIN ato_pessoa ap ON ap.ato_id = a.id
+         WHERE MATCH(t.texto_busca) AGAINST(:ft IN BOOLEAN MODE)
+           AND a.ano BETWEEN 2016 AND 2100
+         GROUP BY o.sigla ORDER BY atos DESC, o.sigla
+         LIMIT 500");
+    $st->execute([':ft' => $ft]);
+    $setoresPgd = array_map(fn($r) => [
+        'sigla' => $r['sigla'], 'atos' => (int)$r['atos'],
+        'primeiro' => $r['primeiro'], 'ultimo' => $r['ultimo'],
+        'servidores' => (int)$r['servidores'],
+    ], $st->fetchAll(PDO::FETCH_ASSOC));
+
+    responder_json([
+        'flex' => ['serie' => $serieFlex, 'setores' => $setoresFlex],
+        'pgd'  => ['serie' => $seriePgd, 'setores' => $setoresPgd],
+    ]);
 }
+
+// A rota foi fechada por senha até 18/07/2026 (dossie_autorizado + dossie_token
+// no config.php). Foi aberta por decisão do mantenedor: com o RSC, o público
+// desta consulta passou a ser o próprio servidor procurando os seus registros
+// ("Meu SIAPE"), não só a Gestão de Pessoal. Os atos listados são os mesmos já
+// públicos no BS; a rota não grava nada. O dossie_token do config.php ficou
+// sem uso (inofensivo se ainda existir lá).
 
 // ---- DOSSIÊ de um servidor (por SIAPE) ------------------------------------
 // Serve o Decreto 13.048/2026 (RSC do PCCTAE): o Anexo I pontua participação em
@@ -1049,8 +1164,6 @@ function dossie_autorizado(array $cfg): bool {
 //   por SQL. Quem cobre esse buraco é o rótulo "confira o ato", não este aviso.
 //   Separar essas pessoas é curadoria — Fase 2.
 function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
-    if (!dossie_autorizado($cfg)) responder_json(['erro' => 'nao_autorizado'], 401);
-
     $siape = preg_replace('/\D/', '', $siape);
     if ($siape === '') responder_json(['erro' => 'siape ausente'], 400);
     $chave = ltrim($siape, '0');

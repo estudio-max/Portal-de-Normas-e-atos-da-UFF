@@ -13,6 +13,7 @@ import ChefiasApi from './components/ChefiasApi';
 import DossieApi from './components/DossieApi';
 import InsightsApi from './components/InsightsApi';
 import PrazosApi from './components/PrazosApi';
+import JornadaApi from './components/JornadaApi';
 import MandatosApi from './components/MandatosApi';
 import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
@@ -133,6 +134,7 @@ export default function App() {
 
           {activeTab === 'mandatos' && <div id="painel-mandatos-wrap"><MandatosApi /></div>}
           {activeTab === 'prazos' && <div id="painel-prazos-wrap"><PrazosApi /></div>}
+          {activeTab === 'jornada' && <div id="painel-jornada-wrap"><JornadaApi /></div>}
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 

@@ -46,26 +46,28 @@ export default function PrivacidadeLGPD() {
         </p>
       </Secao>
 
-      <Secao icon={<FolderSearch className="w-4 h-4" />} titulo="A aba Dossiê do servidor é fechada">
+      <Secao icon={<FolderSearch className="w-4 h-4" />} titulo="A aba Meu SIAPE">
         <p>
-          Na maior parte do portal você consulta um ato de cada vez, e qualquer pessoa pode. A aba
-          <strong> Dossiê do servidor</strong> faz outra coisa: reúne, numa lista só, os atos que
-          citam a mesma matrícula ao longo de todos os anos indexados. Os atos são os mesmos, e
-          todos já eram públicos — mas juntar o que estava espalhado por centenas de boletins é um
-          tratamento de natureza diferente de ler um boletim, e não seria honesto tratar os dois
-          como a mesma coisa.
+          Na maior parte do portal você consulta um ato de cada vez. A aba <strong>Meu SIAPE</strong> faz
+          outra coisa: reúne, numa lista só, os atos que citam uma matrícula ao longo de todos os
+          anos indexados. Os atos são os mesmos, e todos já eram públicos — mas juntar o que estava
+          espalhado por centenas de boletins é um tratamento de natureza diferente de ler um
+          boletim, e não seria honesto tratar os dois como a mesma coisa.
         </p>
         <p>
-          Por isso ela é a <strong>única aba restrita do portal</strong>, protegida por senha
-          entregue à Gestão de Pessoal da UFF. A recusa acontece no servidor, não na tela: sem a
-          senha, a consulta não é respondida. Ela existe porque o Decreto 13.048/2026 passou a
-          exigir a comprovação de participações antigas para o Reconhecimento de Saberes e
-          Competências, e levantar isso à mão em vinte e cinco anos de PDF não é razoável.
+          Essa aba nasceu restrita por senha. Foi <strong>aberta em julho de 2026</strong>, e o
+          motivo é o público a que ela passou a servir: com o Decreto 13.048/2026 (Reconhecimento de
+          Saberes e Competências), são os próprios servidores que precisam localizar seus registros
+          antigos no Boletim para instruir seus pedidos — e levantar isso à mão em vinte e cinco
+          anos de PDF não é razoável. Restringir a busca à Gestão de Pessoal significava obrigar
+          cada servidor a pedir a terceiros uma consulta sobre si mesmo, em documentos públicos.
         </p>
         <p>
-          O resultado é gerado na hora, a partir da consulta digitada, e não fica guardado: o portal
-          não monta nem armazena perfil de ninguém. A aba também não pontua e não avalia conduta —
-          devolve os atos publicados e o link do boletim de origem.
+          As mitigações continuam as mesmas: o resultado é gerado na hora, a partir da consulta
+          digitada, e não fica guardado — o portal não monta nem armazena perfil de ninguém. A aba
+          não pontua e não avalia conduta: devolve os atos publicados e o link do boletim de origem.
+          E vale dizer com clareza: qualquer pessoa pode consultar qualquer matrícula, mas tudo o
+          que aparece já estava publicado pela UFF nos boletins.
         </p>
       </Secao>
 
@@ -78,13 +80,14 @@ export default function PrivacidadeLGPD() {
           constitucional da publicidade dos atos administrativos.
         </p>
         <p>
-          Para o dossiê por matrícula, esse argumento não bastaria sozinho, e é melhor dizer isso do
-          que fingir que basta: a UFF publicou atos avulsos, não históricos consolidados por pessoa.
-          O que sustenta essa aba é outra coisa — ela não é pública. O acesso fica com a Gestão de
-          Pessoal, que já trata esses dados por dever de ofício, e serve a uma finalidade estreita:
-          instruir o processo de Reconhecimento de Saberes e Competências que o Decreto 13.048/2026
-          criou. É um uso interno, sobre atos que já são públicos, que beneficia o próprio servidor
-          avaliado, sem juízo de valor sobre ele e sem guardar o resultado.
+          Para a consulta por matrícula (Meu SIAPE), o raciocínio precisa de mais um passo, e é
+          melhor explicitá-lo do que fingir que não existe: a UFF publicou atos avulsos, não
+          históricos consolidados por pessoa. O que sustenta essa aba é a finalidade e o desenho
+          dela: existe para o servidor localizar os próprios registros e instruir o Reconhecimento
+          de Saberes e Competências (Decreto 13.048/2026); não revela nada além do que o documento
+          público já traz, apenas poupa o trabalho de folhear os boletins; não emite juízo de valor;
+          e não guarda o resultado de nenhuma consulta. Os CPFs seguem mascarados e pedidos de
+          remoção são atendidos caso a caso (ver Seus direitos, abaixo).
         </p>
       </Secao>
 

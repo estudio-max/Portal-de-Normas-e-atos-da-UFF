@@ -53,10 +53,12 @@ Modelo em estrela. PK substituta `ato.id` (BIGINT, estável) + `ato.uid` (slug
 legível). **A API expõe `uid AS id`** — o `id` público em URLs é o `uid`, nunca o
 BIGINT interno.
 
-**Uma rota é fechada: `/api/dossie`** (aba Dossiê do servidor). É a única que
-reúne a vida funcional de uma pessoa num lugar só — as outras devolvem atos
-avulsos, públicos por natureza. Senha no `config.php`, conferida no PHP. Gate no
-React não serviria: o bundle é público e a rota continuaria aberta pela URL.
+**Todas as rotas são abertas.** `/api/dossie` (aba **Meu SIAPE**, ex-"Dossiê do
+servidor") foi fechada por senha até 18/07/2026 e aberta por decisão do
+mantenedor: com o RSC, o público é o próprio servidor consultando os seus
+registros. O `dossie_token` do `config.php` ficou sem uso (inofensivo se ainda
+existir); a rota `dossie_auth` segue no ar devolvendo `ok` para não quebrar
+bundle antigo. A justificativa LGPD da abertura está na aba Privacidade.
 
 - Dimensões: `orgao`, `orgao_alias`, `tipo_ato`, `pessoa`, `boletim`
 - Núcleo: `ato`, `ato_texto` (`texto_original` exibe, `texto_busca` é o FULLTEXT)
@@ -88,12 +90,8 @@ na mesma janela.** Subir só um dos dois quebra o painel afetado.
 `backend/api/config.php` mora só no servidor (está no `.gitignore` e contém as
 credenciais do banco). Não versione, não imprima o conteúdo.
 
-**A aba Dossiê exige `dossie_token` no `config.php`.** É a senha da Gestão de
-Pessoal, conferida pelo PHP (`dossie_autorizado()`). A rota **falha fechado**:
-sem a chave preenchida no servidor, `/api/dossie` responde 401 e a aba não abre —
-de propósito, para deploy pela metade não virar dossiê aberto. Ao subir o
-`config.php` novo, preencha, senão a aba fica morta sem erro visível no resto do
-portal.
+A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
+`config.php` era da época em que ela tinha senha; ficou sem uso).
 
 ## Regras do domínio que já custaram retrabalho
 

@@ -382,17 +382,48 @@ def dossie_payload(siape, nome):
             "funcoes": funcoes, "atos": atos, "porNome": por_nome}, 200
 
 
-# Senha do dossiê no mock (espelha dossie_autorizado() do index_v2.php, que lê
-# 'dossie_token' do config.php). Falha fechado igual: sem DOSSIE_TOKEN no
-# ambiente, a rota responde 401 — para o dev testar o gate, não contorná-lo.
-DOSSIE_TOKEN = os.environ.get("DOSSIE_TOKEN", "")
+# /jornada: espelha jornada() do index_v2.php. Flex usa a forma
+# entrada/saida/ativos (validada contra planilha de RH, 17/07/2026); PGD segue
+# por menção, como antes. Números de brinquedo, só pra forma do painel renderizar.
+def jornada_payload():
+    def linha_flex(ano, entradas, saidas):
+        return {"ano": ano, "entradas": entradas, "saidas": saidas}
+    def setor_flex(sigla, status, entrada, saida):
+        return {"sigla": sigla, "status": status, "entrada": entrada, "saida": saida}
+    def linha_pgd(ano, atos, setores, servidores):
+        return {"ano": ano, "atos": atos, "setores": setores, "servidores": servidores}
+    def setor_pgd(sigla, atos, primeiro, ultimo, servidores):
+        return {"sigla": sigla, "atos": atos, "primeiro": primeiro, "ultimo": ultimo,
+                "servidores": servidores}
+
+    flex_serie_bruta = [linha_flex(2019, 45, 0), linha_flex(2020, 57, 2),
+                         linha_flex(2021, 5, 3), linha_flex(2022, 20, 10),
+                         linha_flex(2023, 12, 25), linha_flex(2024, 3, 15)]
+    acumulado = 0
+    flex_serie = []
+    for l in flex_serie_bruta:
+        acumulado += l["entradas"] - l["saidas"]
+        flex_serie.append({**l, "ativos": acumulado})
+
+    return {
+        "flex": {
+            "serie": flex_serie,
+            "setores": [setor_flex("ESS", "Revogado", "2019-03-01", "2023-10-01"),
+                        setor_flex("SDC", "Revogado", "2019-05-10", "2022-08-15"),
+                        setor_flex("PROGEPE", "Ativo", "2020-02-01", None)],
+        },
+        "pgd": {
+            "serie": [linha_pgd(2022, 150, 40, 800), linha_pgd(2023, 283, 62, 1400),
+                      linha_pgd(2024, 184, 55, 1100), linha_pgd(2025, 67, 30, 500),
+                      linha_pgd(2026, 17, 12, 150)],
+            "setores": [setor_pgd("ESD", 22, "2022-06-07", "2026-05-01", 120),
+                        setor_pgd("ESS", 19, "2022-07-01", "2025-11-01", 95),
+                        setor_pgd("PROGRAD", 15, "2022-09-01", "2026-02-01", 70)],
+        },
+    }
 
 
 class H(BaseHTTPRequestHandler):
-    def _autorizado(self):
-        veio = self.headers.get("X-Dossie-Token") or ""
-        return bool(DOSSIE_TOKEN) and veio == DOSSIE_TOKEN
-
     def _send(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -433,14 +464,14 @@ class H(BaseHTTPRequestHandler):
         elif recurso == "filtros":
             self._send(filtros_payload())
         elif recurso == "dossie_auth":
-            self._send({"ok": True} if self._autorizado() else {"erro": "nao_autorizado"},
-                       200 if self._autorizado() else 401)
+            # resquício da época com senha; devolve ok como a API real
+            self._send({"ok": True})
         elif recurso == "dossie":
-            if not self._autorizado():
-                self._send({"erro": "nao_autorizado"}, 401)
-                return
+            # rota aberta desde 18/07/2026 (aba "Meu SIAPE"), como na API real
             obj, code = dossie_payload(q.get("siape", [""])[0], q.get("nome", [""])[0])
             self._send(obj, code)
+        elif recurso == "jornada":
+            self._send(jornada_payload())
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)
