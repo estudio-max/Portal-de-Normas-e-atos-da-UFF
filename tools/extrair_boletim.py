@@ -965,6 +965,18 @@ def limpa_sigla(orgao):
         mc = re.match(r"(?i)CONJUNTA\b\s*", s)
         if mc:
             s = s[mc.end():]; mudou = True; continue
+        # "EDITAL DO PROGRAMA DE GESTÃO ESD Nº 2..." — o título padrão do PGD
+        # (teletrabalho) põe o NOME DO PROGRAMA entre o tipo e a sigla, e o
+        # regex de título capturava tudo como órgão ("PROGRAMA DE GESTÃO ESD").
+        # O programa não é setor; a sigla real vem depois. Medido: 37 atos
+        # 2022-2025 com esse defeito. "EDITAL" idem, quando vaza junto
+        # ("PROGRAMA DE GESTÃO - EDITAL PROAES" -> "PROAES").
+        mg = re.match(r"(?i)(?:NOVO )?PROGRAMA DE GEST[ÃA]O\b\s*(?:\(NGPD\))?\s*-?\s*", s)
+        if mg:
+            s = s[mg.end():]; mudou = True; continue
+        me = re.match(r"(?i)EDITAL\b\s*", s)
+        if me:
+            s = s[me.end():]; mudou = True; continue
         mp = re.match(r"([A-Za-zÀ-ú]+)\b\s*", s)
         if mp and _fold(mp.group(1)) in _CONECT_SIGLA:
             s = s[mp.end():]; mudou = True
