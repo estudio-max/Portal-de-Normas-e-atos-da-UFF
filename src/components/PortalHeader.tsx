@@ -36,6 +36,7 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
     { id: 'tab-ia-parser', key: 'ia-parser', emoji: '🧠', label: apiMode ? 'Analisar Ato (texto)' : 'Assistente IA de Indexação' },
     { id: 'tab-ajuda', key: 'ajuda', emoji: '❓', label: 'Ajuda' },
     { id: 'tab-privacidade', key: 'privacidade', icon: <ShieldCheck className="w-4 h-4" />, label: 'Privacidade' },
+    { id: 'tab-sobre', key: 'sobre', emoji: 'ℹ️', label: 'Sobre' },
   ];
 
   return (
