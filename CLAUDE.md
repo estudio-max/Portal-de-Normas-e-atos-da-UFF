@@ -197,7 +197,10 @@ manda neles.**
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
-- Cutover para o domínio oficial da UFF.
+- Cutover para o domínio oficial da UFF — runbook pronto em
+  [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) (o frontend já é portável, `/api`
+  relativo; o `db.php` já tem polyfill de PHP 7.4). Verificação do banco novo:
+  `backend/db/verificar_migracao.sql`.
 - **Fase 2 do Dossiê (Decreto 13.048/2026, RSC do PCCTAE).** A aba de hoje
   localiza atos; ela não sabe quem participou de quê. Falta:
   - `colegiado` como entidade + membros com papel (presidente/titular/suplente)
