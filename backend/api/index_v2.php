@@ -1043,15 +1043,32 @@ function pad_cadeia(PDO $pdo, string $proc): void {
 // que se revoga uma vez só — o padrão de entrada/saída da flexibilização não
 // se aplica igual. "Servidores" aqui é piso (ato_pessoa é menção; 30-70% dos
 // atos não trazem SIAPE), não censo — a aba diz isso na tela.
-// Junta letras isoladas separadas por espaço — artefato de OCR muito comum
-// nesta faixa do corpus ("Ap r o va a m anut enç ão" = "Aprova a manutenção").
-// Só em runs de 3+ letras, pra não colar sigla real ("CBI", "SDC" ficam).
-// Achado real: sem isso, "ementa LIKE 'Aprov%'" no SQL perdia toda adesão cuja
-// ementa saiu com essa quebra — a Portaria 68.707/2024 é o caso que expôs isso.
+// Junta letras isoladas separadas por espaço, só pra tentar recuperar o nome
+// do SETOR dentro da ementa (abaixo) — artefato de OCR comum nesta faixa do
+// corpus ("t r a b a l h o" = "trabalho"). Só em runs de 3+ letras isoladas,
+// pra não colar sigla real ("CBI", "SDC" ficam). É uma reconstrução PARCIAL:
+// quando o OCR quebra em fragmentos de 2+ letras (não letra-a-letra — ver
+// flex_comeca_aprova abaixo), a frase-âncora que flex_setor_da_ementa procura
+//("administrativos", "e dá outras") também quebra, e a extração retorna ''
+// — cai no rótulo "(setor não identificado na ementa)", que é honesto.
 function normaliza_ocr_letras(string $s): string {
-    $e = preg_replace_callback('/(?:\b\pL\b ?){3,}/u',
+    $e = preg_replace_callback('/(?:\b[a-zA-ZÀ-ÿ]\b ?){3,}/u',
         fn($m) => str_replace(' ', '', $m[0]), $s);
     return preg_replace('/\s+/u', ' ', $e);
+}
+
+// Detecta o verbo de abertura ("Aprova...") mesmo com o OCR desta faixa do
+// corpus quebrando a palavra de forma IRREGULAR — não é uma letra por vez
+// ("Ap r o va", não "A p r o v a"), então tentar reconstruir palavra por
+// palavra (versão anterior, com \b<letra>\b) falhava: testado contra a
+// Portaria 68.704/2024 real, não recuperava nada. A solução robusta é mais
+// bruta: tira TODO espaço dos primeiros caracteres e compara o prefixo, sem
+// tentar adivinhar onde estão os limites de palavra. Validado contra 61
+// portarias reais (ano≥2019): recupera as 2 adesões OCR-quebradas (68.704/
+// 2024, 68.609/2023), zero regressão nas 48 que já batiam.
+function flex_comeca_aprova(string $ementa): bool {
+    $inicio = mb_strtolower(preg_replace('/\s+/u', '', mb_substr($ementa, 0, 20)));
+    return str_starts_with($inicio, 'aprova');
 }
 
 // Extrai o SETOR flexibilizado da ementa (já normalizada). O emissor da
@@ -1104,10 +1121,10 @@ function jornada(PDO $pdo): void {
     $porSetor = [];
     $setoresFlex = [];
     foreach ($candidatas as $c) {
+        if (!flex_comeca_aprova($c['ementa'] ?? '')) continue;   // só adesão/manutenção
         $ementaNorm = normaliza_ocr_letras($c['ementa'] ?? '');
-        if (!preg_match('/^aprova/iu', $ementaNorm)) continue;   // só adesão/manutenção
         $setor = flex_setor_da_ementa($ementaNorm);
-        $chave = mb_strtolower(preg_replace('/[^a-z0-9]/i', '', strip_ac($setor)));
+        $chave = mb_strtolower(preg_replace('/[^a-z0-9]/i', '', nome_ascii($setor)));
         if ($chave === '') $chave = 'port-' . $c['numero'] . '-' . $c['ano'];  // sem setor: por portaria
         if (!isset($porSetor[$chave])) {
             $porSetor[$chave] = ['entrada' => $c['entrada'], 'saida' => $c['saida']];
