@@ -197,24 +197,25 @@ manda neles.**
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
 - **Anos impossíveis / fantasmas de citação (limpos em produção; falta a guarda
-  no extrator).** Dois SQLs de correção rodados no phpMyAdmin:
+  no extrator).** SQLs de correção:
   `corrigir_anos_impossiveis.sql` (DUPLICATA de ano typado — Resolução 02/**1014**
   = 02/2014, o boletim 134-2014 tem o typo; e o FANTASMA do anexo SIORG da
-  Portaria 57.716/2017 — "Criado em: DECISÃO Nº 41/2010" virou "Decisão 41/1771")
-  e `corrigir_fantasmas_citacao.sql` (5 fantasmas de citação: refs ABNT e normas
+  Portaria 57.716/2017 — "Criado em: DECISÃO Nº 41/2010" virou "Decisão 41/1771"),
+  `corrigir_fantasmas_citacao.sql` (5 fantasmas de citação: refs ABNT e normas
   federais citadas em boletins de 2006-2022 — IN SEDAP 205/1988, Port. SVS/MS
-  29/98, NS 504/00 do NEDIN, etc.). **Auditoria completa dos 108 atos com
-  `ano < 2001`:** 100 são reais do boletim de 2001 (backlog/OCR — mantidos), 6
-  fantasmas apagados, e 2 são reais com ano mal lido — DTS GQO 003/004, que o
-  boletim 144-2007 imprime "de 23 de agosto de **20007**" (OCR de 2007) e o
-  extrator leu como 2000 pegando os 4 primeiros dígitos; ano corrigido para 2007
-  em `corrigir_ano_gqo.sql`. O discriminador que resolveu: **ano-do-ato <<
-  ano-do-boletim** (via `linkBoletim` de cada ficha). Fase B (re-extração)
-  precisa de: (a) guarda de ano plausível contra o ano do boletim; (b) reconhecer
-  o anexo SIORG como tabela de unidades, não atos; (c) não criar ato a partir de
-  citação/referência ("Criado em: DECISÃO Nº…", refs ABNT, "criou o NEDIN");
-  (d) tratar ano de 5 dígitos (OCR "20007" → 2007, não 2000); (e) revisar o parse
-  de ano no boletim 2001.
+  29/98, NS 504/00 do NEDIN, etc.),
+  `corrigir_ano_gqo.sql` (DTS GQO 003/004 com ano lido como 2000 em vez de 2007).
+  **Auditoria completa dos ~100 atos com `ano < 2001` do boletim de 2001 (19/07/2026):**
+  45 backlog legítimo (nada fazer), 26 com ano mal lido pelo OCR (DTS-TEC de 1998→2001,
+  etc. — corrigidos em `corrigir_anos_boletim2001.sql`), e 29 deixados para revisão
+  humana (7 ambíguos com múltiplos candidatos, 22 sem-match por OCR não acurado).
+  Metodologia: puxadas fichas da API, baixados 19 PDFs dos boletins, extraído texto,
+  casamento numero+sigla via regex e curadoria manual. O discriminador que resolveu:
+  **ano-do-ato comparado com ano-do-boletim via linkBoletim**. Fase B (re-extração)
+  precisa de: (a) guarda de ano plausível contra ano-do-boletim; (b) reconhecer anexo
+  SIORG como tabela de unidades, não atos; (c) não criar ato a partir de
+  citação/referência ("Criado em: DECISÃO Nº…", refs ABNT); (d) tratar ano de 5
+  dígitos (OCR "20007" → 2007, não 2000); (e) revisar parse de ano no boletim 2001.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
 - Cutover para o domínio oficial da UFF — runbook pronto em
   [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) (o frontend já é portável, `/api`

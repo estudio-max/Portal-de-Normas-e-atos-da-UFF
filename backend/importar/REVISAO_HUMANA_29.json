@@ -1,0 +1,430 @@
+[
+ {
+  "uid": "dts-uff-10-2000",
+  "numero": "10",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "002",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-13-2000",
+  "numero": "13",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "002",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-2-2000",
+  "numero": "02",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "002",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-4-2000",
+  "numero": "04",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "002",
+  "motivo": "AMBIGUO (2 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "04",
+    "dia": "18",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 6755,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 04 de 18 de dezembro de 2000"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "04",
+    "dia": "13",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 14444,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 04 de 13 de dezembro de 2000"
+   }
+  ]
+ },
+ {
+  "uid": "dts-uff-6-2000",
+  "numero": "06",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "002",
+  "motivo": "AMBIGUO (2 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "06",
+    "dia": "26",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 8130,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 06 de 26 de dezembro de 2000"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "06",
+    "dia": "26",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 10059,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 06 de 26 de dezembro de 2000"
+   }
+  ]
+ },
+ {
+  "uid": "dts-uff-8-2000",
+  "numero": "08",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "002",
+  "motivo": "AMBIGUO (2 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "08",
+    "dia": "26",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 11392,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 08 de 26 de dezembro de 2000"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "08",
+    "dia": "13",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 18133,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 08 de 13 de dezembro de 2000"
+   }
+  ]
+ },
+ {
+  "uid": "dts-uff-3-2000-2",
+  "numero": "03",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "004",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-7-2000-2",
+  "numero": "07",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "004",
+  "motivo": "AMBIGUO (2 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "EDUFF",
+    "numero": "07",
+    "dia": "12",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 4650,
+    "raw": "DETERMINAÇÃO DE SERVIÇO EdUFF nº 07,12 de dezembro de 2000"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "07",
+    "dia": "26",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 10259,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 07 de 26 de dezembro de 2000"
+   }
+  ]
+ },
+ {
+  "uid": "port-reitoria-28699-2000",
+  "numero": "28.699",
+  "sigla": "Reitoria",
+  "ano_banco": 2000,
+  "boletim": "004",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-tm-9-2000",
+  "numero": "09",
+  "sigla": "TM",
+  "ano_banco": 2000,
+  "boletim": "006",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-tmi-11-2000",
+  "numero": "11",
+  "sigla": "TMI",
+  "ano_banco": 2000,
+  "boletim": "006",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-tmi-13-2000",
+  "numero": "13",
+  "sigla": "TMI",
+  "ano_banco": 2000,
+  "boletim": "006",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-g8g-13-2000",
+  "numero": "13",
+  "sigla": "G8G",
+  "ano_banco": 2000,
+  "boletim": "007",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-mfi-15-2000",
+  "numero": "15",
+  "sigla": "MFI",
+  "ano_banco": 2000,
+  "boletim": "008",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-mfl-13-2000",
+  "numero": "13.",
+  "sigla": "MFL",
+  "ano_banco": 2000,
+  "boletim": "008",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-mfl-141-2000",
+  "numero": "14.1",
+  "sigla": "MFL",
+  "ano_banco": 2000,
+  "boletim": "008",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-1-2000",
+  "numero": "01",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "009",
+  "motivo": "AMBIGUO (4 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "MEP",
+    "numero": "01",
+    "dia": "02",
+    "mes": null,
+    "ano": 2001,
+    "pos": 8001,
+    "raw": "DETERMINAÇÃO DE SERVIÇO MEP nº 01 de 02 de janciro de 2001"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "01",
+    "dia": "09",
+    "mes": 1,
+    "ano": 2001,
+    "pos": 11836,
+    "raw": "DETERMINAÇÃO DE SERVIÇO \n- Nº \n01 \nde 09 de janeiro de 2001"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "01",
+    "dia": "22",
+    "mes": 12,
+    "ano": 2000,
+    "pos": 14285,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 01 DE 22 DE DEZEMBRO DE 2000"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "01",
+    "dia": "05",
+    "mes": 1,
+    "ano": 2001,
+    "pos": 22296,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 01, de 05 de janeiro de 2001"
+   }
+  ]
+ },
+ {
+  "uid": "os-uff-1-2000",
+  "numero": "01",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "012",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "res-uff-197-2000",
+  "numero": "197",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "013",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "res-uff-99-2000",
+  "numero": "99",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "013",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-11-2000",
+  "numero": "11",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "014",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-5-2000-2",
+  "numero": "05",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "019",
+  "motivo": "AMBIGUO (2 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "",
+    "numero": "05",
+    "dia": "07",
+    "mes": null,
+    "ano": 2000,
+    "pos": 11490,
+    "raw": "DETERMINAÇÃO DE SERVIÇO Nº 05 de 07 de dezmbro de 2000"
+   },
+   {
+    "tipo": "DETERMINAÇÃO DE SERVIÇO",
+    "sigla": "MNS",
+    "numero": "05",
+    "dia": "08",
+    "mes": null,
+    "ano": 2001,
+    "pos": 14783,
+    "raw": "DETERMINAÇÃO DE SERVIÇO -MNS-Nº 05 de 08 de Janciro de 2001"
+   }
+  ]
+ },
+ {
+  "uid": "dts-ccm-10-2000",
+  "numero": "010",
+  "sigla": "CCM",
+  "ano_banco": 2000,
+  "boletim": "021",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-ccm-6-2000",
+  "numero": "006",
+  "sigla": "CCM",
+  "ano_banco": 2000,
+  "boletim": "021",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-ccm-9-2000",
+  "numero": "009",
+  "sigla": "CCM",
+  "ano_banco": 2000,
+  "boletim": "021",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-3-2000-3",
+  "numero": "003",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "021",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dts-uff-5-2000-3",
+  "numero": "005",
+  "sigla": "UFF",
+  "ano_banco": 2000,
+  "boletim": "021",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "port-cuv-3-2000",
+  "numero": "03",
+  "sigla": "CUV",
+  "ano_banco": 2000,
+  "boletim": "063",
+  "motivo": "SEM_MATCH (numero nao acurado no PDF)",
+  "candidatos": null
+ },
+ {
+  "uid": "dec-mge-32-1999",
+  "numero": "32",
+  "sigla": "MGE",
+  "ano_banco": 1999,
+  "boletim": "187",
+  "motivo": "AMBIGUO (2 candidatos)",
+  "candidatos": [
+   {
+    "tipo": "DECISÃO",
+    "sigla": "MGE",
+    "numero": "32",
+    "dia": "09",
+    "mes": 6,
+    "ano": 1999,
+    "pos": 18359,
+    "raw": "DECISÃO MGE \nnº \n32 \nde \n09 DE JUNHO DE \n1999"
+   },
+   {
+    "tipo": "DECISÃO",
+    "sigla": "MGE",
+    "numero": "32",
+    "dia": "09",
+    "mes": 6,
+    "ano": 1999,
+    "pos": 18832,
+    "raw": "Decisão MGE nº 32 de 09 de junho de 1999"
+   }
+  ]
+ }
+]
