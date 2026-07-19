@@ -1416,6 +1416,56 @@ function coop_normaliza_pais(string $bruto): string {
     return '';
 }
 
+// Países ordenados do nome MAIS LONGO para o mais curto: sem isso, "São Tomé e
+// Príncipe" nunca casaria (um país de nome curto casaria antes, dentro dele).
+function coop_paises_ordenados(): array {
+    static $ord = null;
+    if ($ord === null) {
+        $ord = array_keys(coop_paises());
+        usort($ord, fn($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+    }
+    return $ord;
+}
+
+// Acha o país do parceiro. Três camadas, da mais confiável para a menos —
+// medido no corpus (1.350 atos): só a 1ª dava 346 acordos com país; as três
+// dão 508 (+47%).
+//   1) país entre PARÊNTESES em qualquer posição — não só no fim: metade dos
+//      casos traz texto depois ("(Itália), de iniciativa do Departamento…"),
+//      e exigir fim de string perdia todos eles.
+//   2) país depois de TRAVESSÃO ("Colegio de México - México") — família
+//      inteira dos atos "Designar Docente para Coordenar o Acordo" (+39,
+//      precisão de 100% na amostra).
+//   3) país dentro do NOME da instituição ("Instituto Superior Politécnico de
+//      São Tomé e Príncipe"), que é o único sinal quando o ato não declara o
+//      país em campo separado (+123).
+// "Brasil" é aceito só na camada 1 (parêntese explícito, intencional). Nas
+// outras ficaria ruidoso: nome de empresa carrega o país ("Equinor Brasil") e
+// acordo doméstico viraria falso internacional.
+function coop_pais_do_texto(string $ementa, string $inst): string {
+    if (preg_match_all('/\(([^()]{2,40})\)/u', $ementa, $mm)) {
+        foreach (array_reverse($mm[1]) as $cand) {
+            $n = coop_normaliza_pais($cand);
+            if ($n !== '') return $n;
+        }
+    }
+    $emAscii = nome_ascii($ementa);
+    foreach (coop_paises_ordenados() as $nome) {
+        if ($nome === 'Brasil') continue;
+        $p = preg_quote(nome_ascii($nome), '/');
+        if (preg_match('/[–—-]\s*' . $p . '\b/iu', $emAscii)) return $nome;
+    }
+    if ($inst !== '') {
+        $iAscii = nome_ascii($inst);
+        foreach (coop_paises_ordenados() as $nome) {
+            if ($nome === 'Brasil') continue;
+            $p = preg_quote(nome_ascii($nome), '/');
+            if (preg_match('/\b' . $p . '\b/iu', $iAscii)) return $nome;
+        }
+    }
+    return '';
+}
+
 function coop_categoria(string $ementa): string {
     foreach (coop_categorias() as [$rotulo, $rgx]) {
         if (preg_match($rgx, $ementa)) return $rotulo;
@@ -1450,6 +1500,17 @@ function coop_instituicao(string $ementa): string {
         // fosse a parceira, escondendo a instituição real (achado: Petrobras).
         if ($p === '' || preg_match('/^' . $uff . '\b/iu', $p)) continue;
         $p = preg_replace('/^(a|o|as|os)\s+/iu', '', $p);
+        // cauda que vaza do fim da ementa: ", celebrado em ." e o país repetido
+        // depois do travessão ("… de São Tomé e Príncipe – São Tomé e Príncipe").
+        $p = preg_replace('/,?\s*(?:celebrad[oa]|firmad[oa])\s+em\b.*$/iu', '', $p);
+        $p = preg_replace('/,\s*de\s+iniciativa\s+d.*$/iu', '', $p);
+        // país repetido depois do travessão ("… de São Tomé e Príncipe – São
+        // Tomé e Príncipe"): corta no último travessão SÓ se a cauda for país.
+        if (preg_match('/^(.*)[–—-]\s*([^–—-]{3,30})\s*$/u', $p, $mm)
+            && coop_normaliza_pais($mm[2]) !== '') {
+            $p = $mm[1];
+        }
+        $p = trim($p, " \t.,;:–—-");
         if (mb_strlen($p) >= 3) return mb_substr($p, 0, 120);
     }
     return '';
@@ -1492,19 +1553,14 @@ function cooperacao(PDO $pdo): void {
         $cat = coop_categoria($ementa);
         if ($cat === '' || !coop_eh_acordo($ementa)) continue;   // menção solta, não é acordo
 
-        $pais = '';
-        if (preg_match_all('/\(([^()]{2,40})\)?/u', $ementa, $mm)) {
-            foreach (array_reverse($mm[1]) as $cand) {   // o país costuma ser o ÚLTIMO
-                $n = coop_normaliza_pais($cand);
-                if ($n !== '') { $pais = $n; break; }
-            }
-        }
+        $instituicao = coop_instituicao($ementa);
+        $pais = coop_pais_do_texto($ementa, $instituicao);
         $ano = (int)$r['ano'];
         $acordos[] = [
             'id' => $r['id'], 'numero' => $r['numero'], 'ano' => $ano,
             'data' => $r['data_ato'], 'link' => $r['link'], 'sigla' => $r['sigla'],
             'categoria' => $cat,
-            'instituicao' => coop_instituicao($ementa),
+            'instituicao' => $instituicao,
             'pais' => $pais,
             'lat' => $pais !== '' ? $coords[$pais][0] : null,
             'lon' => $pais !== '' ? $coords[$pais][1] : null,
