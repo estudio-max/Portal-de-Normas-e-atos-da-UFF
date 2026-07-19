@@ -847,9 +847,13 @@ export async function getDossie(siape: string, nome: string): Promise<DossieRet>
 // continua por menção no texto (o modelo não segue o mesmo padrão 1
 // portaria-por-setor-revogada). Por isso as formas são diferentes.
 export interface JornadaLinhaFlex { ano: number; entradas: number; saidas: number; ativos: number }
-export interface JornadaSetorFlex {
-  setor: string; numero: string; ano: number; link: string | null;
+export interface JornadaPortariaFlex {
+  numero: string; ano: number; link: string | null;
   status: string; entrada: string; saida: string | null;
+}
+export interface JornadaSetorFlex {
+  setor: string; status: string; entrada: string; saida: string | null;
+  portarias: JornadaPortariaFlex[];
 }
 export interface JornadaModeloFlex { serie: JornadaLinhaFlex[]; setores: JornadaSetorFlex[] }
 

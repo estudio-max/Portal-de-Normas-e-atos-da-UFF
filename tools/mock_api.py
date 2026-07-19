@@ -388,9 +388,12 @@ def dossie_payload(siape, nome):
 def jornada_payload():
     def linha_flex(ano, entradas, saidas):
         return {"ano": ano, "entradas": entradas, "saidas": saidas}
-    def setor_flex(setor, numero, ano, link, status, entrada, saida):
-        return {"setor": setor, "numero": numero, "ano": ano, "link": link,
+    def portaria_flex(numero, ano, link, status, entrada, saida):
+        return {"numero": numero, "ano": ano, "link": link,
                 "status": status, "entrada": entrada, "saida": saida}
+    def setor_flex(setor, status, entrada, saida, portarias):
+        return {"setor": setor, "status": status, "entrada": entrada, "saida": saida,
+                "portarias": portarias}
     def linha_pgd(ano, atos, setores, servidores):
         return {"ano": ano, "atos": atos, "setores": setores, "servidores": servidores}
     def setor_pgd(sigla, atos, primeiro, ultimo, servidores):
@@ -410,14 +413,26 @@ def jornada_payload():
         "flex": {
             "serie": flex_serie,
             "setores": [
-                setor_flex("Biblioteca da Escola de Enfermagem - CBI/SDC", "68.622", 2023,
-                           "https://boletimdeservico.uff.br/wp-content/uploads/exemplo.pdf",
-                           "Revogado", "2019-03-01", "2023-10-01"),
-                setor_flex("Instituto de Biologia - EGB", "66.470", 2020, None,
-                           "Revogado", "2019-05-10", "2022-08-15"),
-                setor_flex("PROGEPE", "68.707", 2024,
-                           "https://boletimdeservico.uff.br/wp-content/uploads/exemplo2.pdf",
-                           "Ativo", "2020-02-01", None),
+                # setor com múltiplas portarias (adesão + manutenções) — testa o
+                # desdobramento; caso real: bibliotecas renovam a equipe com frequência.
+                setor_flex("CBI/SDC - Biblioteca da Faculdade de Economia", "Ativo",
+                           "2019-10-09", None, [
+                    portaria_flex("65.293", 2019, None, "Vigente", "2019-10-09", None),
+                    portaria_flex("68.644", 2023,
+                                  "https://boletimdeservico.uff.br/wp-content/uploads/exemplo3.pdf",
+                                  "Vigente", "2023-08-01", None),
+                    portaria_flex("68.704", 2024,
+                                  "https://boletimdeservico.uff.br/wp-content/uploads/exemplo4.pdf",
+                                  "Vigente", "2024-07-22", None),
+                ]),
+                setor_flex("Instituto de Biologia - EGB", "Revogado", "2019-05-10", "2022-08-15", [
+                    portaria_flex("66.470", 2020, None, "Revogado", "2019-05-10", "2022-08-15"),
+                ]),
+                setor_flex("PROGEPE", "Ativo", "2020-02-01", None, [
+                    portaria_flex("68.707", 2024,
+                                  "https://boletimdeservico.uff.br/wp-content/uploads/exemplo2.pdf",
+                                  "Ativo", "2020-02-01", None),
+                ]),
             ],
         },
         "pgd": {

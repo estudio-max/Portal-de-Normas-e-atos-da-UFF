@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Clock, Loader2, Info, ExternalLink, Building2, Users, FileText, LogOut } from 'lucide-react';
+import { Clock, Loader2, Info, ExternalLink, Building2, Users, FileText, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import * as ds from '../dataSource';
 
 // Aba "Jornada de trabalho": os dois modelos recentes de organização da
@@ -141,6 +141,80 @@ function CartaoPgd({ dados }: { dados: ds.JornadaModelo }) {
   );
 }
 
+function BadgeStatus({ status }: { status: string }) {
+  return (
+    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+      status === 'Ativo'
+        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        : 'bg-slate-100 text-slate-600 border border-slate-200'
+    }`}>
+      {status === 'Ativo' ? 'Ativo' : 'Revogado'}
+    </span>
+  );
+}
+
+// Uma linha por SETOR (não por portaria): setores com várias portarias
+// (adesão + manutenções — comum em bibliotecas, que renovam a equipe com
+// frequência) desdobram sob demanda, em vez de repetir o mesmo setor numa
+// linha por renovação.
+function LinhaSetorFlex({ s }: { s: ds.JornadaSetorFlex }) {
+  const [aberta, setAberta] = useState(false);
+  const multiplas = s.portarias.length > 1;
+  const unica = s.portarias[0];
+  return (
+    <>
+      <tr className="border-t border-slate-100 hover:bg-slate-50">
+        <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[220px]">{s.setor}</td>
+        <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+          {multiplas ? (
+            <button onClick={() => setAberta(v => !v)}
+              className="inline-flex items-center gap-1 text-blue-700 hover:underline font-semibold">
+              {aberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              {s.portarias.length} portarias
+            </button>
+          ) : unica.link ? (
+            <a href={unica.link} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
+              {unica.numero}/{unica.ano} <ExternalLink className="w-3 h-3" />
+            </a>
+          ) : <span>{unica.numero}/{unica.ano}</span>}
+        </td>
+        <td className="px-3 py-1.5 text-xs"><BadgeStatus status={s.status} /></td>
+        <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.entrada)}</td>
+        <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.saida)}</td>
+      </tr>
+      {multiplas && aberta && (
+        <tr className="border-t border-slate-100 bg-slate-50/60">
+          <td colSpan={5} className="px-3 py-2">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Histórico de portarias deste setor
+            </div>
+            <table className="w-full text-xs">
+              <tbody>
+                {s.portarias.map((p, i) => (
+                  <tr key={p.numero + p.ano + i} className="border-t border-slate-200 first:border-0">
+                    <td className="py-1 pr-3 whitespace-nowrap">
+                      {p.link ? (
+                        <a href={p.link} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
+                          {p.numero}/{p.ano} <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : <span className="font-semibold">{p.numero}/{p.ano}</span>}
+                    </td>
+                    <td className="py-1 pr-3"><BadgeStatus status={p.status} /></td>
+                    <td className="py-1 pr-3 text-slate-500 whitespace-nowrap">{fmtData(p.entrada)}</td>
+                    <td className="py-1 text-slate-500 whitespace-nowrap">{fmtData(p.saida)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
   const [todos, setTodos] = useState(false);
   const lista = todos ? setores : setores.slice(0, 15);
@@ -164,30 +238,7 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
             </tr>
           </thead>
           <tbody>
-            {lista.map((s, i) => (
-              <tr key={s.setor + s.numero + i} className="border-t border-slate-100 hover:bg-slate-50">
-                <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[220px]">{s.setor}</td>
-                <td className="px-3 py-1.5 text-xs whitespace-nowrap">
-                  {s.link ? (
-                    <a href={s.link} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
-                      {s.numero}/{s.ano} <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : <span>{s.numero}/{s.ano}</span>}
-                </td>
-                <td className="px-3 py-1.5 text-xs">
-                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                    s.status === 'Ativo'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-slate-100 text-slate-600 border border-slate-200'
-                  }`}>
-                    {s.status === 'Ativo' ? 'Ativo' : 'Revogado'}
-                  </span>
-                </td>
-                <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.entrada)}</td>
-                <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.saida)}</td>
-              </tr>
-            ))}
+            {lista.map((s, i) => <React.Fragment key={s.setor + i}><LinhaSetorFlex s={s} /></React.Fragment>)}
           </tbody>
         </table>
       </div>
