@@ -876,6 +876,35 @@ export async function getJornada(): Promise<JornadaResp | null> {
   } catch { return null; }
 }
 
+// ---- Cooperação (acordos, protocolos, cotutelas) ---------------------------
+// Categoria, instituição parceira e país saem da EMENTA (muito estruturada
+// nesses atos) — o servidor já entrega normalizado, com lat/lon quando o país
+// é reconhecido, para o mapa não precisar de tabela própria.
+export interface CoopSerieAno { ano: number; total: number; categorias: Record<string, number> }
+export interface CoopCategoria { categoria: string; n: number }
+export interface CoopPais { pais: string; n: number; lat: number; lon: number }
+export interface CoopAcordo {
+  id: string; numero: string; ano: number; data: string | null; link: string | null;
+  sigla: string; categoria: string; instituicao: string; pais: string;
+  lat: number | null; lon: number | null; ementa: string;
+}
+export interface CoopResp {
+  serie: CoopSerieAno[]; categorias: CoopCategoria[];
+  paises: CoopPais[]; acordos: CoopAcordo[];
+}
+
+export async function getCooperacao(): Promise<CoopResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/cooperacao`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    // API antiga cai no default listar() e devolve outra forma — valida a shape.
+    if (!j || !Array.isArray(j.acordos) || !Array.isArray(j.serie)) return null;
+    return j as CoopResp;
+  } catch { return null; }
+}
+
 interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
 
 // Infere PARA QUEM serve o prazo (o público que precisa agir), a partir de

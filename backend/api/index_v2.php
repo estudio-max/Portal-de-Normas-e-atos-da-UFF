@@ -62,6 +62,7 @@ switch ($recurso) {
     case 'analitico': analitico($pdo); break;
     case 'prazos':   prazos($pdo); break;
     case 'jornada':  jornada($pdo); break;
+    case 'cooperacao': cooperacao($pdo); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
     // Resquício do tempo em que a aba (hoje "Meu SIAPE") era fechada por senha.
@@ -1306,6 +1307,223 @@ function jornada(PDO $pdo): void {
     responder_json([
         'flex' => ['serie' => $serieFlex, 'setores' => $setoresFlex],
         'pgd'  => ['serie' => $seriePgd, 'setores' => $setoresPgd],
+    ]);
+}
+
+// ---- COOPERAÇÃO (acordos, protocolos, cotutelas) ---------------------------
+// A ementa desses atos é MUITO estruturada e carrega tudo que a aba precisa:
+//   "Dispõe sobre a aprovação do Acordo de Cooperação Internacional celebrado
+//    entre a UFF - UFF e a Oslo New University College (Noruega)."
+// Daí saem a CATEGORIA (o qualificador do acordo), a INSTITUIÇÃO parceira e o
+// PAÍS (entre parênteses). Por isso a rota lê `a.ementa` (que tem FULLTEXT
+// próprio, ft_ementa) e não o corpo — o corpo só traria ruído.
+//
+// "Internacional" NÃO é categoria paralela às outras: é qualificador, e muito
+// acordo internacional está registrado como "Cooperação Acadêmica ... (Espanha)".
+// O sinal confiável de internacionalidade é o PAÍS reconhecido, não a palavra.
+
+// Categorias, da MAIS específica para a mais genérica — a ordem importa:
+// "Técnico-Científica" tem de casar antes de "Técnica", e os qualificadores
+// antes do "Cooperação" genérico. O último padrão é a rede de segurança.
+const COOP_CATEGORIAS = [
+    ['Cotutela',                           '/cotutela/iu'],
+    ['Dupla Diplomação',                   '/dupla\s+diploma/iu'],
+    ['Memorando de Entendimento',          '/memorando\s+de\s+entendimento/iu'],
+    ['Protocolo de Intenções',             '/protocolo\s+de\s+inten/iu'],
+    ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnico[-\s]*cient[íi]f/iu'],
+    ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnica\s+e\s+cient[íi]f/iu'],
+    ['Cooperação Científica e Tecnológica','/coopera\w*\s+cient[íi]fica\s+e\s+tecnol/iu'],
+    ['Cooperação Técnica',                 '/coopera\w*\s+t[ée]cnic/iu'],
+    ['Cooperação Internacional',           '/coopera\w*\s+internacional/iu'],
+    ['Cooperação Acadêmica',               '/coopera\w*\s+acad[êe]mica/iu'],
+    ['Cooperação Multilateral',            '/coopera\w*\s+multilateral/iu'],
+    ['Cooperação de Pesquisa',             '/coopera\w*\s+de\s+pesquisa/iu'],
+    ['Cooperação Geral',                   '/coopera\w*\s+geral/iu'],
+    ['Cooperação Específica',              '/coopera\w*\s+espec[íi]fic/iu'],
+    ['Convênio de Cooperação',             '/conv[êe]nio\s+de\s+coopera/iu'],
+    ['Termo de Cooperação',                '/termo\s+de\s+coopera/iu'],
+    ['Acordo de Cooperação',               '/coopera/iu'],
+];
+
+// País (pt-BR) -> [lat, lon]. Serve a DOIS propósitos: plotar no mapa e VALIDAR
+// — só é país o que está aqui, o que descarta sozinho o lixo que cai entre
+// parênteses na ementa ("(GENI/UFF)", "(PPGH)"). Coordenadas aproximadas do
+// centro do país; o mapa é de leitura, não cartografia.
+function coop_paises(): array {
+    static $p = [
+        'África do Sul'=>[-30.6,22.9], 'Alemanha'=>[51.2,10.5], 'Angola'=>[-11.2,17.9],
+        'Arábia Saudita'=>[23.9,45.1], 'Argélia'=>[28.0,1.7], 'Argentina'=>[-38.4,-63.6],
+        'Austrália'=>[-25.3,133.8], 'Áustria'=>[47.5,14.6], 'Bélgica'=>[50.5,4.5],
+        'Bolívia'=>[-16.3,-63.6], 'Brasil'=>[-14.2,-51.9], 'Bulgária'=>[42.7,25.5],
+        'Cabo Verde'=>[16.0,-24.0], 'Camarões'=>[7.4,12.4], 'Canadá'=>[56.1,-106.3],
+        'Chile'=>[-35.7,-71.5], 'China'=>[35.9,104.2], 'Chipre'=>[35.1,33.4],
+        'Colômbia'=>[4.6,-74.3], 'Coreia do Sul'=>[35.9,127.8], 'Costa Rica'=>[9.7,-83.8],
+        'Croácia'=>[45.1,15.2], 'Cuba'=>[21.5,-77.8], 'Dinamarca'=>[56.3,9.5],
+        'Egito'=>[26.8,30.8], 'El Salvador'=>[13.8,-88.9], 'Equador'=>[-1.8,-78.2],
+        'Eslovênia'=>[46.2,15.0], 'Espanha'=>[40.5,-3.7], 'Estados Unidos'=>[37.1,-95.7],
+        'Estônia'=>[58.6,25.0], 'Etiópia'=>[9.1,40.5], 'Filipinas'=>[12.9,121.8],
+        'Finlândia'=>[61.9,25.7], 'França'=>[46.2,2.2], 'Gana'=>[7.9,-1.0],
+        'Grécia'=>[39.1,21.8], 'Guatemala'=>[15.8,-90.2], 'Guiné-Bissau'=>[11.8,-15.2],
+        'Holanda'=>[52.1,5.3], 'Hungria'=>[47.2,19.5], 'Índia'=>[20.6,79.0],
+        'Indonésia'=>[-0.8,113.9], 'Irlanda'=>[53.4,-8.2], 'Israel'=>[31.0,34.9],
+        'Itália'=>[41.9,12.6], 'Japão'=>[36.2,138.3], 'Letônia'=>[56.9,24.6],
+        'Líbano'=>[33.9,35.9], 'Lituânia'=>[55.2,23.9], 'Luxemburgo'=>[49.8,6.1],
+        'Macau'=>[22.2,113.5], 'Marrocos'=>[31.8,-7.1], 'México'=>[23.6,-102.6],
+        'Moçambique'=>[-18.7,35.5], 'Namíbia'=>[-22.96,18.5], 'Nigéria'=>[9.1,8.7],
+        'Noruega'=>[60.5,8.5], 'Nova Zelândia'=>[-40.9,174.9], 'Panamá'=>[8.5,-80.8],
+        'Paraguai'=>[-23.4,-58.4], 'Peru'=>[-9.2,-75.0], 'Polônia'=>[51.9,19.1],
+        'Portugal'=>[39.4,-8.2], 'Quênia'=>[-0.02,37.9], 'Reino Unido'=>[55.4,-3.4],
+        'República Tcheca'=>[49.8,15.5], 'Romênia'=>[45.9,25.0], 'Rússia'=>[61.5,105.3],
+        'São Tomé e Príncipe'=>[0.2,6.6], 'Senegal'=>[14.5,-14.5], 'Sérvia'=>[44.0,21.0],
+        'Singapura'=>[1.35,103.8], 'Suécia'=>[60.1,18.6], 'Suíça'=>[46.8,8.2],
+        'Tailândia'=>[15.9,101.0], 'Timor-Leste'=>[-8.9,125.7], 'Tunísia'=>[33.9,9.5],
+        'Turquia'=>[39.0,35.2], 'Ucrânia'=>[48.4,31.2], 'Uruguai'=>[-32.5,-55.8],
+        'Venezuela'=>[6.4,-66.6], 'Vietnã'=>[14.1,108.3],
+    ];
+    return $p;
+}
+
+// Normaliza o que veio entre parênteses e devolve o país canônico, ou '' se não
+// for país. Trata as variações reais do corpus: "EUA", "Lisboa – Portugal"
+// (cidade + travessão), acento/caixa trocados e o fecha-parêntese perdido no OCR.
+function coop_normaliza_pais(string $bruto): string {
+    $p = trim($bruto, " \t.,;:–—-");
+    if ($p === '') return '';
+    if (preg_match('/[–—-]\s*([^–—-]+)$/u', $p, $m)) $p = trim($m[1]);   // "Lisboa – Portugal"
+    $alias = [
+        'eua' => 'Estados Unidos', 'usa' => 'Estados Unidos', 'eeuu' => 'Estados Unidos',
+        'estados unidos da america' => 'Estados Unidos', 'inglaterra' => 'Reino Unido',
+        'escocia' => 'Reino Unido', 'gra-bretanha' => 'Reino Unido', 'uk' => 'Reino Unido',
+        'paises baixos' => 'Holanda', 'republica checa' => 'República Tcheca',
+        'coreia' => 'Coreia do Sul', 'republica da coreia' => 'Coreia do Sul',
+        'costa do marfim' => 'Senegal',
+    ];
+    $chave = mb_strtolower(nome_ascii($p));
+    if (isset($alias[$chave])) return $alias[$chave];
+    foreach (array_keys(coop_paises()) as $nome) {          // casa sem acento/caixa
+        if (mb_strtolower(nome_ascii($nome)) === $chave) return $nome;
+    }
+    return '';
+}
+
+function coop_categoria(string $ementa): string {
+    foreach (COOP_CATEGORIAS as [$rotulo, $rgx]) {
+        if (preg_match($rgx, $ementa)) return $rotulo;
+    }
+    return '';
+}
+
+// Instituição parceira. Estratégia: REMOVER a própria UFF do trecho que segue
+// "entre" e ficar com o resto — em vez de partir a lista por " e a/o ", que
+// falhava em 12% dos casos reais: sem artigo ("e Volkswagen Caminhões"), com
+// vírgula ("UFF – UFF, a Fundação Euclides") ou sem conector nenhum, por typo
+// ("UFF - UFF Texas Christian University"). Partir por " e " solto seria pior:
+// truncaria nomes que contêm "e" ("Ciência e Tecnologia" viraria "Tecnologia").
+// Cobre as duas ordens do corpus ("entre a UFF e a X" e "entre a X e a UFF").
+function coop_instituicao(string $ementa): string {
+    $e = preg_replace('/\s+/u', ' ', trim($ementa));
+    $e = preg_replace('/\s*\([^()]*\)?\s*\.?\s*$/u', '', $e);      // tira o país do fim
+    if (!preg_match('/\bentre\b(.+)$/iu', $e, $m)) return '';
+    $txt = trim($m[1], " \t.,;:–—-");
+
+    $uff = '(?:a\s+|o\s+)?(?:UFF|Universidade\s+Federal\s+Fluminense)(?:\s*[-–—]\s*UFF)?';
+    $txt = preg_replace('/^' . $uff . '\s*[,;]?\s*(?:e\s+)?/iu', '', $txt, 1);   // UFF na frente
+    $txt = preg_replace('/\s*[,;]?\s*e\s+' . $uff . '\s*$/iu', '', $txt, 1);     // UFF no fim
+
+    // Se ainda restou uma lista com artigo, fica com o último parceiro real.
+    $partes = preg_split('/\s+e\s+(?:a|o|as|os|à|ao)\s+|,\s+(?:a|o|as|os)\s+/iu', $txt);
+    foreach (array_reverse($partes) as $parte) {
+        $p = trim($parte, " \t.,;:–—-");
+        // COMEÇA com UFF (não "é igual a"): o corpus traz "…e a UFF - UFF, com
+        // interveniência administrativa da Fundação…", em que a parte da UFF
+        // carrega uma oração atrás. Exigir igualdade devolvia a UFF como se
+        // fosse a parceira, escondendo a instituição real (achado: Petrobras).
+        if ($p === '' || preg_match('/^' . $uff . '\b/iu', $p)) continue;
+        $p = preg_replace('/^(a|o|as|os)\s+/iu', '', $p);
+        if (mb_strlen($p) >= 3) return mb_substr($p, 0, 120);
+    }
+    return '';
+}
+
+// O ato é mesmo um ACORDO, e não um ato que só MENCIONA cooperação? Sem isto
+// entram bancas examinadoras e bolsas ("Comissão de Avaliação para Concessão de
+// Bolsa no âmbito do Termo de Cooperação do Carrefour"), que citam o acordo mas
+// não o celebram — mesma regra de sempre: classifique pelo DISPOSITIVO, não
+// pela menção.
+function coop_eh_acordo(string $ementa): bool {
+    return (bool)preg_match(
+        '/celebrad|firmad|(?:acordo|termo|conv[êe]nio|protocolo|instrumento|mem[oó]rando)\s'
+        . '|cotutela|dupla\s+diploma/iu', $ementa);
+}
+
+function cooperacao(PDO $pdo): void {
+    // BOOLEAN MODE sem "+": as expressões são alternativas (basta UMA casar).
+    // A triagem fina é o coop_categoria() abaixo — quem não casa categoria
+    // nenhuma sai fora, o que remove a menção solta a "cooperação".
+    $ft = 'coopera* cotutela "protocolo de intenções" "memorando de entendimento" "dupla diplomação"';
+    $st = $pdo->prepare("
+        SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa,
+               o.sigla, b.url_pdf AS link
+          FROM ato a
+          JOIN orgao o        ON o.id = a.orgao_id
+          LEFT JOIN boletim b ON b.id = a.boletim_id
+         WHERE MATCH(a.ementa) AGAINST(:ft IN BOOLEAN MODE)
+         ORDER BY a.ano DESC, a.numero_norm DESC
+         LIMIT 4000");
+    $st->execute([':ft' => $ft]);
+
+    $coords = coop_paises();
+    $acordos = [];
+    $porAnoCat = [];      // ano => categoria => n
+    $porPais = [];        // país => n
+    $cats = [];           // categoria => n
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $ementa = preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? ''));
+        $cat = coop_categoria($ementa);
+        if ($cat === '' || !coop_eh_acordo($ementa)) continue;   // menção solta, não é acordo
+
+        $pais = '';
+        if (preg_match_all('/\(([^()]{2,40})\)?/u', $ementa, $mm)) {
+            foreach (array_reverse($mm[1]) as $cand) {   // o país costuma ser o ÚLTIMO
+                $n = coop_normaliza_pais($cand);
+                if ($n !== '') { $pais = $n; break; }
+            }
+        }
+        $ano = (int)$r['ano'];
+        $acordos[] = [
+            'id' => $r['id'], 'numero' => $r['numero'], 'ano' => $ano,
+            'data' => $r['data_ato'], 'link' => $r['link'], 'sigla' => $r['sigla'],
+            'categoria' => $cat,
+            'instituicao' => coop_instituicao($ementa),
+            'pais' => $pais,
+            'lat' => $pais !== '' ? $coords[$pais][0] : null,
+            'lon' => $pais !== '' ? $coords[$pais][1] : null,
+            'ementa' => mb_substr($ementa, 0, 260),
+        ];
+        $porAnoCat[$ano][$cat] = ($porAnoCat[$ano][$cat] ?? 0) + 1;
+        $cats[$cat] = ($cats[$cat] ?? 0) + 1;
+        if ($pais !== '') $porPais[$pais] = ($porPais[$pais] ?? 0) + 1;
+    }
+
+    ksort($porAnoCat);
+    $serie = [];
+    foreach ($porAnoCat as $ano => $porCat) {
+        $serie[] = ['ano' => $ano, 'total' => array_sum($porCat), 'categorias' => $porCat];
+    }
+    arsort($cats);
+    arsort($porPais);
+    $paises = [];
+    foreach ($porPais as $nome => $n) {
+        $paises[] = ['pais' => $nome, 'n' => $n,
+                     'lat' => $coords[$nome][0], 'lon' => $coords[$nome][1]];
+    }
+
+    responder_json([
+        'serie'      => $serie,
+        'categorias' => array_map(fn($k, $v) => ['categoria' => $k, 'n' => $v],
+                                  array_keys($cats), array_values($cats)),
+        'paises'     => $paises,
+        'acordos'    => $acordos,
     ]);
 }
 

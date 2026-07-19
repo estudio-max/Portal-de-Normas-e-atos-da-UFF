@@ -450,6 +450,50 @@ def jornada_payload():
     }
 
 
+def cooperacao_payload():
+    """Espelha a forma da rota /cooperacao: categoria, instituicao, pais e
+    lat/lon ja resolvidos no servidor (o front so filtra e desenha)."""
+    def ac(numero, ano, cat, inst, pais, lat, lon, sigla='CEPEx'):
+        return {"id": f"res-cepex-{numero}-{ano}", "numero": numero, "ano": ano,
+                "data": f"{ano}-05-10", "link": None, "sigla": sigla,
+                "categoria": cat, "instituicao": inst, "pais": pais,
+                "lat": lat, "lon": lon,
+                "ementa": f"Dispõe sobre a aprovação do {cat} celebrado entre a UFF - UFF e a {inst}"
+                          + (f" ({pais})." if pais else ".")}
+    acordos = [
+        ac("6.145", 2026, "Cooperação Internacional", "Beihang University", "China", 35.9, 104.2),
+        ac("6.143", 2026, "Cooperação Internacional", "Oslo New University College", "Noruega", 60.5, 8.5),
+        ac("6.144", 2026, "Cooperação Acadêmica", "Universidade Técnica do Atlântico", "Cabo Verde", 16.0, -24.0),
+        ac("563", 2012, "Cooperação Acadêmica", "Universitat Autònoma de Barcelona", "Espanha", 40.5, -3.7),
+        ac("512", 2013, "Cooperação Acadêmica", "Université de Rennes", "França", 46.2, 2.2),
+        ac("6.148", 2026, "Termo de Cooperação", "Petróleo Brasileiro S.A. - Petrobras", "", None, None),
+        ac("6.150", 2026, "Cooperação Técnica", "Município de Maricá", "", None, None),
+        ac("562", 2012, "Protocolo de Intenções", "CEDERJ/CECIERJ", "", None, None),
+        ac("301", 2018, "Cotutela", "Universidade do Porto", "Portugal", 39.4, -8.2),
+        ac("410", 2019, "Cooperação Acadêmica", "Universidad de Buenos Aires", "Argentina", -38.4, -63.6),
+    ]
+    serie, cats, paises = [], {}, {}
+    por_ano = {}
+    for a in acordos:
+        por_ano.setdefault(a["ano"], {}).setdefault(a["categoria"], 0)
+        por_ano[a["ano"]][a["categoria"]] += 1
+        cats[a["categoria"]] = cats.get(a["categoria"], 0) + 1
+        if a["pais"]:
+            paises.setdefault(a["pais"], {"pais": a["pais"], "n": 0,
+                                          "lat": a["lat"], "lon": a["lon"]})
+            paises[a["pais"]]["n"] += 1
+    for ano in sorted(por_ano):
+        serie.append({"ano": ano, "total": sum(por_ano[ano].values()),
+                      "categorias": por_ano[ano]})
+    return {
+        "serie": serie,
+        "categorias": [{"categoria": k, "n": v}
+                       for k, v in sorted(cats.items(), key=lambda x: -x[1])],
+        "paises": sorted(paises.values(), key=lambda x: -x["n"]),
+        "acordos": acordos,
+    }
+
+
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -499,6 +543,8 @@ class H(BaseHTTPRequestHandler):
             self._send(obj, code)
         elif recurso == "jornada":
             self._send(jornada_payload())
+        elif recurso == "cooperacao":
+            self._send(cooperacao_payload())
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)

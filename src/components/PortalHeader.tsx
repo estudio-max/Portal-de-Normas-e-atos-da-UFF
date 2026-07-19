@@ -33,6 +33,7 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
     { id: 'tab-mandatos', key: 'mandatos', emoji: '⏳', label: 'Mandatos' },
     { id: 'tab-prazos', key: 'prazos', emoji: '📅', label: 'Prazos' },
     { id: 'tab-jornada', key: 'jornada', emoji: '🕒', label: 'Jornada de trabalho' },
+    { id: 'tab-cooperacao', key: 'cooperacao', emoji: '🤝', label: 'Cooperação' },
     { id: 'tab-insights', key: 'insights', emoji: '📈', label: 'Insights' },
     { id: 'tab-ia-parser', key: 'ia-parser', emoji: '🧠', label: apiMode ? 'Analisar Ato (texto)' : 'Assistente IA de Indexação' },
     { id: 'tab-ajuda', key: 'ajuda', emoji: '❓', label: 'Ajuda' },

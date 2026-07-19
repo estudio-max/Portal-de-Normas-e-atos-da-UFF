@@ -14,6 +14,7 @@ import DossieApi from './components/DossieApi';
 import InsightsApi from './components/InsightsApi';
 import PrazosApi from './components/PrazosApi';
 import JornadaApi from './components/JornadaApi';
+import CooperacaoApi from './components/CooperacaoApi';
 import MandatosApi from './components/MandatosApi';
 import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
@@ -135,6 +136,7 @@ export default function App() {
           {activeTab === 'mandatos' && <div id="painel-mandatos-wrap"><MandatosApi /></div>}
           {activeTab === 'prazos' && <div id="painel-prazos-wrap"><PrazosApi /></div>}
           {activeTab === 'jornada' && <div id="painel-jornada-wrap"><JornadaApi /></div>}
+          {activeTab === 'cooperacao' && <div id="painel-cooperacao-wrap"><CooperacaoApi /></div>}
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 
