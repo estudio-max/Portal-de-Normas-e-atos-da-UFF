@@ -424,6 +424,42 @@ def corrige_ano_futuro(data_ato, ano_ato, bs_data):
     return data_ato, ano_ato
 
 
+# Ato cujo ANO fica muito atrás do ano do BOLETIM quase nunca é ato: é uma
+# CITAÇÃO de norma antiga que o recorte tratou como cabeçalho, ou um pedaço de
+# corpo ("que designou…", "considerando Processo…", "Art. 2º…", "resolve:").
+#
+# Medido nos 60 boletins de 2026 (3.250 atos): gap 0 = 3.042, gap 1 = 186
+# (ato de dezembro publicado em janeiro — legítimo), gap 2 = 9, gap>=3 = 13.
+# Os 13 eram TODOS fragmento ou citação, vários repetidos (a Portaria 1.335/2021
+# aparecia 4x, recortada de boletins diferentes que a citavam).
+#
+# Exige TAMBÉM a forma de fragmento (começa em minúscula, vazio, ou abre com
+# que/considerando/resolve/a saber/Art.). Só o gap não basta: o boletim de 2001,
+# digitalizado, publica backlog REAL de 1998-2000 com ementa própria — esse
+# precisa continuar entrando. Sem a segunda condição, a guarda comeria 100 atos
+# legítimos daquele ano.
+# SEM re.IGNORECASE de propósito: a classe de MINÚSCULAS é metade do sinal
+# ("do Ministério…", "que designou…" começam minúsculo porque foram recortados
+# do meio de uma frase). Com re.I, `[a-zà-ö…]` casaria maiúscula também e a
+# condição viraria letra morta — a guarda degeneraria em "só o gap" e passaria a
+# derrubar ato legítimo de ementa normal (medido: derrubava "DESIGNAR os
+# docentes…" e "As bolsas são distribuídas…", que começam em maiúscula).
+_FRAGMENTO_INI_RE = re.compile(
+    r"^\s*$"                                             # ementa vazia
+    r"|^\s*[a-zà-öø-ÿ]"                                  # começa em minúscula
+    r"|^\s*(?:[Qq]ue|[Cc]onsiderando|[Rr]esolve|[Aa]\s+saber|[Aa]rt)\b")
+
+
+def citacao_recortada(ementa, ano_ato, bs_data):
+    """True se o 'ato' é, na verdade, citação/fragmento de um ato antigo."""
+    m = re.match(r"\d{2}/\d{2}/(\d{4})$", bs_data or "")
+    if not (m and ano_ato and str(ano_ato).isdigit()):
+        return False
+    if int(m.group(1)) - int(ano_ato) < 3:
+        return False
+    return bool(_FRAGMENTO_INI_RE.match(ementa or ""))
+
+
 def data_iso(dia, mes_nome, ano):
     m = MESES.get(mes_nome.lower().strip())
     if not m:
@@ -720,7 +756,7 @@ def parse_pdf(caminho):
         tem_corpo = ("resolve" in corpo_baixo or "art." in corpo_baixo
                      or "art " in corpo_baixo or "considerando" in corpo_baixo
                      or len(trecho) > 700)
-        if tem_corpo:
+        if tem_corpo and not citacao_recortada(ementa, ano_ato, bs_data):
             atos.append(ato)
 
     return atos, {"bs_numero": bs_num, "bs_data": bs_data, "bs_ano": bs_ano,

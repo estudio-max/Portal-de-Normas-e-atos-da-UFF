@@ -126,6 +126,20 @@ resumo operacional.
   não apresentar documentação") como designações. Antes de acrescentar um cargo,
   **meça** quantas vezes ele aparece após "cargo de direção de" versus após
   "cargo de" solto — `tools/teste_funcoes_cd.py` fixa os casos.
+- **Ato com ano muito atrás do boletim é citação, não ato** (`citacao_recortada()`
+  em `extrair_boletim.py`). Uma norma antiga citada no corpo vira "ato" quando o
+  recorte a trata como cabeçalho. Medido nos 60 boletins de 2026 (3.250 atos):
+  gap 0 = 3.042, gap 1 = 186 (dezembro publicado em janeiro, legítimo), gap 2 = 9,
+  **gap ≥ 3 = 13 — todos fragmento/citação** ("que designou…", "considerando
+  Processo…", "Art. 2º…", "resolve:", ementa vazia; a Portaria 1.335/2021 aparecia
+  4x, recortada de boletins distintos que a citavam). A guarda exige gap ≥ 3
+  **E** forma de fragmento (vazio, começa em minúscula, ou abre com
+  que/considerando/resolve/a saber/Art). **O `_FRAGMENTO_INI_RE` NÃO pode ter
+  `re.IGNORECASE`**: com ele a classe de minúsculas casaria maiúscula, a segunda
+  condição viraria letra morta e a guarda degeneraria em "só o gap" — medido,
+  passava a derrubar ato legítimo ("DESIGNAR os docentes…"). Regressão que
+  fecha a decisão: 2026 perde 10 (todos lixo) e **2001 perde ZERO** — o boletim
+  digitalizado publica backlog real de 1998-2000 e precisa continuar entrando.
 - **Collation do MySQL ≠ dedup do Python.** `DECISOES` == `DECISÕES` e
   `'001'` == `'01'` == `'1'` para o MySQL. Qualquer ETL precisa considerar isso.
 - Órgão tem ~1.162 grafias de sigla no corpus. Consolidar é **curadoria** (via
