@@ -1325,25 +1325,35 @@ function jornada(PDO $pdo): void {
 // Categorias, da MAIS específica para a mais genérica — a ordem importa:
 // "Técnico-Científica" tem de casar antes de "Técnica", e os qualificadores
 // antes do "Cooperação" genérico. O último padrão é a rede de segurança.
-const COOP_CATEGORIAS = [
-    ['Cotutela',                           '/cotutela/iu'],
-    ['Dupla Diplomação',                   '/dupla\s+diploma/iu'],
-    ['Memorando de Entendimento',          '/memorando\s+de\s+entendimento/iu'],
-    ['Protocolo de Intenções',             '/protocolo\s+de\s+inten/iu'],
-    ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnico[-\s]*cient[íi]f/iu'],
-    ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnica\s+e\s+cient[íi]f/iu'],
-    ['Cooperação Científica e Tecnológica','/coopera\w*\s+cient[íi]fica\s+e\s+tecnol/iu'],
-    ['Cooperação Técnica',                 '/coopera\w*\s+t[ée]cnic/iu'],
-    ['Cooperação Internacional',           '/coopera\w*\s+internacional/iu'],
-    ['Cooperação Acadêmica',               '/coopera\w*\s+acad[êe]mica/iu'],
-    ['Cooperação Multilateral',            '/coopera\w*\s+multilateral/iu'],
-    ['Cooperação de Pesquisa',             '/coopera\w*\s+de\s+pesquisa/iu'],
-    ['Cooperação Geral',                   '/coopera\w*\s+geral/iu'],
-    ['Cooperação Específica',              '/coopera\w*\s+espec[íi]fic/iu'],
-    ['Convênio de Cooperação',             '/conv[êe]nio\s+de\s+coopera/iu'],
-    ['Termo de Cooperação',                '/termo\s+de\s+coopera/iu'],
-    ['Acordo de Cooperação',               '/coopera/iu'],
-];
+//
+// FUNÇÃO com `static`, e NÃO um `const` de arquivo: em PHP as funções são
+// hoisted (existem antes da linha em que aparecem), mas o `const` de escopo de
+// arquivo NÃO é — ele executa na ordem do arquivo. Como o switch de rotas lá em
+// cima despacha antes desta linha, um `const` aqui ainda não existiria quando a
+// rota roda, e "Undefined constant" derruba a requisição inteira com HTTP 500 de
+// corpo vazio (foi exatamente o que aconteceu no primeiro deploy desta aba).
+function coop_categorias(): array {
+    static $c = [
+        ['Cotutela',                           '/cotutela/iu'],
+        ['Dupla Diplomação',                   '/dupla\s+diploma/iu'],
+        ['Memorando de Entendimento',          '/memorando\s+de\s+entendimento/iu'],
+        ['Protocolo de Intenções',             '/protocolo\s+de\s+inten/iu'],
+        ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnico[-\s]*cient[íi]f/iu'],
+        ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnica\s+e\s+cient[íi]f/iu'],
+        ['Cooperação Científica e Tecnológica','/coopera\w*\s+cient[íi]fica\s+e\s+tecnol/iu'],
+        ['Cooperação Técnica',                 '/coopera\w*\s+t[ée]cnic/iu'],
+        ['Cooperação Internacional',           '/coopera\w*\s+internacional/iu'],
+        ['Cooperação Acadêmica',               '/coopera\w*\s+acad[êe]mica/iu'],
+        ['Cooperação Multilateral',            '/coopera\w*\s+multilateral/iu'],
+        ['Cooperação de Pesquisa',             '/coopera\w*\s+de\s+pesquisa/iu'],
+        ['Cooperação Geral',                   '/coopera\w*\s+geral/iu'],
+        ['Cooperação Específica',              '/coopera\w*\s+espec[íi]fic/iu'],
+        ['Convênio de Cooperação',             '/conv[êe]nio\s+de\s+coopera/iu'],
+        ['Termo de Cooperação',                '/termo\s+de\s+coopera/iu'],
+        ['Acordo de Cooperação',               '/coopera/iu'],
+    ];
+    return $c;
+}
 
 // País (pt-BR) -> [lat, lon]. Serve a DOIS propósitos: plotar no mapa e VALIDAR
 // — só é país o que está aqui, o que descarta sozinho o lixo que cai entre
@@ -1407,7 +1417,7 @@ function coop_normaliza_pais(string $bruto): string {
 }
 
 function coop_categoria(string $ementa): string {
-    foreach (COOP_CATEGORIAS as [$rotulo, $rgx]) {
+    foreach (coop_categorias() as [$rotulo, $rgx]) {
         if (preg_match($rgx, $ementa)) return $rotulo;
     }
     return '';
