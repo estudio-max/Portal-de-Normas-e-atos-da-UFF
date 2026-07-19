@@ -196,20 +196,21 @@ manda neles.**
 
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
-- **Anos impossíveis / fantasmas de citação (2 limpos em produção, falta a guarda
-  no extrator).** `backend/importar/corrigir_anos_impossiveis.sql` apagou uma
-  DUPLICATA com ano typado (Resolução 02/**1014** = 02/2014, o boletim 134-2014
-  tem o typo) e um FANTASMA do anexo SIORG da Portaria 57.716/2017 ("Criado em:
-  DECISÃO Nº 41/2010" da tabela de unidades virou "Decisão 41/**1771**"). Restam
-  ~108 atos com `ano < 2001` (medido na produção): +2 fantasmas de citação (IN
-  SEDAP 205/1988; "Portaria 2203/1996" que é referência ABNT "BRASIL. Ministério
-  da Saúde…") e ~106 de 1998-2000 que são **erro de parse de ano do OCR de 2001**
-  (prova: "DTS 04/1998 torna sem efeito DTS de dezembro de 2000" — anular em 1998
-  um ato de 2000 é impossível). Fase B precisa de: (a) guarda de ano plausível
-  contra o ano do boletim; (b) reconhecer o anexo SIORG como tabela de unidades,
-  não atos; (c) revisar o parse de ano no boletim 2001. Os ~108 restantes **não
-  foram tocados** — exigem decisão caso a caso (alguns 1998-2000 podem ser
-  backlog legítimo).
+- **Anos impossíveis / fantasmas de citação (limpos em produção; falta a guarda
+  no extrator).** Dois SQLs de correção rodados no phpMyAdmin:
+  `corrigir_anos_impossiveis.sql` (DUPLICATA de ano typado — Resolução 02/**1014**
+  = 02/2014, o boletim 134-2014 tem o typo; e o FANTASMA do anexo SIORG da
+  Portaria 57.716/2017 — "Criado em: DECISÃO Nº 41/2010" virou "Decisão 41/1771")
+  e `corrigir_fantasmas_citacao.sql` (5 fantasmas de citação: refs ABNT e normas
+  federais citadas em boletins de 2012-2022 — IN SEDAP 205/1988, Port. SVS/MS
+  29/98, etc.). **Auditoria completa dos 108 atos com `ano < 2001`:** 100 são
+  reais do boletim de 2001 (backlog/OCR — mantidos), 3 são reais com ano errado
+  (Qca Orgânica em boletim 2007; ratificação em 2006 — mantidos, ano por corrigir),
+  5 fantasmas apagados. O discriminador que resolveu: **ano-do-ato << ano-do-boletim**.
+  Fase B (re-extração) precisa de: (a) guarda de ano plausível contra o ano do
+  boletim; (b) reconhecer o anexo SIORG como tabela de unidades, não atos; (c) não
+  criar ato a partir de citação/referência ("Criado em: DECISÃO Nº…", refs ABNT);
+  (d) revisar o parse de ano no boletim 2001 e o ano dos 3 reais-mal-datados.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
 - Cutover para o domínio oficial da UFF — runbook pronto em
   [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) (o frontend já é portável, `/api`
