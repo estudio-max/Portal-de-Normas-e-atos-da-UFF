@@ -157,6 +157,7 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
           <thead>
             <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
               <th className="text-left font-bold px-3 py-1.5">Setor</th>
+              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Portaria</th>
               <th className="text-left font-bold px-3 py-1.5">Status</th>
               <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Entrada</th>
               <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Saída</th>
@@ -164,8 +165,16 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
           </thead>
           <tbody>
             {lista.map((s, i) => (
-              <tr key={s.sigla + i} className="border-t border-slate-100 hover:bg-slate-50">
-                <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs">{s.sigla}</td>
+              <tr key={s.setor + s.numero + i} className="border-t border-slate-100 hover:bg-slate-50">
+                <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[220px]">{s.setor}</td>
+                <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+                  {s.link ? (
+                    <a href={s.link} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
+                      {s.numero}/{s.ano} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : <span>{s.numero}/{s.ano}</span>}
+                </td>
                 <td className="px-3 py-1.5 text-xs">
                   <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                     s.status === 'Ativo'

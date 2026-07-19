@@ -1043,36 +1043,95 @@ function pad_cadeia(PDO $pdo, string $proc): void {
 // que se revoga uma vez só — o padrão de entrada/saída da flexibilização não
 // se aplica igual. "Servidores" aqui é piso (ato_pessoa é menção; 30-70% dos
 // atos não trazem SIAPE), não censo — a aba diz isso na tela.
+// Junta letras isoladas separadas por espaço — artefato de OCR muito comum
+// nesta faixa do corpus ("Ap r o va a m anut enç ão" = "Aprova a manutenção").
+// Só em runs de 3+ letras, pra não colar sigla real ("CBI", "SDC" ficam).
+// Achado real: sem isso, "ementa LIKE 'Aprov%'" no SQL perdia toda adesão cuja
+// ementa saiu com essa quebra — a Portaria 68.707/2024 é o caso que expôs isso.
+function normaliza_ocr_letras(string $s): string {
+    $e = preg_replace_callback('/(?:\b\pL\b ?){3,}/u',
+        fn($m) => str_replace(' ', '', $m[0]), $s);
+    return preg_replace('/\s+/u', ' ', $e);
+}
+
+// Extrai o SETOR flexibilizado da ementa (já normalizada). O emissor da
+// portaria é sempre a Reitoria — o setor de verdade está na ementa: "...dos
+// servidores técnicos administrativos da <SETOR - SIGLA> e dá outras
+// providências". Devolve o trecho do setor, ou '' se não achar o padrão.
+function flex_setor_da_ementa(string $ementaNorm): string {
+    if (preg_match('/administrativ\w*\s+d[aeo]s?\s+(.+?)\s+e\s+d[áa]\s+outras/iu', $ementaNorm, $m)) {
+        return trim($m[1]);
+    }
+    // fallback: pega o que vem depois de "flexibilização da jornada..." e antes
+    // de "e dá outras", sem exigir o "administrativos" (que o OCR às vezes come).
+    if (preg_match('/flexibiliza\w*\s+da\s+jornada.+?\bd[aeo]s?\s+([^,]{4,80}?)\s+e\s+d[áa]\s+outras/iu', $ementaNorm, $m)) {
+        return trim($m[1]);
+    }
+    return '';
+}
+
 function jornada(PDO $pdo): void {
-    // ---- Flexibilização: entrada = portaria concedida; saída = data da
-    // portaria que a revogou (se houver), via o grafo de relações.
+    // ---- Flexibilização (Norma de Serviço 672/2019 em diante): a ADESÃO de um
+    // setor é a portaria "Aprova (o plano|a manutenção) de flexibilização..."
+    // — o emissor é a Reitoria, mas o setor está na ementa. A SAÍDA é a data da
+    // portaria que a revogou (grafo de relações; validado 17/07/2026 contra
+    // planilha de RH, 24/24 pares). Retificações ("Retificar..." — inclui as
+    // que só trocam SERVIDORES da equipe existente, "Retirar X / Incluir Y",
+    // confirmadas pelo usuário como não-adesão) não são entrada nem saída.
+    //
+    // O prefixo "Aprova" é checado em PHP, DEPOIS de normalizar o OCR — não em
+    // SQL: a ementa crua às vezes chega como "Ap r o va a manutenção..." (2023,
+    // 2024), e "ementa LIKE 'Aprov%'" perdia essas adesões reais silenciosamente.
     $st = $pdo->query("
-        SELECT a.id, o.sigla, a.status, a.data_ato AS entrada,
+        SELECT a.numero, a.ano, a.ementa, a.status, a.data_ato AS entrada,
+               b.url_pdf AS link,
                (SELECT MIN(a2.data_ato) FROM relacao r JOIN ato a2 ON a2.id = r.ato_id
                  WHERE r.destino_ato_id = a.id AND r.tipo = 'Revoga') AS saida
           FROM ato a
           JOIN ato_texto t  ON t.ato_id = a.id
           JOIN tipo_ato tt  ON tt.id = a.tipo_id
-          JOIN orgao o      ON o.id = a.orgao_id
+          JOIN boletim b    ON b.id = a.boletim_id
          WHERE MATCH(t.texto_busca) AGAINST('+flexibiliza* +jornada' IN BOOLEAN MODE)
            AND tt.nome = 'Portaria'
-           AND a.ano BETWEEN 2016 AND 2100
-           AND a.ementa NOT LIKE 'Revog%'");
-    $concessoes = $st->fetchAll(PDO::FETCH_ASSOC);
+           AND a.ano BETWEEN 2019 AND 2100
+         ORDER BY a.data_ato");
+    $candidatas = $st->fetchAll(PDO::FETCH_ASSOC);
 
-    $porAno = [];   // ano => ['entradas'=>n, 'saidas'=>n]
+    // Conta o MOVIMENTO por setor, não por portaria: "Aprova a manutenção" é
+    // renovação do mesmo setor, não uma adesão nova — se contasse como entrada,
+    // infla. Chave = setor extraído, normalizado. Primeira aprovação = entrada;
+    // primeira revogação = saída.
+    $porSetor = [];
     $setoresFlex = [];
-    foreach ($concessoes as $c) {
-        $anoEntrada = (int)substr($c['entrada'], 0, 4);
-        $porAno[$anoEntrada]['entradas'] = ($porAno[$anoEntrada]['entradas'] ?? 0) + 1;
-        if ($c['saida']) {
-            $anoSaida = (int)substr($c['saida'], 0, 4);
-            $porAno[$anoSaida]['saidas'] = ($porAno[$anoSaida]['saidas'] ?? 0) + 1;
+    foreach ($candidatas as $c) {
+        $ementaNorm = normaliza_ocr_letras($c['ementa'] ?? '');
+        if (!preg_match('/^aprova/iu', $ementaNorm)) continue;   // só adesão/manutenção
+        $setor = flex_setor_da_ementa($ementaNorm);
+        $chave = mb_strtolower(preg_replace('/[^a-z0-9]/i', '', strip_ac($setor)));
+        if ($chave === '') $chave = 'port-' . $c['numero'] . '-' . $c['ano'];  // sem setor: por portaria
+        if (!isset($porSetor[$chave])) {
+            $porSetor[$chave] = ['entrada' => $c['entrada'], 'saida' => $c['saida']];
+        } else {
+            // fica a entrada mais antiga e a saída mais recente conhecida
+            if ($c['entrada'] < $porSetor[$chave]['entrada']) $porSetor[$chave]['entrada'] = $c['entrada'];
+            if ($c['saida'] && (!$porSetor[$chave]['saida'] || $c['saida'] > $porSetor[$chave]['saida']))
+                $porSetor[$chave]['saida'] = $c['saida'];
         }
         $setoresFlex[] = [
-            'sigla' => $c['sigla'], 'status' => $c['status'],
-            'entrada' => $c['entrada'], 'saida' => $c['saida'],
+            'setor' => $setor !== '' ? $setor : '(setor não identificado na ementa)',
+            'numero' => $c['numero'], 'ano' => (int)$c['ano'], 'link' => $c['link'],
+            'status' => $c['status'], 'entrada' => $c['entrada'], 'saida' => $c['saida'],
         ];
+    }
+
+    $porAno = [];   // ano => ['entradas'=>n, 'saidas'=>n]
+    foreach ($porSetor as $s) {
+        $ae = (int)substr($s['entrada'], 0, 4);
+        $porAno[$ae]['entradas'] = ($porAno[$ae]['entradas'] ?? 0) + 1;
+        if ($s['saida']) {
+            $as = (int)substr($s['saida'], 0, 4);
+            $porAno[$as]['saidas'] = ($porAno[$as]['saidas'] ?? 0) + 1;
+        }
     }
     ksort($porAno);
     $serieFlex = [];
@@ -1082,10 +1141,18 @@ function jornada(PDO $pdo): void {
         $serieFlex[] = ['ano' => $ano, 'entradas' => (int)($v['entradas'] ?? 0),
                          'saidas' => (int)($v['saidas'] ?? 0), 'ativos' => $acumulado];
     }
-    usort($setoresFlex, fn($a, $b) => strcmp($a['sigla'], $b['sigla']));
+    // tabela: adesões primeiro, depois por data (mais recente no topo)
+    usort($setoresFlex, fn($a, $b) => strcmp($b['entrada'], $a['entrada']));
 
-    // ---- PGD: por menção, como antes.
-    $ft = '+"programa de gestão"';
+    // ---- PGD (Programa de Gestão e Desempenho, Decreto 11.072/2022): por
+    // menção, a partir de 2022 (quando a UFF o implementou, IN 28/2022). O
+    // modelo funciona por edital/ciclo recorrente, não por portaria-por-setor
+    // revogável, então não cabe o mesmo padrão de entrada/saída da flex.
+    // ⚠️ PRECISÃO: a frase curta "programa de gestão" pega alguns programas
+    // homônimos (Gestão Ambiental, de Documentos etc.); a frase longa "gestão e
+    // desempenho" perde os editais que usam só a forma curta. Mantém a curta
+    // (recall) e exclui os homônimos conhecidos por palavra (-ambiental etc.).
+    $ft = '+"programa de gestão" -ambiental -patrimonial';
     $st = $pdo->prepare("
         SELECT a.ano,
                COUNT(DISTINCT a.id)        AS atos,
@@ -1095,7 +1162,7 @@ function jornada(PDO $pdo): void {
           JOIN ato_texto t   ON t.ato_id = a.id
           LEFT JOIN ato_pessoa ap ON ap.ato_id = a.id
          WHERE MATCH(t.texto_busca) AGAINST(:ft IN BOOLEAN MODE)
-           AND a.ano BETWEEN 2016 AND 2100
+           AND a.ano BETWEEN 2022 AND 2100
          GROUP BY a.ano ORDER BY a.ano");
     $st->execute([':ft' => $ft]);
     $seriePgd = array_map(fn($r) => [
@@ -1114,7 +1181,7 @@ function jornada(PDO $pdo): void {
           JOIN orgao o       ON o.id = a.orgao_id
           LEFT JOIN ato_pessoa ap ON ap.ato_id = a.id
          WHERE MATCH(t.texto_busca) AGAINST(:ft IN BOOLEAN MODE)
-           AND a.ano BETWEEN 2016 AND 2100
+           AND a.ano BETWEEN 2022 AND 2100
          GROUP BY o.sigla ORDER BY atos DESC, o.sigla
          LIMIT 500");
     $st->execute([':ft' => $ft]);

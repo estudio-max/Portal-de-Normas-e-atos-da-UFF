@@ -388,8 +388,9 @@ def dossie_payload(siape, nome):
 def jornada_payload():
     def linha_flex(ano, entradas, saidas):
         return {"ano": ano, "entradas": entradas, "saidas": saidas}
-    def setor_flex(sigla, status, entrada, saida):
-        return {"sigla": sigla, "status": status, "entrada": entrada, "saida": saida}
+    def setor_flex(setor, numero, ano, link, status, entrada, saida):
+        return {"setor": setor, "numero": numero, "ano": ano, "link": link,
+                "status": status, "entrada": entrada, "saida": saida}
     def linha_pgd(ano, atos, setores, servidores):
         return {"ano": ano, "atos": atos, "setores": setores, "servidores": servidores}
     def setor_pgd(sigla, atos, primeiro, ultimo, servidores):
@@ -408,9 +409,16 @@ def jornada_payload():
     return {
         "flex": {
             "serie": flex_serie,
-            "setores": [setor_flex("ESS", "Revogado", "2019-03-01", "2023-10-01"),
-                        setor_flex("SDC", "Revogado", "2019-05-10", "2022-08-15"),
-                        setor_flex("PROGEPE", "Ativo", "2020-02-01", None)],
+            "setores": [
+                setor_flex("Biblioteca da Escola de Enfermagem - CBI/SDC", "68.622", 2023,
+                           "https://boletimdeservico.uff.br/wp-content/uploads/exemplo.pdf",
+                           "Revogado", "2019-03-01", "2023-10-01"),
+                setor_flex("Instituto de Biologia - EGB", "66.470", 2020, None,
+                           "Revogado", "2019-05-10", "2022-08-15"),
+                setor_flex("PROGEPE", "68.707", 2024,
+                           "https://boletimdeservico.uff.br/wp-content/uploads/exemplo2.pdf",
+                           "Ativo", "2020-02-01", None),
+            ],
         },
         "pgd": {
             "serie": [linha_pgd(2022, 150, 40, 800), linha_pgd(2023, 283, 62, 1400),
