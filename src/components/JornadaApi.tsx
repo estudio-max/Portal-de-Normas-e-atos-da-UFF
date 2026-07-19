@@ -153,61 +153,73 @@ function BadgeStatus({ status }: { status: string }) {
   );
 }
 
-// Uma linha por SETOR (não por portaria): setores com várias portarias
-// (adesão + manutenções — comum em bibliotecas, que renovam a equipe com
-// frequência) desdobram sob demanda, em vez de repetir o mesmo setor numa
-// linha por renovação.
+// Link para o PDF do boletim da portaria (ou texto simples se não houver link).
+function PortariaLink({ p }: { p: ds.JornadaPortariaRef | null }) {
+  if (!p) return <span className="text-slate-400">—</span>;
+  return p.link ? (
+    <a href={p.link} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
+      {p.numero}/{p.ano} <ExternalLink className="w-3 h-3" />
+    </a>
+  ) : <span className="font-semibold text-slate-700">{p.numero}/{p.ano}</span>;
+}
+
+const COR_PONTO: Record<string, string> = { entrada: 'bg-emerald-500', alt: 'bg-amber-500', saida: 'bg-slate-400' };
+function PassoLinha({ rotulo, cor, p }: { rotulo: string; cor: string; p: ds.JornadaPortariaRef }) {
+  return (
+    <li className="flex items-center gap-2 text-xs">
+      <span className={`w-2 h-2 rounded-full shrink-0 ${COR_PONTO[cor]}`} />
+      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 w-24 shrink-0">{rotulo}</span>
+      <PortariaLink p={p} />
+      <span className="text-slate-400 text-[11px]">{fmtData(p.data)}</span>
+    </li>
+  );
+}
+
+// Uma linha por SETOR: portaria de APROVAÇÃO, ALTERAÇÕES (manutenções anuais +
+// retificações de equipe) e REVOGAÇÃO, cada uma com sua data. As alterações
+// desdobram numa linha do tempo sob demanda, pra não repetir o setor.
 function LinhaSetorFlex({ s }: { s: ds.JornadaSetorFlex }) {
   const [aberta, setAberta] = useState(false);
-  const multiplas = s.portarias.length > 1;
-  const unica = s.portarias[0];
+  const nAlt = s.alteracoes.length;
   return (
     <>
-      <tr className="border-t border-slate-100 hover:bg-slate-50">
-        <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[220px]">{s.setor}</td>
+      <tr className="border-t border-slate-100 hover:bg-slate-50 align-top">
+        <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[240px]">{s.setor}</td>
         <td className="px-3 py-1.5 text-xs whitespace-nowrap">
-          {multiplas ? (
+          <PortariaLink p={s.aprovacao} />
+          <div className="text-[10px] text-slate-400">{fmtData(s.aprovacao?.data ?? null)}</div>
+        </td>
+        <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+          {nAlt ? (
             <button onClick={() => setAberta(v => !v)}
               className="inline-flex items-center gap-1 text-blue-700 hover:underline font-semibold">
               {aberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-              {s.portarias.length} portarias
+              {nAlt} {nAlt === 1 ? 'alteração' : 'alterações'}
             </button>
-          ) : unica.link ? (
-            <a href={unica.link} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
-              {unica.numero}/{unica.ano} <ExternalLink className="w-3 h-3" />
-            </a>
-          ) : <span>{unica.numero}/{unica.ano}</span>}
+          ) : <span className="text-slate-400">—</span>}
+        </td>
+        <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+          <PortariaLink p={s.revogacao} />
+          {s.revogacao && <div className="text-[10px] text-slate-400">{fmtData(s.revogacao.data)}</div>}
         </td>
         <td className="px-3 py-1.5 text-xs"><BadgeStatus status={s.status} /></td>
-        <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.entrada)}</td>
-        <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.saida)}</td>
       </tr>
-      {multiplas && aberta && (
+      {aberta && nAlt > 0 && (
         <tr className="border-t border-slate-100 bg-slate-50/60">
           <td colSpan={5} className="px-3 py-2">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Histórico de portarias deste setor
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+              Linha do tempo — {s.setor}
             </div>
-            <table className="w-full text-xs">
-              <tbody>
-                {s.portarias.map((p, i) => (
-                  <tr key={p.numero + p.ano + i} className="border-t border-slate-200 first:border-0">
-                    <td className="py-1 pr-3 whitespace-nowrap">
-                      {p.link ? (
-                        <a href={p.link} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
-                          {p.numero}/{p.ano} <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ) : <span className="font-semibold">{p.numero}/{p.ano}</span>}
-                    </td>
-                    <td className="py-1 pr-3"><BadgeStatus status={p.status} /></td>
-                    <td className="py-1 pr-3 text-slate-500 whitespace-nowrap">{fmtData(p.entrada)}</td>
-                    <td className="py-1 text-slate-500 whitespace-nowrap">{fmtData(p.saida)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ol className="space-y-1">
+              <PassoLinha rotulo="Aprovação" cor="entrada" p={s.aprovacao} />
+              {s.alteracoes.map((a, i) => (
+                <React.Fragment key={a.numero + a.ano + i}>
+                  <PassoLinha rotulo={a.tipo} cor="alt" p={a} />
+                </React.Fragment>
+              ))}
+              {s.revogacao && <PassoLinha rotulo="Revogação" cor="saida" p={s.revogacao} />}
+            </ol>
           </td>
         </tr>
       )}
@@ -231,10 +243,10 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
           <thead>
             <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
               <th className="text-left font-bold px-3 py-1.5">Setor</th>
-              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Portaria</th>
+              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Aprovação</th>
+              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Alterações</th>
+              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Revogação</th>
               <th className="text-left font-bold px-3 py-1.5">Status</th>
-              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Entrada</th>
-              <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Saída</th>
             </tr>
           </thead>
           <tbody>
@@ -387,11 +399,13 @@ export default function JornadaApi() {
 
       <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
-        <strong>Como este painel conta.</strong> <strong>Flexibilização</strong>: cada portaria de adesão é ligada, pelo
-        grafo de relações do portal, à portaria que a revogou (se houver) — Ativo/Revogado é o status real do ato, não
-        estimativa (validado contra planilha independente de RH, 24/24 casos corretos). <strong>Programa de Gestão</strong>:
-        por <strong>menção no texto</strong> (busca no corpo completo) — um ato que cita o modelo entra na conta mesmo
-        sendo retificação ou desligamento; o modelo funciona por edital recorrente, não por portaria única revogável.
+        <strong>Como este painel conta.</strong> <strong>Flexibilização</strong>: as portarias de um mesmo setor (aprovação
+        do plano, manutenções anuais da CPFJ e retificações de equipe) são agrupadas pelo <strong>processo SEI</strong>, que
+        se mantém ao longo dos anos. Um setor é <strong>Revogado</strong> quando o Boletim traz a portaria que o revogou —
+        ela costuma citar o ato original ("Revogar a Portaria X e suas retificações"). <strong>Ativo</strong> = tem plano
+        vigente e nenhuma revogação registrada até a data da base; alguns setores foram revogados e depois reabertos, e
+        aparecem como ativos de novo. <strong>Programa de Gestão</strong>: por <strong>menção no texto</strong> (busca no
+        corpo completo) — o modelo funciona por edital recorrente, não por portaria única revogável.
         *"Servidores" do PGD são pessoas citadas nos atos; como parte dos atos do Boletim não registra SIAPE, é um piso,
         não um censo. A fonte oficial é sempre o <strong>Boletim de Serviço da UFF</strong>.
       </p>

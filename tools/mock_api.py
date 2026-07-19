@@ -388,12 +388,13 @@ def dossie_payload(siape, nome):
 def jornada_payload():
     def linha_flex(ano, entradas, saidas):
         return {"ano": ano, "entradas": entradas, "saidas": saidas}
-    def portaria_flex(numero, ano, link, status, entrada, saida):
-        return {"numero": numero, "ano": ano, "link": link,
-                "status": status, "entrada": entrada, "saida": saida}
-    def setor_flex(setor, status, entrada, saida, portarias):
+    def ref(numero, ano, data, link):
+        return {"numero": numero, "ano": ano, "data": data, "link": link}
+    def alt(numero, ano, data, link, tipo):
+        return {"numero": numero, "ano": ano, "data": data, "link": link, "tipo": tipo}
+    def setor_flex(setor, status, entrada, saida, aprovacao, alteracoes, revogacao):
         return {"setor": setor, "status": status, "entrada": entrada, "saida": saida,
-                "portarias": portarias}
+                "aprovacao": aprovacao, "alteracoes": alteracoes, "revogacao": revogacao}
     def linha_pgd(ano, atos, setores, servidores):
         return {"ano": ano, "atos": atos, "setores": setores, "servidores": servidores}
     def setor_pgd(sigla, atos, primeiro, ultimo, servidores):
@@ -413,26 +414,29 @@ def jornada_payload():
         "flex": {
             "serie": flex_serie,
             "setores": [
-                # setor com múltiplas portarias (adesão + manutenções) — testa o
-                # desdobramento; caso real: bibliotecas renovam a equipe com frequência.
-                setor_flex("CBI/SDC - Biblioteca da Faculdade de Economia", "Ativo",
-                           "2019-10-09", None, [
-                    portaria_flex("65.293", 2019, None, "Vigente", "2019-10-09", None),
-                    portaria_flex("68.644", 2023,
-                                  "https://boletimdeservico.uff.br/wp-content/uploads/exemplo3.pdf",
-                                  "Vigente", "2023-08-01", None),
-                    portaria_flex("68.704", 2024,
-                                  "https://boletimdeservico.uff.br/wp-content/uploads/exemplo4.pdf",
-                                  "Vigente", "2024-07-22", None),
-                ]),
-                setor_flex("Instituto de Biologia - EGB", "Revogado", "2019-05-10", "2022-08-15", [
-                    portaria_flex("66.470", 2020, None, "Revogado", "2019-05-10", "2022-08-15"),
-                ]),
-                setor_flex("PROGEPE", "Ativo", "2020-02-01", None, [
-                    portaria_flex("68.707", 2024,
-                                  "https://boletimdeservico.uff.br/wp-content/uploads/exemplo2.pdf",
-                                  "Ativo", "2020-02-01", None),
-                ]),
+                # setor revogado com aprovação + manutenções + retificação + revogação
+                # (caso real: Biblioteca da Escola de Enfermagem, agrupada por processo).
+                setor_flex("Biblioteca da Escola de Enfermagem - CBI/SDC", "Revogado",
+                           "2019-10-23", "2024-12-17",
+                           ref("65.397", 2019, "2019-10-23", None),
+                           [alt("68.365", 2022, "2022-06-02",
+                                "https://boletimdeservico.uff.br/wp-content/uploads/e1.pdf", "Retificação"),
+                            alt("68.622", 2023, "2023-11-29",
+                                "https://boletimdeservico.uff.br/wp-content/uploads/e2.pdf", "Manutenção")],
+                           ref("68.754", 2024, "2024-12-17",
+                               "https://boletimdeservico.uff.br/wp-content/uploads/e3.pdf")),
+                # setor ativo simples (adesão só, sem alterações nem revogação)
+                setor_flex("Biblioteca da Faculdade de Nova Friburgo - BNF/CBI/SDC", "Ativo",
+                           "2019-12-16", None,
+                           ref("65.987", 2019, "2019-12-16", None),
+                           [alt("68.644", 2023, "2023-12-21",
+                                "https://boletimdeservico.uff.br/wp-content/uploads/e4.pdf", "Manutenção")],
+                           None),
+                # setor genérico de 2019 (setor veio do corpo), revogado
+                setor_flex("Secretaria Administrativa do Instituto de Estudos Estratégicos", "Revogado",
+                           "2019-10-09", "2022-10-05",
+                           ref("65.294", 2019, "2019-10-09", None), [],
+                           ref("68.438", 2022, "2022-10-05", None)),
             ],
         },
         "pgd": {

@@ -1043,89 +1043,101 @@ function pad_cadeia(PDO $pdo, string $proc): void {
 // que se revoga uma vez só — o padrão de entrada/saída da flexibilização não
 // se aplica igual. "Servidores" aqui é piso (ato_pessoa é menção; 30-70% dos
 // atos não trazem SIAPE), não censo — a aba diz isso na tela.
-// Junta letras isoladas separadas por espaço, só pra tentar recuperar o nome
-// do SETOR dentro da ementa (abaixo) — artefato de OCR comum nesta faixa do
-// corpus ("t r a b a l h o" = "trabalho"). Só em runs de 3+ letras isoladas,
-// pra não colar sigla real ("CBI", "SDC" ficam). É uma reconstrução PARCIAL:
-// quando o OCR quebra em fragmentos de 2+ letras (não letra-a-letra — ver
-// flex_comeca_aprova abaixo), a frase-âncora que flex_setor_da_ementa procura
-//("administrativos", "e dá outras") também quebra, e a extração retorna ''
-// — cai no rótulo "(setor não identificado na ementa)", que é honesto.
+// Junta letras isoladas separadas por espaço — artefato de OCR comum nesta
+// faixa do corpus ("t r a b a l h o" = "trabalho"). Só runs de 3+ letras
+// isoladas, pra não colar sigla real ("CBI", "SDC" ficam). Reconstrução
+// PARCIAL: quando o OCR quebra em fragmentos de 2+ letras ("adm inistrativos",
+// "Bibliot eca"), isto não conserta — por isso a extração de setor prefere o
+// CORPO (texto corrido, mais limpo) à ementa (mais sujeita a esse defeito).
 function normaliza_ocr_letras(string $s): string {
     $e = preg_replace_callback('/(?:\b[a-zA-ZÀ-ÿ]\b ?){3,}/u',
         fn($m) => str_replace(' ', '', $m[0]), $s);
     return preg_replace('/\s+/u', ' ', $e);
 }
 
-// Detecta o verbo de abertura ("Aprova...") mesmo com o OCR desta faixa do
-// corpus quebrando a palavra de forma IRREGULAR — não é uma letra por vez
-// ("Ap r o va", não "A p r o v a"), então tentar reconstruir palavra por
-// palavra (versão anterior, com \b<letra>\b) falhava: testado contra a
-// Portaria 68.704/2024 real, não recuperava nada. A solução robusta é mais
-// bruta: tira TODO espaço dos primeiros caracteres e compara o prefixo, sem
-// tentar adivinhar onde estão os limites de palavra. Validado contra 61
-// portarias reais (ano≥2019): recupera as 2 adesões OCR-quebradas (68.704/
-// 2024, 68.609/2023), zero regressão nas 48 que já batiam.
+// Detecta o verbo de abertura ("Aprova...") mesmo com o OCR quebrando a palavra
+// de forma IRREGULAR ("Ap r o va", não "A p r o v a"): reconstruir letra a letra
+// falhava (testado real, 68.704/2024). Solução bruta: tira TODO espaço do
+// prefixo e compara. Validado contra 61 portarias reais (ano≥2019).
 function flex_comeca_aprova(string $ementa): bool {
     $inicio = mb_strtolower(preg_replace('/\s+/u', '', mb_substr($ementa, 0, 20)));
     return str_starts_with($inicio, 'aprova');
 }
 
-// Extrai o SETOR flexibilizado da ementa (já normalizada). O emissor da
-// portaria é sempre a Reitoria — o setor de verdade está na ementa: "...dos
-// servidores técnicos administrativos da <SETOR - SIGLA> e dá outras
-// providências". Devolve o trecho do setor, ou '' se não achar o padrão.
-//
-// A âncora é sempre "administrativ(o/os)", nunca solta a partir de "jornada":
-// achado real (Portaria 65.293/2019) — quando a portaria aprova o modelo em
-// termos GERAIS, sem citar setor ("...administrativos e dá outras
-// providências"), um fallback antigo que procurava só "da jornada ... d[aeo]s?
-// ... e dá outras" confundia o próprio BOILERPLATE ("trabalho dos servidores
-// técnicos administrativos") com nome de setor, porque "jornada DE trabalho"
-// já tem um "de" pra ancorar errado. Sem setor real, o certo é devolver ''.
-function flex_setor_da_ementa(string $ementaNorm): string {
-    if (!preg_match('/administrativ\w*\s+d[aeo]s?\s+(.+?)\s+e\s+d[áa]\s+outras/iu', $ementaNorm, $m)) {
-        return '';
+// Classifica a portaria de flexibilização pelo DISPOSITIVO (verbo de abertura):
+//   adesao      = "Aprova o plano de flexibilização..." (entrada do setor)
+//   manutencao  = "Aprova a manutenção do plano..."     (renovação anual — a
+//                 CPFJ reavalia o setor todo ano; é alteração, não nova adesão)
+//   retificacao = "Retificação..."                      (troca de membros da equipe)
+//   outro       = norma geral, criação da CPFJ, suspensão etc. — NÃO é setor
+function flex_classe(string $ementa): string {
+    if (flex_comeca_aprova($ementa)) {
+        $ini = nome_ascii(mb_strtolower(preg_replace('/\s+/u', '', mb_substr($ementa, 0, 45))));
+        return str_contains($ini, 'manuten') ? 'manutencao' : 'adesao';
     }
-    $setor = trim($m[1]);
-    // limpa dois artefatos de OCR vistos no corpus: espaço depois da barra
-    // ("CBI/ SDC" -> "CBI/SDC") e "?" solto no lugar do travessão que separa
-    // nome extenso e sigla ("Instituto Biomédico ? CBI" -> "... - CBI").
-    $setor = preg_replace('/\s*\/\s*/u', '/', $setor);
-    $setor = preg_replace('/\s+\?\s+/u', ' - ', $setor);
-    return $setor;
+    $ini = nome_ascii(mb_strtolower(preg_replace('/\s+/u', '', mb_substr($ementa, 0, 18))));
+    return str_starts_with($ini, 'retific') ? 'retificacao' : 'outro';
 }
 
-// Fallback: portarias de flexibilização mais antigas (2019) usam uma ementa
-// GENÉRICA de propósito — o texto acima devolve '' para elas de propósito, e
-// aqui é onde o setor de verdade mora: no corpo do ato ("Art. 1º Aprovar o
-// plano de flexibilização dos servidores técnico-administrativos [em
-// educação] lotados na/no <SETOR>, conforme consta..."). Achado real:
-// Portarias 65.293/2019 e 65.294/2019, mesmo texto-padrão, setor só no corpo.
-function flex_setor_do_corpo(string $corpoNorm): string {
-    if (preg_match('/lotados?\s+n[ao]\s+([^,]{4,120}?)\s*,/iu', $corpoNorm, $m)) {
-        return trim($m[1]);
+// Apara o nome do setor: corta caudas de boilerplate que vazam do corpo
+// ("... O Reitor da UFF", "; art. 2º ...", "conforme consta") e da ementa
+// ("e dá outras providências" — tolerante ao OCR "e dá out ras"); junta a
+// barra ("CBI/ SDC" -> "CBI/SDC") e troca "?" solto por travessão.
+function flex_limpa_setor(string $s): string {
+    $s = trim($s);
+    $s = preg_split('/\s+O\s+Reitor/iu', $s)[0];
+    $s = preg_split('/\s*;\s*art/iu', $s)[0];
+    $s = preg_split('/\s+conforme\b/iu', $s)[0];
+    $s = preg_split('/\s+e\s+d[aá]\s+o\s*u\s*t\s*r/iu', $s)[0];
+    $s = preg_replace('/\s*\/\s*/u', '/', $s);
+    $s = preg_replace('/\s+\?\s+/u', ' - ', $s);
+    $s = preg_replace('/^[-(\s]+/u', '', $s);
+    $s = preg_replace("/[\\s.,']+$/u", '', $s);
+    return trim($s);
+}
+
+// Extrai o SETOR flexibilizado. O emissor da portaria é sempre a Reitoria — o
+// setor de verdade mora no texto. Prefere o CORPO ("...lotados na/no <SETOR>,
+// conforme...") porque é texto corrido e mais limpo, e é o ÚNICO lugar onde as
+// portarias-modelo de 2019 (ementa genérica) trazem o setor. Cai pra ementa
+// ("...administrativos d[aeo]s <SETOR> e dá outras...") quando o corpo não bate.
+// A âncora "administrativ" é tolerante ao OCR "adm inistrativos".
+function flex_setor(string $ementa, string $corpo): string {
+    $c = normaliza_ocr_letras($corpo);
+    if (preg_match('/lotad[oa]s?\s+n[ao]\s+(.{5,160}?)(?:,|;|\s+conforme\b|\s+O\s+Reitor)/iu', $c, $m)) {
+        $s = flex_limpa_setor($m[1]);
+        if ($s !== '') return $s;
+    }
+    $e = normaliza_ocr_letras($ementa);
+    if (preg_match('/adm\s?inistrativ\w*\s+d[aeo]s?\s+(.+)$/iu', $e, $m)) {
+        $s = flex_limpa_setor($m[1]);
+        if ($s !== '') return $s;
     }
     return '';
 }
 
 function jornada(PDO $pdo): void {
-    // ---- Flexibilização (Norma de Serviço 672/2019 em diante): a ADESÃO de um
-    // setor é a portaria "Aprova (o plano|a manutenção) de flexibilização..."
-    // — o emissor é a Reitoria, mas o setor está na ementa. A SAÍDA é a data da
-    // portaria que a revogou (grafo de relações; validado 17/07/2026 contra
-    // planilha de RH, 24/24 pares). Retificações ("Retificar..." — inclui as
-    // que só trocam SERVIDORES da equipe existente, "Retirar X / Incluir Y",
-    // confirmadas pelo usuário como não-adesão) não são entrada nem saída.
+    // ---- Flexibilização (Norma de Serviço 672/2019 em diante) --------------
+    // Um SETOR entra com "Aprova o plano de flexibilização...", renova todo ano
+    // ("Aprova a manutenção..." — reavaliação da CPFJ), troca membros da equipe
+    // ("Retificação...") e sai quando uma portaria o REVOGA. O painel espelha
+    // isso: agrupa as portarias de um mesmo setor e mostra aprovação →
+    // alterações → revogação, cada uma com sua data.
     //
-    // O prefixo "Aprova" é checado em PHP, DEPOIS de normalizar o OCR — não em
-    // SQL: a ementa crua às vezes chega como "Ap r o va a manutenção..." (2023,
-    // 2024), e "ementa LIKE 'Aprov%'" perdia essas adesões reais silenciosamente.
+    // AGRUPAMENTO por PROCESSO SEI, não por nome: o nome vem do texto e o OCR o
+    // quebra diferente a cada ano ("Bibliot eca", "adm inistrativos") — não
+    // serve de chave. O processo é o MESMO em todas as portarias do setor
+    // (medido no corpus: adesão 2019 + manutenção 2023 + retificações
+    // compartilham o processo). Sem processo (poucos atos 2022-2024) cai pro
+    // nome normalizado; por fim, solo.
+    //
+    // STATUS vem do pipeline (ato.status), não recalculado: a adesão velha fica
+    // "Revogado" quando a MANUTENÇÃO a substitui — isso é renovação, não saída.
+    // Logo o status do SETOR é o do ato de aprovação MAIS RECENTE: se o mais
+    // novo está Ativo, o setor segue ativo; se foi revogado, aí sim saiu.
     $st = $pdo->query("
-        SELECT a.numero, a.ano, a.ementa, a.status, a.data_ato AS entrada,
-               b.url_pdf AS link, t.texto_original AS corpo,
-               (SELECT MIN(a2.data_ato) FROM relacao r JOIN ato a2 ON a2.id = r.ato_id
-                 WHERE r.destino_ato_id = a.id AND r.tipo = 'Revoga') AS saida
+        SELECT a.id, a.numero, a.ano, a.ementa, a.status, a.data_ato,
+               a.processo_sei, b.url_pdf AS link, t.texto_original AS corpo
           FROM ato a
           JOIN ato_texto t  ON t.ato_id = a.id
           JOIN tipo_ato tt  ON tt.id = a.tipo_id
@@ -1134,42 +1146,100 @@ function jornada(PDO $pdo): void {
            AND tt.nome = 'Portaria'
            AND a.ano BETWEEN 2019 AND 2100
          ORDER BY a.data_ato");
-    $candidatas = $st->fetchAll(PDO::FETCH_ASSOC);
+    $flexAtos = $st->fetchAll(PDO::FETCH_ASSOC);
 
-    // Conta o MOVIMENTO por setor, não por portaria: "Aprova a manutenção" é
-    // renovação do mesmo setor, não uma adesão nova — se contasse como entrada,
-    // infla. Chave = setor extraído, normalizado. Primeira aprovação = entrada;
-    // primeira revogação = saída. Setores com muitas trocas (comum em
-    // bibliotecas, que renovam a equipe com frequência) viram UM registro só,
-    // com a lista de portarias (adesão + manutenções) aninhada — não uma linha
-    // repetida por renovação.
-    $porSetor = [];
-    foreach ($candidatas as $c) {
-        if (!flex_comeca_aprova($c['ementa'] ?? '')) continue;   // só adesão/manutenção
-        $ementaNorm = normaliza_ocr_letras($c['ementa'] ?? '');
-        $setor = flex_setor_da_ementa($ementaNorm);
-        if ($setor === '') $setor = flex_setor_do_corpo(normaliza_ocr_letras($c['corpo'] ?? ''));
-        $chave = mb_strtolower(preg_replace('/[^a-z0-9]/i', '', nome_ascii($setor)));
-        if ($chave === '') $chave = 'port-' . $c['numero'] . '-' . $c['ano'];  // sem setor: por portaria
-        if (!isset($porSetor[$chave])) {
-            $porSetor[$chave] = [
-                'setor' => $setor !== '' ? $setor : '(setor não identificado no ato)',
-                'entrada' => $c['entrada'], 'saida' => $c['saida'], 'portarias' => [],
-            ];
-        } else {
-            // fica a entrada mais antiga e a saída mais recente conhecida
-            if ($c['entrada'] < $porSetor[$chave]['entrada']) $porSetor[$chave]['entrada'] = $c['entrada'];
-            if ($c['saida'] && (!$porSetor[$chave]['saida'] || $c['saida'] > $porSetor[$chave]['saida']))
-                $porSetor[$chave]['saida'] = $c['saida'];
+    // Quem REVOGA cada uma dessas portarias (grafo de relações). A revogação
+    // cita só o número ("Revogar a Portaria 66.470/2020 e suas retificações"),
+    // sem repetir "flexibilização" — por isso vem do grafo, não da busca.
+    $revogaPor = [];
+    $ids = array_column($flexAtos, 'id');
+    if ($ids) {
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $rs = $pdo->prepare("
+            SELECT r.destino_ato_id AS alvo, a2.numero, a2.ano, a2.data_ato, b2.url_pdf AS link
+              FROM relacao r
+              JOIN ato a2     ON a2.id = r.ato_id
+              JOIN boletim b2 ON b2.id = a2.boletim_id
+             WHERE r.tipo = 'Revoga' AND r.destino_ato_id IN ($ph)
+             ORDER BY a2.data_ato");
+        $rs->execute($ids);
+        foreach ($rs->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            if (!isset($revogaPor[$r['alvo']]))     // a revogação mais antiga por alvo
+                $revogaPor[$r['alvo']] = ['numero' => $r['numero'], 'ano' => (int)$r['ano'],
+                                          'data' => $r['data_ato'], 'link' => $r['link']];
         }
-        $porSetor[$chave]['portarias'][] = [
-            'numero' => $c['numero'], 'ano' => (int)$c['ano'], 'link' => $c['link'],
-            'status' => $c['status'], 'entrada' => $c['entrada'], 'saida' => $c['saida'],
-        ];
     }
 
-    $porAno = [];   // ano => ['entradas'=>n, 'saidas'=>n]
-    foreach ($porSetor as $s) {
+    // Agrupa as portarias por setor (chave = processo; senão nome; senão solo).
+    $grupos = [];
+    foreach ($flexAtos as $a) {
+        $classe = flex_classe($a['ementa'] ?? '');
+        if ($classe === 'outro') continue;              // norma geral / CPFJ / suspensão
+        $setor = flex_setor($a['ementa'] ?? '', $a['corpo'] ?? '');
+        $chave = trim($a['processo_sei'] ?? '');
+        if ($chave === '') {
+            $nk = mb_strtolower(preg_replace('/[^a-z0-9]/i', '', nome_ascii($setor)));
+            $chave = $nk !== '' ? 'nome:' . $nk : 'solo:' . $a['numero'] . '/' . $a['ano'];
+        }
+        $grupos[$chave]['portarias'][] = [
+            'numero' => $a['numero'], 'ano' => (int)$a['ano'], 'data' => $a['data_ato'],
+            'link' => $a['link'], 'classe' => $classe, 'status' => $a['status'],
+            'revogacao' => $revogaPor[$a['id']] ?? null,
+        ];
+        if ($setor !== '' && mb_strlen($setor) > mb_strlen($grupos[$chave]['setor'] ?? ''))
+            $grupos[$chave]['setor'] = $setor;          // guarda o melhor nome (mais longo) do grupo
+    }
+
+    // Monta cada setor: aprovação (adesão mais antiga), alterações (o resto, em
+    // ordem), revogação (a que encerrou o setor).
+    $setoresFlex = [];
+    foreach ($grupos as $g) {
+        $ports = $g['portarias'];
+        usort($ports, fn($x, $y) => strcmp($x['data'], $y['data']));
+        $aprovas = array_values(array_filter($ports, fn($p) => $p['classe'] !== 'retificacao'));
+        if (!$aprovas) continue;
+        $adesao = null;
+        foreach ($aprovas as $p) if ($p['classe'] === 'adesao') { $adesao = $p; break; }
+        if (!$adesao) $adesao = $aprovas[0];            // grupo só de manutenção
+
+        // Setor saiu se QUALQUER portaria do grupo foi revogada — a revogação
+        // costuma mirar o ATO ORIGINAL ("Revogar a Portaria 65.397/2019 e suas
+        // retificações"), não a manutenção mais nova, então checar só a última
+        // aprovação deixava passar setores já revogados. Neste domínio toda
+        // revogação é saída explícita (manutenção COMPLEMENTA, não revoga).
+        // Saída = a revogação mais recente do grupo.
+        $revog = null;
+        $temRevogado = false;
+        foreach ($ports as $p) {
+            if ($p['status'] === 'Revogado') $temRevogado = true;
+            if ($p['revogacao'] && (!$revog || $p['revogacao']['data'] > $revog['data']))
+                $revog = $p['revogacao'];
+        }
+        $status = ($revog || $temRevogado) ? 'Revogado' : 'Ativo';
+
+        $alteracoes = [];
+        foreach ($ports as $p) {
+            if ($p['numero'] === $adesao['numero'] && $p['ano'] === $adesao['ano']) continue;
+            $alteracoes[] = ['numero' => $p['numero'], 'ano' => $p['ano'], 'data' => $p['data'],
+                             'link' => $p['link'],
+                             'tipo' => $p['classe'] === 'retificacao' ? 'Retificação' : 'Manutenção'];
+        }
+
+        $setoresFlex[] = [
+            'setor' => $g['setor'] ?? '(setor não identificado no ato)',
+            'status' => $status,
+            'entrada' => $adesao['data'], 'saida' => $revog['data'] ?? null,
+            'aprovacao' => ['numero' => $adesao['numero'], 'ano' => $adesao['ano'],
+                            'data' => $adesao['data'], 'link' => $adesao['link']],
+            'alteracoes' => $alteracoes,
+            'revogacao' => $revog,
+        ];
+    }
+    usort($setoresFlex, fn($a, $b) => strcmp($b['entrada'], $a['entrada']));   // entrada mais recente no topo
+
+    // Série anual pro gráfico: entrada = ano da adesão; saída = ano da revogação.
+    $porAno = [];
+    foreach ($setoresFlex as $s) {
         $ae = (int)substr($s['entrada'], 0, 4);
         $porAno[$ae]['entradas'] = ($porAno[$ae]['entradas'] ?? 0) + 1;
         if ($s['saida']) {
@@ -1185,20 +1255,6 @@ function jornada(PDO $pdo): void {
         $serieFlex[] = ['ano' => $ano, 'entradas' => (int)($v['entradas'] ?? 0),
                          'saidas' => (int)($v['saidas'] ?? 0), 'ativos' => $acumulado];
     }
-
-    // tabela: um registro por setor — status é do SETOR (saiu ou não), não do
-    // documento individual, senão duas portarias do mesmo setor podiam mostrar
-    // status diferentes entre si.
-    $setoresFlex = [];
-    foreach ($porSetor as $s) {
-        usort($s['portarias'], fn($a, $b) => strcmp($a['entrada'], $b['entrada']));
-        $setoresFlex[] = [
-            'setor' => $s['setor'], 'entrada' => $s['entrada'], 'saida' => $s['saida'],
-            'status' => $s['saida'] ? 'Revogado' : 'Ativo',
-            'portarias' => $s['portarias'],
-        ];
-    }
-    usort($setoresFlex, fn($a, $b) => strcmp($b['entrada'], $a['entrada']));
 
     // ---- PGD (Programa de Gestão e Desempenho, Decreto 11.072/2022): por
     // menção, a partir de 2022 (quando a UFF o implementou, IN 28/2022). O
