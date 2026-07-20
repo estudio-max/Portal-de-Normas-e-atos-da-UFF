@@ -1,0 +1,43 @@
+name: CI do frontend
+
+# Barreira de qualidade: todo push/PR passa por type-check e build.
+# Não valida o extrator aqui — os testes dele (tools/teste_*.py) comparam
+# contra o corpus de boletins, que é local e não vive no repositório.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - "vite.config.*"
+      - ".github/workflows/ci.yml"
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Type-check (lint)
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

@@ -801,7 +801,9 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                       {/* Relações (saída + entrada/referenciado por) */}
                       <td className="py-1.5 px-2.5">
                         {(() => {
-                          const out = Array.from(new Set(act.relacoes.map(r => r.tipoRelacao)));
+                          // generic explícito: neste tsconfig, new Set(iterable) sem ele
+                          // resolve para Set<unknown> e o `t` de cor(t) vira unknown
+                          const out = Array.from(new Set<ActRelation['tipoRelacao']>(act.relacoes.map(r => r.tipoRelacao)));
                           const inb = act.referenciadoPor || [];
                           const cor = (t: string) => t === 'Revoga'
                             ? 'bg-rose-100 text-rose-800 border-rose-200'
