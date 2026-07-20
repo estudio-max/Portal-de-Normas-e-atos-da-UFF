@@ -31,6 +31,24 @@ Sem estas respostas o plano não fecha:
       UFF? (afeta o fallback estático e a Action de indexação — seção 7).
 - [ ] Qual será a **URL nova** e quem controla o **DNS**.
 
+**Privacidade e perímetro (infactíveis na HostGator, obrigatórios na UFF):**
+
+- [ ] **Validação LGPD institucional do Meu SIAPE.** A rota `/api/dossie` é
+      pública por decisão documentada do mantenedor (justificativa na aba
+      Privacidade). Num domínio `.uff.br` essa decisão deixa de ser só do
+      projeto: submeter ao **encarregado de dados (DPO) da UFF** antes do
+      cutover, com a documentação já escrita.
+- [ ] **Rate limiting / anti-enumeração** no perímetro (WAF/proxy institucional
+      da STI). Sem SSH na HostGator não há como fazer isso de verdade; na UFF é
+      pedir a regra pronta — alvo: limitar rajadas em `/api/dossie` sem afetar
+      navegação normal.
+- [ ] **Logs de acesso**: definir retenção e mascaramento de query string (o
+      SIAPE viaja em `?siape=` — o access log do servidor o grava; decidir
+      retenção curta ou mascarar o parâmetro no log).
+- [ ] A API já envia `Cache-Control: no-store` + `Referrer-Policy: no-referrer`
+      no dossiê (lado aplicação, feito em 20/07/2026); o que falta é só o
+      perímetro acima.
+
 ---
 
 ## 1. Inventário — o que move e o que não move
