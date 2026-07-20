@@ -1692,6 +1692,12 @@ function cooperacao(PDO $pdo): void {
 //   por SQL. Quem cobre esse buraco é o rótulo "confira o ato", não este aviso.
 //   Separar essas pessoas é curadoria — Fase 2.
 function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
+    // A rota é pública por decisão documentada (aba Privacidade), mas a
+    // RESPOSTA reúne a vida funcional de uma pessoa — não pode ficar em cache
+    // compartilhado (proxy/CDN entregaria o dossiê de A para B), e navegar de
+    // dentro dela não deve vazar a URL com o SIAPE no Referer.
+    header('Cache-Control: no-store');
+    header('Referrer-Policy: no-referrer');
     $siape = preg_replace('/\D/', '', $siape);
     if ($siape === '') responder_json(['erro' => 'siape ausente'], 400);
     $chave = ltrim($siape, '0');

@@ -19,7 +19,10 @@ return [
     'fonte_json' => 'https://raw.githubusercontent.com/estudio-max/'
                   . 'Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json',
 
-    // CORS: domínios autorizados a consumir a API ('*' = qualquer; uso interno)
+    // CORS: origem autorizada a consumir a API pelo navegador. Em PRODUÇÃO,
+    // use a origem do próprio portal (front e API são same-origin, então nada
+    // quebra) — '*' fica só para desenvolvimento local com o mock:
+    //   'cors_origin' => 'https://inteligencia.fanara.com.br',
     'cors_origin' => '*',
 
     // Segredo exigido em ?token=... pelos endpoints de importação/correção
@@ -28,16 +31,9 @@ return [
     // e preencha só no servidor — nunca reaproveite o exemplo abaixo.
     'import_token' => 'SEU_TOKEN_FORTE_AQUI',
 
-    // Senha da aba "Dossiê do servidor" (rota /api/dossie), entregue à Gestão de
-    // Pessoal. É a ÚNICA rota que reúne a vida funcional de uma pessoa num lugar
-    // só — por isso é a única fechada.
-    //
-    // Enquanto esta linha não for preenchida no servidor, a rota responde 401 e
-    // a aba não abre. É de propósito: um deploy pela metade tem que falhar
-    // fechado, não virar dossiê aberto na internet.
-    //
-    // Use um valor forte e trate como senha de verdade: quem tiver isto lê o
-    // histórico de qualquer servidor. Trocar aqui invalida a senha de todo mundo
-    // na hora (é o jeito de revogar).
+    // SEM USO desde 18/07/2026 — a rota /api/dossie (aba "Meu SIAPE") foi
+    // aberta por decisão do mantenedor (justificativa LGPD na aba Privacidade;
+    // ver CLAUDE.md). A chave fica aqui só para não quebrar config.php antigo
+    // que ainda a tenha; pode remover.
     'dossie_token' => '',
 ];
