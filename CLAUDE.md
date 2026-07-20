@@ -85,7 +85,12 @@ Suba pelo Gerenciador de Arquivos da HostGator:
 2. **API:** `backend/api/index_v2.php` → `api/index.php` (renomeando).
 
 **Se o formato de resposta da API mudou, `dist/` e `api/index.php` sobem juntos,
-na mesma janela.** Subir só um dos dois quebra o painel afetado.
+na mesma janela** — e bump em `api_versao()` no `index_v2.php`. Subir só um dos
+dois quebra o painel afetado.
+
+**Deploy só está pronto quando `bash tools/smoke_test.sh` passa** (valida
+health/versão da API, rotas principais, o roteamento `/api/atos/{id}` e que o
+`config.php` segue bloqueado). `GET /api/health` devolve a versão rodando.
 
 `backend/api/config.php` mora só no servidor (está no `.gitignore` e contém as
 credenciais do banco). Não versione, não imprima o conteúdo.

@@ -54,6 +54,7 @@ if ($path !== '') {
 }
 
 switch ($recurso) {
+    case 'health':   health($pdo); break;
     case 'stats':    stats($pdo); break;
     case 'filtros':  filtros($pdo); break;
     case 'chefias':  chefias($pdo); break;
@@ -293,6 +294,36 @@ function ficha(PDO $pdo, string $id): void {
             'atoDestinoId' => $r['destino_uid'], 'detalhes' => $r['trecho'],
         ], $relacoes),
         'referenciadoPor' => $refs,
+    ]);
+}
+
+// ---- SAÚDE / VERSÃO -------------------------------------------------------
+// Data (não semver) bumpada a cada mudança de CONTRATO da API — formato de
+// resposta novo/alterado, rota nova. É o que permite diagnosticar em segundos
+// o cenário que mais deu dor: dist/ novo no ar com api/index.php velho (o
+// painel novo mostra "precisa da versão mais recente da API" e ninguém sabe
+// qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
+// hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
+// versão da rota cooperacao).
+function api_versao(): string { return '2026-07-20'; }
+
+// GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
+// pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
+// servidores da UFF, o teste de "API de pé" antes de virar o DNS.
+function health(PDO $pdo): void {
+    $ato = $pdo->query(
+        "SELECT COUNT(*) AS n, MAX(data_ato) AS ultimo_ato, MAX(atualizado_em) AS atualizado
+           FROM ato")->fetch();
+    $ext = $pdo->query(
+        "SELECT MAX(executada_em) AS ultima FROM extracao")->fetch();
+    responder_json([
+        'ok'          => true,
+        'api_versao'  => api_versao(),
+        'php'         => PHP_VERSION,
+        'atos'        => (int)$ato['n'],
+        'ultimo_ato'  => $ato['ultimo_ato'],
+        'banco_atualizado_em' => $ato['atualizado'],
+        'ultima_extracao'     => $ext['ultima'],
     ]);
 }
 
