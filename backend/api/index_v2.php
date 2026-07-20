@@ -1332,25 +1332,49 @@ function jornada(PDO $pdo): void {
 // cima despacha antes desta linha, um `const` aqui ainda não existiria quando a
 // rota roda, e "Undefined constant" derruba a requisição inteira com HTTP 500 de
 // corpo vazio (foi exatamente o que aconteceu no primeiro deploy desta aba).
+//
+// OS RÓTULOS são um MERGE de 16 nomenclaturas em 5 — estudado no CORPO real do
+// ato (o dispositivo/"RESOLVE", não só a ementa), não arbitrário. Medido em
+// 1.973 atos: o texto operativo de Acadêmica, Internacional, Protocolo de
+// Intenções, Multilateral, Memorando de Entendimento e o "Acordo de Cooperação"
+// genérico é o MESMO boilerplate — "desenvolver programas de intercâmbio e
+// cooperação em áreas de interesse mútuo e benefício para ambas as
+// instituições" aparece literalmente idêntico nos cinco —, com distância de
+// vocabulário entre 0,9 e 2,7 (o cluster mais compacto de toda a análise): é o
+// mesmo instrumento, o nome só mudou ao longo dos anos (Acadêmica teve mediana
+// 2014, Internacional mediana 2025 — a mesma onda, renomeada). "Internacional"
+// nunca foi categoria própria: é qualificador: o país (`coop_pais_do_texto`)
+// já carrega essa informação sem precisar de rótulo à parte.
+// Termo de Cooperação/Específica/de Pesquisa/Científica e Tecnológica formam
+// outra família: objeto CONCRETO e nomeado no dispositivo ("laboratório de
+// termodinâmica", "projeto Flowlift 2"), não a fórmula genérica de intercâmbio.
+// Técnica/Técnico-Científica/Convênio de Cooperação, uma terceira.
+// Cotutela fica SOZINHA: é o outlier mais extremo da análise inteira (sinal de
+// titulação conjunta 22,2 por 1.000 palavras do dispositivo, contra 0-2 em
+// qualquer outra categoria; distância de 22 a 27 contra todas as demais).
+// Dupla Diplomação usa o MESMO texto-modelo do grupo acadêmico mas resulta em
+// diploma conjunto (titulação real, 7,1) — mais perto do acadêmico (~9) que da
+// Cotutela (~17,5), mas com consequência jurídica própria: mantida com rótulo
+// próprio, sem se fundir a nenhum dos dois lados.
 function coop_categorias(): array {
     static $c = [
-        ['Cotutela',                           '/cotutela/iu'],
-        ['Dupla Diplomação',                   '/dupla\s+diploma/iu'],
-        ['Memorando de Entendimento',          '/memorando\s+de\s+entendimento/iu'],
-        ['Protocolo de Intenções',             '/protocolo\s+de\s+inten/iu'],
-        ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnico[-\s]*cient[íi]f/iu'],
-        ['Cooperação Técnico-Científica',      '/coopera\w*\s+t[ée]cnica\s+e\s+cient[íi]f/iu'],
-        ['Cooperação Científica e Tecnológica','/coopera\w*\s+cient[íi]fica\s+e\s+tecnol/iu'],
-        ['Cooperação Técnica',                 '/coopera\w*\s+t[ée]cnic/iu'],
-        ['Cooperação Internacional',           '/coopera\w*\s+internacional/iu'],
-        ['Cooperação Acadêmica',               '/coopera\w*\s+acad[êe]mica/iu'],
-        ['Cooperação Multilateral',            '/coopera\w*\s+multilateral/iu'],
-        ['Cooperação de Pesquisa',             '/coopera\w*\s+de\s+pesquisa/iu'],
-        ['Cooperação Geral',                   '/coopera\w*\s+geral/iu'],
-        ['Cooperação Específica',              '/coopera\w*\s+espec[íi]fic/iu'],
-        ['Convênio de Cooperação',             '/conv[êe]nio\s+de\s+coopera/iu'],
-        ['Termo de Cooperação',                '/termo\s+de\s+coopera/iu'],
-        ['Acordo de Cooperação',               '/coopera/iu'],
+        ['Cotutela',              '/cotutela/iu'],
+        ['Dupla Diplomação',      '/dupla\s+diploma/iu'],
+        ['Cooperação Acadêmica',  '/memorando\s+de\s+entendimento/iu'],
+        ['Cooperação Acadêmica',  '/protocolo\s+de\s+inten/iu'],
+        ['Cooperação Técnica',    '/coopera\w*\s+t[ée]cnico[-\s]*cient[íi]f/iu'],
+        ['Cooperação Técnica',    '/coopera\w*\s+t[ée]cnica\s+e\s+cient[íi]f/iu'],
+        ['Termo de Cooperação',   '/coopera\w*\s+cient[íi]fica\s+e\s+tecnol/iu'],
+        ['Cooperação Técnica',    '/coopera\w*\s+t[ée]cnic/iu'],
+        ['Cooperação Acadêmica',  '/coopera\w*\s+internacional/iu'],
+        ['Cooperação Acadêmica',  '/coopera\w*\s+acad[êe]mica/iu'],
+        ['Cooperação Acadêmica',  '/coopera\w*\s+multilateral/iu'],
+        ['Termo de Cooperação',   '/coopera\w*\s+de\s+pesquisa/iu'],
+        ['Cooperação Acadêmica',  '/coopera\w*\s+geral/iu'],
+        ['Termo de Cooperação',   '/coopera\w*\s+espec[íi]fic/iu'],
+        ['Cooperação Técnica',    '/conv[êe]nio\s+de\s+coopera/iu'],
+        ['Termo de Cooperação',   '/termo\s+de\s+coopera/iu'],
+        ['Cooperação Acadêmica',  '/coopera/iu'],
     ];
     return $c;
 }
@@ -1527,6 +1551,16 @@ function coop_eh_acordo(string $ementa): bool {
         . '|cotutela|dupla\s+diploma/iu', $ementa);
 }
 
+// "Designar Docente para Coordenar o Acordo de Cooperação entre a UFF e X,
+// celebrado em ." passa no coop_eh_acordo() acima (tem "acordo" seguido de
+// espaço e "celebrado") mas NÃO celebra nada — só nomeia quem vai coordenar um
+// acordo que já existe. Medido no corpo real: 119 desses "acordos" fantasmas
+// numa amostra de 1.973 atos. O verbo de abertura é "Designar", não
+// "Aprova/Ratifica/Dispõe" — mesma regra de sempre: dispositivo, não menção.
+function coop_eh_designacao(string $ementa): bool {
+    return (bool)preg_match('/^\s*designa[r]?\b/iu', $ementa);
+}
+
 function cooperacao(PDO $pdo): void {
     // BOOLEAN MODE sem "+": as expressões são alternativas (basta UMA casar).
     // A triagem fina é o coop_categoria() abaixo — quem não casa categoria
@@ -1551,7 +1585,7 @@ function cooperacao(PDO $pdo): void {
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $ementa = preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? ''));
         $cat = coop_categoria($ementa);
-        if ($cat === '' || !coop_eh_acordo($ementa)) continue;   // menção solta, não é acordo
+        if ($cat === '' || !coop_eh_acordo($ementa) || coop_eh_designacao($ementa)) continue;
 
         $instituicao = coop_instituicao($ementa);
         $pais = coop_pais_do_texto($ementa, $instituicao);
