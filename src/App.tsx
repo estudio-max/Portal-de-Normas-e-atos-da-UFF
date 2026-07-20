@@ -83,6 +83,23 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {/* Contingência NUNCA é silenciosa: se a API caiu (ou o deploy ficou
+            pela metade), o leitor precisa saber que está vendo uma cópia
+            estática e ATÉ QUANDO ela vai — senão dado velho passa por vivo.
+            role=alert: leitores de tela anunciam a degradação na hora. */}
+        {!apiMode && (
+          <div role="alert"
+            className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>Modo de contingência.</strong> A consulta ao vivo (banco de dados)
+            está indisponível agora; você está vendo uma <strong>cópia estática</strong>{' '}
+            do índice{ds.dataCorteEstatico() && <> com atos até <strong>{ds.dataCorteEstatico()}</strong></>}.
+            Atos publicados depois disso podem não aparecer, e os painéis analíticos ficam limitados.{' '}
+            <button onClick={() => window.location.reload()}
+              className="underline font-bold hover:text-amber-700">
+              Tentar novamente
+            </button>
+          </div>
+        )}
         <div className="animate-fade-in duration-300">
 
           {activeTab === 'planilha' && (

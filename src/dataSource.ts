@@ -32,6 +32,19 @@ let DEST: Record<string, string> = {};   // (porId|relacao) -> destId (modo est�
 export function modo() { return MODO; }
 export function todosAtos(): UffAct[] { return CACHE; }   // só no modo estático
 
+// Até quando vão os dados do modo estático (máx. dataAssinatura do JSON).
+// O portal-data.json é uma lista pura, sem campo "gerado_em" — a data de corte
+// é derivada do próprio dado, que é o que interessa ao leitor: "isto aqui
+// cobre até X". Alimenta o banner de contingência do App.
+export function dataCorteEstatico(): string {
+  let max = '';
+  for (const a of CACHE) {
+    const d = (a.dataAssinatura || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > max) max = d;
+  }
+  return max ? max.split('-').reverse().join('/') : '';
+}
+
 async function tentaApi(): Promise<boolean> {
   try {
     const c = new AbortController();
