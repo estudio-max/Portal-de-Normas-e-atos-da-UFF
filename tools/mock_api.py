@@ -453,10 +453,11 @@ def jornada_payload():
 def cooperacao_payload():
     """Espelha a forma da rota /cooperacao: categoria, instituicao, pais e
     lat/lon ja resolvidos no servidor (o front so filtra e desenha)."""
-    def ac(numero, ano, cat, inst, pais, lat, lon, sigla='CEPEx'):
+    def ac(numero, ano, cat, inst, pais, lat, lon, sigla='CEPEx', inferido=False):
         return {"id": f"res-cepex-{numero}-{ano}", "numero": numero, "ano": ano,
                 "data": f"{ano}-05-10", "link": None, "sigla": sigla,
                 "categoria": cat, "instituicao": inst, "pais": pais,
+                "paisInferido": inferido,
                 "lat": lat, "lon": lon,
                 "ementa": f"Dispõe sobre a aprovação do {cat} celebrado entre a UFF - UFF e a {inst}"
                           + (f" ({pais})." if pais else ".")}
@@ -470,6 +471,9 @@ def cooperacao_payload():
         ac("6.150", 2026, "Cooperação Técnica", "Município de Maricá", "", None, None),
         ac("562", 2012, "Protocolo de Intenções", "CEDERJ/CECIERJ", "", None, None),
         ac("301", 2018, "Cotutela", "Universidade do Porto", "Portugal", 39.4, -8.2),
+        # país INFERIDO (curadoria — o ato não o declara): testa o asterisco
+        ac("302", 2019, "Cooperação Acadêmica", "Brunel University", "Reino Unido",
+           55.4, -3.4, inferido=True),
         ac("410", 2019, "Cooperação Acadêmica", "Universidad de Buenos Aires", "Argentina", -38.4, -63.6),
     ]
     serie, cats, paises = [], {}, {}

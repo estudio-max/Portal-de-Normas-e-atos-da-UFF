@@ -899,6 +899,9 @@ export interface CoopPais { pais: string; n: number; lat: number; lon: number }
 export interface CoopAcordo {
   id: string; numero: string; ano: number; data: string | null; link: string | null;
   sigla: string; categoria: string; instituicao: string; pais: string;
+  // true = país veio de curadoria/propagação (a ementa não o declara);
+  // false/ausente = declarado no próprio texto do ato. Opcional p/ API antiga.
+  paisInferido?: boolean;
   lat: number | null; lon: number | null; ementa: string;
 }
 export interface CoopResp {

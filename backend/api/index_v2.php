@@ -305,7 +305,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-20'; }
+function api_versao(): string { return '2026-07-20.2'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1444,6 +1444,10 @@ function coop_paises(): array {
         'Tailândia'=>[15.9,101.0], 'Timor-Leste'=>[-8.9,125.7], 'Tunísia'=>[33.9,9.5],
         'Turquia'=>[39.0,35.2], 'Ucrânia'=>[48.4,31.2], 'Uruguai'=>[-32.5,-55.8],
         'Venezuela'=>[6.4,-66.6], 'Vietnã'=>[14.1,108.3],
+        // países que só aparecem via tabela curada de instituições (nenhum
+        // ato os declara em texto): parceiros reais achados na curadoria.
+        'Albânia'=>[41.15,20.17], 'Belarus'=>[53.7,27.95], 'Bangladesh'=>[23.7,90.35],
+        'Malásia'=>[4.2,102.0], 'Honduras'=>[15.2,-86.2], 'Barbados'=>[13.2,-59.5],
     ];
     return $p;
 }
@@ -1469,6 +1473,71 @@ function coop_normaliza_pais(string $bruto): string {
         if (mb_strtolower(nome_ascii($nome)) === $chave) return $nome;
     }
     return '';
+}
+
+// Chave de comparação de instituição: sem acento, minúscula, só [a-z0-9 ].
+// Serve à propagação (mesma instituição em atos diferentes) e à tabela curada.
+function coop_chave_inst(string $s): string {
+    $k = mb_strtolower(nome_ascii($s));
+    $k = preg_replace('/\(.*?\)/', ' ', $k);
+    $k = preg_replace('/[^a-z0-9 ]/', ' ', $k);
+    return trim(preg_replace('/\s+/', ' ', $k));
+}
+
+// TABELA CURADA instituição → país. Última camada, para os acordos cuja ementa
+// NÃO traz o país em lugar nenhum ("…celebrado entre a UFF e a Brunel
+// University." — e ponto): medido na produção, 176 instituições distintas
+// ficavam sem país e a maioria dos casos ESTRANGEIROS só se resolve sabendo
+// quem é quem. Curadoria como a de órgãos (orgao_alias): entradas só onde a
+// identificação é segura; ambíguo fica de fora (em branco = tratado como
+// nacional, que é o comportamento documentado na aba).
+// O match é por SUBSTRING da chave normalizada — as ementas sujam a cauda
+// ("Universidade de Sevilha. Esta DECISÃO entra em…"), então igualdade exata
+// perderia casos.
+function coop_inst_pais_curada(): array {
+    static $m = [
+        // Europa
+        'brunel university' => 'Reino Unido', 'university of birmingham' => 'Reino Unido',
+        'university of aarhus' => 'Dinamarca', 'lund university' => 'Suécia',
+        'vaasan ammattikorkea' => 'Finlândia',
+        'universitat zu koln' => 'Alemanha', 'ruhr universitat bochum' => 'Alemanha',
+        'europa universitat viadrina' => 'Alemanha', 'zu brausnchweig' => 'Alemanha',
+        'zu braunschweig' => 'Alemanha', 'speyer' => 'Alemanha',
+        'center for natural resources and development' => 'Alemanha', 'furhlander' => 'Alemanha',
+        'universita degli studi di torino' => 'Itália', 'universita degli studi di teramo' => 'Itália',
+        'universita degli studi di federico ii' => 'Itália', 'universita di bologna' => 'Itália',
+        'universita di brescia' => 'Itália', 'sapienza' => 'Itália',
+        'sorbonne nouvelle' => 'França', 'universite laval' => 'Canadá',
+        'd avignon' => 'França', 'franche comte' => 'França', 'd auvergne' => 'França',
+        'claude bernard lyon' => 'França', 'bretagne occidentale' => 'França',
+        'universidade de montpellier' => 'França', 'dcns' => 'França',
+        'universite libre de bruxel' => 'Bélgica', 'universite de lausanne' => 'Suíça',
+        'universidade de sevilha' => 'Espanha', 'las palmas de gran canaria' => 'Espanha',
+        'xunta de galicia' => 'Espanha',
+        'universidade catolica portuguesa' => 'Portugal', 'universidade lusofona' => 'Portugal',
+        'politecnico de coimbra' => 'Portugal',
+        'dunarea de jo' => 'Romênia', 'universidade gediz' => 'Turquia',
+        'aleksander moisiu' => 'Albânia', 'belarusian state pedagogical' => 'Belarus',
+        // Rússia / Ucrânia
+        'lomonosov moscow' => 'Rússia', 'belgorod' => 'Rússia',
+        'saint petersburg electrotechnical' => 'Rússia', 'southwest state university' => 'Rússia',
+        'kharkiv aviaton' => 'Ucrânia', 'kharkiv aviation' => 'Ucrânia',
+        'kyiv polytechnic' => 'Ucrânia',
+        // Américas
+        'tulane university' => 'Estados Unidos', 'hastings college of the law' => 'Estados Unidos',
+        'universidade de columbia' => 'Estados Unidos',
+        'quebec em montreal' => 'Canadá',
+        'universidad nacional de cordoba' => 'Argentina', 'rio cuarto' => 'Argentina',
+        'universidad de antofagasta' => 'Chile', 'universidad ricardo palma' => 'Peru',
+        'distrital francisco jose de caldas' => 'Colômbia',
+        'autonoma de honduras' => 'Honduras',
+        'west indies cave hill' => 'Barbados',
+        // África / Ásia
+        'katyavala bwila' => 'Angola',
+        'fundan university' => 'China',   // grafia do boletim p/ Fudan (Xangai)
+        'daffodil international' => 'Bangladesh', 'limkokwing' => 'Malásia',
+    ];
+    return $m;
 }
 
 // Países ordenados do nome MAIS LONGO para o mais curto: sem isso, "São Tomé e
@@ -1609,10 +1678,15 @@ function cooperacao(PDO $pdo): void {
     $st->execute([':ft' => $ft]);
 
     $coords = coop_paises();
+    $curada = coop_inst_pais_curada();
+
+    // PASSE 1 — extrai do texto (parênteses/travessão/nome) e, faltando, cai
+    // na TABELA CURADA instituição→país. Muitas ementas não declaram o país em
+    // lugar NENHUM ("…entre a UFF e a Brunel University." — e ponto): medido
+    // na produção, 696 acordos sem país, sendo ~65 instituições estrangeiras
+    // conhecidas — só curadoria resolve. paisInferido marca a proveniência
+    // (false = declarado no texto do ato; true = curadoria/propagação).
     $acordos = [];
-    $porAnoCat = [];      // ano => categoria => n
-    $porPais = [];        // país => n
-    $cats = [];           // categoria => n
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $ementa = preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? ''));
         $cat = coop_categoria($ementa);
@@ -1620,20 +1694,61 @@ function cooperacao(PDO $pdo): void {
 
         $instituicao = coop_instituicao($ementa);
         $pais = coop_pais_do_texto($ementa, $instituicao);
-        $ano = (int)$r['ano'];
+        $inferido = false;
+        if ($pais === '' && $instituicao !== '') {
+            $ki = coop_chave_inst($instituicao);
+            foreach ($curada as $frag => $p) {           // substring: ementas sujam a cauda
+                if ($ki !== '' && str_contains($ki, $frag)) { $pais = $p; $inferido = true; break; }
+            }
+        }
         $acordos[] = [
-            'id' => $r['id'], 'numero' => $r['numero'], 'ano' => $ano,
+            'id' => $r['id'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
             'data' => $r['data_ato'], 'link' => $r['link'], 'sigla' => $r['sigla'],
             'categoria' => $cat,
             'instituicao' => $instituicao,
-            'pais' => $pais,
-            'lat' => $pais !== '' ? $coords[$pais][0] : null,
-            'lon' => $pais !== '' ? $coords[$pais][1] : null,
+            'pais' => $pais, 'paisInferido' => $inferido,
+            'lat' => null, 'lon' => null,               // preenchidos no fim
             'ementa' => mb_substr($ementa, 0, 260),
         ];
-        $porAnoCat[$ano][$cat] = ($porAnoCat[$ano][$cat] ?? 0) + 1;
-        $cats[$cat] = ($cats[$cat] ?? 0) + 1;
-        if ($pais !== '') $porPais[$pais] = ($porPais[$pais] ?? 0) + 1;
+    }
+
+    // PASSE 2 — PROPAGAÇÃO: a mesma instituição às vezes aparece noutro ato
+    // COM o país declarado ("Universidad de Granada - Espanha" em 2015, só
+    // "Universidad de Granada" em 2011). Propaga por chave normalizada;
+    // instituição com países CONFLITANTES entre atos fica de fora (medido: 0
+    // conflitos hoje, mas a guarda fica).
+    $mapa = [];
+    $conflito = [];
+    foreach ($acordos as $a) {
+        if ($a['pais'] === '' || $a['instituicao'] === '') continue;
+        $k = coop_chave_inst($a['instituicao']);
+        if (mb_strlen($k) < 6) continue;
+        if (isset($mapa[$k]) && $mapa[$k] !== $a['pais']) $conflito[$k] = true;
+        $mapa[$k] = $a['pais'];
+    }
+    foreach ($acordos as &$a) {
+        if ($a['pais'] === '' && $a['instituicao'] !== '') {
+            $k = coop_chave_inst($a['instituicao']);
+            if (isset($mapa[$k]) && !isset($conflito[$k])) {
+                $a['pais'] = $mapa[$k];
+                $a['paisInferido'] = true;
+            }
+        }
+        if ($a['pais'] !== '') {
+            $a['lat'] = $coords[$a['pais']][0];
+            $a['lon'] = $coords[$a['pais']][1];
+        }
+    }
+    unset($a);
+
+    // PASSE 3 — agregados (depois de todo país resolvido)
+    $porAnoCat = [];      // ano => categoria => n
+    $porPais = [];        // país => n
+    $cats = [];           // categoria => n
+    foreach ($acordos as $a) {
+        $porAnoCat[$a['ano']][$a['categoria']] = ($porAnoCat[$a['ano']][$a['categoria']] ?? 0) + 1;
+        $cats[$a['categoria']] = ($cats[$a['categoria']] ?? 0) + 1;
+        if ($a['pais'] !== '') $porPais[$a['pais']] = ($porPais[$a['pais']] ?? 0) + 1;
     }
 
     ksort($porAnoCat);

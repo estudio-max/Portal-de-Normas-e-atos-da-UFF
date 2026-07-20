@@ -319,8 +319,13 @@ export default function CooperacaoApi() {
                         <div className="text-[10px] text-slate-400 font-normal line-clamp-1" title={a.ementa}>{a.ementa}</div>
                       </td>
                       <td className="px-3 py-1.5 text-xs whitespace-nowrap">
-                        {a.pais ? <span className="text-slate-600">{a.pais}</span>
-                                : <span className="text-slate-300">—</span>}
+                        {a.pais ? (
+                          <span className="text-slate-600" title={a.paisInferido
+                            ? 'País identificado por curadoria/propagação — o ato não o declara'
+                            : 'País declarado no próprio ato'}>
+                            {a.pais}{a.paisInferido && <span className="text-slate-400">*</span>}
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-1.5 text-xs">
                         <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
@@ -357,10 +362,13 @@ export default function CooperacaoApi() {
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         <strong>Como este painel conta.</strong> Categoria, instituição e país são extraídos da{' '}
         <strong>ementa</strong> do ato — que nesses acordos é padronizada. Um acordo só entra se a
-        ementa casar uma categoria conhecida (menção solta a "cooperação" fica de fora). O país só é
-        aceito se for um país reconhecido, o que descarta sigla entre parênteses. Acordo sem país
-        identificado é, em geral, <strong>nacional</strong> — mas pode ser falha de extração.
-        A fonte oficial é sempre o <strong>Boletim de Serviço da UFF</strong>.
+        ementa casar uma categoria conhecida (menção solta a "cooperação" fica de fora; ato que só
+        designa coordenador também). O país vem de três fontes, nesta ordem: <strong>declarado no
+        texto</strong> do ato; <strong>tabela curada</strong> de instituições conhecidas (muitos atos
+        dizem só "…e a Brunel University", sem país); e <strong>propagação</strong> — a mesma
+        instituição em outro ato com o país declarado. País com <strong>*</strong> é inferido
+        (curadoria/propagação), não declarado no ato. Acordo sem país é, em geral,{' '}
+        <strong>nacional</strong>. A fonte oficial é sempre o <strong>Boletim de Serviço da UFF</strong>.
       </p>
     </div>
   );
