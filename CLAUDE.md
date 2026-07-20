@@ -99,6 +99,32 @@ credenciais do banco). Não versione, não imprima o conteúdo.
 A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 `config.php` era da época em que ela tinha senha; ficou sem uso).
 
+## Painéis derivados da EMENTA (não de tabela-fato)
+
+Duas abas não têm tabela-fato própria: são **calculadas em tempo de consulta**
+lendo o texto do ato. É uma escolha — enquanto as regras ainda estão sendo
+descobertas, mudar um regex e recarregar é barato; virar `INSERT` só quando a
+regra estabilizar (aí sim vale o modelo em estrela).
+
+- **Jornada de trabalho** (`/api/jornada`): flexibilização vs Programa de Gestão
+  e Desempenho. Agrupa as portarias de um setor pelo **processo SEI** (o nome do
+  setor sai do texto e o OCR o escreve diferente a cada ano — não serve de
+  chave). Setor saiu se QUALQUER portaria do grupo foi revogada: a revogação
+  mira o ato ORIGINAL, não a manutenção mais nova.
+- **Cooperação** (`/api/cooperacao`): acordos, protocolos e cotutelas. 16
+  nomenclaturas foram fundidas em **5 categorias**, decisão tomada lendo o CORPO
+  (o dispositivo), não a ementa: o texto operativo de Acadêmica/Internacional/
+  Protocolo de Intenções é o MESMO boilerplate, e "Internacional" nunca foi
+  categoria — é qualificador (quem carrega isso é o país). Cotutela fica sozinha
+  (outlier extremo: sinal de titulação 22,2 por 1.000 palavras contra 0-2 nas
+  outras). Ato que só DESIGNA coordenador não é acordo.
+  O **país** vem em cascata: declarado no texto → tabela curada
+  instituição→país (`coop_inst_pais_curada`, para as ementas que não declaram
+  nada: "…e a Brunel University." e ponto) → propagação da mesma instituição
+  vista noutro ato. `paisInferido` marca o que não veio do ato, e a interface
+  mostra `*`. A tabela curada é **extensível**: instituição estrangeira sem país
+  = uma linha nova ali.
+
 ## Regras do domínio que já custaram retrabalho
 
 O catálogo completo está em [`docs/GUIA-EXTRACAO-BS.md`](docs/GUIA-EXTRACAO-BS.md)
@@ -231,11 +257,18 @@ manda neles.**
   humana (7 ambíguos com múltiplos candidatos, 22 sem-match por OCR não acurado).
   Metodologia: puxadas fichas da API, baixados 19 PDFs dos boletins, extraído texto,
   casamento numero+sigla via regex e curadoria manual. O discriminador que resolveu:
-  **ano-do-ato comparado com ano-do-boletim via linkBoletim**. Fase B (re-extração)
-  precisa de: (a) guarda de ano plausível contra ano-do-boletim; (b) reconhecer anexo
-  SIORG como tabela de unidades, não atos; (c) não criar ato a partir de
-  citação/referência ("Criado em: DECISÃO Nº…", refs ABNT); (d) tratar ano de 5
-  dígitos (OCR "20007" → 2007, não 2000); (e) revisar parse de ano no boletim 2001.
+  **ano-do-ato comparado com ano-do-boletim via linkBoletim**.
+  **Estado (20/07/2026):** os 3 primeiros SQLs já rodaram em produção (conferido:
+  os fantasmas respondem 404 e o GQO está em 2007). O
+  `corrigir_anos_boletim2001.sql` (26 correções) **ainda não foi executado** — a
+  produção segue com 100 atos de `ano < 2001`, dos quais 45 são backlog legítimo.
+  No EXTRATOR, `citacao_recortada()` já cobre (b) e (c) — não cria ato a partir de
+  citação/anexo (regressão: 2026 perde 10 fragmentos, 2001 perde zero). **Falta
+  ainda:** (a) guarda de ano plausível contra o ano do boletim para o caso PASSADO
+  (o `corrige_ano_futuro()` só trata ano futuro e ano não-4-dígitos); (d) ano de 5
+  dígitos (OCR "20007" vira 2000 porque `TITULO_RE` casa `\d{4}` e larga o 5º
+  dígito — mexer aqui é mexer no regex mais sensível do extrator, exige medição
+  própria); (e) revisar o parse de ano no boletim 2001.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
 - Cutover para o domínio oficial da UFF — runbook pronto em
   [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) (o frontend já é portável, `/api`
