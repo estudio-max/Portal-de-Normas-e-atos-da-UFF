@@ -41,6 +41,7 @@ GitHub é o espelho único; se não foi empurrado, não aconteceu.
 | `backend/db/schema_v2.sql` | O schema vivo. |
 | `backend/db/schema.sql`, `gerar_sql.py`, `importar/importar.php`, `resolver_relacoes.php` | v1, mortos. |
 | `backend/importar/importar_v2.php`, `resolver_relacoes_v2.php` | Os vivos. |
+| `server.ts` | **Só dev** (`npm run dev`, Vite em middleware). Não existe em produção — lá o front é estático e a API é PHP. No dev, `/api/*` responde 404 de propósito (o modo banco se testa com `?api=http://127.0.0.1:8900` + `tools/mock_api.py`). |
 
 **Regra de deploy da API:** `index_v2.php` sobe para o servidor **renomeado como
 `api/index.php`**. O `.htaccess` roteia `/api/*` para `index.php`; subir com o

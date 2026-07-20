@@ -21,3 +21,11 @@ backend/api/config.php
 # Carga SQL (regenerável a partir do JSON)
 backend/db/carga_inicial.sql
 backend/db/carga_inicial.sql.gz
+
+# Bancada local de extracao (saidas de extrair_boletim.py rodado na mao) —
+# nunca versionar: ja entraram por acidente num git add -A (220MB).
+tools/atos.csv
+tools/atos.json
+tools/atos.xlsx
+tools/dados.js
+tools/portal-data-extrato-reprocessado.json

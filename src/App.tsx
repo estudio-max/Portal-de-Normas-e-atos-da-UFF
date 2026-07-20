@@ -47,8 +47,11 @@ export default function App() {
       const todos = ds.todosAtos();
       setActs(todos.length ? todos : INITIAL_ACTS);
     }
-    setStats(await ds.getStats());
+    // setModo ANTES do stats, e stats nunca derruba o init: se este await
+    // rejeitar com o modo ainda não setado, o portal fica em "Carregando…"
+    // para sempre (aconteceu de verdade quando /api/stats devolvia HTML).
     setModo(m);
+    try { setStats(await ds.getStats()); } catch { /* header fica sem números */ }
   };
   useEffect(() => { inicializar(); }, []);
 
