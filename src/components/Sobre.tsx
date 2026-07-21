@@ -27,12 +27,23 @@ function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: stri
  *  como se fossem parte do layout. Não vale para foto: se algum dia entrar
  *  uma, ela vai precisar de `filter: invert(1)` próprio para cancelar o da
  *  página. */
-function Figura({ arquivo, alt, legenda }: { arquivo: string; alt: string; legenda: string }) {
+function Figura({ arquivo, alt, legenda, w, h }: {
+  arquivo: string; alt: string; legenda: string; w: number; h: number;
+}) {
   return (
     <figure className="pt-1">
+      {/* `width`/`height` são o viewBox do SVG e NÃO são decorativos: o
+          navegador usa os dois para reservar a caixa na proporção certa antes
+          de baixar o arquivo. Sem eles a imagem não tem tamanho intrínseco,
+          a caixa colapsa para a altura da borda (2px), e aí `loading="lazy"`
+          nunca dispara — a imagem fica esperando entrar em viewport numa
+          caixa que nunca ocupa espaço. Aconteceu em produção; em dev passou
+          porque a rolagem durante o carregamento acabava disparando. */}
       <img
         src={`figuras/${arquivo}`}
         alt={alt}
+        width={w}
+        height={h}
         loading="lazy"
         className="w-full h-auto rounded-md border border-slate-200 bg-white"
       />
@@ -69,6 +80,7 @@ export default function Sobre() {
         </p>
         <Figura
           arquivo="7-abas-do-portal.svg"
+          w={960} h={500}
           alt="Grade com os dez painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação e Analisar Ato."
           legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
         />
@@ -125,11 +137,13 @@ export default function Sobre() {
         </p>
         <Figura
           arquivo="2-jornada-do-ato.svg"
+          w={1000} h={420}
           alt="Fluxo em cinco etapas: a UFF publica o Boletim em PDF, um robô baixa todo dia às 19h10, o texto é recortado em atos, os atos vão para a base com 133 mil registros, e o usuário pesquisa."
           legenda="A etapa do meio é a difícil: o PDF não marca onde um ato termina e o outro começa."
         />
         <Figura
           arquivo="3-anatomia-do-ato.svg"
+          w={940} h={520}
           alt="Uma folha de documento com cinco chamadas indicando os campos que o portal separa: tipo, número e ano, órgão, ementa e processo SEI."
           legenda="Os campos extraídos de cada ato. Boletim antigo, digitalizado, costuma ter menos."
         />
@@ -160,6 +174,7 @@ export default function Sobre() {
         </p>
         <Figura
           arquivo="5-mapa-cooperacao.svg"
+          w={1000} h={520}
           alt="Mapa-múndi com círculos proporcionais marcando os países com acordos de cooperação da UFF, e ao lado o ranking dos oito maiores: França 89, Portugal 86, Espanha 67, Itália 47, Alemanha 38, Colômbia 37, Argentina 35 e Estados Unidos 25."
           legenda="1.467 acordos de cooperação em 59 países, extraídos dos atos. São acordos aprovados por ato do Boletim, não necessariamente parcerias ativas hoje: o Boletim não registra o encerramento de um convênio."
         />
@@ -184,6 +199,7 @@ export default function Sobre() {
         </p>
         <Figura
           arquivo="4-teia-de-relacoes.svg"
+          w={960} h={510}
           alt="Cinco atos numa linha do tempo. Dois atos alteram o ato de 2015 e um o revoga em 2024, deixando-o marcado como revogado. Legenda: verde é vigente, amarelo é alterado, vermelho é revogado."
           legenda="É a pergunta que o acervo em PDF não responde e o índice responde."
         />
