@@ -864,6 +864,11 @@ export interface JornadaPortariaRef { numero: string; ano: number; data: string;
 export interface JornadaAlteracao extends JornadaPortariaRef { tipo: string }   // 'Manutenção' | 'Retificação'
 export interface JornadaSetorFlex {
   setor: string; status: string; entrada: string; saida: string | null;
+  // O processo SEI costura as portarias do setor: adesão, manutenções e
+  // revogação escrevem o nome do setor de jeitos diferentes, e é o processo
+  // que prova que são o mesmo. Pode vir null nos poucos atos sem processo.
+  processoSei: string | null;
+  linkSeiProcesso: string | null;
   aprovacao: JornadaPortariaRef;
   alteracoes: JornadaAlteracao[];
   revogacao: JornadaPortariaRef | null;

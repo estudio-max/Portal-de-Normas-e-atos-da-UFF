@@ -305,7 +305,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-21.2'; }
+function api_versao(): string { return '2026-07-21.3'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1108,7 +1108,16 @@ function flex_classe(string $ementa): string {
         return str_contains($ini, 'manuten') ? 'manutencao' : 'adesao';
     }
     $ini = nome_ascii(mb_strtolower(preg_replace('/\s+/u', '', mb_substr($ementa, 0, 18))));
-    return str_starts_with($ini, 'retific') ? 'retificacao' : 'outro';
+    if (str_starts_with($ini, 'retific')) return 'retificacao';
+    // A portaria que ENCERRA a flexibilização de um setor abre com "Revogar a
+    // Portaria X - Jornada Flexibilizada de ...". Sem esta linha ela caía em
+    // 'outro' e o agrupamento a descartava com `continue`, então o grupo nunca
+    // ficava sabendo que o setor tinha saído e continuava "Ativo" para sempre.
+    // Não dá para depender só da relação Revoga do banco: a portaria revogada
+    // costuma ser de 2019 e várias nem estão no acervo (a 64.402/2019, por
+    // exemplo), então não há alvo para a relação apontar.
+    if (str_starts_with($ini, 'revog')) return 'revogacao';
+    return 'outro';
 }
 
 // Apara o nome do setor: corta caudas de boilerplate que vazam do corpo
@@ -1218,6 +1227,14 @@ function jornada(PDO $pdo): void {
             'link' => $a['link'], 'classe' => $classe, 'status' => $a['status'],
             'revogacao' => $revogaPor[$a['id']] ?? null,
         ];
+        // O processo SEI é a espinha dorsal do setor: é ele que costura adesão,
+        // manutenções e revogação, cada uma escrevendo o nome do setor de um
+        // jeito. Guardado aqui para ir ao front — sem ele quem consulta não
+        // consegue conferir a cadeia no SEI nem entender por que dois nomes
+        // diferentes são o mesmo setor.
+        $sei = trim($a['processo_sei'] ?? '');
+        if ($sei !== '' && empty($grupos[$chave]['processoSei']))
+            $grupos[$chave]['processoSei'] = $sei;
         if ($setor !== '' && mb_strlen($setor) > mb_strlen($grupos[$chave]['setor'] ?? ''))
             $grupos[$chave]['setor'] = $setor;          // guarda o melhor nome (mais longo) do grupo
     }
@@ -1228,7 +1245,12 @@ function jornada(PDO $pdo): void {
     foreach ($grupos as $g) {
         $ports = $g['portarias'];
         usort($ports, fn($x, $y) => strcmp($x['data'], $y['data']));
-        $aprovas = array_values(array_filter($ports, fn($p) => $p['classe'] !== 'retificacao'));
+        // Nem retificação nem revogação servem de "adesão": uma corrige o ato,
+        // a outra o encerra. Sem excluir a revogação, um grupo cujo ato de
+        // origem não está no acervo elegeria a própria revogação como entrada
+        // do setor, e a data de início viraria a data da saída.
+        $aprovas = array_values(array_filter(
+            $ports, fn($p) => $p['classe'] !== 'retificacao' && $p['classe'] !== 'revogacao'));
         if (!$aprovas) continue;
         $adesao = null;
         foreach ($aprovas as $p) if ($p['classe'] === 'adesao') { $adesao = $p; break; }
@@ -1242,16 +1264,37 @@ function jornada(PDO $pdo): void {
         // Saída = a revogação mais recente do grupo.
         $revog = null;
         $temRevogado = false;
+        $ultimaAprova = '';
         foreach ($ports as $p) {
+            if ($p['classe'] === 'adesao' || $p['classe'] === 'manutencao')
+                if ($p['data'] > $ultimaAprova) $ultimaAprova = $p['data'];
             if ($p['status'] === 'Revogado') $temRevogado = true;
             if ($p['revogacao'] && (!$revog || $p['revogacao']['data'] > $revog['data']))
                 $revog = $p['revogacao'];
+            // A própria portaria de revogação, quando ela está no grupo (mesmo
+            // processo SEI). É a fonte mais confiável das três: não depende de
+            // a relação ter sido resolvida nem de o ato revogado existir.
+            if ($p['classe'] === 'revogacao') {
+                $temRevogado = true;
+                $esta = ['numero' => $p['numero'], 'ano' => $p['ano'],
+                         'data' => $p['data'], 'link' => $p['link']];
+                if (!$revog || $esta['data'] > $revog['data']) $revog = $esta;
+            }
+        }
+        // Aprovação DEPOIS da revogação = o setor voltou. Não acontece no
+        // acervo de hoje (medido: 0 casos em 44 processos), mas nada impede a
+        // UFF de reflexibilizar um setor reusando o mesmo processo, e sem esta
+        // guarda ele ficaria "Revogado" para sempre a partir daí.
+        if ($revog && $ultimaAprova > $revog['data']) {
+            $revog = null;
+            $temRevogado = false;
         }
         $status = ($revog || $temRevogado) ? 'Revogado' : 'Ativo';
 
         $alteracoes = [];
         foreach ($ports as $p) {
             if ($p['numero'] === $adesao['numero'] && $p['ano'] === $adesao['ano']) continue;
+            if ($p['classe'] === 'revogacao') continue;   // sai no campo `revogacao`, não como alteração
             $alteracoes[] = ['numero' => $p['numero'], 'ano' => $p['ano'], 'data' => $p['data'],
                              'link' => $p['link'],
                              'tipo' => $p['classe'] === 'retificacao' ? 'Retificação' : 'Manutenção'];
@@ -1259,6 +1302,8 @@ function jornada(PDO $pdo): void {
 
         $setoresFlex[] = [
             'setor' => $g['setor'] ?? '(setor não identificado no ato)',
+            'processoSei' => $g['processoSei'] ?? null,
+            'linkSeiProcesso' => link_sei_processo((string)($g['processoSei'] ?? '')),
             'status' => $status,
             'entrada' => $adesao['data'], 'saida' => $revog['data'] ?? null,
             'aprovacao' => ['numero' => $adesao['numero'], 'ano' => $adesao['ano'],

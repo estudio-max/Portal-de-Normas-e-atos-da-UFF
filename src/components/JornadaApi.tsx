@@ -185,7 +185,23 @@ function LinhaSetorFlex({ s }: { s: ds.JornadaSetorFlex }) {
   return (
     <>
       <tr className="border-t border-slate-100 hover:bg-slate-50 align-top">
-        <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[240px]">{s.setor}</td>
+        <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs max-w-[240px]">
+          {s.setor}
+          {/* O processo é o que permite conferir a cadeia no SEI e o que
+              explica por que portarias com nomes de setor diferentes são o
+              mesmo setor. Sem ele a linha fica só com um nome que o OCR
+              escreveu de um jeito naquele ano. */}
+          {s.processoSei && (
+            <div className="font-normal text-[10px] text-slate-400 mt-0.5">
+              {s.linkSeiProcesso ? (
+                <a href={s.linkSeiProcesso} target="_blank" rel="noopener noreferrer"
+                   className="hover:text-blue-700 hover:underline">
+                  SEI {s.processoSei}
+                </a>
+              ) : <>SEI {s.processoSei}</>}
+            </div>
+          )}
+        </td>
         <td className="px-3 py-1.5 text-xs whitespace-nowrap">
           <PortariaLink p={s.aprovacao} />
           <div className="text-[10px] text-slate-400">{fmtData(s.aprovacao?.data ?? null)}</div>
