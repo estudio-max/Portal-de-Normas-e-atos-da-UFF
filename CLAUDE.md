@@ -269,6 +269,25 @@ manda neles.**
   dígitos (OCR "20007" vira 2000 porque `TITULO_RE` casa `\d{4}` e larga o 5º
   dígito — mexer aqui é mexer no regex mais sensível do extrator, exige medição
   própria); (e) revisar o parse de ano no boletim 2001.
+- **Buraco do CEPEx 2021-2024 (extrator corrigido; produção ainda com a lacuna).**
+  Investigando por que a aba Cooperação mostrava 2021 zerado, achei a causa:
+  o `TITULO_RE` só aceitava MAIÚSCULAS no nome do órgão, e "CEPEx" — a grafia
+  real usada pela UFF de ~2021 a meados de 2025 — tem um "x" minúsculo que
+  quebrava o regex por completo; a resolução inteira virava corpo do ato
+  anterior. Medido: **+4.238 atos genuínos recuperados** só em 2021-2024 (ver
+  commit `42c504d`). O fix trocou o charset por uma classe única (não
+  alternância de grupos — uma primeira tentativa com alternância causou
+  ReDoS real, travava >15s). **Pendente:** o fix vale para reprocessamento
+  futuro; os boletins de 2021-2024 já importados em produção continuam com a
+  lacuna até serem reextraídos e reimportados.
+- **Duplicata por citação (pré-existente, mais ampla que o item acima).** Uma
+  citação bem formatada de uma resolução anterior ("conforme a RESOLUÇÃO
+  CEPEX/UFF Nº 394, DE 15 DE SETEMBRO DE 2021.") dentro de um documento
+  posterior pode virar "título" e duplicar o ato original com outro boletim
+  de origem. Confirmado que já acontecia no `TITULO_RE` original (não é
+  regressão do fix acima) — medido ~240-277 casos/ano só na amostra
+  2021-2024. Não tratado; precisa de heurística própria (ex.: descartar
+  título cujo `numero+ano` já existe capturado num boletim ANTERIOR).
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
 - Cutover para o domínio oficial da UFF — runbook pronto em
   [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) (o frontend já é portável, `/api`
