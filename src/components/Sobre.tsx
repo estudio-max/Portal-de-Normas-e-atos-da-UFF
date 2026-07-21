@@ -73,8 +73,9 @@ export default function Sobre() {
           legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
         />
         <p>
-          A ideia em si é antiga: nasceu da experiência com o Portal de Normas do BNDES, no começo
-          dos anos 2000. A diferença é que o BNDES tinha um setor que centralizava a gestão das suas
+          A ideia em si é antiga: nasceu da minha experiência com a primeira versão do Portal de
+          Normas do BNDES, lá no começo dos anos 2000. A diferença é que o BNDES tinha um setor
+          que centralizava a gestão das suas
           normas, e a UFF nunca teve — sem um órgão para gerir o conteúdo, um sistema assim não se
           sustentava. Só as ferramentas de IA atuais tornaram viável ler milhares de PDFs (vários
           deles fruto de digitalização e OCR de qualidade irregular) com precisão aceitável para

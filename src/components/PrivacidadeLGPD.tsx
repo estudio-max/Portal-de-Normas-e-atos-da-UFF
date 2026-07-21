@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, FileText, UserCheck, Lock, Scale, Database, FolderSearch } from 'lucide-react';
+import { ShieldCheck, FileText, Lock, Scale, Database, FolderSearch } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -87,7 +87,7 @@ export default function PrivacidadeLGPD() {
           de Saberes e Competências (Decreto 13.048/2026); não revela nada além do que o documento
           público já traz, apenas poupa o trabalho de folhear os boletins; não emite juízo de valor;
           e não guarda o resultado de nenhuma consulta. Os CPFs seguem mascarados e pedidos de
-          remoção são atendidos caso a caso (ver Seus direitos, abaixo).
+          remoção são atendidos caso a caso.
         </p>
       </Secao>
 
@@ -96,17 +96,6 @@ export default function PrivacidadeLGPD() {
           Números de CPF encontrados no texto dos boletins são mascarados automaticamente
           (exibidos como <code className="bg-slate-100 px-1 rounded text-[12px]">***.XXX.XXX-**</code>),
           mantendo visível só o suficiente para conferência, sem publicar o número completo.
-        </p>
-      </Secao>
-
-      <Secao icon={<UserCheck className="w-4 h-4" />} titulo="Seus direitos">
-        <p>
-          Se você aparece em algum ato indexado aqui e quer corrigir uma informação, ou pedir a
-          remoção do seu nome de um trecho específico (por exemplo, uma ementa que cita um
-          processo disciplinar), escreva para <a href="mailto:nidi.gar@id.uff.br" className="text-blue-700 underline font-semibold">nidi.gar@id.uff.br</a>.
-          Cada pedido é avaliado caso a caso. Quando dá para resolver removendo só o nome do
-          trecho, preferimos isso a apagar o ato inteiro — o ato em si continua existindo no
-          boletim oficial da UFF de qualquer forma, com ou sem este portal.
         </p>
       </Secao>
 
