@@ -33,6 +33,12 @@ verdade, e você consegue corrigir uma palavra sem refazer a figura inteira.
 Se ainda assim quiser gerar diagrama como imagem, peça sem nenhum texto e
 escreva os rótulos por cima depois, em qualquer editor.
 
+**As cinco peças de diagrama já estão prontas** em [`figuras/`](figuras/), com
+o texto correto e acentuado. Quem as gerou foi o `tools/gerar_figuras_doc.py`:
+rode de novo depois de atualizar os números e as cinco saem juntas. As peças 1
+e 6 continuam por fazer, e são justamente as duas que ferramenta de imagem
+resolve bem.
+
 ---
 
 ## Identidade visual (repita isto em todos os prompts)
