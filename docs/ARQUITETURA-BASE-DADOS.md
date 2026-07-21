@@ -340,7 +340,7 @@ Nunca mexer na produção viva. Construir a v2 ao lado, validar, e só então vi
    amostras lado a lado v1×v2, busca FULLTEXT funcionando.
 4. **Backfill de relações** sobre a base limpa (o INSERT-only que já preparamos, agora
    com `destino_norm`/`extracao_id` e, quando houver, corpo em caixa natural → mais recall).
-5. **Rodar `resolver_relacoes.php`** adaptado ao v2 (liga `destino_ato_id`, recalcula status).
+5. **Rodar `resolver_relacoes_v2.php`** (liga `destino_ato_id`, recalcula status).
 6. **Cutover**: apontar o app PHP para `uffnormas_v2`; manter v1 como backup congelado.
 7. **Atualizar o pipeline** (`extrair_boletim.py` / `gerar_sql.py`) para emitir v2 nativo.
 

@@ -3,11 +3,8 @@
 // lá o frontend é estático (dist/ na raiz do site) e a API é PHP
 // (backend/api/index_v2.php publicado como api/index.php).
 //
-// Já foi um servidor "full-stack" do AI Studio, com uma rota Gemini
-// (/api/parse-act) que NADA no frontend chamava — o ActParser analisa
-// localmente, sem chave de API. A rota, o @google/genai, o dotenv e o
-// caminho Cloud Run (Dockerfile/serve.cjs) foram removidos em 20/07/2026
-// para o repositório parar de fingir que tem um runtime Node de produção.
+// Não há rota de API aqui, nem chave de serviço, nem runtime Node em produção:
+// este arquivo só serve o front em desenvolvimento.
 import express from "express";
 import { createServer as createViteServer } from "vite";
 

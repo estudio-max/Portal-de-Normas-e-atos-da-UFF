@@ -1,7 +1,7 @@
 <?php
 // ============================================================================
 //  Importador v2: le o JSON publicado pela extracao e faz UPSERT no schema
-//  normalizado (fanara87_governanca). Adaptado de importar.php (v1).
+//  normalizado (fanara87_governanca). Único importador do projeto.
 //  Idempotente por CHAVE NATURAL -- o `id` do JSON e um slug de estilo v1
 //  (ex.: "01-26-determina-o-de-servi-o-gqa-29-2025"), NAO o `uid` v2; o
 //  casamento usa (boletim_id,tipo_id,sigla_orig,numero_norm,ano), igual ao

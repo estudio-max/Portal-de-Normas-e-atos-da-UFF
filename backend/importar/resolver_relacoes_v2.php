@@ -2,7 +2,8 @@
 // ============================================================================
 //  resolver_relacoes_v2.php — Resolve relações e recalcula vigência (schema v2)
 //
-//  Adaptado de resolver_relacoes.php (v1) para o schema normalizado v2:
+//  Opera sobre o schema normalizado v2. O mapa de nomes da geração anterior,
+//  mantido porque explica os nomes de coluna que sobraram:
 //    atos          -> ato            (id BIGINT, tipo_id FK, sigla_orig, numero_norm INT)
 //    ato_relacoes  -> relacao        (tipo ENUM Revoga/Altera/Complementa,
 //                                     destino_texto, destino_ato_id, trecho)

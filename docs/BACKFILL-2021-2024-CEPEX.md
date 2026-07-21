@@ -19,14 +19,6 @@ O extrator já está corrigido e no ar (`tools/extrair_boletim.py`). Este runboo
 é só a etapa que falta: levar o resultado da reextração para o **MySQL de
 produção**, sem SSH, pelo caminho que o próprio projeto já previu para isso.
 
-## Por que não os workflows `Backfill do Legado` / `Backfill em Bloco`
-
-`.github/workflows/backfill.yml` e `backfill-bloco.yml` chamam
-`backend/db/gerar_sql.py`, que grava no **schema v1** (`atos`, `ato_corpo`,
-`ato_siapes`...) — morto, segundo a própria tabela de armadilhas do
-`CLAUDE.md`. A API viva lê do schema v2 (`ato`, `ato_texto`, `ato_pessoa`...).
-Rodar esses workflows não ajudaria e pode confundir. **Não usar.**
-
 ## O caminho certo: `importar_v2.php`
 
 Esse importador já foi desenhado exatamente para isto — o comentário do

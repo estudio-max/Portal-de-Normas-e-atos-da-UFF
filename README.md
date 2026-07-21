@@ -23,6 +23,3 @@ npm run dev
 
 O build de produção (`npm run build`) gera `dist/`, que sobe manualmente para a
 HostGator — ver o procedimento em [`CLAUDE.md`](CLAUDE.md).
-
-> `DEPLOY.md` e `backend/README.md` descrevem a arquitetura antiga (v1) e estão
-> defasados. Valem como referência histórica apenas.

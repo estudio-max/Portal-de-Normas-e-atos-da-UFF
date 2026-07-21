@@ -8,7 +8,8 @@ dispositivo reconhecível. É a 2ª metade do modo HÍBRIDO: o determinístico c
 O que faz: para cada ato com ementa oficial vazia E ementa_inferida=False,
 manda o corpo do ato ao Haiku e pede UMA frase de ementa, impessoal, fiel ao
 texto (sem inventar). Grava em ementa_resumo + ementa_inferida=True no atos.json.
-Depois é só rodar de novo gerar_dados_portal.py + gerar_sql.py.
+Depois é só rodar de novo gerar_dados_portal.py e importar o JSON
+resultante por importar_v2.php.
 
 Uso:
     export ANTHROPIC_API_KEY=sk-ant-...        # ou `ant auth login`

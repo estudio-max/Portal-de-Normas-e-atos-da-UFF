@@ -32,15 +32,20 @@ Não há tarefa agendada local.
 Regra de fechamento: **todo trabalho termina em `git commit` + `git push`.** O
 GitHub é o espelho único; se não foi empurrado, não aconteceu.
 
-## Armadilhas de nome (leia antes de editar qualquer arquivo)
+## Os arquivos que importam
+
+O sufixo `_v2` nos nomes é cicatriz da migração de schema de julho/2026. **Não
+existe mais um v1**: os arquivos da geração anterior foram apagados do repo em
+21/07/2026 (estão no `git log` se alguém precisar arqueologia). O que sobrou é
+tudo vivo.
 
 | Arquivo | O que é |
 |---|---|
-| `backend/api/index_v2.php` | **A API viva.** É este que você edita. |
-| `backend/api/index.php` | API do v1, **morta**. Não edite, não faça deploy. |
-| `backend/db/schema_v2.sql` | O schema vivo. |
-| `backend/db/schema.sql`, `gerar_sql.py`, `importar/importar.php`, `resolver_relacoes.php` | v1, mortos. |
-| `backend/importar/importar_v2.php`, `resolver_relacoes_v2.php` | Os vivos. |
+| `backend/api/index_v2.php` | **A API.** Único arquivo de API. |
+| `backend/db/schema_v2.sql` | O schema. |
+| `backend/importar/importar_v2.php` | O importador (upsert por chave natural). |
+| `backend/importar/resolver_relacoes_v2.php` | Resolve relações + recalcula vigência. Roda sozinho ao fim de cada import. |
+| `tools/extrair_boletim.py` | O extrator: PDF → atos. O arquivo mais sensível do projeto. |
 | `server.ts` | **Só dev** (`npm run dev`, Vite em middleware). Não existe em produção — lá o front é estático e a API é PHP. No dev, `/api/*` responde 404 de propósito (o modo banco se testa com `?api=http://127.0.0.1:8900` + `tools/mock_api.py`). |
 
 **Regra de deploy da API:** `index_v2.php` sobe para o servidor **renomeado como
@@ -180,8 +185,31 @@ resumo operacional.
   passava a derrubar ato legítimo ("DESIGNAR os docentes…"). Regressão que
   fecha a decisão: 2026 perde 10 (todos lixo) e **2001 perde ZERO** — o boletim
   digitalizado publica backlog real de 1998-2000 e precisa continuar entrando.
+  A classe de fragmento também cobre **pontuação órfã** (`)`, `]`, `•`, `●`, `▪`,
+  `§`): recorte no meio de lista ou parágrafo, acrescentado em 21/07/2026 depois
+  que 3 fantasmas escaparam por aí (medido em 27.536 atos de 2021-2024: derruba
+  13, todos lixo; 2001 perde +0). **O alcance desta guarda é limitado por
+  desenho:** ela só age com gap ≥ 3 anos, então não vê a duplicata por citação
+  de gap curto — um boletim de 2022 citando resolução de 2021 passa inteiro.
+  Esse é outro problema, tratado na seção de pendências.
 - **Collation do MySQL ≠ dedup do Python.** `DECISOES` == `DECISÕES` e
   `'001'` == `'01'` == `'1'` para o MySQL. Qualquer ETL precisa considerar isso.
+- **Pergunta sobre o banco se responde CONTANDO NO BANCO.** Custou o dia
+  21/07/2026: três medições erradas seguidas, todas por medir um proxy no lugar
+  da coisa perguntada. (1) `curl | python` no Windows lê stdin como `cp1252` e
+  mastiga todo acento — fabricou "mojibake em 100% do corpus" que não existia;
+  leia JSON de ARQUIVO com `io.open(..., encoding='utf-8')`. (2) A rota de
+  listagem não devolve o boletim de origem; ler esse campo vazio e concluir
+  "nenhum veio do backfill" é ausência de dado, não evidência — use
+  `/api/atos/{uid}`, que traz a ficha completa. (3) Cópias no JSON de extração
+  **não são** linhas no banco: a chave natural do importador inclui o boletim,
+  então N citações dentro do MESMO boletim colapsam em uma linha (erro de 1.126
+  contra 98 reais). Regra prática: antes de afirmar quanto mudou em produção,
+  pagine a API e conte, ou compare contra o dump em `dados/dumps/`.
+- **A API recusa user-agent de script.** `urllib` sem header devolve **406** (o
+  mod_security da HostGator); `curl` passa. Mande
+  `{'User-Agent': 'curl/8.0'}` em qualquer coleta por Python, ou você vai
+  interpretar bloqueio como "ato não existe".
 - Órgão tem ~1.162 grafias de sigla no corpus. Consolidar é **curadoria** (via
   `orgao_alias`), não regex.
 - **O mesmo servidor é DUAS pessoas quando o SIAPE varia no zero à esquerda.**
@@ -223,12 +251,6 @@ resumo operacional.
   novo sobre uma amostra ampla do corpus (`dados/boletins/`) — não confie só
   no PDF que motivou a mudança.
 
-## Documentos que NÃO são confiáveis
-
-`DEPLOY.md` e `backend/README.md` descrevem o mundo v1 (Cloud Run, `app-fonte/`,
-banco `fanara87_uffnormas`). Estão marcados com aviso no topo. **Este arquivo
-manda neles.**
-
 ## Pendências
 
 - **RDD individual não vira ato próprio (lacuna, não regressão).** O fix de
@@ -266,10 +288,13 @@ manda neles.**
   Metodologia: puxadas fichas da API, baixados 19 PDFs dos boletins, extraído texto,
   casamento numero+sigla via regex e curadoria manual. O discriminador que resolveu:
   **ano-do-ato comparado com ano-do-boletim via linkBoletim**.
-  **Estado (20/07/2026):** os 3 primeiros SQLs já rodaram em produção (conferido:
-  os fantasmas respondem 404 e o GQO está em 2007). O
-  `corrigir_anos_boletim2001.sql` (26 correções) **ainda não foi executado** — a
-  produção segue com 100 atos de `ano < 2001`, dos quais 45 são backlog legítimo.
+  **Estado (21/07/2026): os 4 SQLs rodaram em produção e estão conferidos** — os
+  fantasmas respondem 404, o GQO está em 2007, e os 26 do boletim 2001 têm
+  `ano=2001` com os uids novos (os antigos dão 404). Restam **76 atos com
+  `ano < 2001`**: 45 são backlog legítimo (o boletim de 2001, digitalizado,
+  publica atos de 1998-2000 de verdade) e o resto é o resíduo que a auditoria
+  deixou para revisão humana. Verificado que nenhum deles veio do backfill de
+  2021-2024 — todos já constavam do dump de 14/07.
   No EXTRATOR, `citacao_recortada()` já cobre (b) e (c) — não cria ato a partir de
   citação/anexo (regressão: 2026 perde 10 fragmentos, 2001 perde zero). **Falta
   ainda:** (a) guarda de ano plausível contra o ano do boletim para o caso PASSADO
@@ -291,14 +316,29 @@ manda neles.**
   `sys.stdin.encoding` é `cp1252` e mastiga TODO acento na leitura, fabricando
   um falso positivo de 100% do corpus. Leia o JSON de arquivo com
   `io.open(..., encoding='utf-8')`.
-- **Duplicata por citação (pré-existente, mais ampla que o item acima).** Uma
-  citação bem formatada de uma resolução anterior ("conforme a RESOLUÇÃO
-  CEPEX/UFF Nº 394, DE 15 DE SETEMBRO DE 2021.") dentro de um documento
-  posterior pode virar "título" e duplicar o ato original com outro boletim
-  de origem. Confirmado que já acontecia no `TITULO_RE` original (não é
-  regressão do fix acima) — medido ~240-277 casos/ano só na amostra
-  2021-2024. Não tratado; precisa de heurística própria (ex.: descartar
-  título cujo `numero+ano` já existe capturado num boletim ANTERIOR).
+- **Duplicata por citação — limpa no CEPEx 2021-2024, viva no resto do corpus.**
+  Uma citação bem formatada de uma resolução anterior ("conforme a RESOLUÇÃO
+  CEPEX/UFF Nº 394, DE 15 DE SETEMBRO DE 2021.") dentro de um documento posterior
+  vira "título" e duplica o ato original com outro boletim de origem. Já
+  acontecia no `TITULO_RE` original — não é regressão do fix do CEPEx.
+  **Limpeza de 21/07/2026:** 98 cópias em 49 grupos, apagadas por SQL depois de
+  curadoria; o CEPEx 2021-2024 foi de 2,4% para 0,0% de duplicata (4.071 atos).
+  Sobraram 2 casos que exigem abrir o PDF: `res-cepex-1797-2023-4` ("Designa a
+  Comissão Especial…" — pode ser artigo da própria 1797 ou resolução distinta) e
+  o par `res-cepex-250-2021` / `-2`, que trazem **cursos diferentes** (Ciências e
+  Ciências Contábeis) sob o mesmo número.
+  **Três regras automáticas foram testadas e reprovadas — não repita:** (a) ano
+  do boletim não serve, há grupo com as 5 cópias do mesmo ano; (b) forma de
+  fragmento resolve só 7 dos 49 grupos; (c) verbo dispositivo deixa 36 grupos com
+  dois candidatos. Pior, **em 2 grupos a cópia verdadeira não era a base**
+  (`2935/2024` e `838/2022`: a citação ficou com o uid sem sufixo e o ato real com
+  o `-2`), então um "mantém a primeira" apagaria o ato certo. O que funcionou foi
+  ler as 63 ementas uma a uma. Método e decisões em
+  `../DUPLICATAS-CEPEX-2021-2024.md` e `../PARTE2-CEPEX-CURADORIA.md`.
+  **O defeito segue no extrator** para os outros órgãos e anos. A heurística que
+  falta continua sendo a mesma: descartar título cujo `numero+ano` já existe
+  capturado num boletim ANTERIOR — mas agora se sabe que ela precisa decidir
+  **qual** cópia fica, e que a mais antiga nem sempre é a certa.
 - Fase B: re-extração dos PDFs em caixa natural (habilitada pela PK estável).
 - Cutover para o domínio oficial da UFF — runbook pronto em
   [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) (o frontend já é portável, `/api`
