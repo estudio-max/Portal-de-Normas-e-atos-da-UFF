@@ -116,8 +116,8 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
     "Localizando referências numéricas e ano de publicação...",
     "Buscando números de processo do SEI (Sistema Eletrônico de Informações)...",
     "Mapeando relações cruzadas (Atos revogados e modificações)...",
-    "Gerando resumo didático em linguagem simples...",
-    "Gerando palavras-chave relevantes para busca..."
+    "Reaproveitando a ementa como resumo...",
+    "Derivando palavras-chave do tipo e do órgão..."
   ];
 
   // Helper to rotate loading tips
@@ -139,7 +139,7 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
   };
 
   // Run AI Parse
-  const handleAiParse = async () => {
+  const handleAnalisar = async () => {
     if (!rawText.trim()) {
       alert("Por favor, digite ou cole o texto do ato legislativo para analisar.");
       return;
@@ -151,9 +151,8 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
     setLoadingTipIndex(0);
 
     try {
-      // Análise local (mesma heurística da indexação automática do portal):
-      // não depende de chave de API e funciona totalmente offline.
-      await new Promise(res => setTimeout(res, 900));
+      // Análise local por expressões regulares — a mesma heurística da
+      // indexação automática do portal. Roda offline, sem serviço externo.
       const data = analisarTextoLocalmente(rawText);
       if (!data.numero && !data.ementa) {
         throw new Error("Não foi possível identificar um ato administrativo neste texto. Verifique se colou o cabeçalho da portaria/resolução.");
@@ -222,7 +221,7 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
       status: parsedResult.relacoes.some((r: any) => r.tipoRelacao === 'Revoga') ? 'Ativo' : 'Ativo', // Default to active, audit can flag.
       boletimNumero: "BS nº 12/2026",
       linkBoletim: "https://boletimdeservico.uff.br/boletins/bs-2026/",
-      notasInternas: "Indexado automaticamente via Inteligência Artificial Gemini.",
+      notasInternas: "Indexado a partir de texto colado, por análise local do portal.",
       dataCriacao: new Date().toISOString().split('T')[0]
     };
 
@@ -247,11 +246,11 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
               <Sparkles className="w-4 h-4" />
             </span>
             <h3 className="text-sm font-bold text-[#003366] uppercase tracking-wide">
-              Assistente IA de Indexação de Boletins UFF
+              Analisador de Ato do Boletim
             </h3>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-            Evite a digitação manual de relatórios e planilhas. Cole o texto copiado de qualquer PDF de Boletim de Serviço da UFF. O analisador identifica automaticamente — de forma local, sem chave de API — o tipo, órgão, ementa, número de processo SEI e as conexões de revogação ou alteração de normas.
+            Evite a digitação manual de relatórios e planilhas. Cole o texto copiado de qualquer PDF de Boletim de Serviço da UFF. O analisador identifica o tipo, órgão, ementa, número de processo SEI e as conexões de revogação ou alteração de normas.
           </p>
         </div>
       </div>
@@ -297,19 +296,19 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
           <button
             id="btn-analisar-ia"
             type="button"
-            onClick={handleAiParse}
+            onClick={handleAnalisar}
             disabled={loading || !rawText.trim()}
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-950 font-bold text-xs py-2 rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed uppercase"
           >
             {loading ? (
               <>
                 <RotateCw className="w-3.5 h-3.5 animate-spin text-blue-950" />
-                <span>Analisando Legislação...</span>
+                <span>Analisando...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-3.5 h-3.5 text-blue-950 stroke-[2.5px]" />
-                <span>Analisar Texto com IA</span>
+                <span>Analisar texto</span>
               </>
             )}
           </button>
@@ -334,9 +333,9 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
                 </div>
               </div>
               <div className="space-y-1 max-w-sm">
-                <h5 className="font-bold text-xs text-[#003366] uppercase tracking-wide">Extraindo Metadados Inteligentes</h5>
+                <h5 className="font-bold text-xs text-[#003366] uppercase tracking-wide">Lendo o texto</h5>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                  Aguarde um instante. Nossa IA está mapeando o documento para gerar o índice cadastral.
+                  Identificando tipo, órgão, número, ementa e referências a outras normas.
                 </p>
               </div>
 
@@ -367,7 +366,7 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
                   <h4 className="font-bold text-xs uppercase tracking-wide text-[#003366]">
-                    Revisar Dados Extraídos pela IA
+                    Revisar dados extraídos
                   </h4>
                 </div>
                 <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">
@@ -452,7 +451,11 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
 
               {/* Explicação simples */}
               <div>
-                <label className="block text-[9px] font-bold text-[#003366] uppercase mb-0.5">Impacto Didático (Explicação Simples)</label>
+                {/* Vem preenchido com a própria ementa — o analisador não redige
+                    resumo novo. O campo existe para você reescrever à mão em
+                    linguagem simples, se quiser. O rótulo não pode prometer uma
+                    explicação que a ferramenta não gera. */}
+                <label className="block text-[9px] font-bold text-[#003366] uppercase mb-0.5">Resumo (editável — vem igual à ementa)</label>
                 <textarea
                   rows={2}
                   value={parsedResult.conteudoResumido}
@@ -474,7 +477,7 @@ export default function ActParser({ onAddParsedAct, somentePreview }: ActParserP
 
               {/* Relations Editor block */}
               <div className="bg-slate-50 p-2.5 rounded-md border border-slate-200 text-xs space-y-1.5">
-                <span className="font-bold text-slate-700 block uppercase tracking-wide text-[9px]">Relações Identificadas pela IA ({parsedResult.relacoes?.length || 0})</span>
+                <span className="font-bold text-slate-700 block uppercase tracking-wide text-[9px]">Referências encontradas no texto ({parsedResult.relacoes?.length || 0})</span>
                 
                 {parsedResult.relacoes && parsedResult.relacoes.length > 0 ? (
                   <div className="space-y-1">
