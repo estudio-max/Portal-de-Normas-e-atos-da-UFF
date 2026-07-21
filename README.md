@@ -12,6 +12,8 @@ ar, qual arquivo é o vivo, como fazer deploy e quais são as pendências. Leia
 antes de mexer em qualquer coisa.
 
 - Arquitetura da base: [`docs/ARQUITETURA-BASE-DADOS.md`](docs/ARQUITETURA-BASE-DADOS.md)
+- Como explicar o portal a quem não é de TI (figuras e diagramas):
+  [`docs/PROMPTS-DOCUMENTACAO-VISUAL.md`](docs/PROMPTS-DOCUMENTACAO-VISUAL.md)
 - Histórico: `git log` e [`docs/`](docs/)
 
 ## Rodar local
