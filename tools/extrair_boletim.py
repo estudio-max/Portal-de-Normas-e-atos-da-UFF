@@ -106,9 +106,35 @@ _TIT_NUM_DATA = (
 #   PORTARIA N.º 54.919 de 11 de novembro de 2015
 #   DETERMINAÇÃO DE SERVIÇO DDRH, Nº. 068 de 20 de julho de 2010  (vírgula antes do Nº)
 #   DETERMINAÇÃO DE SERVIÇO — HUAP - nº 58, de 26 de setembro de 2000  (travessão)
+#   RESOLUÇÃO CEPEx/UFF Nº 224, DE 14 DE JULHO DE 2021  (sigla com minúscula)
+#
+# O grupo ÓRGÃO agora aceita minúscula (além de maiúscula/dígito/pontuação, como
+# sempre foi). É o que salva "CEPEx" — a grafia real que o CEPEx usou de ~2021 a
+# meados de 2025 antes de padronizar para "CEPEX". Achado real: com o charset
+# só-maiúsculas, o "x" minúsculo quebrava o TITULO_RE por completo e a resolução
+# inteira desaparecia (virava corpo do ato anterior) — medido em boletins reais:
+# ~140-280 ocorrências por amostra de 40 boletins em 2022-2024 (a esmagadora
+# maioria das resoluções do CEPEx desses 3 anos), o que também explica um
+# "buraco" que a aba Cooperação expôs (2021 zerado).
+#
+# CUIDADO — já houve uma versão anterior aqui com `(?:[MAIÚSC][MAIÚSCla-zà-ÿ]*|
+# [pontuação])*?` (alternância de grupos, tentando restringir a minúscula a
+# "cauda de token que começa maiúsculo"): CATASTRÓFICA. Duas formas de a mesma
+# sequência de maiúsculas ser particionada pelo grupo repetido = backtracking
+# exponencial. Travou de verdade (testado: >15s e nunca terminou) num texto
+# adversarial de ~750 chars sem o "Nº" no fim — que é exatamente a forma do
+# CORPO de qualquer ato, já que o TITULO_RE roda `.finditer()` no texto inteiro
+# do boletim, não só em cabeçalhos. Uma CLASSE DE CARACTERES ÚNICA (sem
+# alternância/aninhamento) não tem essa ambiguidade — cada posição do texto só
+# tem UMA forma de ser consumida — e o quantificador `{0,40}?` (limitado, não
+# `*`) elimina o resto do risco. Medido: 0ms contra 30.000 chars adversariais.
+# Isso é MENOS restritivo que a tentativa anterior (aceita minúscula solta, não
+# só cauda de token maiúsculo) — testado que ainda não vira falso positivo em
+# citação de prosa, porque a âncora real é o TIPO em maiúsculas plenas antes,
+# não o charset do órgão.
 TITULO_RE = re.compile(
     r"(?P<tipo>%s)\s+"
-    r"(?P<orgao>[A-ZÀ-Ú0-9/().\-–— ]{0,40}?)?,?\s*"
+    r"(?P<orgao>[A-ZÀ-Úa-zà-ÿ0-9/().\-–— ]{0,40}?)?,?\s*"
     % TIPOS_RE + _TIT_NUM_DATA
 )
 
