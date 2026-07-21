@@ -279,7 +279,10 @@ manda neles.**
   alternância de grupos — uma primeira tentativa com alternância causou
   ReDoS real, travava >15s). **Pendente:** o fix vale para reprocessamento
   futuro; os boletins de 2021-2024 já importados em produção continuam com a
-  lacuna até serem reextraídos e reimportados.
+  lacuna até serem reextraídos e reimportados. Runbook pronto, com os 4 JSONs
+  já gerados (`../backfill-2021-2024/`), em
+  [`docs/BACKFILL-2021-2024-CEPEX.md`](docs/BACKFILL-2021-2024-CEPEX.md) — falta
+  só o upload + disparo por ano (sem SSH, via `importar_v2.php?arquivo=`).
 - **Duplicata por citação (pré-existente, mais ampla que o item acima).** Uma
   citação bem formatada de uma resolução anterior ("conforme a RESOLUÇÃO
   CEPEX/UFF Nº 394, DE 15 DE SETEMBRO DE 2021.") dentro de um documento
