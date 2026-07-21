@@ -32,19 +32,24 @@ function Figura({ arquivo, alt, legenda, w, h }: {
 }) {
   return (
     <figure className="pt-1">
-      {/* `width`/`height` são o viewBox do SVG e NÃO são decorativos: o
-          navegador usa os dois para reservar a caixa na proporção certa antes
-          de baixar o arquivo. Sem eles a imagem não tem tamanho intrínseco,
-          a caixa colapsa para a altura da borda (2px), e aí `loading="lazy"`
-          nunca dispara — a imagem fica esperando entrar em viewport numa
-          caixa que nunca ocupa espaço. Aconteceu em produção; em dev passou
-          porque a rolagem durante o carregamento acabava disparando. */}
+      {/* `width`/`height` são o viewBox do SVG. Sem eles a imagem não tem
+          tamanho intrínseco e a caixa colapsa para a altura da borda (2px)
+          até o arquivo chegar — declarados, o navegador reserva o espaço na
+          proporção certa e a página não dá o pulo de layout.
+
+          SEM `loading="lazy"` de propósito. As cinco figuras somam 48 KB,
+          contra 508 KB de JavaScript que a página baixa de qualquer jeito:
+          adiar 10% disso não economiza nada de perceptível, e em troca
+          depende do observer de viewport disparar. Já falhou em produção uma
+          vez (as imagens ficaram esperando numa caixa de 2px que nunca
+          entrava em viewport) e, mesmo com a caixa corrigida, não consegui
+          confirmar o disparo em todo ambiente de render. Carregar direto
+          troca uma otimização irrelevante por um comportamento previsível. */}
       <img
         src={`figuras/${arquivo}`}
         alt={alt}
         width={w}
         height={h}
-        loading="lazy"
         className="w-full h-auto rounded-md border border-slate-200 bg-white"
       />
       <figcaption className="text-[11px] text-slate-500 pt-1.5 leading-relaxed">{legenda}</figcaption>
