@@ -258,4 +258,35 @@ CREATE TABLE `prazo` (
   CONSTRAINT `fk_prazo_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------------------------
+-- ato_processo — TODOS os números de processo citados por um ato.
+--
+-- `ato.processo_sei` guarda UM número, o primeiro que aparece no texto. Medido
+-- numa extração de 20.310 atos: 9.554 têm processo, mas o total de menções é
+-- 17.040 — a coluna única descartava 44% das referências, e 1.500 atos citam
+-- dois ou mais. Um ato que revoga outro cita o processo do revogado; uma
+-- designação de fiscal cita o processo do contrato. Sem esta tabela, pesquisar
+-- "quais atos falam deste processo" só encontrava aqueles em que ele calhou de
+-- ser o primeiro.
+--
+-- `numero` guarda o número COMO ESTÁ NO TEXTO (com ponto, barra e hífen) e
+-- `digitos` a versão só-dígitos, que é o que a busca usa: quem consulta digita
+-- ora "23069.154690/2019-45", ora "23069154690201945", ora só "154690".
+-- Comparar dígito a dígito evita depender da pontuação que o OCR às vezes come.
+--
+-- `ordem` preserva a posição no texto: ordem=1 é o mesmo número que está em
+-- `ato.processo_sei`, mantido lá por compatibilidade com quem já consome o campo.
+DROP TABLE IF EXISTS `ato_processo`;
+CREATE TABLE `ato_processo` (
+  `id`      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ato_id`  BIGINT UNSIGNED NOT NULL,
+  `numero`  VARCHAR(32) NOT NULL,
+  `digitos` VARCHAR(24) NOT NULL,
+  `ordem`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_ato_processo` (`ato_id`, `digitos`),
+  KEY `ix_digitos` (`digitos`),
+  CONSTRAINT `fk_atoproc_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

@@ -313,6 +313,9 @@ try {
     $insApos = $pdo->prepare("INSERT INTO ato_aposentadoria (ato_id,tipo,base_legal) VALUES (:id,:t,:b)");
     $delDesl = $pdo->prepare("DELETE FROM ato_deslocamento WHERE ato_id=:id");
     $insDesl = $pdo->prepare("INSERT INTO ato_deslocamento (ato_id,tipo,direcao,motivo,setor) VALUES (:id,:t,:d,:m,:s)");
+    $delProc = $pdo->prepare("DELETE FROM ato_processo WHERE ato_id=:id");
+    $insProc = $pdo->prepare("INSERT IGNORE INTO ato_processo (ato_id,numero,digitos,ordem)
+                               VALUES (:id,:num,:dig,:ord)");
     $delPrazo = $pdo->prepare("DELETE FROM prazo WHERE ato_id=:id");
     $insPrazo = $pdo->prepare("INSERT INTO prazo (ato_id,tipo,data_limite,conf,base,publico,trecho)
                                VALUES (:id,:tp,:dl,:cf,:bs,:pb,:tr)");
@@ -356,6 +359,25 @@ try {
             if ($pid) $pids[$pid] = true;
         }
         foreach (array_keys($pids) as $pid) $insPessoa->execute([':id' => $atoId, ':p' => $pid]);
+
+        // processos citados — TODOS, não só o primeiro. Vem de `processosSei`;
+        // se o JSON for de uma extração antiga que não tem o campo, cai no
+        // `processoSei` sozinho e o comportamento fica igual ao de antes.
+        $delProc->execute([':id' => $atoId]);
+        $procs = $a['processosSei'] ?? [];
+        if (!$procs && !empty($a['processoSei'])) $procs = [$a['processoSei']];
+        $ordem = 0;
+        $jaProc = [];
+        foreach ($procs as $pnum) {
+            $pnum = trim((string)$pnum);
+            $dig = preg_replace('/\D/', '', $pnum);
+            // NUP tem 17 dígitos (23069 + 6 + 4 + 2); menos que isso é recorte
+            // de OCR e viraria lixo indexado.
+            if (strlen($dig) < 17 || isset($jaProc[$dig])) continue;
+            $jaProc[$dig] = true;
+            $insProc->execute([':id' => $atoId, ':num' => mb_substr($pnum, 0, 32),
+                               ':dig' => mb_substr($dig, 0, 24), ':ord' => ++$ordem]);
+        }
 
         // tags
         $delTag->execute([':id' => $atoId]);

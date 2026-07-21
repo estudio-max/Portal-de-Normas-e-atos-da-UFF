@@ -112,7 +112,7 @@ export default function App() {
                   <Database className="w-4 h-4 text-yellow-500" /> Planilha de Pesquisa Normativa
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-                  Pesquise leis, resoluções e portarias por número, ementa, processo SEI, nome do servidor ou matrícula SIAPE.
+                  Pesquise leis, resoluções e portarias por número, ementa, processo, nome do servidor ou matrícula SIAPE.
                   {apiMode && ' Consulta direta no banco de dados (paginação no servidor).'}
                 </p>
               </div>

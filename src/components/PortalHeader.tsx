@@ -26,7 +26,7 @@ export default function PortalHeader({ acts, stats, apiMode, onResetData, active
   const withSei = stats?.comSei ?? acts.filter(a => a.processoSei).length;
 
   const TABS: { id: string; key: string; emoji?: string; icon?: React.ReactNode; label: string }[] = [
-    { id: 'tab-planilha', key: 'planilha', emoji: '📊', label: 'Planilha e Cadastro de Atos' },
+    { id: 'tab-planilha', key: 'planilha', emoji: '📊', label: 'Atos e Normas' },
     { id: 'tab-relacoes', key: 'relacoes', emoji: '🕸️', label: 'Mapa de Relações e Impacto' },
     { id: 'tab-chefias', key: 'chefias', emoji: '👥', label: 'Chefias da UFF' },
     { id: 'tab-dossie', key: 'dossie', emoji: '🗂️', label: 'Meu SIAPE' },

@@ -42,7 +42,7 @@ export default function HelpGuide() {
       {/* Início rápido */}
       <Secao icon={<Search className="w-4 h-4" />} titulo="Começando em 30 segundos">
         <ol className="list-decimal ml-5 space-y-1">
-          <li>Na aba <strong>📊 Planilha e Cadastro</strong>, digite na caixa de busca o que procura
+          <li>Na aba <strong>📊 Atos e Normas</strong>, digite na caixa de busca o que procura
             (número da portaria, assunto, processo SEI…).</li>
           <li>Use os <strong>filtros</strong> (tipo, órgão, ano, status) para estreitar.</li>
           <li>Clique no <strong>olho 👁</strong> de uma linha para abrir a <strong>Ficha do Ato</strong> com todos os detalhes.</li>

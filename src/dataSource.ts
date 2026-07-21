@@ -8,6 +8,10 @@ import { UffAct } from './types';
 export interface ListaParams {
   busca?: string; tipo?: string; orgao?: string; ano?: string; status?: string;
   nome?: string; siape?: string; com_relacoes?: boolean; com_sei?: boolean;
+  // Número de processo. Casa por dígitos, então aceita com ou sem
+  // pontuação e aceita pedaço ("154690"). Traz todo ato que CITA o
+  // número, não só aquele em que ele é o processo principal.
+  processo?: string;
   ordenar?: string; dir?: 'asc' | 'desc'; pagina?: number; por_pagina?: number;
 }
 export interface AtoLista {
@@ -131,6 +135,15 @@ function filtraEstatico(p: ListaParams): UffAct[] {
     if (siape) {
       const ok = (a.siapes || []).some(s => s.includes(siape)) || (a.textoBusca || '').includes(siape);
       if (!ok) return false;
+    }
+    // Processo: casa por DÍGITOS, igual ao modo banco. No estático não há a
+    // tabela ato_processo, então varre o corpo — que é onde os outros
+    // processos citados estão. Tirar a pontuação dos dois lados é o que faz
+    // "23069.154690/2019-45" achar o mesmo ato que "23069154690201945".
+    const proc = (p.processo || '').replace(/\D/g, '');
+    if (proc) {
+      const alvo = `${a.processoSei || ''} ${a.textoBusca || ''}`.replace(/\D/g, '');
+      if (!alvo.includes(proc)) return false;
     }
     if (p.com_sei && !a.processoSei) return false;
     if (p.com_relacoes && !((a.relacoes && a.relacoes.length) || (a.referenciadoPor && a.referenciadoPor.length))) return false;

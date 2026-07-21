@@ -415,7 +415,7 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
             <input
               id="input-busca-geral"
               type="text"
-              placeholder="Buscar por número, ementa, processo SEI, tags, conteúdo..."
+              placeholder="Buscar por número, ementa, processo, tags, conteúdo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-400 focus:border-yellow-400 focus:bg-white transition-all text-slate-800"
@@ -710,7 +710,7 @@ Portaria,68.991,2026,2026-06-25,PROGRAD,"Aprova novas normas de matrícula extra
                 </th>
                 <th className="py-2 px-2.5 w-44 cursor-pointer hover:bg-slate-100 transition-all" onClick={() => handleSort('processoSei')}>
                   <div className="flex items-center gap-1">
-                    <span>Processo SEI</span>
+                    <span>Processo</span>
                     {sortField === 'processoSei' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>

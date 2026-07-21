@@ -170,6 +170,21 @@ function listar(PDO $pdo): void {
         $where[] = "EXISTS (SELECT 1 FROM ato_pessoa ap JOIN pessoa ps ON ps.id=ap.pessoa_id WHERE ap.ato_id=a.id AND ps.siape LIKE :siape)";
         $p[':siape'] = '%' . $siape . '%';
     }
+    // Busca por PROCESSO: acha todo ato que CITA o número, não só aquele em que
+    // ele calhou de ser o primeiro do texto. Casa por dígitos, então funciona
+    // com "23069.154690/2019-45", "23069154690201945" ou o pedaço "154690" —
+    // a pontuação do processo varia no boletim e o OCR às vezes a come.
+    //
+    // Não use FULLTEXT aqui: o índice quebra o número nos tokens "23069" e
+    // "154690", e "23069" é prefixo de TODO processo da UFF, então metade da
+    // busca casa com o acervo inteiro. Medido antes de escolher este caminho:
+    // pelo FULLTEXT, 4 dos 7 resultados eram falso positivo.
+    $proc = preg_replace('/\D/', '', $_GET['processo'] ?? '');
+    if ($proc !== '') {
+        $where[] = "EXISTS (SELECT 1 FROM ato_processo ap
+                             WHERE ap.ato_id = a.id AND ap.digitos LIKE :proclike)";
+        $p[':proclike'] = '%' . $proc . '%';
+    }
     if (!empty($_GET['com_sei']))  { $where[] = "a.processo_sei IS NOT NULL AND a.processo_sei <> ''"; }
     if (!empty($_GET['com_relacoes'])) {
         $where[] = "(EXISTS(SELECT 1 FROM relacao r WHERE r.ato_id=a.id) "
@@ -316,10 +331,17 @@ function health(PDO $pdo): void {
            FROM ato")->fetch();
     $ext = $pdo->query(
         "SELECT MAX(executada_em) AS ultima FROM extracao")->fetch();
+    // Versão do banco: decide o que é possível num script de manutenção
+    // (REGEXP_SUBSTR, CTE recursiva e funções de janela só existem no MySQL 8).
+    // Sem SSH e sem console, este é o único lugar de onde se descobre isso.
+    $mysql = '';
+    try { $mysql = (string)$pdo->query('SELECT VERSION()')->fetchColumn(); } catch (Throwable $e) {}
+
     responder_json([
         'ok'          => true,
         'api_versao'  => api_versao(),
         'php'         => PHP_VERSION,
+        'mysql'       => $mysql,
         'atos'        => (int)$ato['n'],
         'ultimo_ato'  => $ato['ultimo_ato'],
         'banco_atualizado_em' => $ato['atualizado'],

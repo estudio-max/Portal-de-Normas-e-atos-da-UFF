@@ -209,6 +209,13 @@ def converter(dados, urls=None):
             "ementa": ementa_disp,
             "ementaInferida": ementa_inferida,
             "processoSei": a.get("processo_sei_principal") or None,
+            # TODOS os processos citados, não só o primeiro. O extrator sempre
+            # coletou a lista em `processos_sei`; era aqui que ela morria, e com
+            # ela 44% das referências (medido: 17.040 menções contra 9.554 atos
+            # com processo). Um ato de revogação cita o processo do ato revogado,
+            # uma designação de fiscal cita o do contrato — perder isso é perder
+            # justamente a ligação entre atos que o usuário procura.
+            "processosSei": a.get("processos_sei") or [],
             "seiDocumento": a.get("sei_documento") or None,
             "linkSeiProcesso": a.get("link_sei_processo") or None,
             "linkSeiDocumento": a.get("link_sei_documento") or None,
