@@ -136,6 +136,14 @@ resumo operacional.
 
 - **CEP ≠ CEPEx.** CEP é o Comitê de Ética em Pesquisa (3 instâncias), órgão
   totalmente diferente do CEPEx. Nunca mesclar.
+- **Sigla de órgão NÃO é caixa alta.** "CEPEx" — a grafia real da UFF de ~2021 a
+  meados de 2025 — tem um "x" minúsculo. Enquanto o `TITULO_RE` exigiu
+  MAIÚSCULAS no nome do órgão, o título inteiro deixava de casar e a resolução
+  virava corpo do ato anterior: **4.234 atos sumidos só em 2021-2024** (CEPEx
+  2023 tinha 1 ato na base contra 1.488 depois do conserto). Corrigido em
+  `42c504d` + backfill de 21/07/2026. Ao mexer nesse grupo do regex, use uma
+  classe de caracteres única — a tentativa com alternância de grupos causou
+  ReDoS real (>15s por boletim).
 - **A identidade do boletim é o ARQUIVO, não o número impresso.** O arquivo
   `57-26.pdf` traz "BS nº 113"; chavear pelo número duplica atos.
 - **A identidade do ato é a `sigla_orig`** (a do cabeçalho). O órgão derivado do
@@ -269,20 +277,20 @@ manda neles.**
   dígitos (OCR "20007" vira 2000 porque `TITULO_RE` casa `\d{4}` e larga o 5º
   dígito — mexer aqui é mexer no regex mais sensível do extrator, exige medição
   própria); (e) revisar o parse de ano no boletim 2001.
-- **Buraco do CEPEx 2021-2024 (extrator corrigido; produção ainda com a lacuna).**
-  Investigando por que a aba Cooperação mostrava 2021 zerado, achei a causa:
-  o `TITULO_RE` só aceitava MAIÚSCULAS no nome do órgão, e "CEPEx" — a grafia
-  real usada pela UFF de ~2021 a meados de 2025 — tem um "x" minúsculo que
-  quebrava o regex por completo; a resolução inteira virava corpo do ato
-  anterior. Medido: **+4.238 atos genuínos recuperados** só em 2021-2024 (ver
-  commit `42c504d`). O fix trocou o charset por uma classe única (não
-  alternância de grupos — uma primeira tentativa com alternância causou
-  ReDoS real, travava >15s). **Pendente:** o fix vale para reprocessamento
-  futuro; os boletins de 2021-2024 já importados em produção continuam com a
-  lacuna até serem reextraídos e reimportados. Runbook pronto, com os 4 JSONs
-  já gerados (`../backfill-2021-2024/`), em
-  [`docs/BACKFILL-2021-2024-CEPEX.md`](docs/BACKFILL-2021-2024-CEPEX.md) — falta
-  só o upload + disparo por ano (sem SSH, via `importar_v2.php?arquivo=`).
+- **Nomes de instituição com fragmento de boilerplate na aba Cooperação.** 19
+  dos 1.467 acordos trazem no campo Instituição uma sobra de frase em vez do
+  nome ("ser desenvolvido no Instituto de Ciências Humanas…", "através do Núcleo
+  de Estudos…", "apoio à operacionalização…"). São ementas em que `coop_instituicao()`
+  ancora no `entre` errado. O caso mais numeroso — "que **entre** si celebram a X"
+  (15 ocorrências) — já foi corrigido; sobra a cauda difusa, que precisa de
+  medição própria antes de mexer no âncora. Sintoma de triagem: nome de
+  instituição **começando em minúscula** é quase sempre fragmento.
+- **19 acordos com mojibake real** (dupla codificação: `Ã`+símbolo no lugar do
+  acento), espalhados por 2004, 2016, 2018, 2020 e 2022-2026. Pré-existente, não
+  veio do backfill. Nunca diagnostique isto por `curl | python` no Windows: o
+  `sys.stdin.encoding` é `cp1252` e mastiga TODO acento na leitura, fabricando
+  um falso positivo de 100% do corpus. Leia o JSON de arquivo com
+  `io.open(..., encoding='utf-8')`.
 - **Duplicata por citação (pré-existente, mais ampla que o item acima).** Uma
   citação bem formatada de uma resolução anterior ("conforme a RESOLUÇÃO
   CEPEX/UFF Nº 394, DE 15 DE SETEMBRO DE 2021.") dentro de um documento

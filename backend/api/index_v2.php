@@ -305,7 +305,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-20.2'; }
+function api_versao(): string { return '2026-07-21.1'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1614,6 +1614,12 @@ function coop_instituicao(string $ementa): string {
     $txt = preg_replace('/^' . $uff . '\s*[,;]?\s*(?:e\s+)?/iu', '', $txt, 1);   // UFF na frente
     $txt = preg_replace('/\s*[,;]?\s*e\s+' . $uff . '\s*$/iu', '', $txt, 1);     // UFF no fim
 
+    // "Acordo que ENTRE si celebram a X e a UFF": o âncora `entre` lá em cima
+    // cai DENTRO da locução "entre si celebram", e a sobra vem colada ao nome
+    // ("si celebram a Universidade de Coimbra"). 15 casos, todos de 2021-2022 —
+    // invisíveis até o backfill do CEPEx trazer esses atos para a base.
+    $txt = preg_replace('/^si\s+(?:celebra|firma|assina)[mn]?\s+/iu', '', $txt, 1);
+
     // Se ainda restou uma lista com artigo, fica com o último parceiro real.
     $partes = preg_split('/\s+e\s+(?:a|o|as|os|à|ao)\s+|,\s+(?:a|o|as|os)\s+/iu', $txt);
     foreach (array_reverse($partes) as $parte) {
@@ -1633,6 +1639,15 @@ function coop_instituicao(string $ementa): string {
         if (preg_match('/^(.*)[–—-]\s*([^–—-]{3,30})\s*$/u', $p, $mm)
             && coop_normaliza_pais($mm[2]) !== '') {
             $p = $mm[1];
+        }
+        // Mesma coisa com o país entre PARÊNTESES ("Universidad de la Habana
+        // (Cuba)"). A limpeza no topo só corta parêntese no FIM da ementa, e
+        // aqui ele está no meio ("… (Cuba) e a UFF – UFF."). O país já sai à
+        // parte em coop_pais_do_texto(); aqui só sujaria o nome. Corta só se
+        // for país mesmo — "(FME)" e "(UERJ)" são sigla útil e têm que ficar.
+        if (preg_match('/^(.*?)\s*\(([^()]*)\)\s*$/u', $p, $mp)
+            && coop_normaliza_pais($mp[2]) !== '') {
+            $p = $mp[1];
         }
         $p = trim($p, " \t.,;:–—-");
         if (mb_strlen($p) >= 3) return mb_substr($p, 0, 120);

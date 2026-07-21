@@ -1,5 +1,12 @@
 # Backfill 2021-2024 — recuperação das resoluções CEPEx
 
+> **EXECUTADO em 21/07/2026.** Os quatro anos rodaram sem erro. `novos` por ano:
+> 2021 = 651, 2022 = 818, 2023 = 1.509, 2024 = 1.256 — **4.234 atos recuperados**
+> (a medição local previa 4.238; diferença de 0,09%). Banco: 128.968 → 133.202
+> atos. CEPEx por ano, antes → depois: 2021 10 → 631, 2022 4 → 813,
+> 2023 1 → 1.488, 2024 5 → 1.235. Smoke test passou nas 9 verificações.
+> O documento fica como registro do método — não precisa ser rodado de novo.
+
 Fecha na produção o que o commit `42c504d` corrigiu só no extrator: até então,
 `TITULO_RE` só reconhecia órgão em CAIXA ALTA — "CEPEx" (x minúsculo, a grafia
 real usada pela UFF de ~2021 a meados de 2025) quebrava o título inteiro, e a
