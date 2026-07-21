@@ -470,9 +470,17 @@ def corrige_ano_futuro(data_ato, ano_ato, bs_data):
 # condição viraria letra morta — a guarda degeneraria em "só o gap" e passaria a
 # derrubar ato legítimo de ementa normal (medido: derrubava "DESIGNAR os
 # docentes…" e "As bolsas são distribuídas…", que começam em maiúscula).
+#
+# A classe de PONTUAÇÃO órfã veio depois, do backfill de 2021-2024: 3 fantasmas
+# escaparam por abrirem com ")", "●" e "§" — recorte no meio de uma lista ou de
+# um parágrafo, forma de fragmento tão clara quanto a minúscula, mas que a
+# classe original não via. Medido nos 27.536 atos de 2021-2024: derruba 13, todos
+# fragmento inequívoco. Regressão em 2001 (o controle, onde caractere-lixo de OCR
+# no início de ementa seria esperado): +0, nada a mais cai.
 _FRAGMENTO_INI_RE = re.compile(
     r"^\s*$"                                             # ementa vazia
     r"|^\s*[a-zà-öø-ÿ]"                                  # começa em minúscula
+    r"|^\s*[)\]•●▪§]"                                    # pontuação/marcador órfão
     r"|^\s*(?:[Qq]ue|[Cc]onsiderando|[Rr]esolve|[Aa]\s+saber|[Aa]rt)\b")
 
 
