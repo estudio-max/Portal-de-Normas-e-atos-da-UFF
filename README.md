@@ -5,6 +5,25 @@ MySQL e serve um portal de busca e análise.
 
 No ar em **https://inteligencia.fanara.com.br/**
 
+## Como o sistema é feito
+
+Três linguagens, cada uma numa etapa diferente do caminho que leva um PDF até
+uma busca. A barra de linguagens do GitHub mostra as proporções, mas não diz o
+que cada uma faz — é isto:
+
+| Etapa | Tecnologia | Onde no repositório |
+|---|---|---|
+| Baixar e ler os PDFs do Boletim | **Python** (PyMuPDF; Tesseract no OCR de 2001) | [`tools/`](tools/) |
+| Guardar os atos | **MySQL** 8, InnoDB, utf8mb4, schema normalizado | [`backend/db/`](backend/db/) |
+| Servir as consultas | **PHP** 8.3, arquivo único, sem framework | [`backend/api/`](backend/api/) |
+| Interface | **React + TypeScript**, build com Vite | [`src/`](src/) |
+| Rodar tudo todo dia | **GitHub Actions** | [`.github/workflows/`](.github/workflows/) |
+
+O peso das linguagens engana: o TypeScript é a maior fatia em linhas, mas a
+parte difícil do projeto está no Python. Extrair atos de um PDF sem estrutura,
+num formato que mudou várias vezes em 25 anos, é o problema central — veja
+[`docs/REGEX.md`](docs/REGEX.md).
+
 ## Comece por aqui
 
 **[`CLAUDE.md`](CLAUDE.md) descreve o estado atual do projeto** — o que está no
