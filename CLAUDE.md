@@ -3,9 +3,10 @@
 Indexador do Boletim de Serviço da UFF: baixa os PDFs, extrai os atos, carrega
 num MySQL e serve um portal de busca e análise.
 
-**Este arquivo descreve só o presente.** Nada de histórico entra aqui — a história
-está no `git log` e em `docs/CHANGELOG-*.md`. Se algo aqui deixou de ser verdade,
-corrija a linha, não acrescente uma nota dizendo que mudou.
+**Este arquivo descreve só o presente.** Nada de histórico entra aqui — a
+história está no `git log`, que é onde ela deve ser procurada. Se algo aqui
+deixou de ser verdade, corrija a linha, não acrescente uma nota dizendo que
+mudou.
 
 ## O que está no ar
 
@@ -100,6 +101,19 @@ health/versão da API, rotas principais, o roteamento `/api/atos/{id}` e que o
 
 `backend/api/config.php` mora só no servidor (está no `.gitignore` e contém as
 credenciais do banco). Não versione, não imprima o conteúdo.
+
+**Reimportar um lote grande sem SSH.** O cron diário só processa boletins novos;
+para reprocessar anos inteiros (ex.: depois de consertar o extrator), o caminho é
+o modo navegador do importador. Suba o JSON gerado por `gerar_dados_portal.py`
+para a pasta `importar/` do servidor e visite
+`importar/importar_v2.php?token=<import_token>&arquivo=<nome>.json`. O
+`basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
+É seguro repetir: o upsert casa por chave natural
+`(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
+chama o `resolver_relacoes_v2.php` sozinho. Confira que
+`extrair_prazos.php` e `extrair_prazos_pad_sinve.php` estão na mesma pasta: o
+importador faz `require_once` dos dois, e a falta deles dá HTTP 500 de corpo
+vazio. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
 
 A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 `config.php` era da época em que ela tinha senha; ficou sem uso).

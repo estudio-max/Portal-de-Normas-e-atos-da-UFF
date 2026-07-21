@@ -1073,6 +1073,13 @@ def _limpa_nome(run):
     return _titlecase_nome(" ".join(p)) if len(p) >= 2 else ""
 
 
+# Fronteira entre o preâmbulo do ato e o dispositivo. Ao procurar o nome de uma
+# pessoa ANTES de uma matrícula, a janela de busca não pode atravessar o
+# "RESOLVE:" para trás — do outro lado ficam a autoridade que assina e os nomes
+# citados nos "considerandos", que não são a pessoa do registro. Cortando ali, a
+# janela pôde crescer de 170 para 230 caracteres sem passar a errar.
+# Os `\s*` entre as letras são para o espaçamento tipográfico do boletim, que
+# publica "R E S O L V E" espaçado com frequência.
 _RESOLVE_CORTE = re.compile(r"(?i)\bR\s*E\s*S\s*O\s*L\s*V\s*E")
 
 
