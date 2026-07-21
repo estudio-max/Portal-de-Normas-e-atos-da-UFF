@@ -22,16 +22,20 @@ const URG: Record<Urg, { rotulo: string; card: string; ponto: string; texto: str
   adiante:   { rotulo: 'Mais adiante',     card: 'border-l-slate-400',  ponto: '#8a93a3', texto: 'text-slate-600' },
   vencido:   { rotulo: 'Vencidos',         card: 'border-l-slate-300',  ponto: '#b6bcc7', texto: 'text-slate-500' },
 };
-// prazos disciplinares (PAD/Sindicância Investigativa): categoria de ALTA
+// prazos disciplinares (PAD e sindicâncias): categoria de ALTA
 // confiança, extração estruturada por lei — distinta dos prazos heurísticos.
 const ehPadSinve = (p: ds.Prazo) => p.base === 'PAD_SINVE';
-// rótulo legível do tipo (o banco guarda códigos: PAD, PAD_SUMARIO, SINVE)
+// rótulo legível do tipo (o banco guarda códigos: PAD, PAD_SUMARIO, SINVE,
+// SINDACUS). Acusatória e investigativa aparecem separadas de propósito: a
+// investigativa é inquisitorial e não pune; a acusatória tem contraditório e
+// pode aplicar penalidade. Quem consulta prazo disciplinar precisa saber qual é.
 const rotuloTipo = (t: string) =>
   t === 'PAD_SUMARIO' ? 'PAD Sumário'
   : t === 'SINVE' ? 'Sindicância Investigativa'
+  : t === 'SINDACUS' ? 'Sindicância Acusatória'
   : t;
 const corTipo = (t: string) =>
-  /^(PAD|SINVE)/.test(t) ? 'bg-rose-50 text-rose-700 border-rose-200'
+  /^(PAD|SINVE|SINDACUS)/.test(t) ? 'bg-rose-50 text-rose-700 border-rose-200'
   : /inscri/.test(t) ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
   : /recurso/.test(t) ? 'bg-purple-50 text-purple-700 border-purple-200'
   : /entrega/.test(t) ? 'bg-teal-50 text-teal-700 border-teal-200'
@@ -155,7 +159,7 @@ export default function PrazosApi() {
               <CalendarClock className="w-4 h-4 text-yellow-500" /> Prazos e datas-limite
             </h3>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-              Radar de prazos de <strong>comissões disciplinares (PAD e Sindicância Investigativa)</strong> e de
+              Radar de prazos de <strong>comissões disciplinares (PAD e sindicâncias, investigativa e acusatória)</strong> e de
               <strong> inscrições, recursos, entregas, contratos e validades</strong> detectados no texto dos atos —
               cada prazo mostra <strong>para quem serve</strong>, o assunto e o trecho que o gerou. É um <strong>apoio</strong>: <strong>sempre confira o ato de origem</strong>.
             </p>

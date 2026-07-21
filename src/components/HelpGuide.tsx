@@ -137,7 +137,7 @@ export default function HelpGuide() {
           <span>
             <strong>Prazos de comissão disciplinar (categoria de alta confiança).</strong> Os prazos de
             <strong> Processo Administrativo Disciplinar (PAD)</strong>, <strong>PAD Sumário</strong> e
-            <strong> Sindicância Investigativa</strong> ganham um selo{' '}
+            <strong> Sindicância Investigativa</strong> e <strong>Sindicância Acusatória</strong> ganham um selo{' '}
             <Badge cor="bg-rose-600 text-white border-rose-700">Prazo legal</Badge> e uma categoria própria.
             São mais confiáveis que os demais porque o <strong>número de dias é lido literalmente do próprio ato</strong>{' '}
             (ex.: “prazo de 30 (trinta) dias”), incluindo as <strong>prorrogações e reconduções</strong> de comissão.

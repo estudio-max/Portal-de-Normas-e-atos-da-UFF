@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Extração de prazos PAD/SINVE (Processo Administrativo Disciplinar &
-Sindicância Investigativa) com alta confiança. Diferente dos prazos
+sindicâncias investigativa e acusatória) com alta confiança. Diferente dos prazos
 genéricos, estes são sempre literais (30, 60, 45, 15 dias) e rastreáveis
 a uma cadeia de instauração → prorrogações → sobrestamentos.
 
@@ -25,6 +25,9 @@ def norm(s):
 PAD_SUM_RE = re.compile(r"processo administrativo disciplinar\s+sum[aá]rio", re.I)
 PAD_RE = re.compile(r"processo administrativo disciplinar", re.I)
 SINVE_RE = re.compile(r"sindic[âa]ncia investigat[óo]ria|sindic[âa]ncia investigativa", re.I)
+# Acusatoria e punitiva sao o mesmo instrumento na doutrina: tem contraditorio
+# e podem punir, ao contrario da investigativa, que e inquisitorial e nao pune.
+SINDACUS_RE = re.compile(r"sindic[âa]ncia (?:acusat[óo]ria|punitiva)", re.I)
 
 # Classificação por papel no fluxo
 INSTAURA_RE = re.compile(r"\binstaura(r|ção|da|do|m)?\b", re.I)
@@ -52,14 +55,22 @@ CITA_ORIGINARIO_RE = re.compile(
 )
 
 def classifica_tipo(txt):
-    """Retorna 'SINVE', 'PAD_SUMARIO', 'PAD', ou None.
+    """Retorna 'SINDACUS', 'SINVE', 'PAD_SUMARIO', 'PAD', ou None.
 
-    SINVE é checado PRIMEIRO: 'sindicância investigativa' é o termo mais
-    específico e distintivo. Uma SINVE costuma citar 'processo administrativo
-    disciplinar' como possível desdobramento — se checássemos PAD antes, esses
-    atos seriam rotulados PAD por engano.
+    As SINDICÂNCIAS são checadas antes do PAD: são o termo mais específico, e
+    uma sindicância costuma citar 'processo administrativo disciplinar' como
+    possível desdobramento — checar PAD antes rotularia esses atos como PAD.
+
+    Entre acusatória e investigativa, vence a que aparece PRIMEIRO no texto.
+    Um mesmo ato pode citar as duas ('converter a investigativa em
+    acusatória'), e o texto começa pela ementa, que é onde o ato declara o que
+    ele próprio faz.
     """
-    if SINVE_RE.search(txt):
+    ma = SINDACUS_RE.search(txt)
+    mi = SINVE_RE.search(txt)
+    if ma and (not mi or ma.start() < mi.start()):
+        return "SINDACUS"
+    if mi:
         return "SINVE"
     if PAD_SUM_RE.search(txt):
         return "PAD_SUMARIO"
@@ -125,6 +136,7 @@ def processa_atos(atos_json_list):
             "PAD": "Comissão de PAD",
             "PAD_SUMARIO": "Comissão de PAD Sumário",
             "SINVE": "Comissão de Sindicância",
+            "SINDACUS": "Comissão de Sindicância",
         }.get(tipo, "Comissão")
         papel_label = {
             "INSTAURACAO": "instauração",
@@ -135,6 +147,7 @@ def processa_atos(atos_json_list):
             "PAD": "PAD",
             "PAD_SUMARIO": "PAD Sumário",
             "SINVE": "Sindicância Investigativa",
+            "SINDACUS": "Sindicância Acusatória",
         }.get(tipo, tipo)
 
         p = {

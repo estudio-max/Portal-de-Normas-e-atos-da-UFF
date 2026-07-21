@@ -4,7 +4,7 @@
 //  extrair_prazos_pad_sinve.py. Rodado durante importação de cada ato.
 //
 //  Classificação:
-//    - Tipo: PAD, PAD_SUMARIO, SINVE
+//    - Tipo: PAD, PAD_SUMARIO, SINVE, SINDACUS
 //    - Papel: INSTAURACAO, EXTENSAO, SOBRESTAMENTO
 //    - Base legal: dias literais extraídos do texto
 //
@@ -18,11 +18,28 @@
 function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_ato): array {
     $blob = mb_strtolower($ementa . " " . $texto, 'UTF-8');
 
-    // Classificação por tipo. SINVE é checado PRIMEIRO: é o termo mais
-    // específico; uma SINVE costuma citar "processo administrativo disciplinar"
-    // como possível desdobramento e seria rotulada PAD por engano se PAD viesse
-    // antes. (Espelha classifica_tipo em extrair_prazos_pad_sinve.py.)
-    if (preg_match('/sindic[âa]ncia\s+investigat[óo]ria|sindic[âa]ncia\s+investigativa/u', $blob)) {
+    // Classificação por tipo. As SINDICÂNCIAS vêm antes do PAD: são o termo
+    // mais específico, e uma sindicância costuma citar "processo administrativo
+    // disciplinar" como possível desdobramento — checar PAD antes rotularia
+    // esses atos como PAD por engano.
+    // (Espelha classifica_tipo em extrair_prazos_pad_sinve.py.)
+    //
+    // Sindicância ACUSATÓRIA (também chamada punitiva) e INVESTIGATIVA são
+    // instrumentos diferentes: a investigativa é inquisitorial e não pune; a
+    // acusatória tem contraditório e pode aplicar penalidade. Misturar as duas
+    // numa categoria só apaga a distinção que interessa a quem consulta.
+    //
+    // Um mesmo ato pode citar as duas ("converter a investigativa em
+    // acusatória"), então vence a que aparece PRIMEIRO — e o blob começa pela
+    // ementa, que é onde o ato declara o que ele próprio faz.
+    $posAcus = preg_match('/sindic[âa]ncia\s+(?:acusat[óo]ria|punitiva)/u', $blob, $mA, PREG_OFFSET_CAPTURE)
+             ? $mA[0][1] : PHP_INT_MAX;
+    $posInv  = preg_match('/sindic[âa]ncia\s+investigat[óo]ria|sindic[âa]ncia\s+investigativa/u', $blob, $mI, PREG_OFFSET_CAPTURE)
+             ? $mI[0][1] : PHP_INT_MAX;
+
+    if ($posAcus < $posInv) {
+        $tipo = 'SINDACUS';
+    } elseif ($posInv !== PHP_INT_MAX) {
         $tipo = 'SINVE';
     } elseif (preg_match('/processo\s+administrativo\s+disciplinar\s+sum[aá]rio/u', $blob)) {
         $tipo = 'PAD_SUMARIO';
@@ -75,6 +92,7 @@ function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_a
         'PAD'         => 'Comissão de PAD',
         'PAD_SUMARIO' => 'Comissão de PAD Sumário',
         'SINVE'       => 'Comissão de Sindicância',
+        'SINDACUS'    => 'Comissão de Sindicância',
     ];
     $publico = $publico_map[$tipo] ?? 'Comissão';
 
@@ -87,11 +105,12 @@ function extrair_prazos_pad_sinve(string $ementa, string $texto, ?string $data_a
         'PAD'         => 'PAD',
         'PAD_SUMARIO' => 'PAD Sumário',
         'SINVE'       => 'Sindicância Investigativa',
+        'SINDACUS'    => 'Sindicância Acusatória',
     ][$tipo] ?? $tipo;
 
     // Resultado: um "prazo" de alta confiança
     return [[
-        'tipo' => $tipo,           // PAD, PAD_SUMARIO, SINVE (código; o front rotula)
+        'tipo' => $tipo,           // PAD, PAD_SUMARIO, SINVE, SINDACUS (código; o front rotula)
         'papel' => $papel,         // INSTAURACAO, EXTENSAO, SOBRESTAMENTO
         'dias' => $dias,
         'dataLimite' => $data_limite,
