@@ -305,7 +305,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-21.1'; }
+function api_versao(): string { return '2026-07-21.2'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1504,6 +1504,13 @@ function coop_inst_pais_curada(): array {
         'europa universitat viadrina' => 'Alemanha', 'zu brausnchweig' => 'Alemanha',
         'zu braunschweig' => 'Alemanha', 'speyer' => 'Alemanha',
         'center for natural resources and development' => 'Alemanha', 'furhlander' => 'Alemanha',
+        // "Università degli Studi di X" é a fórmula das universidades ESTATAIS
+        // italianas — o marcador vale por si, não precisa de uma linha por
+        // cidade (as específicas abaixo são anteriores a esta regra e ficam por
+        // não custarem nada). É o único idioma do corpus que identifica país
+        // sozinho: "Universidad"/"Universität"/"Universiteit" são ambíguos
+        // entre vários países e continuam exigindo entrada curada.
+        'universita degli studi' => 'Itália',
         'universita degli studi di torino' => 'Itália', 'universita degli studi di teramo' => 'Itália',
         'universita degli studi di federico ii' => 'Itália', 'universita di bologna' => 'Itália',
         'universita di brescia' => 'Itália', 'sapienza' => 'Itália',
