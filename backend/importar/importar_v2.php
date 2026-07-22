@@ -382,11 +382,11 @@ try {
                                ':dig' => mb_substr($dig, 0, 24), ':ord' => ++$ordem]);
         }
 
-        // colegiados permanentes citados (aba Comissões) — mesma frase estrita
-        // do backfill. O casamento vê ementa + corpo, então pega os atos "sem
-        // ementa formal" em que o nome só aparece no dispositivo.
+        // colegiados permanentes citados (aba Comissões) — só a ementa, com a
+        // guarda de colegiado (ver comissoes_match.php). Mesmo casamento do
+        // backfill_ato_comissao.php.
         $delCom->execute([':id' => $atoId]);
-        foreach (comissoes_do_texto((string)($a['ementa'] ?? ''), $texto) as $slug) {
+        foreach (comissoes_do_texto((string)($a['ementa'] ?? '')) as $slug) {
             $insCom->execute([':id' => $atoId, ':c' => $slug]);
         }
 

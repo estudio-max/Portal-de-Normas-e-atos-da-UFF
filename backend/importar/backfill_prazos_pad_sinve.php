@@ -61,7 +61,7 @@ try {
     log_("Linhas base='PAD_SINVE' removidas (recomeço limpo): $removidos");
 
     $inseridos = 0;
-    $por_tipo = ['PAD' => 0, 'PAD_SUMARIO' => 0, 'SINVE' => 0];
+    $por_tipo = ['PAD' => 0, 'PAD_SUMARIO' => 0, 'SINVE' => 0, 'SINDACUS' => 0];
     foreach ($candidatos as $a) {
         $ementaP = (string)($a['ementa'] ?? '');
         $textoP  = (string)($a['texto_original'] ?? '');
@@ -79,7 +79,7 @@ try {
     }
     $pdo->commit();
     log_("OK. Prazos PAD/SINVE inseridos: $inseridos");
-    log_("  PAD=$por_tipo[PAD] | PAD_SUMARIO=$por_tipo[PAD_SUMARIO] | SINVE=$por_tipo[SINVE]");
+    log_("  PAD=$por_tipo[PAD] | PAD_SUMARIO=$por_tipo[PAD_SUMARIO] | SINVE=$por_tipo[SINVE] | SINDACUS=$por_tipo[SINDACUS]");
     $tot = (int)$pdo->query("SELECT COUNT(*) FROM prazo")->fetchColumn();
     $ps  = (int)$pdo->query("SELECT COUNT(*) FROM prazo WHERE base='PAD_SINVE'")->fetchColumn();
     log_("Tabela prazo agora: $tot total | $ps com base='PAD_SINVE'.");

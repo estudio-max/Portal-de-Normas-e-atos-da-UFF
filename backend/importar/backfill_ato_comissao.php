@@ -43,21 +43,22 @@ $pdo = conectar($cfg);
 $n = $pdo->exec("DELETE FROM ato_comissao");
 log_("Recomeço limpo: $n linhas removidas de ato_comissao.");
 
-// Uma junção por corpo. O LIKE bate na EMENTA e no CORPO (texto_original) — a
-// ementa pega o caso normal; o corpo pega os atos "sem ementa formal", em que
-// o nome do colegiado só aparece no dispositivo. utf8mb4_unicode_ci já ignora
-// acento e caixa, então o termo vai como está.
+// Uma junção por corpo. O LIKE bate SÓ na EMENTA (a ementa declara o que o ato
+// é; casar o corpo trazia falso positivo — "segurança da informação" no corpo
+// de currículos, "ações afirmativas" em editais). E uma GUARDA: a ementa tem
+// que citar um colegiado, senão "Política de Segurança da Informação"
+// (documento, não o Comitê) entraria. utf8mb4_unicode_ci já ignora acento/caixa.
 $ins = $pdo->prepare("
     INSERT IGNORE INTO ato_comissao (ato_id, comissao)
     SELECT a.id, :slug
       FROM ato a
-      JOIN ato_texto t ON t.ato_id = a.id
-     WHERE a.ementa LIKE :like OR t.texto_original LIKE :like2");
+     WHERE a.ementa LIKE :like
+       AND (a.ementa LIKE '%comiss%' OR a.ementa LIKE '%comit%'
+            OR a.ementa LIKE '%câmara%' OR a.ementa LIKE '%conselho%')");
 
 $total = 0;
 foreach (comissoes_termos() as $slug => $termo) {
-    $like = '%' . $termo . '%';
-    $ins->execute([':slug' => $slug, ':like' => $like, ':like2' => $like]);
+    $ins->execute([':slug' => $slug, ':like' => '%' . $termo . '%']);
     $n = $ins->rowCount();
     $total += $n;
     log_(sprintf('  %-14s %5d atos  «%s»', $slug, $n, $termo));

@@ -42,6 +42,7 @@ if (!function_exists('comissoes_termos')) {
             'cpt'           => 'permanente de telefonia',
             'pgd'           => 'permanente do programa de gestão',
             'doc-sig'       => 'documentos públicos de natureza sigilosa',
+            'rsc'           => 'reconhecimento de saberes',
         ];
         return $t;
     }
@@ -59,12 +60,22 @@ if (!function_exists('comissoes_fold')) {
 }
 
 if (!function_exists('comissoes_do_texto')) {
-    /** Slugs dos corpos mencionados no texto (ementa + corpo). */
-    function comissoes_do_texto(string $ementa, string $corpo): array {
-        $alvo = comissoes_fold($ementa . ' ' . $corpo);
+    /** Slugs dos colegiados mencionados NA EMENTA.
+     *
+     * Só a ementa, não o corpo: a ementa declara o que o ato É; o corpo cita a
+     * frase de passagem (medido: casar o corpo inflava o CSI de 15 para 86,
+     * "ações afirmativas" de 45 para 341 — a frase aparece em política, edital,
+     * currículo). E uma GUARDA: a ementa tem que citar um colegiado
+     * (comissão/comitê/câmara/conselho), senão "Política de Segurança da
+     * Informação" (documento, não o Comitê) entraria. Com a guarda, CSI cai
+     * para os 3 atos que são mesmo do comitê.
+     */
+    function comissoes_do_texto(string $ementa): array {
+        $e = comissoes_fold($ementa);
+        if (!preg_match('/comiss|comit|c[aâ]mara|conselho/', $e)) return [];
         $out = [];
         foreach (comissoes_termos() as $slug => $termo) {
-            if (mb_strpos($alvo, comissoes_fold($termo)) !== false) $out[] = $slug;
+            if (mb_strpos($e, comissoes_fold($termo)) !== false) $out[] = $slug;
         }
         return $out;
     }
