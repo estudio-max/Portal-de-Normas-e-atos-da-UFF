@@ -188,7 +188,7 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   `ato_processo`. O `ato.processo_sei` guarda só o primeiro número do texto; a
   tabela guarda todos (medido: a coluna única descartava 44% das menções).
   Backfill em `importar/backfill_ato_processo.php`.
-- **Comissões** (`/api/comissoes`): os ~23 colegiados PERMANENTES centrais da
+- **Comissões** (`/api/comissoes`): os 26 colegiados PERMANENTES centrais da
   UFF (CPA, CPPD, CEUA, Governança…). A lista é **curada** em
   `comissoes_registro()` (index) + `comissoes_termos()`
   (`importar/comissoes_match.php`) — os dois nascem de
@@ -197,6 +197,29 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   Estender = uma linha nos três + rodar `backfill_ato_comissao.php`. É uma
   AMOSTRA curada, não o universo: a UFF constituiu 14 mil comissões em 25 anos,
   a maioria efêmera (banca, eleitoral, sindicância) — essas ficam de fora.
+  **Um corpo pode ter VÁRIOS nomes históricos**, separados por `|` no `termos`
+  do registro; casa se qualquer variante bater (o backfill vira `OR` de LIKE, e
+  `comissoes_do_texto()` faz `explode('|')`). Foi assim que se descobriu que o
+  CEP era grafado "em Pesquisa" (58 atos) e não "na Pesquisa" (7) — o termo
+  errado escondia 44 atos —, e que "Comissão de Ética da UFF"/"Ética Pública" e
+  "CGIRC"/"Comitê de Governança" são cada par um corpo só. Cada corpo carrega uma
+  **classificação legal** (`obrig` ∈ `lei` | `controle` | vazio): obrigatória por
+  lei, exigida por órgão de controle, ou nenhuma. É curadoria do mantenedor, não
+  inferência do texto — a aba mostra o selo e filtra por ele. 7 por lei, 6 por
+  controle, 13 sem.
+
+## URL por aba (roteamento por hash)
+
+Cada aba tem uma URL própria via **fragmento** (`#comissoes`, `#dossie`,
+`#jornada`…), em `src/App.tsx`: `ABAS_VALIDAS` (o conjunto de chaves válidas) +
+`abaDoHash()`, e dois efeitos que sincronizam nos dois sentidos (colar/
+compartilhar o hash abre a aba; trocar de aba grava o hash, então o "voltar" do
+navegador anda entre abas). **É hash de propósito, não caminho limpo:** o
+fragmento não chega ao servidor, então funciona em qualquer subcaminho e
+sobrevive à migração para o domínio da UFF sem reescrita de rota — caminho limpo
+brigaria com o `base: './'` que mantém o bundle portável. A raiz sem hash cai na
+aba padrão sem sujar a URL com `#planilha`. Aba nova = uma linha em
+`ABAS_VALIDAS`.
 
 ## Regras do domínio que já custaram retrabalho
 
