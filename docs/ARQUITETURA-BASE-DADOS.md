@@ -285,6 +285,32 @@ CREATE TABLE prazo (
   KEY ix_ato (ato_id), KEY ix_data (data_limite),
   FOREIGN KEY (ato_id) REFERENCES ato(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Todos os nºs de processo citados por um ato (feature Busca por processo).
+-- ato.processo_sei guarda so o 1o; esta guarda todos. `digitos` = so-numeros,
+-- p/ casar com/sem pontuacao. Preenchida por backfill_ato_processo.php + import.
+CREATE TABLE ato_processo (
+  id      BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  ato_id  BIGINT UNSIGNED NOT NULL,
+  numero  VARCHAR(32) NOT NULL,          -- como esta no texto
+  digitos VARCHAR(24) NOT NULL,          -- so digitos (a busca usa este)
+  ordem   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_ato_processo (ato_id, digitos), KEY ix_digitos (digitos),
+  FOREIGN KEY (ato_id) REFERENCES ato(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Liga o ato ao colegiado PERMANENTE que ele cita (feature Comissões). A lista
+-- de corpos e curada (comissoes_registro no index); esta tabela e o indice,
+-- casado por FRASE ESTRITA (LIKE), nao FULLTEXT -- o indice de texto tokeniza e
+-- daria falso positivo. `comissao` = slug do corpo no registro ('cpa','ceua').
+-- Preenchida por backfill_ato_comissao.php + import diario.
+CREATE TABLE ato_comissao (
+  id       BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  ato_id   BIGINT UNSIGNED NOT NULL,
+  comissao VARCHAR(32) NOT NULL,
+  UNIQUE KEY uq_ato_comissao (ato_id, comissao), KEY ix_comissao (comissao),
+  FOREIGN KEY (ato_id) REFERENCES ato(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 ```
 
 ### 3.5 Proveniência

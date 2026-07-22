@@ -58,7 +58,7 @@ flowchart TB
 
     subgraph hg["HostGator — hospedagem compartilhada, sem SSH"]
         api["<b>API de leitura</b><br/>PHP 8.3, arquivo único<br/>api/index.php"]
-        db[("<b>MySQL</b><br/>fanara87_governanca<br/>16 tabelas, schema v2")]
+        db[("<b>MySQL</b><br/>Percona 5.7 · fanara87_governanca<br/>18 tabelas, schema v2")]
         imp["<b>Importador</b><br/>importar_v2.php<br/>upsert por chave natural"]
     end
 
@@ -121,12 +121,14 @@ flowchart LR
     disp --> pessoas["<b>Pessoas</b><br/>chefias · mandatos<br/>dossie"]
     disp --> analise["<b>Análise</b><br/>insights · analitico<br/>prazos · pad_cadeia"]
     disp --> ementa["<b>Derivados da ementa</b><br/>jornada · cooperacao"]
+    disp --> curado["<b>Índice curado</b><br/>comissoes · (processo)"]
     disp --> saude["<b>health</b>"]
 
     acervo --> pdo[("PDO<br/>MySQL")]
     pessoas --> pdo
     analise --> pdo
     ementa --> pdo
+    curado --> pdo
 
     style disp fill:#003366,color:#fff
     style ementa fill:#EAB308
@@ -141,6 +143,14 @@ Os grupos existem por **origem do dado**, e a distinção importa:
   deliberada: enquanto a regra de classificação ainda está sendo descoberta,
   mudar um padrão e recarregar custa segundos, contra reprocessar o acervo
   inteiro. Quando a regra estabiliza, vira `INSERT` numa tabela-fato.
+- **Índice curado** (`comissoes`, a busca por `processo`) lê uma tabela-fato que
+  liga o ato a uma entidade por casamento **de frase estrita**, não FULLTEXT — o
+  índice de texto tokeniza e daria falso positivo ("segurança da informação"
+  casaria "informação" em qualquer lugar). A ligação é cara demais para rodar a
+  cada consulta sobre 128 mil textos, então roda uma vez no backfill e a cada
+  import; a rota só lê o índice pronto. Para as Comissões, a lista de corpos é
+  curada à mão (`comissoes_registro()`), porque "comissão permanente" em texto
+  livre é ruído.
 
 Uma consequência prática: **análise nova é tabela-fato nova, não coluna nova**
 em `ato`. Quem pensa em `ALTER TABLE ato ADD COLUMN` parou no modelo antigo.

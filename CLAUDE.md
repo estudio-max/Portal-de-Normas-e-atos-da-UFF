@@ -14,8 +14,12 @@ mudou.
   para lá — é um domínio antigo, não use como referência).
 - **Host:** HostGator (cPanel). **Sem acesso SSH** — todo deploy é upload manual
   pelo Gerenciador de Arquivos, e todo SQL roda pelo phpMyAdmin.
-- **Banco:** `fanara87_governanca`, schema **v2 normalizado**.
-- **Frontend:** React + TypeScript (Vite). **Backend:** PHP + MySQL (só leitura).
+- **Banco:** `fanara87_governanca`, schema **v2 normalizado**. **Percona Server
+  5.7** (não MySQL 8) — sem `REGEXP_SUBSTR`, `REGEXP_REPLACE`, CTE recursiva nem
+  funções de janela. Confirme a versão em `/api/health` (campo `mysql`) antes de
+  escrever qualquer SQL de manutenção; um script que dependia do 8.0 já foi
+  escrito e jogado fora por causa disto.
+- **Frontend:** React + TypeScript (Vite). **Backend:** PHP 8.3 + MySQL (só leitura).
 
 ## Fonte canônica
 
@@ -70,7 +74,9 @@ bundle antigo. A justificativa LGPD da abertura está na aba Privacidade.
 - Dimensões: `orgao`, `orgao_alias`, `tipo_ato`, `pessoa`, `boletim`
 - Núcleo: `ato`, `ato_texto` (`texto_original` exibe, `texto_busca` é o FULLTEXT)
 - Fatos: `relacao`, `ato_funcao`, `ato_pessoa`, `ato_tag`, `ato_aposentadoria`,
-  `ato_deslocamento`, `prazo`
+  `ato_deslocamento`, `prazo`, `ato_processo` (todos os nºs de processo citados,
+  não só o 1º — ver aba de busca por processo), `ato_comissao` (liga o ato ao
+  colegiado permanente que ele cita — alimenta a aba Comissões)
 - Proveniência: `extracao`
 
 Consequência prática: **análise nova vira `INSERT` numa tabela-fato, não coluna
@@ -128,8 +134,15 @@ regra estabilizar (aí sim vale o modelo em estrela).
 - **Jornada de trabalho** (`/api/jornada`): flexibilização vs Programa de Gestão
   e Desempenho. Agrupa as portarias de um setor pelo **processo SEI** (o nome do
   setor sai do texto e o OCR o escreve diferente a cada ano — não serve de
-  chave). Setor saiu se QUALQUER portaria do grupo foi revogada: a revogação
-  mira o ato ORIGINAL, não a manutenção mais nova.
+  chave). Setor saiu se QUALQUER portaria do grupo foi revogada. A revogação é
+  reconhecida por `flex_classe()` retornar `'revogacao'` para ementa que abre com
+  "Revogar a Portaria X - Jornada Flexibilizada de…". **Antes disso ela caía em
+  `'outro'` e o agrupamento a descartava** — 37 setores ficavam "Ativo" para
+  sempre porque o grafo de relações não resolvia (a portaria revogada é de 2019 e
+  várias nem estão no acervo). A própria portaria de revogação é a fonte do
+  status agora, não o grafo. Guarda de reflexibilização: aprovação com data
+  POSTERIOR à revogação reabre o setor (0 casos hoje, mas fica). O processo SEI
+  vai no resultado.
 - **Cooperação** (`/api/cooperacao`): acordos, protocolos e cotutelas. 16
   nomenclaturas foram fundidas em **5 categorias**, decisão tomada lendo o CORPO
   (o dispositivo), não a ementa: o texto operativo de Acadêmica/Internacional/
@@ -143,6 +156,25 @@ regra estabilizar (aí sim vale o modelo em estrela).
   vista noutro ato. `paisInferido` marca o que não veio do ato, e a interface
   mostra `*`. A tabela curada é **extensível**: instituição estrangeira sem país
   = uma linha nova ali.
+
+## Painéis com tabela-fato + registro curado
+
+Duas abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
+e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
+
+- **Busca por processo** (`/api/atos?processo=…`): casa por DÍGITOS na tabela
+  `ato_processo`. O `ato.processo_sei` guarda só o primeiro número do texto; a
+  tabela guarda todos (medido: a coluna única descartava 44% das menções).
+  Backfill em `importar/backfill_ato_processo.php`.
+- **Comissões** (`/api/comissoes`): os ~23 colegiados PERMANENTES centrais da
+  UFF (CPA, CPPD, CEUA, Governança…). A lista é **curada** em
+  `comissoes_registro()` (index) + `comissoes_termos()`
+  (`importar/comissoes_match.php`) — os dois nascem de
+  `tools/registro_comissoes.py` e não devem divergir. A tabela `ato_comissao`
+  liga corpo→ato por FRASE ESTRITA (ver a armadilha do FULLTEXT abaixo).
+  Estender = uma linha nos três + rodar `backfill_ato_comissao.php`. É uma
+  AMOSTRA curada, não o universo: a UFF constituiu 14 mil comissões em 25 anos,
+  a maioria efêmera (banca, eleitoral, sindicância) — essas ficam de fora.
 
 ## Regras do domínio que já custaram retrabalho
 
@@ -208,6 +240,20 @@ resumo operacional.
   Esse é outro problema, tratado na seção de pendências.
 - **Collation do MySQL ≠ dedup do Python.** `DECISOES` == `DECISÕES` e
   `'001'` == `'01'` == `'1'` para o MySQL. Qualquer ETL precisa considerar isso.
+- **FULLTEXT tokeniza; para casar FRASE use LIKE.** O índice `texto_busca`
+  quebra em palavras: buscar "segurança da informação" nele casa "informação" em
+  qualquer contexto ("Currículo de Engenharia da Informação"). Medido: o termo do
+  Comitê de Segurança da Informação dava 83 resultados no FULLTEXT (a maioria
+  falso positivo) contra 15 reais no LIKE de frase estrita. E o número de
+  processo `23069.154690` vira os tokens `23069`+`154690`, e `23069` é prefixo de
+  TODO processo da UFF. Regra: **ligação corpo↔ato precisa/curada = frase estrita
+  (LIKE numa tabela-fato), não FULLTEXT.** FULLTEXT serve para busca livre do
+  usuário (relevância), não para casamento determinístico. `utf8mb4_unicode_ci`
+  já ignora acento e caixa no LIKE — não precisa normalizar o termo.
+- **É Percona 5.7, não MySQL 8.** SQL de manutenção não pode usar
+  `REGEXP_SUBSTR`/`REGEXP_REPLACE`/CTE recursiva/janela. Quando precisar extrair
+  N ocorrências de um padrão de um TEXT, faça em PHP (loop + `preg_match_all`),
+  como `backfill_ato_processo.php`. Confirme a versão em `/api/health`.
 - **Pergunta sobre o banco se responde CONTANDO NO BANCO.** Custou o dia
   21/07/2026: três medições erradas seguidas, todas por medir um proxy no lugar
   da coisa perguntada. (1) `curl | python` no Windows lê stdin como `cp1252` e
