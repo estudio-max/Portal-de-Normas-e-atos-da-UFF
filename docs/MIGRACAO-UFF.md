@@ -49,6 +49,29 @@ Sem estas respostas o plano não fecha:
       no dossiê (lado aplicação, feito em 20/07/2026); o que falta é só o
       perímetro acima.
 
+**Capacidade (a UFF terá centenas de servidores acessando, sobretudo Meu SIAPE):**
+
+Medido em produção (HostGator, um acesso por vez): Meu SIAPE responde em
+**0,13s** (lookup indexado — é leve, e escala bem); o custo real está nos painéis
+analíticos (jornada/cooperação/insights, ~0,5s cada, recalculados por requisição).
+
+- [x] **Cache de resposta** (lado aplicação, feito em 22/07/2026): os painéis
+      diário-estáticos servem do disco (~0,005s, sem tocar o banco); ver o cache
+      no `CLAUDE.md`. Reduz o custo por acesso em ~100×.
+- [ ] **Pasta `api/cache/` gravável** pelo PHP no servidor novo (o código a cria
+      com `mkdir`; se o host barrar, `chmod 775`). Sem isso o cache degrada
+      silenciosamente para "sempre MISS" — funciona, só não acelera.
+- [ ] **OPcache do PHP ligado** (compila o código uma vez; normalmente já vem no
+      8.x). Confirmar com a STI.
+- [ ] **Workers PHP e conexões MySQL** dimensionados para o pico esperado. Com o
+      cache, o gargalo real vira só `dossie` e a busca — ambos indexados.
+- [ ] **Proxy reverso (nginx)**: se houver, pode servir o cache com
+      `Cache-Control` sem nem chamar o PHP nos painéis — ganho extra, opcional.
+- [ ] **Índice do Meu SIAPE**: a consulta faz `TRIM(LEADING '0' FROM siape)`, que
+      impede o índice e vira varredura da tabela `pessoa` (rápido hoje porque a
+      tabela é pequena). Se a `pessoa` crescer muito, indexar de verdade (coluna
+      normalizada ou índice funcional no MySQL 8).
+
 ---
 
 ## 1. Inventário — o que move e o que não move

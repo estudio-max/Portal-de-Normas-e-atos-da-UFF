@@ -29,3 +29,4 @@ tools/atos.json
 tools/atos.xlsx
 tools/dados.js
 tools/portal-data-extrato-reprocessado.json
+backend/api/cache/

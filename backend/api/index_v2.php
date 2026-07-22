@@ -37,12 +37,6 @@ header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: X-Dossie-Token');
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') { exit; }
 
-try {
-    $pdo = conectar($cfg);
-} catch (Throwable $e) {
-    responder_json(['erro' => 'Falha ao conectar no banco.'], 500);
-}
-
 // ---- roteamento -----------------------------------------------------------
 $recurso = $_GET['r'] ?? '';
 $id = $_GET['id'] ?? '';
@@ -51,6 +45,34 @@ if ($path !== '') {
     $partes = explode('/', $path);
     $recurso = $partes[0];
     if ($recurso === 'atos' && isset($partes[1])) { $recurso = 'ato'; $id = $partes[1]; }
+}
+
+// ---- cache de resposta (rotas diário-estáticas) ---------------------------
+// O acervo muda 1x/dia (a importação do Boletim). Estas rotas dão a MESMA
+// resposta para todos entre uma importação e outra, e custam ~0,5s de CPU cada.
+// Servidas do disco, custam ~0,005s e NEM TOCAM O BANCO — é o que faz o portal
+// aguentar centenas de acessos simultâneos. Não entram aqui: `dossie` (pessoal,
+// no-store), `atos`/`ato` (espaço de chave enorme, já são rápidas) e `health`.
+if (cache_cacheavel($recurso)) {
+    $cacheArq = cache_chave($recurso, $_GET);
+    $hit = cache_le($cacheArq);
+    if ($hit !== null) { header('X-Cache: HIT'); echo $hit; exit; }
+    // MISS: captura a saída da rota (responder_json faz exit, então pego o
+    // buffer no shutdown) e grava, se for 200.
+    header('X-Cache: MISS');
+    ob_start();
+    register_shutdown_function(function () use ($cacheArq) {
+        if (http_response_code() === 200) {
+            $out = ob_get_contents();
+            if ($out !== false && $out !== '') cache_grava($cacheArq, $out);
+        }
+    });
+}
+
+try {
+    $pdo = conectar($cfg);
+} catch (Throwable $e) {
+    responder_json(['erro' => 'Falha ao conectar no banco.'], 500);
 }
 
 switch ($recurso) {
@@ -76,6 +98,51 @@ switch ($recurso) {
     case 'ato':      ficha($pdo, $id); break;
     case 'atos':
     default:        listar($pdo); break;
+}
+
+// ===========================================================================
+//  Cache de resposta — funções auxiliares
+//
+//  `function` com `static` (não `const` de arquivo): as funções são hoisted e o
+//  cache é consultado no topo, antes do switch; um `const` textualmente abaixo
+//  ainda não existiria ali (a mesma armadilha que já derrubou este arquivo com
+//  HTTP 500 — ver coop_categorias()).
+// ===========================================================================
+function cache_ttl(): int { return 600; }   // 10 min — rede de segurança; o
+                                             // import diário zera o cache antes.
+function cache_rotas(): array {
+    // Só rotas cujo resultado é IGUAL para todos e muda 1x/dia. `dossie` é
+    // pessoal (fica de fora); `atos`/`ato` variam demais e já são rápidas.
+    static $r = ['stats', 'filtros', 'jornada', 'cooperacao', 'comissoes',
+                 'insights', 'analitico', 'prazos', 'pad_cadeia'];
+    return $r;
+}
+function cache_cacheavel(string $recurso): bool {
+    return in_array($recurso, cache_rotas(), true);
+}
+function cache_dir(): string {
+    $d = __DIR__ . '/cache';
+    if (!is_dir($d)) { @mkdir($d, 0775, true); @file_put_contents($d . '/.htaccess', "Deny from all\n"); }
+    return $d;
+}
+function cache_chave(string $recurso, array $get): string {
+    // recurso + params (ordenados) -> nome de arquivo estável. `?corpo=cpa` e
+    // `?processo=...` viram arquivos distintos; sem params, um por rota.
+    unset($get['r'], $get['id']);
+    ksort($get);
+    $slug = preg_replace('/[^a-z0-9]/i', '_', $recurso);
+    return $slug . '_' . md5($recurso . '?' . http_build_query($get)) . '.json';
+}
+function cache_le(string $arq): ?string {
+    $p = cache_dir() . '/' . $arq;
+    if (is_file($p) && (time() - filemtime($p)) < cache_ttl()) {
+        $c = @file_get_contents($p);
+        if ($c !== false && $c !== '') return $c;
+    }
+    return null;
+}
+function cache_grava(string $arq, string $conteudo): void {
+    @file_put_contents(cache_dir() . '/' . $arq, $conteudo, LOCK_EX);
 }
 
 // ===========================================================================
@@ -321,7 +388,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-21.6'; }
+function api_versao(): string { return '2026-07-21.7'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os

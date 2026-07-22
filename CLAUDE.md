@@ -157,6 +157,28 @@ regra estabilizar (aí sim vale o modelo em estrela).
   mostra `*`. A tabela curada é **extensível**: instituição estrangeira sem país
   = uma linha nova ali.
 
+## Cache de resposta
+
+Os painéis diário-estáticos (`stats`, `filtros`, `jornada`, `cooperacao`,
+`comissoes`, `insights`, `analitico`, `prazos`, `pad_cadeia`) são cacheados em
+disco (`api/cache/`). Medido: jornada/cooperacao/insights custam ~0,5s de CPU
+por requisição, e dão a MESMA resposta para todos entre uma importação e outra
+(o acervo muda 1x/dia). Servidos do cache custam ~0,005s e **nem conectam no
+banco** — a checagem do cache roda ANTES de `conectar()`. É o que sustenta
+centenas de acessos simultâneos.
+
+- **Não cacheáveis, de propósito:** `dossie` (Meu SIAPE — pessoal, `no-store`;
+  cache compartilhado entregaria o dossiê de um para outro), `atos`/`ato`
+  (espaço de chave enorme e já rápidas), `health`.
+- **Invalidação:** o `importar_v2.php` apaga `api/cache/*.json` ao fim de cada
+  importação, então a atualização diária é imediata. TTL de 10 min
+  (`cache_ttl()`) é a rede de segurança se o apagamento não rodar.
+- Como `responder_json()` faz `exit`, a gravação é feita num
+  `register_shutdown_function` sobre um `ob_start()` — só grava se o status for
+  200. Cabeçalho `X-Cache: HIT|MISS` para conferir.
+- A pasta `api/cache/` precisa ser gravável pelo PHP (ele a cria com `mkdir`; se
+  o host barrar, `chmod 775`). Um `.htaccess Deny from all` é escrito nela.
+
 ## Painéis com tabela-fato + registro curado
 
 Duas abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import

@@ -487,6 +487,17 @@ try {
     // 2) Resolve TODAS as relacoes e recalcula vigencia (autoridade unica).
     require_once __DIR__ . '/resolver_relacoes_v2.php';
     resolver_cross_ano_v2($pdo);
+
+    // 3) Invalida o cache de resposta da API: o dado mudou, entao os paineis
+    // diario-estaticos (jornada/cooperacao/comissoes/insights/stats...) precisam
+    // recalcular na proxima consulta. Best-effort -- se falhar, o TTL de 10 min
+    // do cache_le() garante a atualizacao de qualquer jeito.
+    $cacheDir = dirname(__DIR__) . '/api/cache';
+    if (is_dir($cacheDir)) {
+        $limpos = 0;
+        foreach (glob($cacheDir . '/*.json') ?: [] as $f) { if (@unlink($f)) $limpos++; }
+        log_("Cache da API invalidado: $limpos arquivo(s).");
+    }
 } catch (Throwable $e) {
     $pdo->rollBack();
     exit("ERRO na importação: " . $e->getMessage() . " (linha " . $e->getLine() . ")\n");
