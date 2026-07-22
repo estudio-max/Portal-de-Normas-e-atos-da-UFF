@@ -942,6 +942,8 @@ export async function getCooperacao(): Promise<CoopResp | null> {
 // --- Comissões (colegiados permanentes centrais) ---------------------------
 export interface ComissaoCorpo {
   slug: string; sigla: string; nome: string; tipo: string;
+  // '' | 'lei' (obrigatória por lei) | 'controle' (exigida por órgão de controle)
+  obrig: string;
   atos: number; anos: number; anoMin: number | null; anoMax: number | null;
 }
 export interface ComissoesResp { corpos: ComissaoCorpo[]; total: number; orfaos: string[] }
@@ -952,7 +954,7 @@ export interface ComissaoAtoRef {
   linkSeiProcesso: string | null; ementa: string;
 }
 export interface ComissaoDetalhe {
-  corpo: { slug: string; sigla: string; nome: string; tipo: string };
+  corpo: { slug: string; sigla: string; nome: string; tipo: string; obrig: string };
   atos: ComissaoAtoRef[];
 }
 

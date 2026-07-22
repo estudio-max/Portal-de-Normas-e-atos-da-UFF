@@ -499,15 +499,19 @@ def cooperacao_payload():
 
 
 # Espelha /comissoes: registro curado + contagens (números medidos no acervo).
+# (slug, sigla, nome, tipo, obrig, atos, anoMin, anoMax)
 _COMISSOES = [
-    ("cpa", "CPA", "Comissão Própria de Avaliação", "Comissão", 22, 2004, 2026),
-    ("cppd", "CPPD", "Comissão Permanente de Pessoal Docente", "Comissão", 31, 2005, 2026),
-    ("ceua", "CEUA", "Comissão de Ética no Uso de Animais", "Comissão", 21, 2010, 2026),
-    ("csi", "CSI", "Comitê de Segurança da Informação", "Comitê", 15, 2016, 2026),
-    ("gov-dig", "", "Comitê de Governança Digital", "Comitê", 6, 2021, 2026),
-    ("cps", "CPS", "Comissão Permanente de Sustentabilidade", "Comissão", 24, 2020, 2026),
-    ("afide", "AFIDE", "Comissão Permanente de Ações Afirmativas, Diversidade e Equidade", "Comissão", 12, 2021, 2026),
-    ("doc-sig", "", "Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa", "Comissão", 1, 2019, 2019),
+    ("cpa", "CPA", "Comissão Própria de Avaliação", "Comissão", "lei", 22, 2004, 2026),
+    ("cppd", "CPPD", "Comissão Permanente de Pessoal Docente", "Comissão", "lei", 31, 2005, 2026),
+    ("ceua", "CEUA", "Comissão de Ética no Uso de Animais", "Comissão", "lei", 21, 2010, 2026),
+    ("biosseg", "", "Comissão Interna de Biossegurança", "Comissão", "lei", 40, 2005, 2026),
+    ("etica", "", "Comissão de Ética da UFF", "Comissão", "lei", 12, 2011, 2026),
+    ("cep", "CEP", "Comitê de Ética em Pesquisa", "Comitê", "lei", 58, 2010, 2026),
+    ("cgirc", "CGIRC", "Comitê de Governança, Integridade, Riscos e Controles", "Comitê", "controle", 10, 2016, 2026),
+    ("gov-dig", "", "Comitê de Governança Digital", "Comitê", "controle", 6, 2021, 2026),
+    ("acessib", "", "Comissão de Acessibilidade e Inclusão (UFF Acessível)", "Comissão", "controle", 14, 2019, 2026),
+    ("cps", "CPS", "Comissão Permanente de Sustentabilidade", "Comissão", "", 24, 2020, 2026),
+    ("rsc", "RSC", "Comissão Especial de Reconhecimento de Saberes e Competências (RSC)", "Comissão", "", 20, 2021, 2026),
 ]
 
 
@@ -523,11 +527,11 @@ def comissoes_payload(corpo=""):
             "processoSei": "23069.100000/2026-00" if i % 2 else None,
             "linkSeiProcesso": "https://sei.uff.br/" if i % 2 else None,
             "ementa": f"Designa novos membros para compor a {meta[2]}.",
-        } for i in range(min(meta[4], 6))]
-        return {"corpo": {"slug": meta[0], "sigla": meta[1], "nome": meta[2], "tipo": meta[3]}, "atos": atos}
-    corpos = [{"slug": s, "sigla": sg, "nome": n, "tipo": t, "atos": a,
+        } for i in range(min(meta[5], 6))]
+        return {"corpo": {"slug": meta[0], "sigla": meta[1], "nome": meta[2], "tipo": meta[3], "obrig": meta[4]}, "atos": atos}
+    corpos = [{"slug": s, "sigla": sg, "nome": n, "tipo": t, "obrig": ob, "atos": a,
                "anos": max(1, (mx - mn) // 2), "anoMin": mn, "anoMax": mx}
-              for (s, sg, n, t, a, mn, mx) in _COMISSOES]
+              for (s, sg, n, t, ob, a, mn, mx) in _COMISSOES]
     return {"corpos": corpos, "total": sum(c["atos"] for c in corpos), "orfaos": []}
 
 

@@ -22,9 +22,21 @@ import HelpGuide from './components/HelpGuide';
 import PrivacidadeLGPD from './components/PrivacidadeLGPD';
 import Sobre from './components/Sobre';
 
+// URL canônica por aba, via HASH (#comissoes, #dossie...). O hash não chega ao
+// servidor, então funciona em qualquer subcaminho e sobrevive à migração para a
+// UFF sem precisar de reescrita de rota — ao contrário de caminho limpo, que
+// brigaria com o `base: './'` portável. Chaves = as mesmas do PortalHeader.
+const ABAS_VALIDAS = new Set(['planilha', 'relacoes', 'chefias', 'dossie', 'insights',
+  'mandatos', 'prazos', 'jornada', 'cooperacao', 'comissoes', 'ia-parser',
+  'ajuda', 'privacidade', 'sobre']);
+function abaDoHash(): string {
+  const h = decodeURIComponent((typeof window !== 'undefined' ? window.location.hash : '').replace(/^#/, '')).trim();
+  return ABAS_VALIDAS.has(h) ? h : 'planilha';
+}
+
 export default function App() {
   const [acts, setActs] = useState<UffAct[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('planilha');
+  const [activeTab, setActiveTab] = useState<string>(abaDoHash);
   const [modo, setModo] = useState<'api' | 'estatico' | 'carregando'>('carregando');
   const [stats, setStats] = useState<ds.Stats | null>(null);
 
@@ -38,6 +50,22 @@ export default function App() {
     document.documentElement.classList.toggle('fotofobia', fotofobia);
     try { localStorage.setItem('tema-fotofobia', fotofobia ? '1' : '0'); } catch { /* ignore */ }
   }, [fotofobia]);
+
+  // Sincroniza aba <-> hash da URL, nos dois sentidos.
+  // - voltar/avançar do navegador ou colar #comissoes: o hashchange atualiza a aba.
+  // - clicar numa aba: grava o hash (então o botão voltar anda entre abas).
+  // A raiz limpa (sem hash) fica na aba padrão sem sujar a URL com #planilha.
+  useEffect(() => {
+    const onHash = () => setActiveTab(abaDoHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    const atual = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+    if (atual !== activeTab && !(atual === '' && activeTab === 'planilha')) {
+      window.location.hash = activeTab;
+    }
+  }, [activeTab]);
 
   // Inicializa a camada de dados: usa a API (banco) se disponível, senão o
   // JSON estático. No modo estático carrega tudo em memória (protótipo);

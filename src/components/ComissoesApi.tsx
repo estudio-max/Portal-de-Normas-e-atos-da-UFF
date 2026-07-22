@@ -14,6 +14,17 @@ import * as ds from '../dataSource';
 const fmtData = (s: string | null) =>
   s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10).split('-').reverse().join('/') : '—';
 
+// Selo de obrigatoriedade: por lei (âmbar) ou por órgão de controle (índigo).
+function ObrigChip({ obrig }: { obrig: string }) {
+  if (obrig === 'lei') return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
+      title="Comissão obrigatória por lei">⚖ Por lei</span>);
+  if (obrig === 'controle') return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-200"
+      title="Exigida por órgão de controle (CGU, TCU...)">🛡 Órgão de controle</span>);
+  return null;
+}
+
 function StatusChip({ status }: { status: string }) {
   const cor = status === 'Revogado' ? 'bg-rose-50 text-rose-700 border-rose-200'
     : status === 'Alterado' ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -47,6 +58,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold">{d.corpo.nome}</h3>
               {d.corpo.sigla && <span className="text-[11px] font-mono bg-blue-800 px-1.5 py-0.5 rounded">{d.corpo.sigla}</span>}
+              <ObrigChip obrig={d.corpo.obrig} />
             </div>
             <p className="text-[12px] text-blue-100 mt-1">
               {d.corpo.tipo} · {d.atos.length} ato(s) no Boletim que mencionam este colegiado.
@@ -105,6 +117,7 @@ export default function ComissoesApi() {
   const [r, setR] = useState<ds.ComissoesResp | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState('');
+  const [obrigF, setObrigF] = useState('');   // '' | 'lei' | 'controle'
   const [sel, setSel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,11 +125,18 @@ export default function ComissoesApi() {
     ds.getComissoes().then(setR).finally(() => setCarregando(false));
   }, [apiMode]);
 
+  const contagem = useMemo(() => {
+    const c = { lei: 0, controle: 0 };
+    for (const x of r?.corpos ?? []) if (x.obrig === 'lei') c.lei++; else if (x.obrig === 'controle') c.controle++;
+    return c;
+  }, [r]);
+
   const grupos = useMemo(() => {
     if (!r) return [];
     const q = busca.trim().toLowerCase();
     const filtra = (c: ds.ComissaoCorpo) =>
-      !q || c.nome.toLowerCase().includes(q) || c.sigla.toLowerCase().includes(q);
+      (!q || c.nome.toLowerCase().includes(q) || c.sigla.toLowerCase().includes(q)) &&
+      (!obrigF || c.obrig === obrigF);
     const porTipo = new Map<string, ds.ComissaoCorpo[]>();
     for (const c of r.corpos) {
       if (!filtra(c)) continue;
@@ -125,7 +145,7 @@ export default function ComissoesApi() {
     // dentro de cada tipo, mais atos primeiro
     for (const arr of porTipo.values()) arr.sort((a, b) => b.atos - a.atos);
     return [...porTipo.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [r, busca]);
+  }, [r, busca, obrigF]);
 
   if (!apiMode) {
     return (
@@ -168,17 +188,26 @@ export default function ComissoesApi() {
         <span>
           É uma <strong>seleção curada</strong>, não o universo: em 25 anos a UFF constituiu
           mais de <strong>14 mil</strong> comissões, a maioria temporária (bancas, eleitorais,
-          sindicâncias). Aqui estão os <strong>permanentes</strong>, identificados por serem
-          estáveis por natureza e terem atos assinados pelo Reitor.
+          sindicâncias). Aqui estão os <strong>permanentes</strong>. O selo <strong>⚖ Por lei</strong>
+          marca as obrigatórias por lei; <strong>🛡 Órgão de controle</strong>, as exigidas por
+          órgãos de controle (CGU, TCU).
         </span>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
-        <input value={busca} onChange={e => setBusca(e.target.value)}
-          placeholder="Filtrar por nome ou sigla…"
-          className="w-full bg-white border border-slate-200 rounded pl-8 pr-7 py-1.5 text-xs" />
-        {busca && <button onClick={() => setBusca('')} className="absolute right-2 top-1.5 p-0.5 hover:bg-slate-200 rounded-full text-slate-400"><X className="w-3 h-3" /></button>}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative max-w-xs flex-1 min-w-[180px]">
+          <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
+          <input value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="Filtrar por nome ou sigla…"
+            className="w-full bg-white border border-slate-200 rounded pl-8 pr-7 py-1.5 text-xs" />
+          {busca && <button onClick={() => setBusca('')} className="absolute right-2 top-1.5 p-0.5 hover:bg-slate-200 rounded-full text-slate-400"><X className="w-3 h-3" /></button>}
+        </div>
+        {([['', 'Todas'], ['lei', `⚖ Por lei (${contagem.lei})`], ['controle', `🛡 Órgão de controle (${contagem.controle})`]] as const).map(([k, rot]) => (
+          <button key={k} onClick={() => setObrigF(k)}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${obrigF === k
+              ? 'bg-[#003366] text-white border-[#003366]'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>{rot}</button>
+        ))}
       </div>
 
       {grupos.map(([tipo, corpos]) => (
@@ -191,9 +220,10 @@ export default function ComissoesApi() {
               <button key={c.slug} onClick={() => setSel(c.slug)}
                 className="text-left bg-white border border-slate-200 rounded-lg p-3 hover:border-[#003366] hover:shadow-sm transition flex items-start justify-between gap-2 group">
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center flex-wrap gap-1.5">
                     <span className="font-bold text-[13px] text-[#003366]">{c.nome}</span>
                     {c.sigla && <span className="text-[10px] font-mono text-slate-400 border border-slate-200 rounded px-1">{c.sigla}</span>}
+                    <ObrigChip obrig={c.obrig} />
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
                     {c.atos > 0

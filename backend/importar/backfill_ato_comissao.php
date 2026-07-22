@@ -48,20 +48,23 @@ log_("Recomeço limpo: $n linhas removidas de ato_comissao.");
 // de currículos, "ações afirmativas" em editais). E uma GUARDA: a ementa tem
 // que citar um colegiado, senão "Política de Segurança da Informação"
 // (documento, não o Comitê) entraria. utf8mb4_unicode_ci já ignora acento/caixa.
-$ins = $pdo->prepare("
-    INSERT IGNORE INTO ato_comissao (ato_id, comissao)
-    SELECT a.id, :slug
-      FROM ato a
-     WHERE a.ementa LIKE :like
-       AND (a.ementa LIKE '%comiss%' OR a.ementa LIKE '%comit%'
-            OR a.ementa LIKE '%câmara%' OR a.ementa LIKE '%conselho%')");
+// Cada corpo pode ter VÁRIAS frases (o nome mudou ao longo dos anos); o termo
+// vem separado por '|'. Monto um OR de LIKE por variante, mais a guarda.
+$guarda = "(a.ementa LIKE '%comiss%' OR a.ementa LIKE '%comit%'"
+        . " OR a.ementa LIKE '%câmara%' OR a.ementa LIKE '%conselho%')";
 
 $total = 0;
-foreach (comissoes_termos() as $slug => $termo) {
-    $ins->execute([':slug' => $slug, ':like' => '%' . $termo . '%']);
+foreach (comissoes_termos() as $slug => $termos) {
+    $variantes = explode('|', $termos);
+    $ors = implode(' OR ', array_map(fn($i) => "a.ementa LIKE :t$i", array_keys($variantes)));
+    $ins = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id, comissao)
+        SELECT a.id, :slug FROM ato a WHERE ($ors) AND $guarda");
+    $params = [':slug' => $slug];
+    foreach ($variantes as $i => $v) $params[":t$i"] = '%' . trim($v) . '%';
+    $ins->execute($params);
     $n = $ins->rowCount();
     $total += $n;
-    log_(sprintf('  %-14s %5d atos  «%s»', $slug, $n, $termo));
+    log_(sprintf('  %-14s %5d atos  «%s»', $slug, $n, $termos));
 }
 
 log_('');

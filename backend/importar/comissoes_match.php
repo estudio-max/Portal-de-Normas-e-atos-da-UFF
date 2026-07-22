@@ -18,24 +18,29 @@
 if (!function_exists('comissoes_termos')) {
     function comissoes_termos(): array {
         // [slug => termo de busca (frase distintiva)]
+        // Valor pode ter VÁRIAS frases separadas por '|' (o corpo mudou de nome
+        // ao longo dos anos: o CEP é "em pesquisa" hoje mas já foi "na
+        // pesquisa"; a Comissão de Ética aparece como "da UFF" e "Pública").
         static $t = [
             'cpa'           => 'própria de avaliação',
             'cppd'          => 'permanente de pessoal docente',
-            'cppta'         => 'permanente de pessoal técnico',
-            'cis'           => 'interna de supervisão',
-            'etica-pub'     => 'ética pública',
             'ceua'          => 'ética no uso de animais',
-            'cep'           => 'ética na pesquisa',
-            'gov'           => 'comitê de governança da uff',
+            'biosseg'       => 'interna de biossegurança',
+            'etica'         => 'ética da uff|ética pública',
+            'cep'           => 'ética em pesquisa|ética na pesquisa',
+            'cis'           => 'interna de supervisão',
             'gov-dig'       => 'governança digital',
-            'csi'           => 'segurança da informação',
+            'cgirc'         => 'governança, integridade|comitê de governança da uff',
             'cgi'           => 'gestão da integridade',
-            'cti'           => 'comitê de tecnologia da informação',
             'cgestao-inf'   => 'comitê de gestão da informação',
+            'acessib'       => 'acessibilidade e inclusão',
+            'cipa'          => 'prevenção de acidentes',
+            'cppta'         => 'permanente de pessoal técnico',
+            'csi'           => 'segurança da informação',
+            'cti'           => 'comitê de tecnologia da informação',
             'assessor-pesq' => 'assessor de pesquisa',
             'multi-pesq'    => 'multidisciplinar de pesquisa',
             'patrim-gen'    => 'acesso ao patrimônio genético',
-            'acessib'       => 'acessibilidade e inclusão',
             'afide'         => 'ações afirmativas',
             'cppiq'         => 'indígenas e quilombolas',
             'cps'           => 'permanente de sustentabilidade',
@@ -74,8 +79,10 @@ if (!function_exists('comissoes_do_texto')) {
         $e = comissoes_fold($ementa);
         if (!preg_match('/comiss|comit|c[aâ]mara|conselho/', $e)) return [];
         $out = [];
-        foreach (comissoes_termos() as $slug => $termo) {
-            if (mb_strpos($e, comissoes_fold($termo)) !== false) $out[] = $slug;
+        foreach (comissoes_termos() as $slug => $termos) {
+            foreach (explode('|', $termos) as $termo) {    // qualquer variante casa
+                if (mb_strpos($e, comissoes_fold($termo)) !== false) { $out[] = $slug; break; }
+            }
         }
         return $out;
     }

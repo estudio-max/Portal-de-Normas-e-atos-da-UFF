@@ -388,7 +388,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-21.7'; }
+function api_versao(): string { return '2026-07-21.8'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1831,35 +1831,38 @@ function coop_eh_designacao(string $ementa): bool {
 // e "Undefined constant" derrubaria a requisição com HTTP 500 de corpo vazio
 // (já aconteceu neste arquivo — ver coop_categorias()).
 //
-// Cada linha: [slug, sigla, nome, tipo, termo]. O `termo` é a FRASE distintiva
-// casada por ato_comissao (LIKE estrito no backfill/import) — estender a lista
-// é uma linha aqui + rodar backfill_ato_comissao.php de novo.
+// Cada linha: [slug, sigla, nome, tipo, obrig]. `obrig`: 'lei' (obrigatória por
+// lei), 'controle' (exigida por órgão de controle) ou '' (permanente/central).
+// O termo de busca fica em comissoes_match.php (não aqui). Fonte dos dois:
+// tools/registro_comissoes.py. Estender = uma linha lá + regerar + backfill.
 function comissoes_registro(): array {
     static $r = [
-        ['cpa', 'CPA', 'Comissão Própria de Avaliação', 'Comissão', 'própria de avaliação'],
-        ['cppd', 'CPPD', 'Comissão Permanente de Pessoal Docente', 'Comissão', 'permanente de pessoal docente'],
-        ['cppta', 'CPPTA', 'Comissão Permanente de Pessoal Técnico-Administrativo', 'Comissão', 'permanente de pessoal técnico'],
-        ['cis', 'CIS', 'Comissão Interna de Supervisão do Plano de Carreira (PCCTAE)', 'Comissão', 'interna de supervisão'],
-        ['etica-pub', '', 'Comissão de Ética Pública', 'Comissão', 'ética pública'],
-        ['ceua', 'CEUA', 'Comissão de Ética no Uso de Animais', 'Comissão', 'ética no uso de animais'],
-        ['cep', 'CEP', 'Comitê de Ética na Pesquisa', 'Comitê', 'ética na pesquisa'],
-        ['gov', '', 'Comitê de Governança', 'Comitê', 'comitê de governança da uff'],
-        ['gov-dig', '', 'Comitê de Governança Digital', 'Comitê', 'governança digital'],
-        ['csi', 'CSI', 'Comitê de Segurança da Informação', 'Comitê', 'segurança da informação'],
-        ['cgi', 'CGI', 'Comitê de Gestão da Integridade', 'Comitê', 'gestão da integridade'],
-        ['cti', '', 'Comitê de Tecnologia da Informação', 'Comitê', 'comitê de tecnologia da informação'],
-        ['cgestao-inf', '', 'Comitê de Gestão da Informação', 'Comitê', 'comitê de gestão da informação'],
-        ['assessor-pesq', '', 'Comitê Assessor de Pesquisa', 'Comitê', 'assessor de pesquisa'],
-        ['multi-pesq', '', 'Comitê Multidisciplinar de Pesquisa', 'Comitê', 'multidisciplinar de pesquisa'],
-        ['patrim-gen', '', 'Comitê de Acesso ao Patrimônio Genético', 'Comitê', 'acesso ao patrimônio genético'],
-        ['acessib', '', 'Comissão Permanente de Acessibilidade e Inclusão (UFF Acessível)', 'Comissão', 'acessibilidade e inclusão'],
-        ['afide', 'AFIDE', 'Comissão Permanente de Ações Afirmativas, Diversidade e Equidade', 'Comissão', 'ações afirmativas'],
-        ['cppiq', 'CPPIQ', 'Comissão Permanente de Políticas para Indígenas e Quilombolas', 'Comissão', 'indígenas e quilombolas'],
-        ['cps', 'CPS', 'Comissão Permanente de Sustentabilidade', 'Comissão', 'permanente de sustentabilidade'],
-        ['cpt', 'CPT', 'Comissão Permanente de Telefonia', 'Comissão', 'permanente de telefonia'],
-        ['pgd', '', 'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', 'permanente do programa de gestão'],
-        ['doc-sig', '', 'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', 'documentos públicos de natureza sigilosa'],
-        ['rsc', 'RSC', 'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', 'reconhecimento de saberes'],
+        ['cpa', 'CPA', 'Comissão Própria de Avaliação', 'Comissão', 'lei'],
+        ['cppd', 'CPPD', 'Comissão Permanente de Pessoal Docente', 'Comissão', 'lei'],
+        ['ceua', 'CEUA', 'Comissão de Ética no Uso de Animais', 'Comissão', 'lei'],
+        ['biosseg', '', 'Comissão Interna de Biossegurança', 'Comissão', 'lei'],
+        ['etica', '', 'Comissão de Ética da UFF', 'Comissão', 'lei'],
+        ['cep', 'CEP', 'Comitê de Ética em Pesquisa', 'Comitê', 'lei'],
+        ['cis', 'CIS', 'Comissão Interna de Supervisão do Plano de Carreira (PCCTAE)', 'Comissão', 'lei'],
+        ['gov-dig', '', 'Comitê de Governança Digital', 'Comitê', 'controle'],
+        ['cgirc', 'CGIRC', 'Comitê de Governança, Integridade, Riscos e Controles', 'Comitê', 'controle'],
+        ['cgi', '', 'Comitê de Gestão da Integridade', 'Comitê', 'controle'],
+        ['cgestao-inf', '', 'Comitê de Gestão da Informação', 'Comitê', 'controle'],
+        ['acessib', '', 'Comissão de Acessibilidade e Inclusão (UFF Acessível)', 'Comissão', 'controle'],
+        ['cipa', '', 'Comissão Interna de Prevenção de Acidentes e de Assédio', 'Comissão', 'controle'],
+        ['cppta', 'CPPTA', 'Comissão Permanente de Pessoal Técnico-Administrativo', 'Comissão', ''],
+        ['csi', 'CSI', 'Comitê de Segurança da Informação', 'Comitê', ''],
+        ['cti', '', 'Comitê de Tecnologia da Informação', 'Comitê', ''],
+        ['assessor-pesq', '', 'Comitê Assessor de Pesquisa', 'Comitê', ''],
+        ['multi-pesq', '', 'Comitê Multidisciplinar de Pesquisa', 'Comitê', ''],
+        ['patrim-gen', '', 'Comitê de Acesso ao Patrimônio Genético', 'Comitê', ''],
+        ['afide', 'AFIDE', 'Comissão Permanente de Ações Afirmativas, Diversidade e Equidade', 'Comissão', ''],
+        ['cppiq', 'CPPIQ', 'Comissão Permanente de Políticas para Indígenas e Quilombolas', 'Comissão', ''],
+        ['cps', 'CPS', 'Comissão Permanente de Sustentabilidade', 'Comissão', ''],
+        ['cpt', 'CPT', 'Comissão Permanente de Telefonia', 'Comissão', ''],
+        ['pgd', '', 'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', ''],
+        ['doc-sig', '', 'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', ''],
+        ['rsc', 'RSC', 'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', ''],
     ];
     return $r;
 }
@@ -1874,7 +1877,7 @@ function comissoes(PDO $pdo, string $corpo): void {
     $reg = comissoes_registro();
     $meta = [];
     foreach ($reg as $c) $meta[$c[0]] = ['slug' => $c[0], 'sigla' => $c[1],
-                                         'nome' => $c[2], 'tipo' => $c[3]];
+                                         'nome' => $c[2], 'tipo' => $c[3], 'obrig' => $c[4]];
 
     if ($corpo !== '') {
         if (!isset($meta[$corpo])) responder_json(['erro' => 'comissão desconhecida'], 404);
@@ -1920,6 +1923,7 @@ function comissoes(PDO $pdo, string $corpo): void {
         $s = $porSlug[$slug] ?? null;
         $corpos[] = [
             'slug' => $slug, 'sigla' => $c[1], 'nome' => $c[2], 'tipo' => $c[3],
+            'obrig' => $c[4],
             'atos' => $s ? (int)$s['n'] : 0,
             'anos' => $s ? (int)$s['anos'] : 0,
             'anoMin' => $s ? (int)$s['ano_min'] : null,
