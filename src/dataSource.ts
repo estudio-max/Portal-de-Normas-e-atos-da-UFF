@@ -939,6 +939,45 @@ export async function getCooperacao(): Promise<CoopResp | null> {
   } catch { return null; }
 }
 
+// --- Comissões (colegiados permanentes centrais) ---------------------------
+export interface ComissaoCorpo {
+  slug: string; sigla: string; nome: string; tipo: string;
+  atos: number; anos: number; anoMin: number | null; anoMax: number | null;
+}
+export interface ComissoesResp { corpos: ComissaoCorpo[]; total: number; orfaos: string[] }
+
+export interface ComissaoAtoRef {
+  id: string; numero: string; ano: number; data: string; status: string;
+  sigla: string; link: string | null; processoSei: string | null;
+  linkSeiProcesso: string | null; ementa: string;
+}
+export interface ComissaoDetalhe {
+  corpo: { slug: string; sigla: string; nome: string; tipo: string };
+  atos: ComissaoAtoRef[];
+}
+
+export async function getComissoes(): Promise<ComissoesResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/comissoes`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !Array.isArray(j.corpos)) return null;   // API antiga -> shape errada
+    return j as ComissoesResp;
+  } catch { return null; }
+}
+
+export async function getComissaoAtos(slug: string): Promise<ComissaoDetalhe | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/comissoes?corpo=${encodeURIComponent(slug)}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !Array.isArray(j.atos)) return null;
+    return j as ComissaoDetalhe;
+  } catch { return null; }
+}
+
 interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
 
 // Infere PARA QUEM serve o prazo (o público que precisa agir), a partir de

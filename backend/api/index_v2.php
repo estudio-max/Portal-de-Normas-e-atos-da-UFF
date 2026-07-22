@@ -64,6 +64,7 @@ switch ($recurso) {
     case 'prazos':   prazos($pdo); break;
     case 'jornada':  jornada($pdo); break;
     case 'cooperacao': cooperacao($pdo); break;
+    case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? ''); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
     // Resquício do tempo em que a aba (hoje "Meu SIAPE") era fechada por senha.
@@ -320,7 +321,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-21.4'; }
+function api_versao(): string { return '2026-07-21.5'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1748,6 +1749,125 @@ function coop_eh_acordo(string $ementa): bool {
 // "Aprova/Ratifica/Dispõe" — mesma regra de sempre: dispositivo, não menção.
 function coop_eh_designacao(string $ementa): bool {
     return (bool)preg_match('/^\s*designa[r]?\b/iu', $ementa);
+}
+
+// ===========================================================================
+//  Comissões — colegiados PERMANENTES centrais da UFF
+// ===========================================================================
+// Registro CURADO dos corpos permanentes de alcance institucional. Cada um foi
+// identificado à mão a partir de uma amostra "permanente + assinado pelo
+// reitor" do acervo (24.140 atos constituíram comissões em 25 anos, a maioria
+// efêmera — bancas, eleitorais, sindicâncias; estes são os que ficam).
+//
+// `function` com `static`, NÃO um `const` de arquivo: em PHP as funções são
+// hoisted e o switch de rotas roda no topo; um `const` aqui ainda não existiria
+// e "Undefined constant" derrubaria a requisição com HTTP 500 de corpo vazio
+// (já aconteceu neste arquivo — ver coop_categorias()).
+//
+// Cada linha: [slug, sigla, nome, tipo, termo]. O `termo` é a FRASE distintiva
+// casada por ato_comissao (LIKE estrito no backfill/import) — estender a lista
+// é uma linha aqui + rodar backfill_ato_comissao.php de novo.
+function comissoes_registro(): array {
+    static $r = [
+        ['cpa', 'CPA', 'Comissão Própria de Avaliação', 'Comissão', 'própria de avaliação'],
+        ['cppd', 'CPPD', 'Comissão Permanente de Pessoal Docente', 'Comissão', 'permanente de pessoal docente'],
+        ['cppta', 'CPPTA', 'Comissão Permanente de Pessoal Técnico-Administrativo', 'Comissão', 'permanente de pessoal técnico'],
+        ['cis', 'CIS', 'Comissão Interna de Supervisão do Plano de Carreira (PCCTAE)', 'Comissão', 'interna de supervisão'],
+        ['etica-pub', '', 'Comissão de Ética Pública', 'Comissão', 'ética pública'],
+        ['ceua', 'CEUA', 'Comissão de Ética no Uso de Animais', 'Comissão', 'ética no uso de animais'],
+        ['cep', 'CEP', 'Comitê de Ética na Pesquisa', 'Comitê', 'ética na pesquisa'],
+        ['gov', '', 'Comitê de Governança', 'Comitê', 'comitê de governança da uff'],
+        ['gov-dig', '', 'Comitê de Governança Digital', 'Comitê', 'governança digital'],
+        ['csi', 'CSI', 'Comitê de Segurança da Informação', 'Comitê', 'segurança da informação'],
+        ['cgi', 'CGI', 'Comitê de Gestão da Integridade', 'Comitê', 'gestão da integridade'],
+        ['cti', '', 'Comitê de Tecnologia da Informação', 'Comitê', 'comitê de tecnologia da informação'],
+        ['cgestao-inf', '', 'Comitê de Gestão da Informação', 'Comitê', 'comitê de gestão da informação'],
+        ['assessor-pesq', '', 'Comitê Assessor de Pesquisa', 'Comitê', 'assessor de pesquisa'],
+        ['multi-pesq', '', 'Comitê Multidisciplinar de Pesquisa', 'Comitê', 'multidisciplinar de pesquisa'],
+        ['patrim-gen', '', 'Comitê de Acesso ao Patrimônio Genético', 'Comitê', 'acesso ao patrimônio genético'],
+        ['acessib', '', 'Comissão Permanente de Acessibilidade e Inclusão (UFF Acessível)', 'Comissão', 'acessibilidade e inclusão'],
+        ['afide', 'AFIDE', 'Comissão Permanente de Ações Afirmativas, Diversidade e Equidade', 'Comissão', 'ações afirmativas'],
+        ['cppiq', 'CPPIQ', 'Comissão Permanente de Políticas para Indígenas e Quilombolas', 'Comissão', 'indígenas e quilombolas'],
+        ['cps', 'CPS', 'Comissão Permanente de Sustentabilidade', 'Comissão', 'permanente de sustentabilidade'],
+        ['cpt', 'CPT', 'Comissão Permanente de Telefonia', 'Comissão', 'permanente de telefonia'],
+        ['pgd', '', 'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', 'permanente do programa de gestão'],
+        ['doc-sig', '', 'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', 'documentos públicos de natureza sigilosa'],
+    ];
+    return $r;
+}
+
+/**
+ * /api/comissoes            -> lista os corpos, agrupados por tipo, com contagem
+ *                              de atos, período e o ato mais recente.
+ * /api/comissoes?corpo=slug -> os atos de UM corpo, do mais novo ao mais antigo.
+ * Lê do índice ato_comissao (montado pelo backfill/import), não casa texto aqui.
+ */
+function comissoes(PDO $pdo, string $corpo): void {
+    $reg = comissoes_registro();
+    $meta = [];
+    foreach ($reg as $c) $meta[$c[0]] = ['slug' => $c[0], 'sigla' => $c[1],
+                                         'nome' => $c[2], 'tipo' => $c[3]];
+
+    if ($corpo !== '') {
+        if (!isset($meta[$corpo])) responder_json(['erro' => 'comissão desconhecida'], 404);
+        $st = $pdo->prepare("
+            SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa,
+                   a.status, a.processo_sei, o.sigla, b.url_pdf AS link
+              FROM ato_comissao ac
+              JOIN ato a          ON a.id = ac.ato_id
+              JOIN orgao o        ON o.id = a.orgao_id
+              LEFT JOIN boletim b ON b.id = a.boletim_id
+             WHERE ac.comissao = :slug
+             ORDER BY a.data_ato DESC, a.numero_norm DESC");
+        $st->execute([':slug' => $corpo]);
+        $atos = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $atos[] = [
+                'id' => $r['id'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+                'data' => $r['data_ato'], 'status' => $r['status'], 'sigla' => $r['sigla'],
+                'link' => $r['link'], 'processoSei' => $r['processo_sei'] ?: null,
+                'linkSeiProcesso' => link_sei_processo((string)($r['processo_sei'] ?? '')),
+                'ementa' => mb_substr(preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? '')), 0, 260),
+            ];
+        }
+        responder_json(['corpo' => $meta[$corpo], 'atos' => $atos]);
+    }
+
+    // Visão de lista: contagem/período por corpo, direto do índice.
+    $ag = $pdo->query("
+        SELECT ac.comissao AS slug, COUNT(*) AS n,
+               MIN(a.ano) AS ano_min, MAX(a.ano) AS ano_max,
+               COUNT(DISTINCT a.ano) AS anos,
+               SUM(a.data_ato = (SELECT MAX(a2.data_ato) FROM ato_comissao ac2
+                    JOIN ato a2 ON a2.id = ac2.ato_id WHERE ac2.comissao = ac.comissao)) AS x
+          FROM ato_comissao ac
+          JOIN ato a ON a.id = ac.ato_id
+      GROUP BY ac.comissao")->fetchAll(PDO::FETCH_ASSOC);
+    $porSlug = [];
+    foreach ($ag as $r) $porSlug[$r['slug']] = $r;
+
+    $corpos = [];
+    foreach ($reg as $c) {
+        $slug = $c[0];
+        $s = $porSlug[$slug] ?? null;
+        $corpos[] = [
+            'slug' => $slug, 'sigla' => $c[1], 'nome' => $c[2], 'tipo' => $c[3],
+            'atos' => $s ? (int)$s['n'] : 0,
+            'anos' => $s ? (int)$s['anos'] : 0,
+            'anoMin' => $s ? (int)$s['ano_min'] : null,
+            'anoMax' => $s ? (int)$s['ano_max'] : null,
+        ];
+    }
+    // órfão: atos taggeados com slug fora do registro (não deveria acontecer,
+    // mas se o registro encolher e o índice não for refeito, avisa em vez de
+    // sumir silenciosamente).
+    $orfaos = array_values(array_filter(array_keys($porSlug), fn($s) => !isset($meta[$s])));
+
+    responder_json([
+        'corpos' => $corpos,
+        'total' => array_sum(array_map(fn($c) => $c['atos'], $corpos)),
+        'orfaos' => $orfaos,
+    ]);
 }
 
 function cooperacao(PDO $pdo): void {

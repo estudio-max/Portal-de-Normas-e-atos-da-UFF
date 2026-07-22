@@ -26,6 +26,7 @@ $raiz = dirname(__DIR__);
 require $raiz . '/api/db.php';
 require_once __DIR__ . '/extrair_prazos.php';                // Radar genérico
 require_once __DIR__ . '/extrair_prazos_pad_sinve.php';      // PAD/SINVE (alta confiança)
+require_once __DIR__ . '/comissoes_match.php';               // aba Comissões (tagueia por frase)
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
@@ -313,6 +314,8 @@ try {
     $insApos = $pdo->prepare("INSERT INTO ato_aposentadoria (ato_id,tipo,base_legal) VALUES (:id,:t,:b)");
     $delDesl = $pdo->prepare("DELETE FROM ato_deslocamento WHERE ato_id=:id");
     $insDesl = $pdo->prepare("INSERT INTO ato_deslocamento (ato_id,tipo,direcao,motivo,setor) VALUES (:id,:t,:d,:m,:s)");
+    $delCom = $pdo->prepare("DELETE FROM ato_comissao WHERE ato_id=:id");
+    $insCom = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id,comissao) VALUES (:id,:c)");
     $delProc = $pdo->prepare("DELETE FROM ato_processo WHERE ato_id=:id");
     $insProc = $pdo->prepare("INSERT IGNORE INTO ato_processo (ato_id,numero,digitos,ordem)
                                VALUES (:id,:num,:dig,:ord)");
@@ -377,6 +380,14 @@ try {
             $jaProc[$dig] = true;
             $insProc->execute([':id' => $atoId, ':num' => mb_substr($pnum, 0, 32),
                                ':dig' => mb_substr($dig, 0, 24), ':ord' => ++$ordem]);
+        }
+
+        // colegiados permanentes citados (aba Comissões) — mesma frase estrita
+        // do backfill. O casamento vê ementa + corpo, então pega os atos "sem
+        // ementa formal" em que o nome só aparece no dispositivo.
+        $delCom->execute([':id' => $atoId]);
+        foreach (comissoes_do_texto((string)($a['ementa'] ?? ''), $texto) as $slug) {
+            $insCom->execute([':id' => $atoId, ':c' => $slug]);
         }
 
         // tags

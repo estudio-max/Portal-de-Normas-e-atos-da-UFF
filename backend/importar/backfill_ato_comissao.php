@@ -1,0 +1,68 @@
+<?php
+// ============================================================================
+//  Backfill (uso pontual): preenche `ato_comissao` — liga cada ato aos
+//  colegiados permanentes que ele menciona — para todo o acervo de uma vez.
+//
+//  Usa o MESMO casamento por frase do import diário (comissoes_match.php),
+//  então backfill e import produzem linhas idênticas. Aqui, porém, o LIKE roda
+//  no MySQL: é uma junção INSERT ... SELECT por corpo, direto no banco, o que
+//  é muito mais rápido que puxar 128 mil textos para o PHP.
+//
+//  Compatível com Percona/MySQL 5.7 (só LIKE; nada de 8.0).
+//
+//  Uso (navegador, protegido por token):
+//    https://SEU_SITE/importar/backfill_ato_comissao.php?token=SEU_TOKEN
+//  Uso (CLI):
+//    php backfill_ato_comissao.php
+// ============================================================================
+
+set_time_limit(0);
+@ini_set('memory_limit', '512M');
+
+$raiz = dirname(__DIR__);
+require $raiz . '/api/db.php';
+require_once __DIR__ . '/comissoes_match.php';
+$cfg = carregar_config();
+
+$cli = (PHP_SAPI === 'cli');
+if (!$cli) {
+    ignore_user_abort(true);
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-Accel-Buffering: no');
+    while (ob_get_level()) { @ob_end_flush(); }
+    $token = $cfg['import_token'] ?? '';
+    if ($token === '' || ($_GET['token'] ?? '') !== $token) {
+        http_response_code(403);
+        exit("Acesso negado. Use ?token=...\n");
+    }
+}
+function log_($m) { echo $m . "\n"; @flush(); }
+
+$pdo = conectar($cfg);
+
+$n = $pdo->exec("DELETE FROM ato_comissao");
+log_("Recomeço limpo: $n linhas removidas de ato_comissao.");
+
+// Uma junção por corpo. O LIKE bate na EMENTA e no CORPO (texto_original) — a
+// ementa pega o caso normal; o corpo pega os atos "sem ementa formal", em que
+// o nome do colegiado só aparece no dispositivo. utf8mb4_unicode_ci já ignora
+// acento e caixa, então o termo vai como está.
+$ins = $pdo->prepare("
+    INSERT IGNORE INTO ato_comissao (ato_id, comissao)
+    SELECT a.id, :slug
+      FROM ato a
+      JOIN ato_texto t ON t.ato_id = a.id
+     WHERE a.ementa LIKE :like OR t.texto_original LIKE :like2");
+
+$total = 0;
+foreach (comissoes_termos() as $slug => $termo) {
+    $like = '%' . $termo . '%';
+    $ins->execute([':slug' => $slug, ':like' => $like, ':like2' => $like]);
+    $n = $ins->rowCount();
+    $total += $n;
+    log_(sprintf('  %-14s %5d atos  «%s»', $slug, $n, $termo));
+}
+
+log_('');
+log_("OK. $total ligações ato→comissão gravadas para " . count(comissoes_termos()) . " corpos.");
+log_('Confira: SELECT comissao, COUNT(*) FROM ato_comissao GROUP BY comissao;');

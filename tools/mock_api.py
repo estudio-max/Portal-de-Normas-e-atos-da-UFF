@@ -498,6 +498,39 @@ def cooperacao_payload():
     }
 
 
+# Espelha /comissoes: registro curado + contagens (números medidos no acervo).
+_COMISSOES = [
+    ("cpa", "CPA", "Comissão Própria de Avaliação", "Comissão", 22, 2004, 2026),
+    ("cppd", "CPPD", "Comissão Permanente de Pessoal Docente", "Comissão", 31, 2005, 2026),
+    ("ceua", "CEUA", "Comissão de Ética no Uso de Animais", "Comissão", 21, 2010, 2026),
+    ("csi", "CSI", "Comitê de Segurança da Informação", "Comitê", 15, 2016, 2026),
+    ("gov-dig", "", "Comitê de Governança Digital", "Comitê", 6, 2021, 2026),
+    ("cps", "CPS", "Comissão Permanente de Sustentabilidade", "Comissão", 24, 2020, 2026),
+    ("afide", "AFIDE", "Comissão Permanente de Ações Afirmativas, Diversidade e Equidade", "Comissão", 12, 2021, 2026),
+    ("doc-sig", "", "Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa", "Comissão", 1, 2019, 2019),
+]
+
+
+def comissoes_payload(corpo=""):
+    if corpo:
+        meta = next((c for c in _COMISSOES if c[0] == corpo), None)
+        if not meta:
+            return {"erro": "desconhecida"}
+        atos = [{
+            "id": f"port-reitoria-{68000 + i}-2026", "numero": str(68000 + i), "ano": 2026 - i,
+            "data": f"{2026 - i}-05-1{i}", "status": ["Ativo", "Alterado", "Revogado"][i % 3],
+            "sigla": "Reitoria", "link": "https://boletimdeservico.uff.br/",
+            "processoSei": "23069.100000/2026-00" if i % 2 else None,
+            "linkSeiProcesso": "https://sei.uff.br/" if i % 2 else None,
+            "ementa": f"Designa novos membros para compor a {meta[2]}.",
+        } for i in range(min(meta[4], 6))]
+        return {"corpo": {"slug": meta[0], "sigla": meta[1], "nome": meta[2], "tipo": meta[3]}, "atos": atos}
+    corpos = [{"slug": s, "sigla": sg, "nome": n, "tipo": t, "atos": a,
+               "anos": max(1, (mx - mn) // 2), "anoMin": mn, "anoMax": mx}
+              for (s, sg, n, t, a, mn, mx) in _COMISSOES]
+    return {"corpos": corpos, "total": sum(c["atos"] for c in corpos), "orfaos": []}
+
+
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -549,6 +582,8 @@ class H(BaseHTTPRequestHandler):
             self._send(jornada_payload())
         elif recurso == "cooperacao":
             self._send(cooperacao_payload())
+        elif recurso == "comissoes":
+            self._send(comissoes_payload(q.get("corpo", [""])[0]))
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)

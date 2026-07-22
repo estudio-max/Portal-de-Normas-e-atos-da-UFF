@@ -15,6 +15,7 @@ import InsightsApi from './components/InsightsApi';
 import PrazosApi from './components/PrazosApi';
 import JornadaApi from './components/JornadaApi';
 import CooperacaoApi from './components/CooperacaoApi';
+import ComissoesApi from './components/ComissoesApi';
 import MandatosApi from './components/MandatosApi';
 import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
@@ -157,6 +158,7 @@ export default function App() {
           {activeTab === 'prazos' && <div id="painel-prazos-wrap"><PrazosApi /></div>}
           {activeTab === 'jornada' && <div id="painel-jornada-wrap"><JornadaApi /></div>}
           {activeTab === 'cooperacao' && <div id="painel-cooperacao-wrap"><CooperacaoApi /></div>}
+          {activeTab === 'comissoes' && <div id="painel-comissoes-wrap"><ComissoesApi /></div>}
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 

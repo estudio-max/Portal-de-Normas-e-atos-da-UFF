@@ -289,4 +289,30 @@ CREATE TABLE `ato_processo` (
   CONSTRAINT `fk_atoproc_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------------------------
+-- ato_comissao — liga um ato ao COLEGIADO PERMANENTE que ele menciona.
+--
+-- Alimenta a aba Comissões, que centraliza os comitês/comissões permanentes de
+-- alcance institucional (CPA, CPPD, CEUA, Governança, Sustentabilidade...). A
+-- lista dos corpos é CURADA (vive em comissoes_registro() no index_v2.php); esta
+-- tabela é o índice que diz quais atos falam de cada um.
+--
+-- Por que uma tabela e não busca ao vivo: casar corpo↔ato exige FRASE ESTRITA
+-- (LIKE), não FULLTEXT — o índice de texto tokeniza e "segurança da informação"
+-- casaria "currículo de engenharia da informação". LIKE sobre 128 mil textos,
+-- 23 corpos, por requisição, seria lento demais; aqui roda uma vez no backfill
+-- e a cada import diário, e a rota só lê o índice pronto.
+--
+-- `comissao` é o SLUG do corpo no registro curado (ex.: 'cpa', 'ceua').
+DROP TABLE IF EXISTS `ato_comissao`;
+CREATE TABLE `ato_comissao` (
+  `id`       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ato_id`   BIGINT UNSIGNED NOT NULL,
+  `comissao` VARCHAR(32) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_ato_comissao` (`ato_id`, `comissao`),
+  KEY `ix_comissao` (`comissao`),
+  CONSTRAINT `fk_atocom_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
