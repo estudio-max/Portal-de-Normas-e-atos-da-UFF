@@ -34,7 +34,7 @@ if (!function_exists('comissoes_termos')) {
             'cgi'           => 'gestão da integridade',
             'cgestao-inf'   => 'comitê de gestão da informação',
             'acessib'       => 'acessibilidade e inclusão',
-            'cipa'          => 'prevenção de acidentes',
+            'cipa'          => 'prevenção de acidentes e de assédio',
             'cppta'         => 'permanente de pessoal técnico',
             'csi'           => 'segurança da informação',
             'cti'           => 'comitê de tecnologia da informação',

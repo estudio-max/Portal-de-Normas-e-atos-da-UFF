@@ -243,6 +243,13 @@ resumo operacional.
 
 - **CEP ≠ CEPEx.** CEP é o Comitê de Ética em Pesquisa (3 instâncias), órgão
   totalmente diferente do CEPEx. Nunca mesclar.
+- **CIPA ≠ COPAMA.** A CIPA (Comissão Interna de Prevenção de Acidentes **e de
+  Assédio**, nome atual pela Lei 14.457/2022 / NR-5) NÃO é a COPAMA (Comissão de
+  Prevenção de Acidentes **e Meio Ambiente**), que é um colegiado LOCAL de unidade
+  (a da EEIMVR aparece 4×). O termo do corpo `cipa` tem que ser
+  `prevenção de acidentes e de assédio` — o `e de assédio` é o discriminador:
+  `prevenção de acidentes` sozinho arrastava as 4 COPAMA. Medido: o acervo tem 1
+  ato de CIPA de verdade (Faculdade de Medicina, 2026) contra 4 de COPAMA.
 - **Sigla de órgão NÃO é caixa alta.** "CEPEx" — a grafia real da UFF de ~2021 a
   meados de 2025 — tem um "x" minúsculo. Enquanto o `TITULO_RE` exigiu
   MAIÚSCULAS no nome do órgão, o título inteiro deixava de casar e a resolução

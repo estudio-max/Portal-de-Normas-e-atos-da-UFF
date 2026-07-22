@@ -27,7 +27,7 @@ REGISTRO = [
     ('cgi',       '',      'Comitê de Gestão da Integridade',                    'Comitê',   'gestão da integridade', 'controle'),
     ('cgestao-inf', '',    'Comitê de Gestão da Informação',                     'Comitê',   'comitê de gestão da informação', 'controle'),
     ('acessib',   '',      'Comissão de Acessibilidade e Inclusão (UFF Acessível)', 'Comissão', 'acessibilidade e inclusão', 'controle'),
-    ('cipa',      '',      'Comissão Interna de Prevenção de Acidentes e de Assédio', 'Comissão', 'prevenção de acidentes', 'controle'),
+    ('cipa',      '',      'Comissão Interna de Prevenção de Acidentes e de Assédio', 'Comissão', 'prevenção de acidentes e de assédio', 'controle'),
     # --- permanentes/centrais, sem obrigatoriedade formal -------------------
     ('cppta',     'CPPTA', 'Comissão Permanente de Pessoal Técnico-Administrativo', 'Comissão', 'permanente de pessoal técnico', ''),
     ('csi',       'CSI',   'Comitê de Segurança da Informação',                  'Comitê',   'segurança da informação', ''),

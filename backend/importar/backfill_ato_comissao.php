@@ -90,4 +90,15 @@ log_("  ($totalOrg ligações novas por órgão emissor)");
 
 log_('');
 log_("OK. " . ($total + $totalOrg) . " ligações ato→comissão gravadas para " . count(comissoes_termos()) . " corpos.");
+
+// Invalida o cache de resposta: a rota /api/comissoes é cacheada, e o backfill
+// mudou o dado que ela serve. Sem isto, o card da aba mostra o número velho até
+// o TTL de 10 min expirar (ou o próximo import limpar). Mesmo gesto do importador.
+$cacheDir = dirname(__DIR__) . '/api/cache';
+if (is_dir($cacheDir)) {
+    $limpos = 0;
+    foreach (glob($cacheDir . '/*.json') ?: [] as $f) { if (@unlink($f)) $limpos++; }
+    log_("Cache da API invalidado: $limpos arquivo(s).");
+}
+
 log_('Confira: SELECT comissao, COUNT(*) FROM ato_comissao GROUP BY comissao;');
