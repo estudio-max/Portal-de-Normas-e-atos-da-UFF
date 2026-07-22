@@ -151,6 +151,15 @@ function orgao_id(PDO $pdo, array &$cache, string $siglaRaw) {
     return $cache[$sigla] = (int)$pdo->lastInsertId();
 }
 
+$cacheOrgaoNome = [];
+function orgao_nome(PDO $pdo, array &$cache, int $orgaoId): string {
+    if (isset($cache[$orgaoId])) return $cache[$orgaoId];
+    $st = $pdo->prepare("SELECT nome FROM orgao WHERE id = ?");
+    $st->execute([$orgaoId]);
+    $n = $st->fetchColumn();
+    return $cache[$orgaoId] = ($n === false || $n === null) ? '' : (string)$n;
+}
+
 $cachePessoa = [];
 function pessoa_id(PDO $pdo, array &$cache, ?string $siape, ?string $nome) {
     $siape = mb_substr(digits($siape), 0, 10);
@@ -382,11 +391,17 @@ try {
                                ':dig' => mb_substr($dig, 0, 24), ':ord' => ++$ordem]);
         }
 
-        // colegiados permanentes citados (aba Comissões) — só a ementa, com a
-        // guarda de colegiado (ver comissoes_match.php). Mesmo casamento do
-        // backfill_ato_comissao.php.
+        // colegiados permanentes (aba Comissões). Dois sinais, mesma lógica do
+        // backfill_ato_comissao.php: (1) a EMENTA cita o colegiado — guarda de
+        // colegiado; (2) o ÓRGÃO EMISSOR é o colegiado (o ato que ele assina,
+        // ex.: DECISÃO CGIRC, cuja ementa não se nomeia) — casa o nome canônico.
         $delCom->execute([':id' => $atoId]);
-        foreach (comissoes_do_texto((string)($a['ementa'] ?? '')) as $slug) {
+        $slugsCom = comissoes_do_texto((string)($a['ementa'] ?? ''));
+        $nomeOrg = orgao_nome($pdo, $cacheOrgaoNome, $orgaoId);
+        if ($nomeOrg !== '') {
+            foreach (comissoes_do_orgao($nomeOrg) as $slug) $slugsCom[] = $slug;
+        }
+        foreach (array_unique($slugsCom) as $slug) {
             $insCom->execute([':id' => $atoId, ':c' => $slug]);
         }
 

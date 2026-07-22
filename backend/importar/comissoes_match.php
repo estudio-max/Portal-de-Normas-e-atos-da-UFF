@@ -87,3 +87,32 @@ if (!function_exists('comissoes_do_texto')) {
         return $out;
     }
 }
+
+if (!function_exists('comissoes_do_orgao')) {
+    /** Slugs cujo termo casa o NOME CANÔNICO do órgão emissor do ato.
+     *
+     * Sinal COMPLEMENTAR ao da ementa, para o ato que a comissão ASSINA em vez
+     * de citar. A DECISÃO CGIRC nº 1/2025 ("Aprovação do Plano de Enfrentamento
+     * ao Assédio") não nomeia o colegiado na ementa — quem a identifica é o
+     * órgão emissor. Medido no acervo: o CGIRC emite 13 decisões e a ementa só
+     * pegava 8 (as outras casavam por acaso, quando o preâmbulo vazava pra
+     * ementa); 5 ficavam invisíveis.
+     *
+     * Casa contra `orgao.nome` (dimensão CURADA), não contra o texto do ato:
+     * por isso NÃO precisa da guarda de colegiado e NÃO sofre o overloading de
+     * sigla. "CPS"/"CEP"/"CPT" são siglas de DEPARTAMENTO cujos atos (designar
+     * professor, alocar vaga) casariam pela sigla, mas o NOME do órgão deles não
+     * casa termo de comissão nenhum — medido em 925 órgãos: só o do CGIRC casa.
+     */
+    function comissoes_do_orgao(string $orgaoNome): array {
+        $nome = comissoes_fold($orgaoNome);
+        if ($nome === '') return [];
+        $out = [];
+        foreach (comissoes_termos() as $slug => $termos) {
+            foreach (explode('|', $termos) as $termo) {
+                if (mb_strpos($nome, comissoes_fold($termo)) !== false) { $out[] = $slug; break; }
+            }
+        }
+        return $out;
+    }
+}

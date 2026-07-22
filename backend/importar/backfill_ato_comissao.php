@@ -67,6 +67,27 @@ foreach (comissoes_termos() as $slug => $termos) {
     log_(sprintf('  %-14s %5d atos  «%s»', $slug, $n, $termos));
 }
 
+// 2ª passada: o ato que a comissão ASSINA (não cita na ementa). Casa o NOME do
+// ÓRGÃO EMISSOR (dimensão curada) — não a sigla, que é ambígua ("CPS"/"CEP" são
+// departamentos). Sem guarda de colegiado: o nome do órgão já é a autoridade.
+// INSERT IGNORE não duplica o que a 1ª passada já ligou.
 log_('');
-log_("OK. $total ligações ato→comissão gravadas para " . count(comissoes_termos()) . " corpos.");
+log_('— por órgão emissor (nome canônico) —');
+$totalOrg = 0;
+foreach (comissoes_termos() as $slug => $termos) {
+    $variantes = explode('|', $termos);
+    $ors = implode(' OR ', array_map(fn($i) => "o.nome LIKE :t$i", array_keys($variantes)));
+    $ins = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id, comissao)
+        SELECT a.id, :slug FROM ato a JOIN orgao o ON o.id = a.orgao_id WHERE ($ors)");
+    $params = [':slug' => $slug];
+    foreach ($variantes as $i => $v) $params[":t$i"] = '%' . trim($v) . '%';
+    $ins->execute($params);
+    $n = $ins->rowCount();          // só conta o que a ementa NÃO tinha pego
+    if ($n > 0) log_(sprintf('  %-14s +%d atos assinados', $slug, $n));
+    $totalOrg += $n;
+}
+log_("  ($totalOrg ligações novas por órgão emissor)");
+
+log_('');
+log_("OK. " . ($total + $totalOrg) . " ligações ato→comissão gravadas para " . count(comissoes_termos()) . " corpos.");
 log_('Confira: SELECT comissao, COUNT(*) FROM ato_comissao GROUP BY comissao;');

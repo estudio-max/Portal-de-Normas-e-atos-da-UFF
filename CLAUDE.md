@@ -207,6 +207,17 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   lei, exigida por órgão de controle, ou nenhuma. É curadoria do mantenedor, não
   inferência do texto — a aba mostra o selo e filtra por ele. 7 por lei, 6 por
   controle, 13 sem.
+  **Dois sinais ligam ato↔corpo** (`comissoes_do_texto` + `comissoes_do_orgao`,
+  unidos no import e no backfill): (1) a **ementa** cita o colegiado — com a
+  guarda de colegiado; (2) o **órgão emissor** É o colegiado, para o ato que ele
+  ASSINA sem se nomear na ementa (a DECISÃO CGIRC nº 1/2025 "Aprovação do Plano de
+  Enfrentamento ao Assédio" só se identifica pelo emissor — o CGIRC emite 13
+  decisões e a ementa pegava 8). O 2º sinal casa o **nome canônico do órgão**
+  (`orgao.nome`), **nunca a sigla**: `CPS`/`CEP`/`CPT` são siglas de DEPARTAMENTO
+  cujos atos (designar professor, alocar vaga) casariam pela sigla — 97 falsos
+  positivos —, mas o NOME do órgão deles não bate termo de comissão nenhum
+  (medido em 925 órgãos: só o do CGIRC casa, daí sem guarda). Generaliza sozinho:
+  colegiado curado como órgão na dimensão passa a ter os atos que assina ligados.
 
 ## URL por aba (roteamento por hash)
 
