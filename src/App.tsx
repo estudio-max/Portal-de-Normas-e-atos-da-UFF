@@ -17,7 +17,6 @@ import JornadaApi from './components/JornadaApi';
 import CooperacaoApi from './components/CooperacaoApi';
 import ComissoesApi from './components/ComissoesApi';
 import MandatosApi from './components/MandatosApi';
-import ActParser from './components/ActParser';
 import HelpGuide from './components/HelpGuide';
 import PrivacidadeLGPD from './components/PrivacidadeLGPD';
 import Sobre from './components/Sobre';
@@ -27,7 +26,7 @@ import Sobre from './components/Sobre';
 // UFF sem precisar de reescrita de rota — ao contrário de caminho limpo, que
 // brigaria com o `base: './'` portável. Chaves = as mesmas do PortalHeader.
 const ABAS_VALIDAS = new Set(['planilha', 'relacoes', 'chefias', 'dossie', 'insights',
-  'mandatos', 'prazos', 'jornada', 'cooperacao', 'comissoes', 'ia-parser',
+  'mandatos', 'prazos', 'jornada', 'cooperacao', 'comissoes',
   'ajuda', 'privacidade', 'sobre']);
 function abaDoHash(): string {
   const h = decodeURIComponent((typeof window !== 'undefined' ? window.location.hash : '').replace(/^#/, '')).trim();
@@ -156,10 +155,6 @@ export default function App() {
                 />
               )}
             </div>
-          )}
-
-          {activeTab === 'ia-parser' && (
-            <div id="painel-ia-parser"><ActParser onAddParsedAct={handleAddAct} somentePreview={apiMode} /></div>
           )}
 
           {activeTab === 'relacoes' && (

@@ -86,7 +86,7 @@ export default function Sobre() {
         <Figura
           arquivo="7-abas-do-portal.svg"
           w={960} h={500}
-          alt="Grade com os dez painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação e Analisar Ato."
+          alt="Grade com os dez painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação e Comissões."
           legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
         />
         <p>

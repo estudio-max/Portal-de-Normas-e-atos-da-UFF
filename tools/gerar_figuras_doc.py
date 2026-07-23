@@ -341,7 +341,7 @@ def peca7():
         ('Prazos', ['O que tem data', 'para acabar']),
         ('Jornada', ['Setores em trabalho flexível', 'ou programa de gestão']),
         ('Cooperação', ['Acordos com instituições, com', 'mapa e filtro por país']),
-        ('Analisar Ato', ['Cole o texto de um ato e', 'veja os campos separados']),
+        ('Comissões', ['Comitês, comissões e GTs', 'permanentes num só lugar']),
     ]
     cw, ch, gx, gy = 282, 92, 14, 14
     x0, y0 = 40, 96
@@ -355,8 +355,8 @@ def peca7():
         for j, d in enumerate(desc):
             p.append(texto(x + 20, y + 54 + j * 15, d, 10.5, CINZA))
 
-    p.append(texto(40, H - 22, 'A aba "Analisar Ato" separa os campos com expressões '
-                   'regulares, não com inteligência artificial.', 10.5, CINZA))
+    p.append(texto(40, H - 22, 'A aba "Comissões" separa os colegiados obrigatórios por lei '
+                   'dos exigidos por órgãos de controle.', 10.5, CINZA))
     salvar('7-abas-do-portal.svg', ''.join(p), W, H,
            'Grade com os dez painéis do portal e uma linha explicando o que cada um faz.')
 

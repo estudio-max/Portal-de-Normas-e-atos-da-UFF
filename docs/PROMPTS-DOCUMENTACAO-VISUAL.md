@@ -302,14 +302,10 @@ nome da aba em azul-marinho e uma linha de explicação em cinza:
   Prazos         — "O que tem data para acabar"
   Jornada        — "Setores em trabalho flexível ou programa de gestão"
   Cooperação     — "Acordos com instituições, com mapa e filtro por país"
-  Analisar Ato   — "Cole o texto de um ato e veja os campos separados"
+  Comissões      — "Comitês, comissões e GTs permanentes num só lugar"
 
 Estilo: [colar o bloco de identidade visual]
 ```
-
-Sobre a aba "Analisar Ato": ela separa os campos com expressões regulares, não
-com inteligência artificial. Se a legenda ou o material de divulgação disser
-"IA", vai estar dizendo algo falso sobre a ferramenta.
 
 ---
 
