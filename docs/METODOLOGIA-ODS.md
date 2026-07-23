@@ -1,0 +1,252 @@
+# Metodologia — Atos da UFF × ODS
+
+> **Rascunho para revisão** (jul/2026). Define o critério para classificar os atos
+> normativos da UFF nas 17 ODS de forma **auditável e defensável diante de órgão de
+> controle**. Não é posição institucional da UFF. Companheiro do protótipo em
+> [`../../METODOLOGIA-ODS-protótipo`] (artefato visual) e da futura aba `#ods`.
+
+## 1. Enquadramento: dossiê de evidência, não 17 baldes
+
+O objetivo **não** é rotular todo o acervo. É montar, para cada ODS, a **trilha de
+evidência** dos atos normativos que a comprovam — o mesmo formato que rankings
+internacionais e o controle pedem. Consequências de desenho:
+
+- A maioria dos atos **não entra** (nomeação, aposentadoria, concurso, doação, diária).
+  Medido no protótipo: só ~8% do fluxo normativo cego é proposta ODS real.
+- A distribuição **é desigual e isso é honesto**: governança (16), inclusão (10),
+  trabalho/saúde do servidor (8/3), educação (4) e sustentabilidade (12/13) concentram;
+  ODS 6, 7, 11, 15 quase não aparecem, e 2/13/14 entram sobretudo por **pesquisa**.
+  Forçar equilíbrio seria fabricar evidência — e é o primeiro alvo do controle.
+
+## 2. Âncoras oficiais (para não ser arbitrário)
+
+Nenhum critério aqui é inventado. Cada ODS é ancorado em duas referências que o
+controle (TCU/CGU) e os rankings reconhecem:
+
+### 2.1 THE Impact Rankings — metodologia vigente
+[Methodology 2025](https://www.timeshighereducation.com/world-university-rankings/impact-rankings-2025-methodology)
+· [PDF](https://the-ranking.s3.eu-west-1.amazonaws.com/IMPACT/IMPACT2025/THE.ImpactRankings.METHODOLOGY.2025.pdf)
+
+O THE pontua cada universidade em cada ODS por **três tipos de métrica**:
+
+1. **Bibliométrica** — produção de pesquisa por ODS.
+2. **Contínua** — números normalizados pelo tamanho (ex.: nº de formandos em área de saúde).
+3. **Policy & initiative** — a universidade **submete evidência documentada** de
+   políticas, programas e medidas; ganha crédito pela evidência **e crédito extra por
+   ela ser pública**; *"a evidência não precisa ser exaustiva — busca-se exemplos que
+   demonstrem boa prática"*.
+
+**É o tipo 3 que os atos da UFF alimentam diretamente.** As métricas de política têm
+código e rótulo próprios; exemplos confirmados na metodologia (usados aqui como âncora
+de "o que conta"):
+
+| Código THE | Métrica de política | ODS |
+|---|---|---|
+| 10.6.4 | *Have an anti-discrimination policy* | 10 |
+| 10.6.11 | *Have an anti-harassment policy* | 10/5/16 |
+| 3.3.5 / 3.3.7 | *Mental health support (students / staff)* | 3 |
+| 15.2.5 | *Sustainable management of land for agriculture* | 15 |
+| 2.x | *Access to food / food banks para estudantes e staff* | 2 |
+| 16.x | *Published governance / anti-corruption policies; academic freedom* | 16 |
+| 17.x | *Cross-sector & international collaboration; publication of SDG reports* | 17 |
+
+> Ao industrializar, **fixe os códigos exatos da versão do THE vigente** naquele ciclo
+> (a metodologia muda de ano a ano) — este documento cita a de 2025.
+
+### 2.2 IPEA / ODS-Brasil — metas nacionais adequadas
+[Metas nacionais dos ODS: proposta de adequação](https://repositorio.ipea.gov.br/entities/book/80bd7091-c7cb-4a7d-9ec4-15cc271f4494)
+· [Cadernos ODS](https://www.ipea.gov.br/ods/publicacoes.html)
+
+O IPEA adequou as 169 metas globais à realidade brasileira, por encargo da Comissão
+Nacional dos ODS. É a régua **nacional** — a que um órgão de controle federal usa. Cada
+ODS abaixo aponta a meta nacional pertinente a uma universidade federal (ex.: 4.3/4.5
+acesso e permanência; 5.1/5.2 discriminação e violência de gênero; 16.5/16.6 corrupção e
+instituições eficazes; 8.8 segurança no trabalho).
+
+**Regra de ouro:** um ato só entra num ODS se casar com **uma meta nomeável** (THE
+e/ou IPEA). "Tem a ver com o tema" não basta — a justificativa tem que citar a meta.
+
+## 3. Taxonomia do vínculo (o pulo do gato)
+
+Cada ligação ato↔ODS recebe um **tipo de vínculo**. É a distinção que nenhum casamento
+por palavra-chave faz, e a que separa evidência real de ruído:
+
+| Vínculo | O que é | Vale para o THE como… | Exemplo |
+|---|---|---|---|
+| **proposta** | ato **fundador** de política/programa/plano/estrutura | policy & initiative (o alvo) | Decisão CGIRC que *institui* o Programa Bem Viver |
+| **execução** | **staffing/operação** de política já existente | contexto, não evidência nova | *designa membros* da Comissão de Ações Afirmativas |
+| **pesquisa** | ato que **cria/viabiliza** pesquisa ODS-relevante | métrica bibliométrica/pesquisa | *aprova o projeto* "Mudanças Climáticas e Trabalho Decente" |
+| **ensino** | **oferta acadêmica** sobre tema-ODS (curso/disciplina/currículo) | métricas de *educational programmes on X* | *cria o Curso* de Engenharia de Recursos Hídricos |
+| **nenhuma** | sem meta nomeável | — | *declara vago* o cargo de Técnico em Segurança do Trabalho |
+
+Por que importa: no protótipo com corpo, de 210 atos, **43 eram proposta, 12 pesquisa e
+103 execução** — quase metade das ligações é staffing. Um painel que contasse tudo como
+"evidência" inflaria a ODS 10 em 3× e enganaria o controle. A categoria **pesquisa** é
+o único jeito de as ODS "vazias" (13, 14) ganharem evidência honesta. E **ensino** foi
+imposto pela varredura do corpus completo: curso *sobre* recursos hídricos não é política
+hídrica da instituição — era a maior fonte de falsa "proposta" nas ODS raras (6, 7, 13),
+mas é evidência legítima na métrica educacional do THE, então ganha vínculo próprio em
+vez de ser descartado.
+
+## 4. O pipeline de classificação
+
+```
+133k atos
+  │  (A) RECORTE — corta ~96% (medido no corpus completo)
+  ▼
+tipos normativos (Resolução, Decisão, IN, Norma de Serviço,
+Portaria normativa) ∩ verbo dispositivo no corpo
+(institui | dispõe | estabelece | regulamenta | aprova a política/o
+ programa/o plano | cria)  →  2.819 candidatos
+ (varredura de 22/07/2026 sobre 68.843 atos normativos únicos:
+  901 proposta · 31 pesquisa · 326 ensino · 1.561 execução)
+  │  (B) LER O DISPOSITIVO — não a ementa
+  ▼
+para cada candidato: ler o CORPO (texto_original), do marcador
+"RESOLVE:/DECIDE:" até o fim do Art. 1º-2º
+  │  + GUARDA DE COERÊNCIA corpo↔ementa (ver §5)
+  ▼
+  (C) IA classifica: ODS[] + vínculo + confiança + justificativa
+      (a justificativa cita a meta THE/IPEA e o trecho)
+  │  (D) CURADORIA humana no borderline e no ODS 4
+  ▼
+  (E) grava em tabela-fato `ato_ods`  →  API lê o índice  →  aba #ods
+```
+
+### Por que ler o corpo, e não a ementa
+A ementa engana — medido no lote de 210, o corpo **mudou o veredito em 25 atos (~12%)**:
+- **Rejeitou 19/19 iscas de palavra-chave** que a ementa/área aceitaria: *"declara vago
+  o cargo de Engenheiro de **Segurança do Trabalho**"* (cargo, não ODS 8); *"torna sem
+  efeito nomeação em **vagas reservadas a negros/PcD**"* (nomeação anulada, não ODS 10);
+  *"nomeia Superintendente de Comunicação **Social**"* (isca "nome social");
+  *"ratifica convênio de estágio com Instituto Biasse **Socioambiental**"* (o nome do
+  parceiro, não política ambiental).
+- **Corrigiu ementas truncadas/erradas do OCR:** ementa "Plano de Desenvolvimento do
+  Instituto Biomédico" cujo corpo é regulamento de estágio de biblioteconomia (→ ODS 4).
+
+### Esquema mínimo da tabela-fato
+Segue o padrão de `ato_comissao` (índice pré-computado, lido pela API):
+```sql
+CREATE TABLE `ato_ods` (
+  `id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ato_id`       BIGINT UNSIGNED NOT NULL,
+  `ods`          TINYINT UNSIGNED NOT NULL,      -- 1..17
+  `vinculo`      ENUM('proposta','execucao','pesquisa','ensino') NOT NULL,
+  `confianca`    ENUM('alta','media','baixa') NOT NULL,
+  `meta`         VARCHAR(16) NULL,               -- meta THE/IPEA ancorada (ex.: '10.6.11')
+  `justificativa` VARCHAR(400) NULL,             -- 1 frase + trecho
+  `metodo`       ENUM('ia','curadoria','ia+curadoria') NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_ato_ods` (`ato_id`,`ods`),
+  KEY `ix_ods` (`ods`,`vinculo`),
+  CONSTRAINT `fk_atoods_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+Um ato pode ter **várias** linhas (a IN PROAES 38 casa ODS 10, 5 e 4). É Percona 5.7:
+extração de padrões do TEXT em PHP (loop + `preg_match_all`), nunca `REGEXP_SUBSTR`.
+
+## 5. Armadilhas medidas (guardas obrigatórias)
+
+1. **Isca de palavra-chave.** Termo-ODS no nome do parceiro, na área do concurso ou no
+   cargo da pessoa ≠ política. Guarda: classificar pelo **dispositivo**, não pela menção
+   (mesma doutrina do extrator). 19/19 rejeitadas no lote.
+2. **Ementa ≠ corpo (desalinhamento de extração).** Parte dos atos traz corpo de um ato
+   vizinho. Guarda de **coerência**: exigir que ≥1 palavra-conteúdo da ementa apareça no
+   corpo; senão, marcar `corpo_suspeito` e cair para curadoria. (No casamento offline,
+   isto também pega o bug de casar por número sem sigla — número de Resolução reinicia
+   por colegiado; **sigla é obrigatória**, exceto Portaria/NS, cuja numeração é única.)
+3. **ODS 4 infla.** Educação é a razão de ser da UFF; quase todo ato "toca" ODS 4.
+   Guarda: ODS 4 só conta política de **acesso, permanência, qualidade ou inclusão**
+   (metas 4.3/4.5) — **não** cada regulamento de TCC, criação de disciplina ou
+   progressão docente. Sem essa guarda, ODS 4 vira 17 mil resoluções sem sinal.
+4. **Proposta vs execução.** "Designa membros de" / "altera composição de" = execução.
+   "Institui / cria / aprova a política" = proposta. O verbo decide.
+5. **FULLTEXT tokeniza.** "nome social" casa "Nomeia … Social"; "segurança da informação"
+   casa "engenharia da informação". Casamento determinístico é por **frase/dispositivo**,
+   nunca por índice de texto livre (ver `CLAUDE.md`).
+
+## 6. Critério por ODS (âncora → o que conta na UFF → o que NÃO conta)
+
+| ODS | Âncora (THE / IPEA) | Conta como proposta da UFF | NÃO conta (guarda) | Exemplo real no acervo |
+|---|---|---|---|---|
+| **1** Pobreza | 1.4 acesso a serviços; assistência | Auxílio-moradia, auxílio emergencial, bolsa por vulnerabilidade | Bolsa de mérito acadêmico | IN PROAES 35 (Apoio à Moradia) |
+| **2** Fome | 2.1 acesso a alimento | Restaurante Universitário, auxílio-alimentação, seg. alimentar | Curso de nutrição | Portaria 68.900 (RU campus Macaé) |
+| **3** Saúde | 3.3.5/3.3.7 saúde mental; saúde do servidor | Política de qualidade de vida, saúde do trabalhador, apoio psicológico | Concurso da área de saúde; HUAP assistencial de rotina | Decisão CGIRC 9 (Qualidade de Vida) |
+| **4** Educação | 4.3/4.5 acesso e permanência | **Só** acesso/permanência/qualidade/inclusão | Regulamento de TCC, criação de disciplina, progressão | IN PROAES 22 (Permanência) |
+| **5** Gênero | 10.6.11 assédio; 5.1/5.2 discriminação/violência | Enfrentamento ao assédio, creche, gestantes, nome social, equidade | Ato de pessoal de mulher | IN PROAES 24 (gestantes/creche) |
+| **6** Água | 6.3 saneamento (operações do campus) | Gestão de água/efluentes do campus | — (raro; sobretudo pesquisa) | — |
+| **7** Energia | 7.2/7.3 energia limpa e eficiência | Eficiência energética, solar no campus | Convênio com empresa "Energia Solar" (isca) | — |
+| **8** Trabalho | 8.8 direitos e segurança no trabalho | CIPA, saúde/segurança do servidor, PGD, capacitação | "Cargo de Segurança do Trabalho" (isca) | IN GAR 127 (CISSP) |
+| **9** Inovação | 9.5 pesquisa e infraestrutura | NIT, inovação, ciência aberta, infra de pesquisa | — | DTS SDC 9 (Núcleo Ciência Aberta) |
+| **10** Desigualdades | 10.6.4 antidiscriminação; cotas | Ações afirmativas, cotas, acessibilidade, permanência, SEPAD/AFIDE/CPPIQ | *Designar* membros (isso é execução); nomeação anulada de vaga reservada | Res. CUV 635 (cria SEPAD) |
+| **11** Cidades | 11.4 patrimônio; acesso público | Patrimônio, mobilidade, espaços abertos à comunidade | — | Res. CEPEx 2.678 (Núcleo Meio Ambiente e comunidade) |
+| **12** Consumo | 12.5 resíduos; compras sustentáveis | PLS, A3P, coleta seletiva, gestão de resíduos, CPS | Convênio com parceiro "socioambiental" (isca) | Res. CUV 528 (PLS 2025-2028) |
+| **13** Clima | 13.3 educação climática | Educação/ação climática; **muito via pesquisa** | — | Res. CEPEx 5.213 (pesquisa clima+trabalho) |
+| **14** Vida na água | 14.x | Quase só **pesquisa** (biologia marinha, reciclagem naval) | — | IN VEP 1 (reciclagem de navios) |
+| **15** Vida terrestre | 15.2.5 manejo sustentável | Bem-estar animal (CEUA), manejo; sobretudo pesquisa | — | — |
+| **16** Instituições | 16.5/16.6 corrupção e instituições eficazes; liberdade acadêmica | Governança (CGIRC), integridade, riscos, LGPD, ética, segurança da informação | Sindicância/PAD individual | Res. CUV 372 (PSI); Portaria 68.259 (institui CGIRC) |
+| **17** Parcerias | 17.x colaboração intersetorial e internacional; relatório ODS | Acordos de cooperação internacional, convênios institucionais, o próprio relatório ODS | Convênio de estágio (é operação de ensino) | Res. CEPEx 6.016-6.019 (coop. internacional) |
+
+## 7. Warm start — o que já está curado
+
+Não se começa do zero. Estruturas já curadas no portal são infraestrutura-ODS pronta,
+e seus atos **fundadores** entram direto:
+
+- Comissões permanentes (`comissoes_registro()`): **CPS** → 12/13, **AFIDE** → 10/5,
+  **CPPIQ** → 10, **CGIRC** → 16, **CIPA** → 8, **CEUA** → 15.
+- Nova estrutura vista no lote: **SEPAD** (Superintendência de Equidade, Políticas
+  Afirmativas e Diversidade, Res. CUV 635/2025) → 10/5.
+- Aba **Cooperação** → 17 (já pronta; os acordos internacionais são evidência 17).
+
+## 8. Governança da classificação
+
+- **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle
+  vê o grau de certeza.
+- **Justificativa obrigatória** citando a meta e o trecho do dispositivo — sem
+  justificativa, não grava. É o que torna cada rótulo auditável.
+- **Curadoria humana** no borderline, no ODS 4 e em todo `corpo_suspeito`.
+- **Transparência de método** na própria aba (como a aba Privacidade explica o RSC):
+  dizer que é classificação assistida por IA, ancorada em THE+IPEA, revisada.
+
+## 9. Estado do protótipo (22/07/2026)
+
+Três passadas rodadas, cada uma respondendo uma pergunta:
+
+| Passada | Fonte | N | O que provou |
+|---|---|---|---|
+| Largura | ementas via API | 267 | taxa-base ~8%; proposta ≠ execução; 11/11 iscas rejeitadas |
+| Profundidade | corpo (dispositivo) das cargas | 210 | o corpo muda 12% dos vereditos; 19/19 iscas rejeitadas; achou SEPAD, coop. internacional |
+| Corpus completo | corpo de TODO o normativo (`reprocessamento-2026-07-15/`) | 68.843 | recorte real 96%→2.819 candidatos; achou ODS 2 (Aux. Alimentação, RU), ODS 15 (CEUA 879/2008), ODS 1 (auxílios Covid); impôs o vínculo `ensino` |
+
+Classificador de recorte: `classificador_corpus.py` (scratchpad da sessão — mover para
+`tools/` ao industrializar). A auditoria manual das ODS raras mostrou que o
+determinístico **gera candidatos** (recall) mas erra rótulo no borderline — o rótulo
+final é da camada IA + curadoria, como desenhado.
+
+**Camada fina rodada em 22/07/2026 — backfill pronto.** Os 2.819 candidatos passaram
+pela rotulagem por clusters auditados (`rotulador_final.py`): 40 clusters com meta
+THE/IPEA e justificativa; descartes duros com motivo (concurso, folha, moção, doação,
+cargo CD/FG, aditivo de estágio); vínculo `ensino` decidido pelo NOME do curso na
+ementa (nunca por disciplina citada no corpo); adesões de jornada separadas da norma
+geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
+
+- **1.390 atos rotulados** → uid resolvido contra o dump do dia (97,7%; desempate de
+  duplicata `-2` por prefixo de ementa) → **1.651 linhas (uid × ods)** em
+  `../../backfill-ods/ato_ods_backfill.json` (567 proposta · 911 execução · 166
+  ensino · 7 pesquisa).
+- **32 ambíguos** + **1.429 descartados com motivo** (759 resíduo, sendo 495 atos
+  2001-2010 de ementa vazia) — trilha de auditoria em `backfill-ods/`.
+- Infra: `backend/db/ato_ods.sql` (+ tabela no `schema_v2.sql`) e
+  `backend/importar/backfill_ato_ods.php` (upsert por uid; linha `metodo='curadoria'`
+  nunca é sobrescrita). Runbook: `../../backfill-ods/LEIA-ME.md`.
+
+Falta para a aba: rota `/api/ods` (cacheada, padrão dos painéis diário-estáticos) +
+frontend `#ods` + curadoria dos 32+759.
+
+Dossiê visual: https://claude.ai/code/artifact/59b5cb32-f337-412d-821e-5c21bc78c38a
+
+---
+*Fontes: THE Impact Rankings 2025 (methodology); IPEA — Metas nacionais dos ODS
+(proposta de adequação) e Cadernos ODS. Números do protótipo: 267 atos por ementa +
+210 por corpo + varredura do corpus normativo completo (68.843), acervo
+`inteligencia.fanara.com.br` e cargas locais, jul/2026.*

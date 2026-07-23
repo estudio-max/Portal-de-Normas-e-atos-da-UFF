@@ -315,4 +315,28 @@ CREATE TABLE `ato_comissao` (
   CONSTRAINT `fk_atocom_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------------------------
+-- ato_ods — liga um ato a uma ODS. Racional em docs/METODOLOGIA-ODS.md;
+-- comentários linha a linha em ato_ods.sql (o arquivo de migração avulso).
+-- `vinculo` distingue proposta (ato fundador — a evidência que rankings e
+-- controle pedem) de execução/pesquisa/ensino; `meta` ancora numa meta
+-- nomeável THE/IPEA; `metodo` separa rótulo de IA da curadoria humana.
+-- Alimentada por importar/backfill_ato_ods.php (upsert por uid).
+DROP TABLE IF EXISTS `ato_ods`;
+CREATE TABLE `ato_ods` (
+  `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ato_id`        BIGINT UNSIGNED NOT NULL,
+  `ods`           TINYINT UNSIGNED NOT NULL,
+  `vinculo`       ENUM('proposta','execucao','pesquisa','ensino') NOT NULL,
+  `confianca`     ENUM('alta','media','baixa') NOT NULL,
+  `meta`          VARCHAR(40) NULL,
+  `justificativa` VARCHAR(400) NULL,
+  `metodo`        ENUM('ia','curadoria','ia+curadoria') NOT NULL DEFAULT 'ia',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_ato_ods` (`ato_id`, `ods`),
+  KEY `ix_ods` (`ods`, `vinculo`),
+  KEY `ix_vinculo` (`vinculo`),
+  CONSTRAINT `fk_atoods_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
