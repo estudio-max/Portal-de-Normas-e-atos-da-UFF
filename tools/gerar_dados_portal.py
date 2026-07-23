@@ -46,6 +46,7 @@ def mascarar_cpfs(texto):
 TIPO_MAP = {
     "PORTARIA": "Portaria",
     "RESOLUÇÃO": "Resolução",
+    "RESOLUÇÃO AD REFERENDUM": "Resolução ad referendum",
     "DETERMINAÇÃO DE SERVIÇO": "Determinação de Serviço",
     "INSTRUÇÃO NORMATIVA": "Instrução Normativa",
     "NORMA DE SERVIÇO": "Norma de Serviço",

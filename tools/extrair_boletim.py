@@ -49,6 +49,16 @@ TIPOS = [
     "INSTRUÇÃO NORMATIVA",
     "NORMA DE SERVIÇO",
     "ORDEM DE SERVIÇO",
+    # "AD REFERENDUM" é SÉRIE PRÓPRIA, não qualificador descartável: o CEPEx
+    # numera as resoluções ad referendum à parte (existem a 010/2021 comum E a
+    # ad referendum). Sem esta entrada, o TITULO_RE casava só "RESOLUÇÃO" e o
+    # "AD REFERENDUM CEPEx" inteiro virava órgão — que o norm_sigla() reduzia a
+    # "AD" (REFERENDUM cai por comprimento e CEPEx cai pelo x minúsculo; 68
+    # atos com emissor errado em produção). Tipo novo exige as 4 camadas em
+    # sincronia: aqui, TIPO_MAP (gerar_dados_portal), SIGLA_TIPO (importar_v2)
+    # e a linha na dimensão tipo_ato do banco — sem a última o importador
+    # IGNORA o ato inteiro.
+    "RESOLUÇÃO AD REFERENDUM",
     "RESOLUÇÃO",
     "PORTARIA",
     "DECISÃO",

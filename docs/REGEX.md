@@ -23,7 +23,7 @@ O problema central do extrator. O boletim é um PDF corrido: nada nele marca o f
 
 ### `TITULO_RE`
 
-`extrair_boletim.py:135`
+`extrair_boletim.py:145`
 
 Título de um ato. Ex.:
 DETERMINAÇÃO DE SERVIÇO COLUNI/UFF Nº. 20, DE 12 DE JUNHO DE 2026
@@ -67,7 +67,7 @@ r"(?P<tipo>%s)\s+"
 
 ### `TITULO_SIGA_RE`
 
-`extrair_boletim.py:146`
+`extrair_boletim.py:156`
 
 Portarias emitidas pelo SIGA em ALGUNS anos (ex.: 2020) saem em Title Case
 ("Portaria Nº 67.634 de 16 de outubro de 2020") — invisíveis ao TITULO_RE,
@@ -82,7 +82,7 @@ r"UFF[A-Z]{3}\d{6,}[A-Z]?\s*\n\s*"
 
 ### `TITULO_CURTO_RE`
 
-`extrair_boletim.py:176`
+`extrair_boletim.py:186`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -121,7 +121,7 @@ r"%s\s*\n\s*"
 
 ### `BOUNDARY_NAO_ATO_RE`
 
-`extrair_boletim.py:223`
+`extrair_boletim.py:233`
 
 Cabeçalhos de documentos publicados no BS que NÃO são "atos" no vocabulário
 do app (extrato de contrato/convênio, termo de homologação/adesão, ata de
@@ -171,7 +171,7 @@ r"(?P<tipo>EXTRATO DE INSTRUMENTO CONVENIAL|EXTRATO DE CONTRATO|EXTRATO DE TERMO
 
 ### `_RESOLVE_CORTE`
 
-`extrair_boletim.py:1083`
+`extrair_boletim.py:1093`
 
 Fronteira entre o preâmbulo do ato e o dispositivo. Ao procurar o nome de uma
 pessoa ANTES de uma matrícula, a janela de busca não pode atravessar o
@@ -191,7 +191,7 @@ Uma norma antiga CITADA dentro de outro documento tem a mesma forma de um títul
 
 ### `_FRAGMENTO_INI_RE`
 
-`extrair_boletim.py:480`
+`extrair_boletim.py:490`
 
 Ato cujo ANO fica muito atrás do ano do BOLETIM quase nunca é ato: é uma
 CITAÇÃO de norma antiga que o recorte tratou como cabeçalho, ou um pedaço de
@@ -229,7 +229,7 @@ r"^\s*$"                                             # ementa vazia
 
 ### `_QUE_ANTES_RE`
 
-`extrair_boletim.py:1523`
+`extrair_boletim.py:1533`
 
 Retificação que CITA uma concessão anterior: "...a portaria nº X de DD/MM/AAAA,
 publicada no DOU..., QUE concedeu aposentadoria a fulano..." — "que" logo antes
@@ -250,7 +250,7 @@ Identificam a edição: número, ano, data e a seção/página em que o ato saiu
 
 ### `HEADER_BS_RE`
 
-`extrair_boletim.py:322`
+`extrair_boletim.py:332`
 
 Linha de cabeçalho repetida em cada página do ato
 
@@ -260,7 +260,7 @@ r"UNIVERSIDADE FEDERAL FLUMINENSE.{0,5}BOLETIM DE SERVIÇO", re.I
 
 ### `ANO_NUM_RE`
 
-`extrair_boletim.py:324`
+`extrair_boletim.py:334`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -272,7 +272,7 @@ r"ANO\s+([IVXLCDM]+)\s*.{0,4}\s*N%s\s*(\d+)" % _ORD, re.I
 
 ### `DATA_BS_RE`
 
-`extrair_boletim.py:325`
+`extrair_boletim.py:335`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -284,7 +284,7 @@ r"\b(\d{2}/\d{2}/\d{4})\b"
 
 ### `SECAO_RE`
 
-`extrair_boletim.py:326`
+`extrair_boletim.py:336`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -300,7 +300,7 @@ Números que ligam o ato a outros sistemas da UFF (SEI) e a pessoas (SIAPE). Sã
 
 ### `PROC_RE`
 
-`extrair_boletim.py:231`
+`extrair_boletim.py:241`
 
 Processo SEI: 23069.166342/2026-40  (aceita espaços no lugar de . / -)
 
@@ -310,7 +310,7 @@ r"23069[.\s]\d{6}[/\s]\d{4}[-\s]\d{2}"
 
 ### `SEI_DOC_RE`
 
-`extrair_boletim.py:233`
+`extrair_boletim.py:243`
 
 Código verificador SEI: "SEI nº 3441183"  ou  "(3442574)"
 
@@ -320,7 +320,7 @@ r"SEI\s*n%s\s*(\d{6,8})" % _ORD
 
 ### `SEI_DOC_PAREN_RE`
 
-`extrair_boletim.py:234`
+`extrair_boletim.py:244`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -332,7 +332,7 @@ r"\((\d{6,8})\)"
 
 ### `SIAPE_RE`
 
-`extrair_boletim.py:239`
+`extrair_boletim.py:249`
 
 Matrícula SIAPE: "SIAPE 1642620", "Siape nº 1642620", "Matrícula SIAPE nº 2364493".
 Consome também a abreviação de "Matrícula" colada/pontuada ("Mat. SIAPE 123",
@@ -348,7 +348,7 @@ Capturar nome próprio em texto livre é heurística, não certeza. Os dois padr
 
 ### `NOME_RE`
 
-`extrair_boletim.py:315`
+`extrair_boletim.py:325`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -363,7 +363,7 @@ r"%s(?:\s+(?:%s|%s)){1,6}" % (_PALAVRA_NOME, _CONN, _PALAVRA_NOME)
 
 ### `NOME_CAPS_RE`
 
-`extrair_boletim.py:319`
+`extrair_boletim.py:329`
 
 Run de CAIXA ALTA não aceita conector minúsculo: nome oficial em caps usa
 "DOS/DE" também em caps (casam como palavra), e o minúsculo no meio denuncia
@@ -375,7 +375,7 @@ r"%s(?:\s+%s){1,6}" % (_PALAVRA_CAPS, _PALAVRA_CAPS)
 
 ### `_NAO_NOME`
 
-`extrair_boletim.py:1235`
+`extrair_boletim.py:1245`
 
 Palavras que denunciam que o "nome" é na verdade um coletivo/genérico.
 
@@ -386,7 +386,7 @@ r"\b(comiss|membro|docente|servidor|professor|grupo|equipe|"
 
 ### `_NOMEIA_EXT`
 
-`extrair_boletim.py:1233`
+`extrair_boletim.py:1243`
 
 A vírgula depois do nome é opcional: portarias de convidado externo tanto
 escrevem "Nomear FULANO, para exercer" quanto "Nomear FULANO para exercer"
@@ -403,7 +403,7 @@ A ementa é por onde se pesquisa. Quando o ato não traz uma formal, o extrator 
 
 ### `PREAMBULO_RE`
 
-`extrair_boletim.py:821`
+`extrair_boletim.py:831`
 
 "Ementa" que na verdade é o PREÂMBULO do ato: a autoridade + "no uso de suas
 atribuições" logo no início (sem frase de ementa antes). Acontece quando o
@@ -416,7 +416,7 @@ r"(?i)^[^.;]{0,80}\bno uso d(?:e suas?\b|e atribui\w*|as?\s+(?:atribui|compet)\w
 
 ### `BOILERPLATE_EMENTA_RE`
 
-`extrair_boletim.py:827`
+`extrair_boletim.py:837`
 
 "Ementa" que é só a cláusula de vigência/fecho do ato ("Esta DTS entrará em
 vigor na data de sua assinatura. DOCUMENTO ASSINADO..."): ato sem ementa cujo
@@ -430,7 +430,7 @@ r"(?i)^\s*est[ae]\s+(?:dts|determina\w*(?:\s+de\s+servi[çc]o)?|portaria|"
 
 ### `_ENUM_EMENTA_RE`
 
-`extrair_boletim.py:912`
+`extrair_boletim.py:922`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -449,7 +449,7 @@ r"(?i)^\s*(?:art\.?\s*\d+[ºo°.\-]*\s*[-–]?\s*|[ivx]{1,4}\s*[-–.)]\s*|"
 
 ### `_STOP_EMENTA_RE`
 
-`extrair_boletim.py:917`
+`extrair_boletim.py:927`
 
 Corte do objeto: ";" ou "." de fim de frase (NÃO o "." interno de nº de
 processo "23069.002753"), próximo item (II-, IV-), ou início de cláusula acessória.
@@ -463,7 +463,7 @@ r"(?i)(?:;|\.(?=\s|$)|\bII+\s*[-–]|\bIV\s*[-–]|,?\s*\bmatr[íi]cula\b|,?\s*\
 
 ### `_CLAUSULA_INI_RE`
 
-`extrair_boletim.py:924`
+`extrair_boletim.py:934`
 
 Cláusula acessória inicial a descartar para chegar ao objeto real. Ex.:
 "dispensar, A PEDIDO, A PARTIR DE 04/08/2025, Fulano..." -> "Fulano...".
@@ -480,7 +480,7 @@ r"(?i)^\s*,?\s*(?:"
 
 ### `ACAO_EMENTA_RE`
 
-`extrair_boletim.py:345`
+`extrair_boletim.py:355`
 
 Verbo no início da ementa -> natureza do ato (para classificação rápida)
 
@@ -496,7 +496,7 @@ O que o portal acrescenta ao acervo: um ato não anuncia a própria revogação,
 
 ### `REF_RE`
 
-`extrair_boletim.py:365`
+`extrair_boletim.py:375`
 
 Aceita as DUAS grafias do número do ato citado:
 • com marcador "nº":  "DTS GES/INF/UFF nº 16, de 22/08/2025"  (ano opcional /AAAA)
@@ -520,7 +520,7 @@ r"(?P<tipo>(?i:%s))\s+"
 
 ### `BS_REF_RE`
 
-`extrair_boletim.py:375`
+`extrair_boletim.py:385`
 
 Referência a outro Boletim: "publicada no BS nº 102, de 01/09/2025"
 
@@ -534,7 +534,7 @@ Designação e dispensa de função. A armadilha documentada aqui é classificar
 
 ### `FUNCAO_RE`
 
-`extrair_boletim.py:1190`
+`extrair_boletim.py:1200`
 
 A vírgula só encerra a unidade quando NÃO for parte do próprio nome: em
 "Pró-Reitor de Pesquisa, Pós-Graduação e Inovação" a vírgula é interna
@@ -634,7 +634,7 @@ _MANDATO_UNID_RE = re.compile(r"^[^)]{0,20}\)\s*(?P<unid>m[eê]s(?:es)?|anos?)",
 
 ### `_VERBO_FUNC`
 
-`extrair_boletim.py:1215`
+`extrair_boletim.py:1225`
 
 "nomear/nomeia" é o par de ENTRADA dos cargos de direção (CD), como
 "designar" é o das funções — e faltava aqui, embora "exoner" (a SAÍDA do CD)
@@ -658,7 +658,7 @@ r"design|nomea(?!c)|nomei|dispens|exoner|destitu"
 
 ### `_SUBST_FUNC`
 
-`extrair_boletim.py:1216`
+`extrair_boletim.py:1226`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -684,7 +684,7 @@ r"(?i)substitut|eventual|pro\s*tempore|respond|interin|exerc[íi]cio eventual"
 
 ### `_ANAFORA_UNID`
 
-`extrair_boletim.py:1217`
+`extrair_boletim.py:1227`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -714,7 +714,7 @@ Quanto dura uma designação e quando ela começou a contar. O fim de um mandato
 
 ### `_MANDATO_RE`
 
-`extrair_boletim.py:1269`
+`extrair_boletim.py:1279`
 
 Mandato da designação: PRAZO e DATA DE INÍCIO ----------------------------- #
 A designação de chefia é AUTOLIMITADA — ela traz a própria validade ("com
@@ -738,7 +738,7 @@ _MANDATO_UNID_RE = re.compile(r"^[^)]{0,20}\
 
 ### `_MANDATO_UNID_RE`
 
-`extrair_boletim.py:1272`
+`extrair_boletim.py:1282`
 
 A unidade vem DEPOIS do extenso entre parênteses ("04 (quatro) anos"), então
 tem que pular o fecha-parênteses antes de ler "anos"/"meses".
@@ -749,7 +749,7 @@ r"^[^
 
 ### `_INICIADO_RE`
 
-`extrair_boletim.py:1279`
+`extrair_boletim.py:1289`
 
 Mandato-tampão: quem COMPLETA o mandato do antecessor. O relógio começou com
 o ANTECESSOR, não com este ato — "complementando assim, o mandato de 04
@@ -764,7 +764,7 @@ r"(?:iniciado|com\s+in[íi]cio)\s+em\s+(?P<d>\d{1,2})\s+de\s+(?P<m>\w+)\s+de\s+(
 
 ### `_APARTIR_RE`
 
-`extrair_boletim.py:1284`
+`extrair_boletim.py:1294`
 
 Início declarado: "Designar, a partir de 30/03/2026, FULANO, ... com mandato
 de 04 (quatro) anos, a função de ...". Sem isso o início vira a data do ato,
@@ -780,7 +780,7 @@ Tipo e base legal. O grosso da dificuldade é distinguir a CONCESSÃO de uma ret
 
 ### `_APOSENT_RETRO_RE`
 
-`extrair_boletim.py:1502`
+`extrair_boletim.py:1512`
 
 Aposentadorias: classifica pelo DISPOSITIVO de concessão, nunca por menção
 solta — desde 2023 é comum a Portaria de nomeação/vacância dizer "a vacância
@@ -807,7 +807,7 @@ r"c[oó]digo\s+de\s+vaga|origem\s+da\s+vaga|decorrente\s+da\s+(?:posse|aposentad
 
 ### `_APOSENT_DISPOSITIVO_RE`
 
-`extrair_boletim.py:1507`
+`extrair_boletim.py:1517`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -834,7 +834,7 @@ r"conced\w*\s+(?:a\s+)?aposentadoria|declara\w*\s+aposentad[oa](?:\s*\([aA]\))?\
 
 ### `_APOSENT_COMPULSORIA_RE`
 
-`extrair_boletim.py:1510`
+`extrair_boletim.py:1520`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -861,7 +861,7 @@ r"aposentadoria\s+compuls[oó]ria|compulsoriamente", re.I
 
 ### `_APOSENT_VOLUNTARIA_RE`
 
-`extrair_boletim.py:1511`
+`extrair_boletim.py:1521`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -888,7 +888,7 @@ r"aposentadoria\s+volunt[aá]ria", re.I
 
 ### `_APOSENT_INVALIDEZ_RE`
 
-`extrair_boletim.py:1512`
+`extrair_boletim.py:1522`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -915,7 +915,7 @@ r"aposentadoria\s+por\s+(?:invalidez|incapacidade)", re.I
 
 ### `_ART40_RE`
 
-`extrair_boletim.py:1513`
+`extrair_boletim.py:1523`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -942,7 +942,7 @@ r"art(?:igo)?\.?\s*40\b", re.I
 
 ### `_INCISO_ART40_RE`
 
-`extrair_boletim.py:1514`
+`extrair_boletim.py:1524`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -973,7 +973,7 @@ Para onde a pessoa foi e por quê. Separa movimentação interna da UFF de saíd
 
 ### `_RED_QQ`
 
-`extrair_boletim.py:1559`
+`extrair_boletim.py:1569`
 
 Deslocamento de servidor (Lei 8.112/90): REMOÇÃO = dentro da própria UFF
 (art. 36); REDISTRIBUIÇÃO = cargo entra/sai da UFF p/ outro órgão (art. 37).
@@ -984,7 +984,7 @@ r"redistribu", re.I
 
 ### `_RED_EXCL`
 
-`extrair_boletim.py:1560`
+`extrair_boletim.py:1570`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1008,7 +1008,7 @@ r"redistribuiç[ãa]o\s+de\s+cargos\s+de\s+direç"        # CD/FG genérico do M
 
 ### `_INST_EXTERNA`
 
-`extrair_boletim.py:1579`
+`extrair_boletim.py:1589`
 
 Instituição de origem/destino EXTERNA (não-UFF). "Ministério da Educação" fica
 de fora de propósito: é o rodapé padrão de TODO ato (a UFF também é MEC), não
@@ -1032,7 +1032,7 @@ r"universidade\s+federal\s+(?!fluminense)\w[\wçãáéíóúâêô]*"
 
 ### `_UFF_MARK`
 
-`extrair_boletim.py:1590`
+`extrair_boletim.py:1600`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1049,7 +1049,7 @@ r"desta\s+universidade|universidade\s+federal\s+fluminense", re.I
 
 ### `_REMOVER`
 
-`extrair_boletim.py:1637`
+`extrair_boletim.py:1647`
 
 Remoção: "remover" ancorado num servidor/matrícula na MESMA frase (sem ponto).
 Cobre "remover o(a) servidor(a)", "remover, em caráter provisório, a servidora",
@@ -1062,7 +1062,7 @@ r"\bremover\b[^.]{0,60}?\b(?:servidor|servidora|professor|docente|"
 
 ### `_M_SAUDE`
 
-`extrair_boletim.py:1640`
+`extrair_boletim.py:1650`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1076,7 +1076,7 @@ r"motivos?\s+de\s+sa[úu]de", re.I
 
 ### `_M_CONJ`
 
-`extrair_boletim.py:1641`
+`extrair_boletim.py:1651`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1090,7 +1090,7 @@ r"acompanhar\s+c[ôo]njuge|acompanhar\s+companheir", re.I
 
 ### `_M_PERMUTA`
 
-`extrair_boletim.py:1642`
+`extrair_boletim.py:1652`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1104,7 +1104,7 @@ r"permuta", re.I
 
 ### `_M_OFICIO`
 
-`extrair_boletim.py:1643`
+`extrair_boletim.py:1653`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1118,7 +1118,7 @@ r"de\s+of[íi]cio|interesse\s+d[ao]\s+administraç", re.I
 
 ### `_M_PEDIDO`
 
-`extrair_boletim.py:1644`
+`extrair_boletim.py:1654`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1132,7 +1132,7 @@ r"a\s+pedido", re.I
 
 ### `_DEST_SIGLA`
 
-`extrair_boletim.py:1647`
+`extrair_boletim.py:1657`
 
 Unidade de DESTINO ("para a UNIDADE - SIGLA[, uorg N]"): prefere a SIGLA (chave
 estável), última ocorrência (a origem vem antes); sem sigla, nome curto.
@@ -1144,7 +1144,7 @@ r"para\s+[oa]s?\s+[^.;:]{3,90}?\s[-–]\s*([a-zà-ú]+(?:/[a-zà-ú]+){0,2})\s*"
 
 ### `_DEST_NOME`
 
-`extrair_boletim.py:1650`
+`extrair_boletim.py:1660`
 
 *O comentário abaixo encabeça o bloco e vale também para os padrões vizinhos.*
 
@@ -1164,7 +1164,7 @@ Lixo de OCR e de extração de PDF que atrapalha tudo o que vem depois.
 
 ### `CTRL_RE`
 
-`extrair_boletim.py:383`
+`extrair_boletim.py:393`
 
 Caracteres de controle ilegais (rejeitados por XLSX e indesejados no resto)
 

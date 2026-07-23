@@ -250,6 +250,24 @@ resumo operacional.
   `prevenção de acidentes e de assédio` — o `e de assédio` é o discriminador:
   `prevenção de acidentes` sozinho arrastava as 4 COPAMA. Medido: o acervo tem 1
   ato de CIPA de verdade (Faculdade de Medicina, 2026) contra 4 de COPAMA.
+- **"AD REFERENDUM" é SÉRIE PRÓPRIA, não qualificador descartável.** O CEPEx
+  numera as resoluções ad referendum à parte: a Resolução 010/2021 comum e a AD
+  REFERENDUM 010/2021 **coexistem** (medido: a série comum de 2021 usa 6, 7,
+  8… ao lado da ad referendum 001-066). Por isso "RESOLUÇÃO AD REFERENDUM" é
+  TIPO próprio (entrada em `TIPOS` no extrator + linha na dimensão `tipo_ato`)
+  — só trocar a sigla fundiria as duas séries na chave natural. Antes do fix, o
+  `TITULO_RE` casava só "RESOLUÇÃO" e "AD REFERENDUM CEPEx" inteiro virava
+  órgão, que o `norm_sigla()` reduzia a **"AD"**: REFERENDUM cai pelo filtro de
+  comprimento (>8) e **CEPEx cai pelo `p == p.upper()`** — o x minúsculo de
+  novo, terceira mordida da mesma armadilha. 68 atos com emissor errado em
+  produção (66 "AD" + AD/CEPEX + AD/CAL; grafia caixa-alta sobrevivia ao filtro,
+  CEPEx não). Conserto de dados: `backend/db/corrigir_ad_referendum.sql`.
+  **Tipo novo exige 4 camadas em sincronia**: `TIPOS` (extrator), `TIPO_MAP`
+  (gerar_dados_portal), `SIGLA_TIPO` (importar_v2, prefixo do uid) e a linha na
+  dimensão `tipo_ato` — sem a última o importador IGNORA o ato ("tipo
+  desconhecido"). Variante "DECISÃO AD REFERENDUM" aparece 1× no corpus como
+  citação, nunca como título — no dia em que materializar, precisa do mesmo
+  tratamento em 4 camadas.
 - **Sigla de órgão NÃO é caixa alta.** "CEPEx" — a grafia real da UFF de ~2021 a
   meados de 2025 — tem um "x" minúsculo. Enquanto o `TITULO_RE` exigiu
   MAIÚSCULAS no nome do órgão, o título inteiro deixava de casar e a resolução

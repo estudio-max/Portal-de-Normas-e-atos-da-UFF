@@ -76,6 +76,7 @@ function digits(?string $s): string {
 }
 const SIGLA_TIPO = [
     'Determinação de Serviço' => 'dts', 'Portaria' => 'port', 'Resolução' => 'res',
+    'Resolução ad referendum' => 'resad',
     'Decisão' => 'dec', 'Ordem de Serviço' => 'os', 'Resumo de Despachos' => 'rd',
     'Edital' => 'ed', 'Comunicado' => 'com', 'Norma de Serviço' => 'ns',
     'Instrução Normativa' => 'in',
