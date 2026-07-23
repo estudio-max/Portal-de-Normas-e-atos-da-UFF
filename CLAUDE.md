@@ -413,6 +413,12 @@ resumo operacional.
 
 - Curadoria fina de órgãos: identificar o CEP no corpus; ~35 nomes com sigla
   embutida entre parênteses.
+- **Ementa pobre nas resoluções ad referendum ("1.").** O formato abre com
+  lista numerada de considerandos ("1. Considerando o constante do processo…")
+  e o extrator de ementa captura o "1." como ementa. Afeta as ~68 resoluções ad
+  referendum do CEPEx (o emissor delas já foi consertado — ver a regra AD
+  REFERENDUM). O conserto é no `extrai_ementa()`: pular lista de considerandos
+  numerados e cair no resumo do dispositivo — precisa de medição própria antes.
 - **Anos impossíveis / fantasmas de citação (limpos em produção; falta a guarda
   no extrator).** SQLs de correção:
   `corrigir_anos_impossiveis.sql` (DUPLICATA de ano typado — Resolução 02/**1014**
