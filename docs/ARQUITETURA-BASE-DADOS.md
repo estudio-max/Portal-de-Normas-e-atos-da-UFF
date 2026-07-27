@@ -2,7 +2,8 @@
 
 > Documento de projeto. Fonte da verdade para a migração do schema atual (v1) para
 > o schema normalizado (v2). Escrito a partir de auditoria do dump real de produção
-> (`out/fanara87_uffnormas.sql`, 130.400 atos, 11/07/2026).
+> (dump `fanara87_uffnormas.sql`, 130.400 atos, 11/07/2026 — artefato gerado,
+> fora do repositório).
 
 ---
 
@@ -368,7 +369,10 @@ Nunca mexer na produção viva. Construir a v2 ao lado, validar, e só então vi
    com `destino_norm`/`extracao_id` e, quando houver, corpo em caixa natural → mais recall).
 5. **Rodar `resolver_relacoes_v2.php`** (liga `destino_ato_id`, recalcula status).
 6. **Cutover**: apontar o app PHP para `uffnormas_v2`; manter v1 como backup congelado.
-7. **Atualizar o pipeline** (`extrair_boletim.py` / `gerar_sql.py`) para emitir v2 nativo.
+7. **Atualizar o pipeline** (`tools/extrair_boletim.py` / `tools/gerar_sql_core.py`)
+   para emitir v2 nativo. O `backend/db/gerar_sql.py` citado nas primeiras versões
+   deste plano era o gerador do v1 e foi apagado junto com o resto do v1;
+   `gerar_sql_core.py` é o sucessor.
 
 Cada passo tem um checkpoint de validação antes do próximo. A produção atual só é
 tocada no passo 6, e mesmo assim de forma reversível (basta reapontar o app).

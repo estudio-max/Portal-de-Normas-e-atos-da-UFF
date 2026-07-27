@@ -360,13 +360,14 @@ Três passadas rodadas, cada uma respondendo uma pergunta:
 | Profundidade | corpo (dispositivo) das cargas | 210 | o corpo muda 12% dos vereditos; 19/19 iscas rejeitadas; achou SEPAD, coop. internacional |
 | Corpus completo | corpo de TODO o normativo (`reprocessamento-2026-07-15/`) | 68.843 | recorte real 96%→2.819 candidatos; achou ODS 2 (Aux. Alimentação, RU), ODS 15 (CEUA 879/2008), ODS 1 (auxílios Covid); impôs o vínculo `ensino` |
 
-Classificador de recorte: `classificador_corpus.py` (scratchpad da sessão — mover para
-`tools/` ao industrializar). A auditoria manual das ODS raras mostrou que o
+Classificador de recorte: `tools/ods/classificador_corpus.py` — ele e os outros
+três do pipeline estão em `tools/ods/`, com a ordem de execução em
+[`../tools/ods/LEIA-ME.md`](../tools/ods/LEIA-ME.md). A auditoria manual das ODS raras mostrou que o
 determinístico **gera candidatos** (recall) mas erra rótulo no borderline — o rótulo
 final é da camada IA + curadoria, como desenhado.
 
 **Camada fina rodada em 22/07/2026 — backfill pronto.** Os 2.819 candidatos passaram
-pela rotulagem por clusters auditados (`rotulador_final.py`): 40 clusters com meta
+pela rotulagem por clusters auditados (`tools/ods/rotulador_final.py`): 40 clusters com meta
 THE/IPEA e justificativa; descartes duros com motivo (concurso, folha, moção, doação,
 cargo CD/FG, aditivo de estágio); vínculo `ensino` decidido pelo NOME do curso na
 ementa (nunca por disciplina citada no corpo); adesões de jornada separadas da norma
