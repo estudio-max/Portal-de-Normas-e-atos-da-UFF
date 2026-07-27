@@ -16,10 +16,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 # Caminho da base: PORTAL_DATA permite apontar para outra safra (backfill,
-# lote reprocessado) sem mexer no app/ — útil para conferir uma aba nova antes
-# de a carga entrar em produção.
-BASE = os.environ.get("PORTAL_DATA") or os.path.join(
-    os.path.dirname(os.path.dirname(__file__)), "app", "portal-data.json")
+# lote reprocessado) — útil para conferir uma aba nova antes de a carga entrar
+# em produção. O padrão é public/portal-data.json (o app/ antigo foi arquivado
+# em jul/2026; o caminho velho fica como fallback para quem tiver a árvore v1).
+_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE = os.environ.get("PORTAL_DATA") or next(
+    (p for p in (os.path.join(_raiz, "public", "portal-data.json"),
+                 os.path.join(_raiz, "app", "portal-data.json")) if os.path.isfile(p)),
+    os.path.join(_raiz, "public", "portal-data.json"))
 ATOS = json.load(open(BASE, encoding="utf-8"))
 POR_ID = {a["id"]: a for a in ATOS}
 
@@ -535,6 +539,61 @@ def comissoes_payload(corpo=""):
     return {"corpos": corpos, "total": sum(c["atos"] for c in corpos), "orfaos": []}
 
 
+# ODS: espelha /api/ods (índice ato_ods, docs/METODOLOGIA-ODS.md). Números
+# ecoam a proporção do backfill real de 22/07/2026 (ODS 17 e 16 dominam;
+# 6/7/11/13 quase vazias — a distribuição desigual é a mensagem do painel).
+_ODS = [  # (n, nome, cor, proposta, execucao, pesquisa, ensino, anoMin, anoMax)
+    (1, "Erradicação da pobreza", "#E5243B", 7, 5, 0, 0, 2021, 2026),
+    (2, "Fome zero", "#DDA63A", 9, 40, 1, 3, 2012, 2026),
+    (3, "Saúde e bem-estar", "#4C9F38", 12, 30, 1, 20, 2004, 2026),
+    (4, "Educação de qualidade", "#C5192D", 25, 30, 0, 9, 2021, 2026),
+    (5, "Igualdade de gênero", "#FF3A21", 10, 12, 0, 4, 2003, 2026),
+    (6, "Água potável e saneamento", "#26BDE2", 1, 1, 0, 1, 2023, 2023),
+    (7, "Energia limpa e acessível", "#FCC30B", 0, 0, 0, 1, 2010, 2010),
+    (8, "Trabalho decente", "#A21942", 30, 70, 1, 5, 2003, 2026),
+    (9, "Indústria, inovação e infraestrutura", "#FD6925", 8, 5, 1, 2, 2001, 2026),
+    (10, "Redução das desigualdades", "#DD1367", 40, 60, 2, 25, 2012, 2026),
+    (11, "Cidades e comunidades sustentáveis", "#FD9D24", 2, 1, 0, 0, 2003, 2013),
+    (12, "Consumo e produção responsáveis", "#BF8B2E", 12, 15, 2, 8, 2006, 2026),
+    (13, "Ação contra a mudança do clima", "#3F7E44", 2, 1, 1, 1, 2009, 2026),
+    (14, "Vida na água", "#0A97D9", 1, 5, 2, 3, 2004, 2026),
+    (15, "Vida terrestre", "#56C02B", 8, 15, 0, 4, 2008, 2026),
+    (16, "Paz, justiça e instituições eficazes", "#00689D", 35, 45, 3, 10, 2004, 2026),
+    (17, "Parcerias e meios de implementação", "#19486A", 90, 60, 4, 2, 2002, 2026),
+]
+
+
+def ods_payload(n=""):
+    if n:
+        num = int(n)
+        meta = next((o for o in _ODS if o[0] == num), None)
+        if not meta:
+            return {"erro": "ODS inválida (1–17)."}
+        vincs = (["proposta"] * min(meta[3], 4) + ["pesquisa"] * min(meta[5], 1)
+                 + ["ensino"] * min(meta[6], 2) + ["execucao"] * min(meta[4], 3))
+        atos = [{
+            "id": f"res-cepex-{4000 + i}-{2026 - i}", "numero": str(4000 + i),
+            "ano": 2026 - i, "data": f"{2026 - i}-06-1{i % 9}", "status": "Ativo",
+            "sigla": ["CEPEx", "CUV", "Reitoria"][i % 3],
+            "link": "https://boletimdeservico.uff.br/",
+            "vinculo": v, "confianca": ["alta", "media", "baixa"][i % 3],
+            "meta": "THE 10.6.4 / IPEA 10.2" if v == "proposta" else None,
+            "justificativa": ("Ato fundador de política institucional ligada à ODS"
+                              if v == "proposta" else "Operação de estrutura existente"),
+            "metodo": "curadoria" if i == 0 else "ia",
+            "ementa": f"Institui programa institucional relacionado a {meta[1]} no âmbito da UFF.",
+        } for i, v in enumerate(vincs)]
+        return {"ods": {"n": meta[0], "nome": meta[1], "cor": meta[2]}, "atos": atos}
+    lista = [{"n": n_, "nome": nome, "cor": cor, "proposta": p, "execucao": e,
+              "pesquisa": q_, "ensino": en, "total": p + e + q_ + en,
+              "anoMin": mn if p + e + q_ + en else None,
+              "anoMax": mx if p + e + q_ + en else None}
+             for (n_, nome, cor, p, e, q_, en, mn, mx) in _ODS]
+    return {"lista": lista, "linhas": sum(x["total"] for x in lista),
+            "atosDistintos": int(sum(x["total"] for x in lista) * 0.84),
+            "curados": 17}
+
+
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -588,6 +647,8 @@ class H(BaseHTTPRequestHandler):
             self._send(cooperacao_payload())
         elif recurso == "comissoes":
             self._send(comissoes_payload(q.get("corpo", [""])[0]))
+        elif recurso == "ods":
+            self._send(ods_payload(q.get("n", [""])[0]))
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)

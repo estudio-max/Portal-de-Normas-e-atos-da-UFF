@@ -980,6 +980,51 @@ export async function getComissaoAtos(slug: string): Promise<ComissaoDetalhe | n
   } catch { return null; }
 }
 
+// ---- ODS (dossiê de evidência nas 17 ODS — docs/METODOLOGIA-ODS.md) --------
+export interface OdsResumo {
+  n: number; nome: string; cor: string;
+  proposta: number; execucao: number; pesquisa: number; ensino: number;
+  total: number; anoMin: number | null; anoMax: number | null;
+}
+export interface OdsResp {
+  lista: OdsResumo[]; linhas: number; atosDistintos: number; curados: number;
+  indisponivel?: boolean; motivo?: string;
+}
+export interface OdsAtoRef {
+  id: string; numero: string; ano: number; data: string | null; status: string;
+  sigla: string; link: string | null;
+  vinculo: 'proposta' | 'execucao' | 'pesquisa' | 'ensino';
+  confianca: 'alta' | 'media' | 'baixa';
+  meta: string | null; justificativa: string | null; metodo: string;
+  ementa: string;
+}
+export interface OdsDetalhe {
+  ods: { n: number; nome: string; cor: string };
+  atos: OdsAtoRef[];
+}
+
+export async function getOds(): Promise<OdsResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/ods`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || (!Array.isArray(j.lista) && !j.indisponivel)) return null;  // API antiga
+    return j as OdsResp;
+  } catch { return null; }
+}
+
+export async function getOdsAtos(n: number): Promise<OdsDetalhe | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/ods?n=${n}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !Array.isArray(j.atos)) return null;
+    return j as OdsDetalhe;
+  } catch { return null; }
+}
+
 interface PrazoBruto { dataLimite: string; tipo: string; conf: 'alta' | 'média'; base: string; origem: string; ctx: string; }
 
 // Infere PARA QUEM serve o prazo (o público que precisa agir), a partir de

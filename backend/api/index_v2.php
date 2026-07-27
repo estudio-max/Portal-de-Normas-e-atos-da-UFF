@@ -87,6 +87,7 @@ switch ($recurso) {
     case 'jornada':  jornada($pdo); break;
     case 'cooperacao': cooperacao($pdo); break;
     case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? ''); break;
+    case 'ods':      ods($pdo, $_GET['n'] ?? ''); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
     // Resquício do tempo em que a aba (hoje "Meu SIAPE") era fechada por senha.
@@ -114,7 +115,7 @@ function cache_rotas(): array {
     // Só rotas cujo resultado é IGUAL para todos e muda 1x/dia. `dossie` é
     // pessoal (fica de fora); `atos`/`ato` variam demais e já são rápidas.
     static $r = ['stats', 'filtros', 'jornada', 'cooperacao', 'comissoes',
-                 'insights', 'analitico', 'prazos', 'pad_cadeia'];
+                 'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods'];
     return $r;
 }
 function cache_cacheavel(string $recurso): bool {
@@ -388,7 +389,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-21.8'; }
+function api_versao(): string { return '2026-07-23.1'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1939,6 +1940,126 @@ function comissoes(PDO $pdo, string $corpo): void {
         'corpos' => $corpos,
         'total' => array_sum(array_map(fn($c) => $c['atos'], $corpos)),
         'orfaos' => $orfaos,
+    ]);
+}
+
+// ===========================================================================
+//  ODS — dossiê de evidência dos atos nas 17 ODS (docs/METODOLOGIA-ODS.md).
+//
+//  Lê o índice pronto `ato_ods` (backfill offline: classificação híbrida
+//  IA + curadoria, ancorada no THE Impact Rankings e nas metas IPEA). A rota
+//  NÃO classifica nada ao vivo — mesmo desenho de ato_comissao.
+//
+//  `vinculo` é a alma do painel: proposta (ato fundador — a evidência),
+//  execucao (staffing/operação), pesquisa, ensino. O frontend mostra os
+//  quatro separados; somar tudo num número único enganaria o leitor.
+// ===========================================================================
+function ods_registro(): array {
+    // [n, nome curto, cor oficial ONU]
+    static $r = [
+        [1,  'Erradicação da pobreza',            '#E5243B'],
+        [2,  'Fome zero',                          '#DDA63A'],
+        [3,  'Saúde e bem-estar',                  '#4C9F38'],
+        [4,  'Educação de qualidade',              '#C5192D'],
+        [5,  'Igualdade de gênero',                '#FF3A21'],
+        [6,  'Água potável e saneamento',          '#26BDE2'],
+        [7,  'Energia limpa e acessível',          '#FCC30B'],
+        [8,  'Trabalho decente',                   '#A21942'],
+        [9,  'Indústria, inovação e infraestrutura', '#FD6925'],
+        [10, 'Redução das desigualdades',          '#DD1367'],
+        [11, 'Cidades e comunidades sustentáveis', '#FD9D24'],
+        [12, 'Consumo e produção responsáveis',    '#BF8B2E'],
+        [13, 'Ação contra a mudança do clima',     '#3F7E44'],
+        [14, 'Vida na água',                       '#0A97D9'],
+        [15, 'Vida terrestre',                     '#56C02B'],
+        [16, 'Paz, justiça e instituições eficazes', '#00689D'],
+        [17, 'Parcerias e meios de implementação', '#19486A'],
+    ];
+    return $r;
+}
+
+function ods(PDO $pdo, string $n): void {
+    $meta = [];
+    foreach (ods_registro() as $o) $meta[$o[0]] = ['n' => $o[0], 'nome' => $o[1], 'cor' => $o[2]];
+
+    // Degradação graciosa: a rota pode subir antes de a tabela existir (deploy
+    // em duas mãos: SQL no phpMyAdmin + arquivos no File Manager). Responder
+    // 200 com `indisponivel` — o backfill limpa o cache ao rodar, então a
+    // resposta boa aparece na sequência sem esperar TTL.
+    try {
+        $pdo->query("SELECT 1 FROM ato_ods LIMIT 1");
+    } catch (Throwable $e) {
+        responder_json(['indisponivel' => true,
+                        'motivo' => 'A tabela ato_ods ainda não foi criada/carregada.']);
+    }
+
+    if ($n !== '') {
+        $num = (int)$n;
+        if ($num < 1 || $num > 17) responder_json(['erro' => 'ODS inválida (1–17).'], 404);
+        $st = $pdo->prepare("
+            SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa, a.status,
+                   o.sigla, b.url_pdf AS link,
+                   ao.vinculo, ao.confianca, ao.meta, ao.justificativa, ao.metodo
+              FROM ato_ods ao
+              JOIN ato a          ON a.id = ao.ato_id
+              JOIN orgao o        ON o.id = a.orgao_id
+              LEFT JOIN boletim b ON b.id = a.boletim_id
+             WHERE ao.ods = :n
+             ORDER BY FIELD(ao.vinculo, 'proposta', 'pesquisa', 'ensino', 'execucao'),
+                      FIELD(ao.confianca, 'alta', 'media', 'baixa'),
+                      a.data_ato DESC, a.ano DESC, a.numero_norm DESC");
+        $st->execute([':n' => $num]);
+        $atos = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $atos[] = [
+                'id' => $r['id'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+                'data' => $r['data_ato'], 'status' => $r['status'], 'sigla' => $r['sigla'],
+                'link' => $r['link'],
+                'vinculo' => $r['vinculo'], 'confianca' => $r['confianca'],
+                'meta' => $r['meta'] ?: null,
+                'justificativa' => $r['justificativa'] ?: null,
+                'metodo' => $r['metodo'],
+                'ementa' => mb_substr(preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? '')), 0, 260),
+            ];
+        }
+        responder_json(['ods' => $meta[$num], 'atos' => $atos]);
+    }
+
+    // Visão de lista: contagem por ODS × vínculo, direto do índice.
+    $ag = $pdo->query("
+        SELECT ao.ods, ao.vinculo, COUNT(*) AS n,
+               MIN(a.ano) AS ano_min, MAX(a.ano) AS ano_max
+          FROM ato_ods ao
+          JOIN ato a ON a.id = ao.ato_id
+      GROUP BY ao.ods, ao.vinculo")->fetchAll(PDO::FETCH_ASSOC);
+    $porOds = [];
+    foreach ($ag as $r) {
+        $o = (int)$r['ods'];
+        if (!isset($porOds[$o])) $porOds[$o] = ['proposta' => 0, 'execucao' => 0,
+            'pesquisa' => 0, 'ensino' => 0, 'anoMin' => null, 'anoMax' => null];
+        $porOds[$o][$r['vinculo']] = (int)$r['n'];
+        $porOds[$o]['anoMin'] = min($porOds[$o]['anoMin'] ?? (int)$r['ano_min'], (int)$r['ano_min']);
+        $porOds[$o]['anoMax'] = max($porOds[$o]['anoMax'] ?? 0, (int)$r['ano_max']);
+    }
+    $lista = [];
+    foreach (ods_registro() as $o) {
+        $s = $porOds[$o[0]] ?? null;
+        $lista[] = [
+            'n' => $o[0], 'nome' => $o[1], 'cor' => $o[2],
+            'proposta' => $s['proposta'] ?? 0, 'execucao' => $s['execucao'] ?? 0,
+            'pesquisa' => $s['pesquisa'] ?? 0, 'ensino' => $s['ensino'] ?? 0,
+            'total' => $s ? $s['proposta'] + $s['execucao'] + $s['pesquisa'] + $s['ensino'] : 0,
+            'anoMin' => $s['anoMin'] ?? null, 'anoMax' => $s['anoMax'] ?? null,
+        ];
+    }
+    $tot = $pdo->query("SELECT COUNT(*) AS linhas, COUNT(DISTINCT ato_id) AS atos,
+                               SUM(metodo = 'curadoria') AS curados
+                          FROM ato_ods")->fetch(PDO::FETCH_ASSOC);
+    responder_json([
+        'lista' => $lista,
+        'linhas' => (int)$tot['linhas'],
+        'atosDistintos' => (int)$tot['atos'],
+        'curados' => (int)$tot['curados'],
     ]);
 }
 

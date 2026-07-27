@@ -16,6 +16,7 @@ import PrazosApi from './components/PrazosApi';
 import JornadaApi from './components/JornadaApi';
 import CooperacaoApi from './components/CooperacaoApi';
 import ComissoesApi from './components/ComissoesApi';
+import OdsApi from './components/OdsApi';
 import MandatosApi from './components/MandatosApi';
 import HelpGuide from './components/HelpGuide';
 import PrivacidadeLGPD from './components/PrivacidadeLGPD';
@@ -26,7 +27,7 @@ import Sobre from './components/Sobre';
 // UFF sem precisar de reescrita de rota — ao contrário de caminho limpo, que
 // brigaria com o `base: './'` portável. Chaves = as mesmas do PortalHeader.
 const ABAS_VALIDAS = new Set(['planilha', 'relacoes', 'chefias', 'dossie', 'insights',
-  'mandatos', 'prazos', 'jornada', 'cooperacao', 'comissoes',
+  'mandatos', 'prazos', 'jornada', 'cooperacao', 'comissoes', 'ods',
   'ajuda', 'privacidade', 'sobre']);
 function abaDoHash(): string {
   const h = decodeURIComponent((typeof window !== 'undefined' ? window.location.hash : '').replace(/^#/, '')).trim();
@@ -182,6 +183,7 @@ export default function App() {
           {activeTab === 'jornada' && <div id="painel-jornada-wrap"><JornadaApi /></div>}
           {activeTab === 'cooperacao' && <div id="painel-cooperacao-wrap"><CooperacaoApi /></div>}
           {activeTab === 'comissoes' && <div id="painel-comissoes-wrap"><ComissoesApi /></div>}
+          {activeTab === 'ods' && <div id="painel-ods-wrap"><OdsApi /></div>}
 
           {activeTab === 'ajuda' && <div id="painel-ajuda"><HelpGuide /></div>}
 
