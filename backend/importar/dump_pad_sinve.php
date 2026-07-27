@@ -9,7 +9,26 @@
 //
 //  Uso (CLI, uma vez):
 //      php dump_pad_sinve.php > pad_sinve.json
+//
+//  SOMENTE CLI -- e isto e uma guarda de seguranca, nao conveniencia.
+//  Ate 27/07/2026 este arquivo respondia por HTTP sem token nenhum e devolvia
+//  4,5 MB de JSON com o texto_original de todo ato de PAD/sindicancia: nomes,
+//  SIAPE e o teor de processos disciplinares, para quem digitasse a URL. O
+//  nome do arquivo esta no repositorio publico, entao nao havia nem o que
+//  adivinhar. Os outros scripts desta pasta checam `import_token`; este ficou
+//  de fora porque nasceu como diagnostico de uso unico -- exatamente o
+//  endpoint esquecido que uma varredura procura.
+//
+//  Nao troque por checagem de token: esta rota nao tem motivo para existir na
+//  web. Ela contorna de proposito o limite da API publica, que nunca expoe
+//  texto_original. Se precisar do dump de novo, rode pelo cron/SSH.
 // ============================================================================
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    exit("Este script e somente CLI.\n");
+}
 
 set_time_limit(0);
 

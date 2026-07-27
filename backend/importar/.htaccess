@@ -17,6 +17,29 @@
   Require all denied
 </FilesMatch>
 
+# ---------------------------------------------------------------------------
+#  Os .php: NEGA POR PADRÃO, libera só a lista nomeada abaixo.
+#
+#  Por que inverter: a proteção real de cada script é o `import_token` que ele
+#  mesmo confere. Isso funciona até alguém esquecer — e alguém esqueceu. O
+#  `dump_pad_sinve.php` nasceu como diagnóstico de uso único, ficou sem
+#  checagem, e por meses respondeu 200 com 4,5 MB de texto integral de
+#  processos disciplinares (nomes, SIAPE, teor) para qualquer um. O nome do
+#  arquivo está no repositório público: não havia nem o que adivinhar.
+#
+#  Com a lista branca, esquecer o token deixa de ser fatal: o script novo
+#  simplesmente não responde na web até ser incluído aqui de propósito.
+#  Continua valendo checar o token DENTRO de cada script — isto é a segunda
+#  camada, não a substituta.
+# ---------------------------------------------------------------------------
+<FilesMatch "\.php$">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "^(importar_v2|resolver_relacoes_v2|corrigir_siapes|backfill_ato_ods|backfill_ato_comissao|backfill_ato_processo|backfill_prazos_pad_sinve)\.php$">
+  Require all granted
+</FilesMatch>
+
 # Sem índice automático: quem acertar o caminho da pasta não recebe a lista
 # de tudo que está lá dentro.
 Options -Indexes

@@ -40,7 +40,7 @@ if (!$cli) {
     header('X-Accel-Buffering: no');
     while (ob_get_level()) { @ob_end_flush(); }
     $token = $cfg['import_token'] ?? '';
-    if ($token === '' || ($_GET['token'] ?? '') !== $token) {
+    if ($token === '' || !hash_equals($token, (string)($_GET['token'] ?? ''))) {
         http_response_code(403);
         exit("Acesso negado. Use ?token=...\n");
     }

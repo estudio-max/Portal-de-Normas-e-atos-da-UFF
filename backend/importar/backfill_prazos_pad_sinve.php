@@ -28,7 +28,7 @@ $cli = (PHP_SAPI === 'cli');
 if (!$cli) {
     header('Content-Type: text/plain; charset=utf-8');
     $token = $cfg['import_token'] ?? '';
-    if ($token === '' || ($_GET['token'] ?? '') !== $token) {
+    if ($token === '' || !hash_equals($token, (string)($_GET['token'] ?? ''))) {
         http_response_code(403);
         exit("Acesso negado. Use ?token=...\n");
     }
