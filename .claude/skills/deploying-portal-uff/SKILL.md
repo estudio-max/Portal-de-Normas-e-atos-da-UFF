@@ -5,6 +5,12 @@ description: Use when preparing or executing a deploy of the Portal de Normas e 
 
 # Deploying Portal de Normas e Atos da UFF
 
+> **Este arquivo existe em DUAS cópias.** A que o Claude Code carrega é a da
+> pasta-mãe (`portal-normas-uff/.claude/skills/`) — skill dentro de `repo/`
+> não é descoberta quando se trabalha a partir da pasta-mãe (testado). A do
+> `repo/` é a versionada no Git. **Editou uma, copie para a outra**:
+> `cp repo/.claude/skills/deploying-portal-uff/SKILL.md .claude/skills/deploying-portal-uff/SKILL.md`
+
 ## Overview
 
 Deploy aqui é **manual, sem SSH, sem CI/CD**: upload por Gerenciador de
