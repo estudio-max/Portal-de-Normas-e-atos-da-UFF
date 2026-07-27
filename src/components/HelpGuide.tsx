@@ -2,7 +2,8 @@ import React from 'react';
 import {
   Search, GitBranch, Sparkles, Link as LinkIcon, Database, ShieldCheck,
   ShieldAlert, GitBranch as Branch, FileText, Filter, User, Info, CheckCircle2,
-  ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle, Scale
+  ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle, Scale,
+  Target
 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
@@ -164,6 +165,49 @@ export default function HelpGuide() {
         </div>
       </Secao>
 
+      {/* ODS */}
+      <Secao icon={<Target className="w-4 h-4" />} titulo="🎯 ODS — o que a UFF propôs em cada Objetivo de Desenvolvimento Sustentável">
+        <p>
+          A aba <strong>ODS</strong> agrupa os atos normativos pelos <strong>17 Objetivos de
+          Desenvolvimento Sustentável</strong> da ONU — o formato que rankings internacionais
+          (como o <strong>THE Impact Rankings</strong>) e órgãos de controle usam para avaliar
+          a gestão universitária. Clique numa ODS para ver os atos que a sustentam.
+        </p>
+        <p>Cada ato ligado a uma ODS recebe um <strong>tipo de vínculo</strong>, e a diferença entre eles é o ponto principal da aba:</p>
+        <ul className="space-y-1.5 mt-1">
+          <li><Badge cor="bg-emerald-100 text-emerald-700 border-emerald-200">Proposta</Badge> — o ato <strong>fundador</strong>: institui uma política, programa, plano ou estrutura. <em>É a evidência que interessa.</em></li>
+          <li><Badge cor="bg-slate-100 text-slate-600 border-slate-200">Execução</Badge> — opera uma política que já existe (designa membros de comissão, ratifica um convênio). É contexto, não evidência nova.</li>
+          <li><Badge cor="bg-sky-100 text-sky-700 border-sky-200">Pesquisa</Badge> — o ato viabiliza um projeto de pesquisa no tema.</li>
+          <li><Badge cor="bg-violet-100 text-violet-700 border-violet-200">Ensino</Badge> — oferta acadêmica sobre o tema (curso, currículo, disciplina).</li>
+        </ul>
+        <p className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-900 flex gap-1.5">
+          <MousePointerClick className="w-4 h-4 shrink-0" />
+          <span>
+            Por que separar: um curso <em>sobre</em> recursos hídricos não é a política hídrica da
+            universidade, e ratificar um convênio não é propor uma política de cooperação. Somar
+            tudo num número só inflaria o resultado. Use os botões de vínculo dentro de cada ODS
+            para ver só as <strong>propostas</strong> — é o recorte que responde
+            “o que a UFF de fato institucionalizou aqui?”.
+          </span>
+        </p>
+        <p>
+          Cada linha traz ainda a <strong>confiança</strong> da classificação (alta, média,
+          baixa), a <strong>meta THE/IPEA</strong> em que ela se ancora e a{' '}
+          <strong>justificativa</strong>. O selo <Badge cor="bg-blue-100 text-blue-700 border-blue-200">revisado</Badge>{' '}
+          marca as ligações conferidas por uma pessoa.
+        </p>
+        <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-xs text-amber-900 flex gap-1.5">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Como ler com cautela:</strong> a classificação é <strong>assistida por IA com
+            curadoria humana</strong> e <strong>não é um relatório oficial da UFF</strong>. ODS sem
+            evidência aparecem <strong>vazias de propósito</strong> — a distribuição é desigual
+            porque a produção normativa real é desigual, e forçar equilíbrio seria fabricar
+            evidência. Para uso oficial, confira sempre o ato de origem no Boletim.
+          </span>
+        </div>
+      </Secao>
+
       {/* SEI */}
       <Secao icon={<LinkIcon className="w-4 h-4" />} titulo="Chegar ao processo no SEI">
         <p>
@@ -205,7 +249,7 @@ export default function HelpGuide() {
         <ul className="space-y-1">
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O portal é uma <strong>camada de consulta</strong> sobre o acervo de PDFs — a <strong>fonte primária</strong> são os Boletins de Serviço. Em decisões oficiais, confira sempre o <strong>PDF oficial</strong> do Boletim (link em cada ato).</li>
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> A indexação é automática e pode ter imperfeições em casos raros — por isso o original prevalece.</li>
-          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O <strong>radar de Prazos</strong> e os <strong>Insights</strong> são apoios derivados do texto — ótimos como lembrete e panorama, mas o <strong>ato de origem sempre prevalece</strong>.</li>
+          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O <strong>radar de Prazos</strong>, os <strong>Insights</strong> e a aba <strong>ODS</strong> são apoios derivados do texto — ótimos como lembrete, panorama e evidência, mas o <strong>ato de origem sempre prevalece</strong>.</li>
           <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Os dados são informação <strong>pública</strong> do Boletim de Serviço da UFF.</li>
         </ul>
       </Secao>

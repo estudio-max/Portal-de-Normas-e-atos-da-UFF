@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3 } from 'lucide-react';
+import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -85,8 +85,8 @@ export default function Sobre() {
         </p>
         <Figura
           arquivo="7-abas-do-portal.svg"
-          w={960} h={500}
-          alt="Grade com os dez painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação e Comissões."
+          w={960} h={540}
+          alt="Grade com os onze painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação, Comissões e ODS."
           legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
         />
         <p>
@@ -97,6 +97,94 @@ export default function Sobre() {
           sustentava. Só as ferramentas de IA atuais tornaram viável ler milhares de PDFs (vários
           deles fruto de digitalização e OCR de qualidade irregular) com precisão aceitável para
           virar uma ferramenta de consulta.
+        </p>
+      </Secao>
+
+      <Secao icon={<Eye className="w-4 h-4" />} titulo="Transparência ativa: publicar não é o mesmo que dar acesso">
+        <p>
+          A Lei de Acesso à Informação (Lei 12.527/2011) distingue duas coisas. A{' '}
+          <strong>transparência passiva</strong> é responder a quem pergunta. A{' '}
+          <strong>transparência ativa</strong> é divulgar por iniciativa própria, sem
+          precisar de pedido — e é o que o artigo 8º exige dos órgãos públicos: publicar
+          informação de interesse coletivo <em>em local de fácil acesso</em>.
+        </p>
+        <p>
+          A UFF cumpre a parte da publicação desde sempre: o Boletim de Serviço sai
+          regularmente e é público. O problema é o <em>fácil acesso</em>. Um acervo de mais de
+          quatro mil PDFs, sem índice e sem busca entre arquivos, é público no sentido
+          formal e inacessível no sentido prático. Quem procura um ato precisa saber de
+          antemão em qual boletim ele saiu — que é justamente o que não se sabe.
+        </p>
+        <p>
+          A mesma lei antecipa esse ponto. O artigo 8º, §3º, pede que os sites permitam{' '}
+          <strong>gravar relatórios em formatos abertos</strong> (planilha, texto) para
+          facilitar a análise, e o <strong>acesso automatizado por sistemas externos</strong>{' '}
+          em formato estruturado e legível por máquina. PDF digitalizado não atende nem a um
+          nem a outro. É essa lacuna que o portal fecha: transforma o acervo em dado
+          estruturado, pesquisável, exportável em CSV e consultável por API — sem alterar
+          uma vírgula do que a universidade já publicava.
+        </p>
+        <p className="text-slate-500 text-xs">
+          Vale a precisão: o portal <strong>não substitui</strong> o canal oficial de
+          transparência da UFF nem o próprio Boletim, que continua sendo a fonte primária e o
+          documento válido para citação. Ele é uma camada de consulta que torna utilizável
+          uma informação que já era pública.
+        </p>
+      </Secao>
+
+      <Secao icon={<Target className="w-4 h-4" />} titulo="Os atos e os Objetivos de Desenvolvimento Sustentável">
+        <p>
+          Rankings internacionais e órgãos de controle avaliam a gestão universitária pelos{' '}
+          <strong>17 Objetivos de Desenvolvimento Sustentável</strong> (ODS) da Agenda 2030 da
+          ONU. A pergunta que a aba <strong>🎯 ODS</strong> responde é: <em>o que esta
+          universidade efetivamente propôs e institucionalizou em cada um desses objetivos?</em>
+        </p>
+        <p>
+          A resposta estava dispersa no acervo. A política de qualidade de vida do servidor, o
+          plano de logística sustentável, o programa de integridade, as políticas afirmativas,
+          o regime de cotutela — cada um é um ato publicado num boletim diferente, ao longo de
+          25 anos, sem nada que os reunisse sob um mesmo tema.
+        </p>
+        <p>
+          O critério de classificação não foi inventado aqui. Ele está ancorado em duas
+          referências que quem avalia reconhece: as métricas de <em>política e iniciativa</em>{' '}
+          do <strong>THE Impact Rankings</strong> — que pedem <strong>evidência documentada</strong>{' '}
+          de políticas, com crédito extra quando a evidência é pública — e as{' '}
+          <strong>metas nacionais dos ODS adequadas ao Brasil pelo IPEA</strong>, a régua que
+          um órgão de controle federal usa. A regra de corte é dura: um ato só entra num ODS
+          se casar com <strong>uma meta nomeável</strong>, e a justificativa registrada precisa
+          citar qual.
+        </p>
+        <p>
+          A distinção que sustenta o painel é entre <strong>proposta</strong> e{' '}
+          <strong>execução</strong>. O ato que <em>institui</em> o Programa Bem Viver é uma
+          proposta; os atos que <em>designam membros</em> da comissão que o executa não são.
+          Ratificar um convênio com uma universidade estrangeira é executar a política de
+          cooperação que já existe, não propor uma nova. Sem essa separação, o acervo exibiria
+          1.662 "evidências"; com ela, exibe <strong>205 propostas</strong> — e cada uma se
+          defende sozinha diante de quem perguntar.
+        </p>
+        <p>
+          O resultado é um retrato honesto, e desigual de propósito: concentra-se em{' '}
+          <strong>redução das desigualdades</strong>, <strong>educação</strong>,{' '}
+          <strong>instituições eficazes</strong> e <strong>trabalho decente</strong>, enquanto
+          água, energia e cidades aparecem só via ensino e pesquisa. Forçar equilíbrio seria
+          fabricar evidência — que é a primeira coisa que um avaliador procura.
+        </p>
+        <p className="text-slate-500 text-xs">
+          A classificação é <strong>assistida por IA com curadoria humana</strong> e{' '}
+          <strong>não é posição institucional da UFF</strong>. Cada ligação carrega vínculo,
+          confiança, meta e justificativa — e as linhas revisadas por pessoa ficam marcadas e
+          não são sobrescritas. A metodologia completa, incluindo o que foi descartado e por
+          quê, está no{' '}
+          <a
+            href="https://github.com/estudio-max/Portal-de-Normas-e-atos-da-UFF/blob/main/docs/METODOLOGIA-ODS.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-700 underline font-semibold"
+          >
+            documento de metodologia
+          </a>.
         </p>
       </Secao>
 
@@ -166,11 +254,11 @@ export default function Sobre() {
           </div>
           <div>
             <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Atos indexados</dt>
-            <dd className="font-bold text-[#003366]">133.106</dd>
+            <dd className="font-bold text-[#003366]">133.176</dd>
           </div>
           <div>
             <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Boletins lidos</dt>
-            <dd className="font-bold text-[#003366]">4.921</dd>
+            <dd className="font-bold text-[#003366]">4.922</dd>
           </div>
         </dl>
         <p className="pt-2">
