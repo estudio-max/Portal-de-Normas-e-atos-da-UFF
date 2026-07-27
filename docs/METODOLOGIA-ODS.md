@@ -2,8 +2,8 @@
 
 > **Rascunho para revisão** (jul/2026). Define o critério para classificar os atos
 > normativos da UFF nas 17 ODS de forma **auditável e defensável diante de órgão de
-> controle**. Não é posição institucional da UFF. Companheiro do protótipo em
-> [`../../METODOLOGIA-ODS-protótipo`] (artefato visual) e da futura aba `#ods`.
+> controle**. Não é posição institucional da UFF. É a metodologia por trás da aba
+> **`#ods`** do portal e da tabela `ato_ods`; a carga vive em `../../backfill-ods/`.
 
 ## 1. Enquadramento: dossiê de evidência, não 17 baldes
 
@@ -87,6 +87,36 @@ imposto pela varredura do corpus completo: curso *sobre* recursos hídricos não
 hídrica da instituição — era a maior fonte de falsa "proposta" nas ODS raras (6, 7, 13),
 mas é evidência legítima na métrica educacional do THE, então ganha vínculo próprio em
 vez de ser descartado.
+
+### O caso decisivo: instrumento individual não é proposta
+
+A aplicação que mais mexeu nos números: **um convênio não é uma política**. Ratificar o
+acordo com a Universidade X é a UFF *executar* a política de cooperação que já tem — não
+propor uma nova. Na primeira carga, os 671 instrumentos individuais entraram como
+`proposta`, e a **ODS 17 sozinha respondia por 68% de todas as propostas do dossiê**
+(388 de 568). Nenhum avaliador leria isso como evidência séria.
+
+Separando **política** (o ato que institui o regime — ex.: *"Regulamenta o regime de
+cotutela"*, Res. 133/2013; *"Cria o Comitê da Assessoria para Assuntos Internacionais"*,
+NS 592/2007) de **instrumento** (cada acordo firmado), o total de propostas caiu de
+**568 para 205** e o perfil virou o de uma federal brasileira de verdade:
+
+| ODS | propostas | ODS | propostas |
+|---|---|---|---|
+| 10 Desigualdades | 49 | 3 Saúde | 10 |
+| 4 Educação | 35 | 2 Fome | 9 |
+| 16 Instituições | 34 | 13 Clima | 4 |
+| 8 Trabalho | 19 | **17 Parcerias** | **3** |
+| 5 Gênero | 15 | 15 Vida terrestre / 9 Inovação | 3 / 2 |
+| 1 Pobreza / 12 Consumo | 11 | 6, 7, 11, 14 | 0 |
+
+A ODS 17 não perdeu evidência — ganhou precisão: **770 execuções** ("a UFF firmou 770
+instrumentos de cooperação") é um número forte e verdadeiro, no rótulo certo.
+
+**Guarda de implementação:** o cluster de política de cooperação só vale se o sinal
+estiver na **ementa**, não no corpo — o clausulado de qualquer convênio diz
+"regulamenta a cooperação", e isso promovia instrumentos individuais de volta a
+proposta (2 falsos-positivos medidos).
 
 ## 4. O pipeline de classificação
 
@@ -306,9 +336,9 @@ geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
 
 - **1.392 atos rotulados** (inclui 33 recuperados da cauda) → uid resolvido contra
   o dump do dia (97,6%; desempate de duplicata `-2` por prefixo de ementa) →
-  **1.661 linhas (uid × ods)** sobre **1.380 atos**, em `../../backfill-ods/`
-  (`ato_ods_backfill.json`, 1.629 de IA + `ato_ods_curadoria.json`, 32 curadas).
-  568 proposta · 886 execução · 168 ensino · 7 pesquisa.
+  **1.662 linhas (uid × ods)** sobre **1.381 atos**, em `../../backfill-ods/`
+  (`ato_ods_backfill.json`, 1.630 de IA + `ato_ods_curadoria.json`, 32 curadas).
+  205 proposta · 1.280 execução · 170 ensino · 7 pesquisa (ver §3).
 - **34 ambíguos** (32 curados — ver §8-A) + **descartados com motivo**, incluindo
   a cauda tratada (§8-B) — trilha completa em `backfill-ods/`.
 - Infra: `backend/db/ato_ods.sql` (+ tabela no `schema_v2.sql`) e
