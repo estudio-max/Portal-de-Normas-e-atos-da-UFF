@@ -198,6 +198,38 @@ e seus atos **fundadores** entram direto:
   Afirmativas e Diversidade, Res. CUV 635/2025) → 10/5.
 - Aba **Cooperação** → 17 (já pronta; os acordos internacionais são evidência 17).
 
+## 8-A. Curadoria dos ambíguos — o que ela ensinou
+
+A resolução automática de uid deixou **32 casos ambíguos** (o dump tem 2+ linhas
+com mesmo tipo+número+ano e a ementa não desempatou). Foram curados um a um:
+22 aproveitados, 10 descartados. Método e resultados em
+`../../backfill-ods/LEIA-ME.md`; a carga curada é `ato_ods_curadoria.json`
+(`metodo='curadoria'`, que a IA nunca sobrescreve).
+
+Três lições que valem para qualquer trabalho futuro neste corpus:
+
+1. **"Manter a primeira cópia" apagaria o ato certo.** Em **6 dos 22**, o ato
+   real é a cópia **`-2`**, não a base — confirmando a medição já registrada no
+   `CLAUDE.md`. Caso-prova: a **Decisão 40/2012 (nome social)**; varrendo o corpo
+   de todo o acervo, só a cópia do **BS 177/2012** contém o dispositivo que
+   regulamenta o nome social de travestis e transexuais — a base (BS 41/2012)
+   não contém. Um "fica a primeira" teria gravado o ato errado numa das
+   evidências mais fortes de ODS 5/10 do acervo.
+2. **O boletim de origem é um discriminador melhor que a ementa.** A carga
+   (`atos.json`) registra de qual PDF cada ato foi extraído, e o dump guarda
+   `boletim.arquivo`: cruzar os dois resolve por evidência. Só falha quando a
+   própria carga tem as duas cópias — que é justamente a origem do `-2`.
+3. **Nem todo ato "da UFF" no acervo é da UFF.** A Resolução 879/2008 é do
+   **CFMV** (Conselho Federal de Medicina Veterinária), citada em boletins de
+   2012/2013 — mesmo tipo de fantasma de norma externa já catalogado. Ela seria
+   a evidência mais forte de ODS 15 do dossiê, e é falsa. Antes de celebrar um
+   achado de ODS rara, confira se o emissor é a UFF.
+
+Os outros descartes: quatro **atos de pessoal** (nomeação de nutricionista,
+designação de médico, licença) que o rótulo automático leu como política de
+alimentação/saúde — a mesma isca de cargo do §5.1, agora entrando por ementa
+vazia; e dois casos indecidíveis (6 atos distintos numerados 3/2021).
+
 ## 8. Governança da classificação
 
 - **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle
@@ -234,8 +266,8 @@ geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
   duplicata `-2` por prefixo de ementa) → **1.651 linhas (uid × ods)** em
   `../../backfill-ods/ato_ods_backfill.json` (567 proposta · 911 execução · 166
   ensino · 7 pesquisa).
-- **32 ambíguos** + **1.429 descartados com motivo** (759 resíduo, sendo 495 atos
-  2001-2010 de ementa vazia) — trilha de auditoria em `backfill-ods/`.
+- **32 ambíguos** (curados — ver §9) + **1.429 descartados com motivo** (759
+  resíduo, sendo 495 atos 2001-2010 de ementa vazia) — trilha em `backfill-ods/`.
 - Infra: `backend/db/ato_ods.sql` (+ tabela no `schema_v2.sql`) e
   `backend/importar/backfill_ato_ods.php` (upsert por uid; linha `metodo='curadoria'`
   nunca é sobrescrita). Runbook: `../../backfill-ods/LEIA-ME.md`.

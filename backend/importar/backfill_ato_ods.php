@@ -62,19 +62,25 @@ if ($recomecar) {
 }
 
 $selAto = $pdo->prepare("SELECT id FROM ato WHERE uid = :uid");
-// metodo='curadoria' vence sempre: o UPDATE só se aplica quando a linha
-// existente NÃO é curadoria (senão mantém os valores que o humano fixou).
+// Precedência: a CURADORIA vence sempre.
+//   - linha nova marcada 'curadoria' -> sobrescreve o que estiver lá;
+//   - linha nova 'ia' sobre uma 'curadoria' existente -> não toca em nada;
+//   - 'ia' sobre 'ia' -> atualiza normalmente.
+// `metodo` sem VALUES() é o valor JÁ GRAVADO; com VALUES(), o que está
+// chegando. O assign de `metodo` fica por ÚLTIMO de propósito: o MySQL avalia
+// as atribuições da esquerda para a direita, então as linhas acima ainda
+// enxergam o método antigo.
 $ins = $pdo->prepare(
     "INSERT INTO ato_ods (ato_id, ods, vinculo, confianca, meta, justificativa, metodo)
-     VALUES (:ato_id, :ods, :vinculo, :confianca, :meta, :justificativa, 'ia')
+     VALUES (:ato_id, :ods, :vinculo, :confianca, :meta, :justificativa, :metodo)
      ON DUPLICATE KEY UPDATE
-       vinculo       = IF(metodo = 'curadoria', vinculo,       VALUES(vinculo)),
-       confianca     = IF(metodo = 'curadoria', confianca,     VALUES(confianca)),
-       meta          = IF(metodo = 'curadoria', meta,          VALUES(meta)),
-       justificativa = IF(metodo = 'curadoria', justificativa, VALUES(justificativa)),
-       metodo        = IF(metodo = 'curadoria', metodo,        'ia')");
+       vinculo       = IF(VALUES(metodo) = 'curadoria' OR metodo <> 'curadoria', VALUES(vinculo),       vinculo),
+       confianca     = IF(VALUES(metodo) = 'curadoria' OR metodo <> 'curadoria', VALUES(confianca),     confianca),
+       meta          = IF(VALUES(metodo) = 'curadoria' OR metodo <> 'curadoria', VALUES(meta),          meta),
+       justificativa = IF(VALUES(metodo) = 'curadoria' OR metodo <> 'curadoria', VALUES(justificativa), justificativa),
+       metodo        = IF(VALUES(metodo) = 'curadoria', 'curadoria', metodo)");
 
-$ok = 0; $semUid = []; $invalidas = 0;
+$ok = 0; $curados = 0; $semUid = []; $invalidas = 0;
 $cacheUid = [];   // o mesmo uid aparece em várias linhas (1 por ODS)
 foreach ($linhas as $l) {
     $uid = trim($l['uid'] ?? '');
@@ -99,11 +105,14 @@ foreach ($linhas as $l) {
                               ? $l['confianca'] : 'baixa',
         ':meta'          => mb_substr($l['meta'] ?? '', 0, 40),
         ':justificativa' => mb_substr($l['justificativa'] ?? '', 0, 400),
+        ':metodo'        => in_array($l['metodo'] ?? '', ['ia', 'curadoria', 'ia+curadoria'], true)
+                              ? $l['metodo'] : 'ia',
     ]);
     $ok++;
+    if (($l['metodo'] ?? '') === 'curadoria') $curados++;
 }
 
-log_("Gravadas/atualizadas: $ok linhas.");
+log_("Gravadas/atualizadas: $ok linhas" . ($curados ? " (destas, $curados de curadoria)." : "."));
 if ($invalidas) log_("Linhas inválidas ignoradas: $invalidas.");
 if ($semUid) {
     log_("uids não encontrados no banco (" . count($semUid) . ") — vão para curadoria:");
@@ -112,7 +121,7 @@ if ($semUid) {
 }
 
 // Invalida o cache de resposta (mesmo gesto do importador e dos outros
-// backfills): a futura rota /api/ods é diário-estática e será cacheada.
+// backfills): a rota /api/ods é diário-estática e cacheada em disco.
 $cacheDir = dirname(__DIR__) . '/api/cache';
 if (is_dir($cacheDir)) {
     $limpos = 0;
