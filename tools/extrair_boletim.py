@@ -536,8 +536,56 @@ def link_sei_documento(cod):
 # Parsing de um PDF
 # --------------------------------------------------------------------------- #
 
-def metadados_bs(texto_paginas):
-    """Descobre número/data/ano do Boletim a partir da capa."""
+def _ano_do_arquivo(caminho):
+    """Ano do boletim pelo NOME do arquivo. '051-2017.pdf'->2017, '062-18.pdf'->2018.
+
+    Cai para o nome da pasta (dados/boletins/<ano>/) quando o arquivo não diz.
+    """
+    base = os.path.basename(caminho)
+    # Casa o nome INTEIRO, não um sufixo: `especial_2010-05-24.pdf` é edição
+    # especial de 24/mai/2010, e um `-(\d{2})\.pdf$` solto lia "2024" nela.
+    m = re.fullmatch(r"\d{1,4}-(\d{4})\.pdf", base, re.I)
+    if m:
+        return int(m.group(1))
+    m = re.fullmatch(r"\d{1,4}-(\d{2})\.pdf", base, re.I)
+    if m:
+        return 2000 + int(m.group(1))
+    pai = os.path.basename(os.path.dirname(os.path.abspath(caminho)))
+    return int(pai) if re.fullmatch(r"\d{4}", pai) else None
+
+
+def metadados_bs(texto_paginas, caminho=None):
+    """Descobre número/data/ano do Boletim a partir da capa.
+
+    O ANO da data da capa é conferido contra DUAS testemunhas independentes: o
+    cabeçalho que se repete nas páginas internas e o nome do arquivo. Só troca
+    quando as duas concordam ENTRE SI e discordam da capa.
+
+    Motivo medido: seis boletins de março/2017 (050 a 056) saíram com a capa de
+    um modelo de 2007 — "ANO XLI ... 23/03/2007" na capa contra
+    "ANO LI ... 23/03/2017" repetido dezenas de vezes por dentro. A capa errada
+    envenenava `corrige_ano_futuro`, que então "corrigia" 208 atos corretos de
+    2017 para 2007 (achado no portal: um ato de 2017 aparecia com data 2007
+    enquanto a própria coluna de referência dizia "BS nº 51/2017").
+
+    Por que as DUAS testemunhas, e não só o cabeçalho interno: varredura dos
+    5.797 PDFs do acervo achou 81 divergências capa-vs-interno, e o cabeçalho
+    interno é OCR de digitalização — sozinho ele é pior que a capa. Aparecem
+    `24/80/2005`, `00/00/2003`, e em `021-2013.pdf` um interno "08/02/2012"
+    que puxaria o ano PARA TRÁS, criando o mesmo defeito que esta função
+    conserta. Das 16 divergências de ano, em 8 o interno bate com o arquivo
+    (capa é template velho — corrige) e nas outras 8 é a CAPA que bate com o
+    arquivo (interno é que está furado — não mexe).
+
+    Só o ANO é reconciliado. As outras 65 divergências são ruído de OCR em
+    dia/mês e ficam intocadas: dia/mês da capa estavam certos nos casos reais.
+
+    Não mexe quando as páginas internas não trazem data — caso do boletim
+    digitalizado antigo (`027-2001.pdf`, cabeçalho só "ANO XXX - Nº 027").
+    Isso é deliberado: o BS de 2001 publica backlog real de 1998-2000, e
+    empurrar a data dele para 2001 faria `citacao_recortada` (gap >= 3 anos)
+    descartar atos legítimos — a regressão que o projeto já mediu e proíbe.
+    """
     bs_num = bs_data = bs_ano = ""
     capa = "\n".join(texto_paginas[:3])
     ma = re.search(r"ANO\s+([IVXLCDM]+)", capa)
@@ -549,6 +597,21 @@ def metadados_bs(texto_paginas):
     md = DATA_BS_RE.search(capa)
     if md:
         bs_data = md.group(1)
+
+    if bs_data and caminho:
+        ano_arq = _ano_do_arquivo(caminho)
+        # Cabeçalho interno: exige >= 2 ocorrências. Um cabeçalho de verdade se
+        # repete em toda página; uma data solta no corpo de um ato, não.
+        internas = {}
+        for pag in texto_paginas[1:]:
+            topo = "\n".join(pag.split("\n")[:4])
+            for d in re.findall(r"\d{2}/\d{2}/(\d{4})", topo):
+                internas[d] = internas.get(d, 0) + 1
+        if ano_arq and internas:
+            ano_int, n = max(internas.items(), key=lambda kv: kv[1])
+            if n >= 2 and int(ano_int) == ano_arq and bs_data[-4:] != ano_int:
+                bs_data = bs_data[:-4] + ano_int
+
     return bs_num, bs_data, bs_ano
 
 
@@ -657,7 +720,7 @@ def parse_pdf(caminho):
     paginas = [_norm_pdf(doc[p].get_text()) for p in range(doc.page_count)]
     doc.close()
 
-    bs_num, bs_data, bs_ano = metadados_bs(paginas)
+    bs_num, bs_data, bs_ano = metadados_bs(paginas, caminho)
     arquivo = os.path.basename(caminho)
 
     # texto com marcadores de página para localizar seção/página por offset

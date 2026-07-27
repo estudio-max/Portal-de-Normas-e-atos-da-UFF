@@ -256,6 +256,51 @@ fica para outra rodada.
 O arquivo `57-26.pdf` traz, impresso na página, "BS nº 113". Chavear pelo número
 publicado duplica atos. A identidade estável é o arquivo.
 
+### A capa mente sobre o ano, e ela envenena a data dos atos
+
+Seis boletins de março/2017 (050 a 056) foram diagramados sobre um modelo de
+2007 que ninguém atualizou: a capa diz `ANO XLI ... 23/03/2007` enquanto o
+cabeçalho das páginas internas diz `ANO LI ... 23/03/2017`, repetido em cada
+página. Como a data do boletim é a âncora de `corrige_ano_futuro`, um ato
+legítimo de 20/03/2017 parecia "futuro" diante de um boletim de 2007 e era
+reescrito para 2007. Efeito visível no portal: o ato aparecia com data de 2007
+na listagem enquanto a própria coluna de referência dizia "BS nº 51/2017" — as
+duas colunas se contradiziam na mesma linha.
+
+**Não conserte isso confiando no cabeçalho interno.** Ele é OCR de
+digitalização e, sozinho, é pior que a capa. A varredura dos 5.797 PDFs do
+acervo achou 81 divergências capa-vs-interno, e entre elas o interno traz
+`24/80/2005`, `00/00/2003` e — em `021-2013.pdf` — um `08/02/2012` que puxaria
+o ano para trás, criando exatamente o defeito que se quer corrigir.
+
+A regra que separa os casos exige **duas testemunhas independentes**: só troca
+o ano quando o cabeçalho interno e o nome do arquivo concordam entre si e
+discordam da capa. Das 16 divergências de ano, isso corrige 8 (`037-2001`,
+`043-2015` e os seis de 2017) e recusa as outras 8 — onde é a capa que bate com
+o arquivo e o interno é que está furado. As 65 divergências restantes são ruído
+de OCR em dia/mês e ficam intocadas: só o ano é reconciliado.
+
+Duas recusas deliberadas, ambas medidas:
+
+- **Boletim sem data nas páginas internas** (`027-2001.pdf`, cabeçalho só
+  `ANO XXX - Nº 027`) fica como está. Empurrar a data dele para 2001 faria
+  `citacao_recortada` (gap ≥ 3 anos) descartar o backlog real de 1998-2000 que
+  esse boletim publica — a regressão "2001 perde ZERO".
+- **Nome de arquivo errado** não dispara nada sozinho. Se alguém batiza
+  `021-2016.pdf` um boletim que é de 2025, capa e interno dirão 2025 e não
+  concordarão com o nome — a regra não mexe.
+
+### O ano do NOME do arquivo também erra, e o estrago é duplicata
+
+O nome do arquivo é a identidade do boletim, mas quem o digita erra. Caso real:
+um `21-16.pdf` que era `21-25.pdf`. Importado antes de alguém perceber, virou um
+conjunto de atos duplicados que precisou de limpeza manual na base — e a
+correção do nome depois do fato não desfaz a importação.
+
+O sinal que denuncia isso é o inverso do defeito da capa: **capa e cabeçalho
+interno concordam no ano entre si e os dois discordam do nome do arquivo.** Aí o
+suspeito é o nome, não o conteúdo. Vale conferir antes de importar, não depois.
+
 ### O mesmo ato sai em mais de um boletim
 
 Republicação é comum: a mesma portaria aparece em edições diferentes e vira dois

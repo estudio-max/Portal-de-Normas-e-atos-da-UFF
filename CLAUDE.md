@@ -76,7 +76,8 @@ bundle antigo. A justificativa LGPD da abertura está na aba Privacidade.
 - Fatos: `relacao`, `ato_funcao`, `ato_pessoa`, `ato_tag`, `ato_aposentadoria`,
   `ato_deslocamento`, `prazo`, `ato_processo` (todos os nºs de processo citados,
   não só o 1º — ver aba de busca por processo), `ato_comissao` (liga o ato ao
-  colegiado permanente que ele cita — alimenta a aba Comissões)
+  colegiado permanente que ele cita — alimenta a aba Comissões), `ato_ods`
+  (liga o ato a uma das 17 ODS, com tipo de vínculo — alimenta a aba ODS)
 - Proveniência: `extracao`
 
 Consequência prática: **análise nova vira `INSERT` numa tabela-fato, não coluna
@@ -160,8 +161,8 @@ regra estabilizar (aí sim vale o modelo em estrela).
 ## Cache de resposta
 
 Os painéis diário-estáticos (`stats`, `filtros`, `jornada`, `cooperacao`,
-`comissoes`, `insights`, `analitico`, `prazos`, `pad_cadeia`) são cacheados em
-disco (`api/cache/`). Medido: jornada/cooperacao/insights custam ~0,5s de CPU
+`comissoes`, `insights`, `analitico`, `prazos`, `pad_cadeia`, `ods`) são
+cacheados em disco (`api/cache/`). Medido: jornada/cooperacao/insights custam ~0,5s de CPU
 por requisição, e dão a MESMA resposta para todos entre uma importação e outra
 (o acervo muda 1x/dia). Servidos do cache custam ~0,005s e **nem conectam no
 banco** — a checagem do cache roda ANTES de `conectar()`. É o que sustenta
@@ -181,7 +182,7 @@ centenas de acessos simultâneos.
 
 ## Painéis com tabela-fato + registro curado
 
-Duas abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
+Três abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
 e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
 
 - **Busca por processo** (`/api/atos?processo=…`): casa por DÍGITOS na tabela
@@ -218,6 +219,22 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   positivos —, mas o NOME do órgão deles não bate termo de comissão nenhum
   (medido em 925 órgãos: só o do CGIRC casa, daí sem guarda). Generaliza sozinho:
   colegiado curado como órgão na dimensão passa a ter os atos que assina ligados.
+- **ODS** (`/api/ods`): liga o ato a uma das 17 ODS da Agenda 2030 pela tabela
+  `ato_ods`. **Não é "17 baldes de atos" — é dossiê de evidência**: cada linha
+  carrega um `vinculo` (`proposta` = ato fundador de política, o que rankings e
+  controle pedem; `execucao` = staffing/operação; `pesquisa`; `ensino`), a `meta`
+  THE/IPEA que a ancora e a `justificativa`. Sem essa separação o painel contaria
+  1.368 "evidências" em vez das 191 propostas reais. `metodo='curadoria'` marca a
+  linha revisada por humano e o backfill **nunca** a sobrescreve.
+  A carga é offline (classificação híbrida IA + curadoria lendo o CORPO, não a
+  ementa) e entra por `importar/backfill_ato_ods.php`; a carga e a trilha de
+  auditoria do que ficou de fora vivem em `../backfill-ods/`.
+  **Critério, âncoras e armadilhas medidas em [`docs/METODOLOGIA-ODS.md`](docs/METODOLOGIA-ODS.md)** —
+  leia antes de mexer. A armadilha-mãe: o termo-ODS costuma estar no NOME de
+  alguém (parceiro do convênio, área do concurso, cargo de quem recebe o ato,
+  órgão emissor, unidade remanejada), não no dispositivo — 292 atos de pessoal
+  entraram assim na primeira carga. Cruzamento com o Relatório ODS oficial da
+  UFF em [`docs/CRUZAMENTO-RELATORIO-ODS-2024.md`](docs/CRUZAMENTO-RELATORIO-ODS-2024.md).
 
 ## URL por aba (roteamento por hash)
 
@@ -391,6 +408,28 @@ resumo operacional.
   aqui de novo: `tools/teste_fronteira_ato.py`, e comparar extrator velho ×
   novo sobre uma amostra ampla do corpus (`dados/boletins/`) — não confie só
   no PDF que motivou a mudança.
+
+- **A data da capa do boletim não é confiável, e ela envenena a data dos
+  atos.** Seis boletins de março/2017 (050 a 056) usaram um modelo de 2007 que
+  ninguém atualizou: capa `23/03/2007`, cabeçalho interno `23/03/2017`. Como a
+  data do boletim é a âncora de `corrige_ano_futuro`, 212 atos legítimos de
+  2017 foram reescritos 10 anos para trás. `metadados_bs` agora reconcilia **só
+  o ano**, e só quando **duas testemunhas** concordam: o cabeçalho das páginas
+  internas e o nome do arquivo. Não relaxe para "o interno ganha": o interno é
+  OCR de digitalização e sozinho é pior que a capa — o acervo tem `24/80/2005`,
+  `00/00/2003` e um `021-2013.pdf` cujo interno diz 2012 e puxaria o ano para
+  trás. Regressão: `tools/teste_data_boletim.py` (24 casos, inclui os 8 que
+  devem mudar e os 8 que não podem). Correção do que já entrou na base:
+  `backend/importar/corrigir_anos_bs2017.sql`.
+
+- **O ano do NOME do arquivo também erra — e o estrago é duplicata.** O nome é
+  a identidade do boletim (`importar_v2.php`, `boletim_id()`), mas quem digita
+  erra: um `21-16.pdf` que era `21-25.pdf` já foi importado e exigiu limpeza
+  manual. Renomear depois **não** desfaz: como a chave natural do importador
+  inclui o ano, a importação seguinte cria os atos de novo e os antigos ficam
+  como duplicata. Rode `tools/conferir_nome_boletim.py <pasta>` **antes** de
+  importar (sai 1 se suspeito). O sinal é o inverso do defeito da capa: capa e
+  interno concordam entre si e discordam do nome.
 
 ## Pendências
 
