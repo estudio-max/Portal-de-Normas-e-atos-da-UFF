@@ -35,8 +35,8 @@ fragilidade é estrutural, não um caso isolado já resolvido.
 | 1 Pobreza | 2 | 1 (indireta) | 1 |
 | 2 Fome | 2 | 0 diretas — forte evidência adjacente | 2 |
 | 3 Saúde | 2 | 0 diretas — forte evidência adjacente | 2 |
-| 4 Educação | 2 | 1 | 1 |
-| 5 Gênero | 4 | **1 (forte)** | 3 |
+| 4 Educação | 2 | 2 | 0 |
+| 5 Gênero | 4 | **2 (fortes)** | 2 |
 | 6 Água | 7 | 0 | **7 — vazio confirmado** |
 | 7 Energia | 9 | 0 direta — 1 pode estar coberta pelo PLS | 8–9 |
 | 8 Trabalho | 3 | 1 | 2 |
@@ -130,12 +130,22 @@ um ato do acervo:
 |---|---|---|
 | Portaria 63.254/2019 | **Cria a Comissão UFF Acessível** e aprova normas iniciais | [PDF](http://www.noticias.uff.br/bs/2019/03/043-19.pdf) |
 | Portaria 67.183/2020 | Constitui a AFIDE (Ações Afirmativas, Diversidade e Equidade) | [PDF](http://www.noticias.uff.br/bs/2020/07/132-20.pdf) |
+| **Portaria 68.317/2022** | **Constitui a CPEG** — Comissão Permanente para Equidade de Gênero | [PDF](http://www.noticias.uff.br/bs/2022/03/44-22.pdf) |
 | Res. UFF 580/2017 | Estabelece as atribuições da AFiDE | *(ver `#ods` no portal)* |
 
-**Gap real confirmado:** não localizei ato fundador específico da **CPEG**
-(Comissão Permanente de Equidade de Gênero) no acervo classificado — ela
-pode existir sob nome diferente, ou não ter sido publicada como ato próprio
-no Boletim. Vale checagem direta com a comissão.
+> **Gap fechado (27/07/2026).** A primeira versão deste documento registrava
+> "não localizei ato fundador da CPEG". O ato **existe** — Portaria 68.317, de
+> 8/3/2022 — e estava no acervo desde sempre; o que falhou foi a classificação:
+> nenhum cluster cobria a grafia *"Comissão Permanente **para** Equidade de
+> Gênero"* (os padrões cobriam AFIDE, SEPAD, CPPIQ e "ações afirmativas,
+> diversidade e equidade"). O ato caíra na cauda longa como "caso único".
+> Corrigido com o cluster `equidade-genero`; a CPEG agora consta como
+> **proposta de ODS 5 e 10, confiança alta**.
+>
+> A CPEG nasceu do **GT "Mulheres na Ciência"** (2018, vinculado à PROPPI), que
+> trabalhou apoio à maternidade, viés implícito e representação feminina em
+> posições de liderança — histórico útil para a submissão, ainda que o GT em si
+> possa não ter ato fundador próprio no Boletim.
 
 ---
 
@@ -155,7 +165,18 @@ no Boletim. Vale checagem direta com a comissão.
 documentada de proteção contra discriminação, e o CGIRC aprovou exatamente
 isso — **em 2025, depois do relatório usar dados de 2023.**
 
-Outras 3 recomendações (dados de mulheres de 1ª geração, taxa de
+> *"seria importante que a UFF criasse uma política (por exemplo, um plano de
+> acesso e participação) devidamente documentada... abordando as inscrições,
+> aceitação, entrada e participação de mulheres na universidade"*
+
+**Segundo match:** a **Portaria 68.317/2022** constitui a CPEG justamente
+"para promoção de ações de indução e monitoramento das políticas que visem à
+construção de um **plano para equidade de gênero**" — é o órgão encarregado
+de produzir exatamente o plano que a recomendação pede. O relatório cita a
+CPEG nominalmente ("apesar das muitas ações desenvolvidas pela CPEG"), sem
+apontar o ato que a criou; o portal agora o entrega com link permanente.
+
+As outras 2 recomendações (dados de mulheres de 1ª geração, taxa de
 inscrição/formatura por gênero) pedem **dado de analytics**, não ato — sem
 evidência normativa por desenho.
 
@@ -344,4 +365,4 @@ intersetorial"**, a métrica central deste ODS.
 Progresso em relação aos Objetivos de Desenvolvimento Sustentável — 2024",
 NIDI/UFF (equipe: Lohana Monaco Bezerra, João Marcel Fanara Corrêa, João
 Gabriel Pelliccione Girota De Souza). Cruzamento feito em 27/07/2026 contra
-a carga `ato_ods` vigente em produção (1.366 linhas / 1.215 atos).*
+a carga `ato_ods` vigente em produção (1.368 linhas / 1.216 atos).*

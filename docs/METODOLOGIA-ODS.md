@@ -324,6 +324,22 @@ detector de defeito sistemático da carga principal. Um falso-positivo que
 aparece 193 vezes no resíduo aparece algumas vezes dentro dos clusters também.
 Vale tratá-la sempre que a classificação for revista.
 
+**E o inverso também mora lá: evidência real perdida.** A cauda esconde
+falso-NEGATIVO, não só falso-positivo. Caso medido: a **Portaria 68.317/2022,
+que constitui a CPEG** (Comissão Permanente para Equidade de Gênero), estava na
+cauda como "caso único". O recorte acertou — marcou `proposta`, ODS 5 e 10 —,
+mas nenhum cluster cobria a grafia *"Comissão Permanente **para** Equidade de
+Gênero"*: os padrões tinham AFIDE, SEPAD, CPPIQ e "ações afirmativas,
+diversidade e equidade". Uma preposição diferente e a evidência sumia.
+
+Generalizando: **cluster é lista de nomes próprios, e nome próprio da UFF varia**
+(preposição, sigla, ordem das palavras, nome histórico). Quando o recorte marca
+`proposta` com ODS plausível e nenhum cluster reconhece, a hipótese default deve
+ser *"falta padrão"*, não *"não é evidência"*. Por isso a cauda vai para o
+`backfill-ods/` com o vínculo e as ODS que o recorte propôs — é ali que se
+procura o que ficou de fora. Este caso foi achado pelo mantenedor lendo o
+painel, não pelos testes.
+
 ## 8. Governança da classificação
 
 - **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle
@@ -358,9 +374,9 @@ geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
 
 - **1.392 atos rotulados** (inclui 33 recuperados da cauda) → uid resolvido contra
   o dump do dia (97,6%; desempate de duplicata `-2` por prefixo de ementa) →
-  **1.366 linhas (uid × ods)** sobre **1.215 atos**, em `../../backfill-ods/`
-  (`ato_ods_backfill.json`, 1.334 de IA + `ato_ods_curadoria.json`, 32 curadas).
-  189 proposta · 966 execução · 172 ensino · 7 pesquisa (ver §3).
+  **1.368 linhas (uid × ods)** sobre **1.216 atos**, em `../../backfill-ods/`
+  (`ato_ods_backfill.json`, 1.336 de IA + `ato_ods_curadoria.json`, 32 curadas).
+  191 proposta · 966 execução · 172 ensino · 7 pesquisa (ver §3).
 - **34 ambíguos** (32 curados — ver §8-A) + **descartados com motivo**, incluindo
   a cauda tratada (§8-B) — trilha completa em `backfill-ods/`.
 - Infra: `backend/db/ato_ods.sql` (+ tabela no `schema_v2.sql`) e
