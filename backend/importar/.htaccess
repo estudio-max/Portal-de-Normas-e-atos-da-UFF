@@ -1,0 +1,22 @@
+# ============================================================================
+#  Proteção da pasta importar/ (ferramentas de manutenção).
+#
+#  Os .php daqui são chamados pelo navegador com `?token=<import_token>` (e o
+#  importador, pelo cron do cPanel), então precisam continuar acessíveis.
+#  O que NÃO precisa ficar acessível é o material que os acompanha: cargas
+#  .json, SQLs de correção, anotações .md, scripts .py que o servidor nem
+#  executa. Baixáveis, eles entregam a estrutura do banco e conteúdo interno
+#  de graça para quem adivinhar o nome do arquivo.
+#
+#  Isto bloqueia só o acesso por HTTP. O PHP continua lendo esses arquivos do
+#  disco normalmente (file_get_contents), que é como o backfill consome os
+#  .json — a carga não quebra.
+# ============================================================================
+
+<FilesMatch "\.(sql|json|md|py|txt|csv|log|bak|zip)$">
+  Require all denied
+</FilesMatch>
+
+# Sem índice automático: quem acertar o caminho da pasta não recebe a lista
+# de tudo que está lá dentro.
+Options -Indexes
