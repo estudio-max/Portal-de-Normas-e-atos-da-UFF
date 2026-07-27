@@ -86,8 +86,13 @@ export default function HelpGuide() {
         </ul>
         <p className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-900 flex gap-1.5">
           <MousePointerClick className="w-4 h-4 shrink-0" />
-          Para investigar a fundo, use a aba <strong>🕸️ Mapa de Relações e Impacto</strong>: escolha um ato e veja
-          o veredito (“revogado pela Portaria X”) e a teia completa de dependências.
+          {/* O texto vai dentro de UM <span>: num container flex, cada elemento
+              filho vira item — sem o span, cada <strong> viraria uma coluna e a
+              frase se despedaçaria em blocos lado a lado. */}
+          <span>
+            Para investigar a fundo, use a aba <strong>🕸️ Mapa de Relações e Impacto</strong>: escolha um ato e veja
+            o veredito (“revogado pela Portaria X”) e a teia completa de dependências.
+          </span>
         </p>
       </Secao>
 
@@ -247,10 +252,25 @@ export default function HelpGuide() {
       {/* Avisos */}
       <Secao icon={<ShieldAlert className="w-4 h-4" />} titulo="Importante">
         <ul className="space-y-1">
-          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O portal é uma <strong>camada de consulta</strong> sobre o acervo de PDFs — a <strong>fonte primária</strong> são os Boletins de Serviço. Em decisões oficiais, confira sempre o <strong>PDF oficial</strong> do Boletim (link em cada ato).</li>
-          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> A indexação é automática e pode ter imperfeições em casos raros — por isso o original prevalece.</li>
-          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> O <strong>radar de Prazos</strong>, os <strong>Insights</strong> e a aba <strong>ODS</strong> são apoios derivados do texto — ótimos como lembrete, panorama e evidência, mas o <strong>ato de origem sempre prevalece</strong>.</li>
-          <li className="flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Os dados são informação <strong>pública</strong> do Boletim de Serviço da UFF.</li>
+          {/* Cada item é flex (ícone + texto), então o texto precisa vir dentro
+              de UM <span>. Solto, cada <strong> vira um item do flex e a frase
+              se quebra em colunas lado a lado — era o que acontecia aqui. */}
+          <li className="flex gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <span>O portal é uma <strong>camada de consulta</strong> sobre o acervo de PDFs — a <strong>fonte primária</strong> são os Boletins de Serviço. Em decisões oficiais, confira sempre o <strong>PDF oficial</strong> do Boletim (link em cada ato).</span>
+          </li>
+          <li className="flex gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <span>A indexação é automática e pode ter imperfeições em casos raros — por isso o original prevalece.</span>
+          </li>
+          <li className="flex gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <span>O <strong>radar de Prazos</strong>, os <strong>Insights</strong> e a aba <strong>ODS</strong> são apoios derivados do texto — ótimos como lembrete, panorama e evidência, mas o <strong>ato de origem sempre prevalece</strong>.</span>
+          </li>
+          <li className="flex gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <span>Os dados são informação <strong>pública</strong> do Boletim de Serviço da UFF.</span>
+          </li>
         </ul>
       </Secao>
 
