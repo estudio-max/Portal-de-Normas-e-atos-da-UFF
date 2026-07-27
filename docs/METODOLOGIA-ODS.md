@@ -198,6 +198,31 @@ e seus atos **fundadores** entram direto:
   Afirmativas e Diversidade, Res. CUV 635/2025) → 10/5.
 - Aba **Cooperação** → 17 (já pronta; os acordos internacionais são evidência 17).
 
+## 5-A. A isca do NOME PRÓPRIO (a armadilha que mais custou)
+
+Todas as guardas do §5.1 são instâncias de **um único defeito**: o termo-ODS
+aparece no **nome de alguma entidade** citada pelo ato, não no que o ato faz.
+Catalogadas até agora, todas medidas neste corpus:
+
+| onde o termo mora | exemplo real | quantos |
+|---|---|---|
+| nome do **parceiro** | convênio de estágio com "Instituto Biasse **Socioambiental**" | dezenas |
+| **área** do concurso | "Comissão Examinadora … **Psiquiatria e Saúde Mental**" | ~32 na amostra |
+| **cargo** da pessoa | "declara vago o cargo de Engenheiro de **Segurança do Trabalho**" | dezenas |
+| nome do **órgão emissor** | "**Escola de Governança** em Gestão Pública" assina a progressão | **193** |
+| nome da **unidade remanejada** | "excluir CD-3 da **Divisão de Saúde Ocupacional**" | **22** |
+| **palavra comum** homônima | "**inclusão** de disciplina", "Bio**ética**" | 2 + cauda |
+
+O caso do emissor é o mais instrutivo: a EGGP assina centenas de atos de
+capacitação, e a palavra "governança" no nome dela fez 193 atos de **folha de
+pagamento** parecerem política de governança (ODS 16). Nenhum deles cita
+governança no dispositivo.
+
+**Regra operacional:** antes de aceitar um vínculo, pergunte *"o termo está no
+DISPOSITIVO ou no nome de alguém?"*. Se for nome — de parceiro, de órgão, de
+cargo, de unidade, de curso — não é vínculo. É a mesma doutrina do extrator
+("classifique pelo dispositivo, não por menção"), aplicada à classificação.
+
 ## 8-A. Curadoria dos ambíguos — o que ela ensinou
 
 A resolução automática de uid deixou **32 casos ambíguos** (o dump tem 2+ linhas
@@ -229,6 +254,23 @@ Os outros descartes: quatro **atos de pessoal** (nomeação de nutricionista,
 designação de médico, licença) que o rótulo automático leu como política de
 alimentação/saúde — a mesma isca de cargo do §5.1, agora entrando por ementa
 vazia; e dois casos indecidíveis (6 atos distintos numerados 3/2021).
+
+## 8-B. A cauda de resíduo — e o que ela revelou sobre a carga
+
+"Resíduo" = candidato que passou pelo recorte mas nenhum cluster reconheceu.
+Eram 759. Tratados: **351 descartados** por regra nova (ato de pessoal, folha,
+estrutura), **33 recuperados** com clusters novos, **375 deixados como cauda
+longa** (casos únicos; 489 dos 759 sem ementa nenhuma, atos de 2001-2010).
+
+O ganho maior não foram os 33 — foi o **diagnóstico**. Ao entender por que 193
+atos de progressão tinham virado candidatos a ODS 16, achamos a isca do órgão
+emissor (§5-A) e, com ela, **auditamos a carga que já ia para produção**: 29
+atos contaminados (2,1%), 54 linhas. Corrigidos na fonte antes do deploy.
+
+**Lição de processo:** a cauda de resíduo não é lixo a ser ignorado — é o
+detector de defeito sistemático da carga principal. Um falso-positivo que
+aparece 193 vezes no resíduo aparece algumas vezes dentro dos clusters também.
+Vale tratá-la sempre que a classificação for revista.
 
 ## 8. Governança da classificação
 
@@ -262,12 +304,13 @@ cargo CD/FG, aditivo de estágio); vínculo `ensino` decidido pelo NOME do curso
 ementa (nunca por disciplina citada no corpo); adesões de jornada separadas da norma
 geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
 
-- **1.390 atos rotulados** → uid resolvido contra o dump do dia (97,7%; desempate de
-  duplicata `-2` por prefixo de ementa) → **1.651 linhas (uid × ods)** em
-  `../../backfill-ods/ato_ods_backfill.json` (567 proposta · 911 execução · 166
-  ensino · 7 pesquisa).
-- **32 ambíguos** (curados — ver §9) + **1.429 descartados com motivo** (759
-  resíduo, sendo 495 atos 2001-2010 de ementa vazia) — trilha em `backfill-ods/`.
+- **1.392 atos rotulados** (inclui 33 recuperados da cauda) → uid resolvido contra
+  o dump do dia (97,6%; desempate de duplicata `-2` por prefixo de ementa) →
+  **1.661 linhas (uid × ods)** sobre **1.380 atos**, em `../../backfill-ods/`
+  (`ato_ods_backfill.json`, 1.629 de IA + `ato_ods_curadoria.json`, 32 curadas).
+  568 proposta · 886 execução · 168 ensino · 7 pesquisa.
+- **34 ambíguos** (32 curados — ver §8-A) + **descartados com motivo**, incluindo
+  a cauda tratada (§8-B) — trilha completa em `backfill-ods/`.
 - Infra: `backend/db/ato_ods.sql` (+ tabela no `schema_v2.sql`) e
   `backend/importar/backfill_ato_ods.php` (upsert por uid; linha `metodo='curadoria'`
   nunca é sobrescrita). Runbook: `../../backfill-ods/LEIA-ME.md`.
