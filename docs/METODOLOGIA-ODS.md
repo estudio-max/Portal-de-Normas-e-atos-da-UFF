@@ -241,7 +241,29 @@ Catalogadas até agora, todas medidas neste corpus:
 | **cargo** da pessoa | "declara vago o cargo de Engenheiro de **Segurança do Trabalho**" | dezenas |
 | nome do **órgão emissor** | "**Escola de Governança** em Gestão Pública" assina a progressão | **193** |
 | nome da **unidade remanejada** | "excluir CD-3 da **Divisão de Saúde Ocupacional**" | **22** |
+| **cargo/lotação de quem recebe** | "Designa Fulana, **Nutricionista**", "diretor da Divisão de Moradia Estudantil e **Restaurante Universitário**" | **~300** |
 | **palavra comum** homônima | "**inclusão** de disciplina", "Bio**ética**" | 2 + cauda |
+
+O caso do **cargo de quem recebe o ato** foi o mais numeroso e o último a cair —
+achado por leitura do painel no ar, não pelos testes: a ODS 2 (Fome zero) exibia
+60 de 75 atos do tipo *"Designa Fulana, Nutricionista"* e *"Dispensa Beltrano"*.
+Nenhum faz política alimentar; o que casava era a profissão da pessoa ou o nome da
+unidade em que ela seria lotada.
+
+**A guarda é o OBJETO DO VERBO**, não o verbo: `designar`/`dispensar`/`nomear`
+seguidos de **pessoa** são ato de pessoal e saem; seguidos de **colegiado**
+("designa membros para compor a Comissão de Ética") são execução legítima de
+política e ficam. Duas sutilezas que custaram medição:
+
+- O dispositivo quase nunca começa no verbo — vem `resolve: 1- designar…`,
+  `resolve: art. 1º - dispensar…`. Sem descascar o marcador de item, o verbo não
+  casa e o ato passa batido (71 designações sobreviveram assim na primeira
+  tentativa).
+- Ato de designação de **colegiado** fica, mas o tema tem de vir da **ementa** —
+  que é onde o colegiado se nomeia. O corpo desses atos é lista de membros e
+  programação de evento: foi por ali que "Designa representantes do Comitê
+  Científico da Agenda Acadêmica" virou evidência de creche (2012) e de
+  assistência estudantil (2014).
 
 O caso do emissor é o mais instrutivo: a EGGP assina centenas de atos de
 capacitação, e a palavra "governança" no nome dela fez 193 atos de **folha de
@@ -336,9 +358,9 @@ geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
 
 - **1.392 atos rotulados** (inclui 33 recuperados da cauda) → uid resolvido contra
   o dump do dia (97,6%; desempate de duplicata `-2` por prefixo de ementa) →
-  **1.662 linhas (uid × ods)** sobre **1.381 atos**, em `../../backfill-ods/`
-  (`ato_ods_backfill.json`, 1.630 de IA + `ato_ods_curadoria.json`, 32 curadas).
-  205 proposta · 1.280 execução · 170 ensino · 7 pesquisa (ver §3).
+  **1.366 linhas (uid × ods)** sobre **1.215 atos**, em `../../backfill-ods/`
+  (`ato_ods_backfill.json`, 1.334 de IA + `ato_ods_curadoria.json`, 32 curadas).
+  189 proposta · 966 execução · 172 ensino · 7 pesquisa (ver §3).
 - **34 ambíguos** (32 curados — ver §8-A) + **descartados com motivo**, incluindo
   a cauda tratada (§8-B) — trilha completa em `backfill-ods/`.
 - Infra: `backend/db/ato_ods.sql` (+ tabela no `schema_v2.sql`) e
