@@ -217,7 +217,7 @@ function resolver_links(PDO $pdo): void
         $pdo->exec("UPDATE relacao SET destino_ato_id = NULL, externo = 0");
 
         $todas = $pdo->query(
-            "SELECT r.id, r.destino_texto, o.data_ato AS origem_data
+            "SELECT r.id, r.ato_id AS origem_id, r.destino_texto, o.data_ato AS origem_data
              FROM relacao r
              JOIN ato o ON o.id = r.ato_id
              WHERE r.destino_texto <> ''"
@@ -232,7 +232,7 @@ function resolver_links(PDO $pdo): void
 
         $externos = [];
         $ligacoes = [];
-        $n_amb = $n_miss = $n_naoparseou = $n_tiposemid = 0;
+        $n_amb = $n_miss = $n_naoparseou = $n_tiposemid = $n_self = 0;
 
         foreach ($todas as $rel) {
             $texto = $rel['destino_texto'];
@@ -246,6 +246,23 @@ function resolver_links(PDO $pdo): void
             if ($tipoId === null) { $n_tiposemid++; continue; }
 
             $r = buscar_destino($indice, $tipoId, $p, $rel['origem_data']);
+
+            // Um ato não revoga, altera nem complementa a SI MESMO. Sem esta
+            // guarda o resolvedor produzia 650 auto-referências (2,1% das
+            // relações), e elas apareciam na ficha como "Complementa: Portaria
+            // nº 37.059" na página da própria Portaria 37.059.
+            //
+            // A causa é o `destino_norm` descartar o ano ('portariano32720'):
+            // quando o texto do ato cita o próprio número — típico de
+            // retificação, que republica sob o número do ato retificado — o
+            // índice casa de volta na origem. Descartar aqui é seguro porque
+            // não existe caso legítimo; o `destino_texto` continua gravado,
+            // então a citação não se perde, só deixa de virar aresta falsa.
+            if ($r['status'] === 'ok' && (int)$r['id'] === (int)$rel['origem_id']) {
+                $n_self++;
+                continue;
+            }
+
             if ($r['status'] === 'ok')          { $ligacoes[$rel['id']] = $r['id']; }
             elseif ($r['status'] === 'ambiguo') { $n_amb++; }
             else                                { $n_miss++; }
@@ -263,6 +280,7 @@ function resolver_links(PDO $pdo): void
          . " | ambíguos (não chutados): $n_amb"
          . " | legado a indexar: $n_miss"
          . ($n_naoparseou ? " | sem parse: $n_naoparseou" : "")
+         . ($n_self ? " | auto-referência barrada: $n_self" : "")
          . ($n_tiposemid ? " | tipo sem correspondência: $n_tiposemid" : ""));
 }
 
