@@ -355,8 +355,27 @@ resumo operacional.
   indecidível, e a curadoria do CEPEx já provou que a cópia verdadeira nem
   sempre é a primeira. Medido em 2022+2025 (15.115 atos): remove 3, todos
   anexo; 2001+2005: remove ZERO. Regressão: `tools/teste_folha_rosto.py`.
-  **Só corrige daqui pra frente** — os atos já em produção precisam de
-  reprocessamento dos boletins afetados.
+  **Varredura do corpus inteiro (26 anos, ~4.900 boletins): 4 casos**, todos
+  reprocessados e **corrigidos em produção em 29/07/2026** —
+  `port-reitoria-47105-2012` (Plano Diretor de TIC), `res-cmb-1-2022` e
+  `res-cmb-5-2025` (Planos de Desenvolvimento do Instituto Biomédico) e
+  `in-gar-ret-26-2022` (Manual de Atos e Comunicações Oficiais). Conferido
+  depois do import: `novos=0` (nenhuma duplicata) e a busca por "Manual de
+  Atos e Comunicações Oficiais", que devolvia ZERO, passou a achar a IN — a
+  ementa real simplesmente não existia na base. Ferramentas:
+  `tools/varrer_folha_rosto.py` (acha) e `tools/reprocessar_boletins.py`
+  (gera o portal-data.json dos boletins afetados, para o importador
+  idempotente atualizar ementa **e** texto de busca).
+- **Um ato não se referencia.** O `destino_norm` descarta o ano
+  (`portariano32720`), então quando o texto cita o próprio número — típico de
+  **retificação**, que republica sob o número do ato retificado — o índice
+  casa de volta na origem. Media 650 auto-referências (2,1% das relações),
+  visíveis na ficha como "Complementa: Portaria nº 37.059" na página da
+  própria Portaria 37.059. `resolver_relacoes_v2.php` barra por
+  `destino_ato_id == ato_id`; é seguro porque não existe caso legítimo, e o
+  `destino_texto` continua gravado (a citação não se perde, só deixa de virar
+  aresta falsa). O contador sai no log como "auto-referência barrada: N" —
+  guarda silenciosa é guarda que ninguém confere.
 - **Hífen na busca: vira ESPAÇO, nunca vazio.** O FULLTEXT trata `-` como
   separador (`Vice-Reitor` está indexado como `vice`+`reitor`), então apagar o
   caractere colava as metades num token inexistente. Medido antes do fix:
