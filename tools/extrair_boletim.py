@@ -504,6 +504,76 @@ def citacao_recortada(ementa, ano_ato, bs_data):
     return bool(_FRAGMENTO_INI_RE.match(ementa or ""))
 
 
+# --------------------------------------------------------------------------- #
+# Anexo que repete o cabeçalho do ato (folha de rosto institucional)
+# --------------------------------------------------------------------------- #
+# Um documento ANEXO publicado logo depois do ato que o institui (Plano de
+# Desenvolvimento de Unidade, Manual de Atos) abre repetindo o título do ato e,
+# em seguida, a FOLHA DE ROSTO da UFF — a lista de dirigentes (Reitor,
+# Vice-Reitor, Chefe de Gabinete, Pró-Reitorias, Superintendências). Esse
+# segundo bloco vira "ato" com a MESMA chave natural (tipo+sigla+número+ano) do
+# ato real, e como a chave é a mesma o importador COLAPSA os dois.
+#
+# O estrago não é ruído, é PERDA: medido em produção, sobrou o anexo e o ato
+# real sumiu — `res-cmb-1-2022` tem a folha de rosto como ementa, enquanto a
+# ementa verdadeira ("Apresenta o Plano de Desenvolvimento da Unidade Instituto
+# Biomédico da UFF – PDU-CMB") não está em lugar nenhum.
+#
+# Efeito colateral que revelou o defeito: a lista de dirigentes entra no índice
+# de busca, então quem ocupou cargo de direção passa a casar em qualquer busca
+# por nome — um Superintendente aparece "citado" num plano de unidade que nunca
+# o mencionou.
+#
+# Medido em 2 anos completos (2022: 245 PDFs / 6.437 atos; 2025: 153 / 8.678):
+# 3 ocorrências, sempre com a mesma forma — ato real primeiro, com ementa de
+# verdade; anexo depois, abrindo pela folha de rosto. Raro, mas cada caso custa
+# um ato real.
+_MASTRO_PADROES = [
+    re.compile(r"vice-?reitor", re.I),
+    re.compile(r"chefe\s+de\s+gabinete", re.I),
+    re.compile(r"pr[óo]-?reitoria", re.I),
+    re.compile(r"superintend[êe]ncia", re.I),
+]
+
+
+def folha_de_rosto(texto):
+    """Quantos marcadores distintos da folha de rosto institucional abrem o texto."""
+    t = (texto or "")[:1200]
+    return sum(1 for rx in _MASTRO_PADROES if rx.search(t))
+
+
+def descarta_anexo_de_folha_rosto(atos):
+    """Remove o ANEXO que repete o cabeçalho de um ato já capturado no mesmo BS.
+
+    Descarta só com as três condições JUNTAS:
+      1. existe outro ato com a mesma chave natural no mesmo boletim;
+      2. o primeiro da chave NÃO abre por folha de rosto (é o ato real);
+      3. este abre por folha de rosto (>= 3 marcadores).
+
+    Sem irmão na mesma chave, não descarta nada: perder o único registro de um
+    ato seria pior que o ruído que esta guarda evita. E se o PRIMEIRO já for
+    folha de rosto, também não mexe — aí não dá para saber qual é o real, e o
+    projeto já pagou caro por regra automática que apagou a cópia certa (ver a
+    curadoria de duplicatas do CEPEx em CLAUDE.md).
+    """
+    por_chave = {}
+    for i, a in enumerate(atos):
+        k = (a.get("tipo"), a.get("sigla"), str(a.get("numero")), str(a.get("ano")))
+        por_chave.setdefault(k, []).append(i)
+
+    fora = set()
+    for idxs in por_chave.values():
+        if len(idxs) < 2:
+            continue
+        marc = [folha_de_rosto(atos[i].get("corpo_busca")) for i in idxs]
+        if marc[0] >= 3:
+            continue
+        for pos in range(1, len(idxs)):
+            if marc[pos] >= 3:
+                fora.add(idxs[pos])
+    return [a for i, a in enumerate(atos) if i not in fora] if fora else atos
+
+
 def data_iso(dia, mes_nome, ano):
     m = MESES.get(mes_nome.lower().strip())
     if not m:
@@ -865,6 +935,10 @@ def parse_pdf(caminho):
                      or len(trecho) > 700)
         if tem_corpo and not citacao_recortada(ementa, ano_ato, bs_data):
             atos.append(ato)
+
+    # Só aqui, com o boletim inteiro em mãos: a guarda precisa achar o IRMÃO de
+    # mesma chave natural para decidir, e dentro do loop isso não existe ainda.
+    atos = descarta_anexo_de_folha_rosto(atos)
 
     return atos, {"bs_numero": bs_num, "bs_data": bs_data, "bs_ano": bs_ano,
                   "arquivo": arquivo, "paginas": len(paginas)}
