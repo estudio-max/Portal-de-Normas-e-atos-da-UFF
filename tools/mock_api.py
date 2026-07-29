@@ -161,10 +161,13 @@ def tokens_busca(s):
 # que concordar. "frase exata" = substring literal adjacente; +palavra ou
 # palavra solta = obrigatoria (o "+" nao muda o resultado, so e' aceito).
 def busca_casa(blob, busca):
-    q = busca.strip()
+    # Hifen vira espaco dos DOIS lados, espelhando booleanize() do PHP: o
+    # FULLTEXT do MySQL ja separa "Vice-Reitor" em `vice`+`reitor`.
+    _sem_hifen = lambda s: re.sub(r"[-‐-―]", " ", s or "")
+    q = _sem_hifen(busca).strip()
     if not q:
         return True
-    b = blob.lower()
+    b = _sem_hifen(blob).lower()
     frases = []
 
     def _tira_frase(m):

@@ -92,9 +92,14 @@ export async function init(): Promise<'api' | 'estatico'> {
 // palavra solta casa por SUBSTRING (equivalente ao "*" de sufixo do MySQL
 // boolean mode), não por token exato.
 export function buscaCasa(blob: string, busca: string): boolean {
-  const q = busca.trim();
+  // Hífen vira espaço dos DOIS lados (busca e texto), espelhando booleanize():
+  // no MySQL o FULLTEXT já separa "Vice-Reitor" em `vice`+`reitor`, e aqui o
+  // texto é cru — sem normalizar os dois lados, o mesmo termo daria resultados
+  // diferentes no modo API e no estático.
+  const semHifen = (s: string) => s.replace(/[-‐-―]/g, ' ');
+  const q = semHifen(busca).trim();
   if (!q) return true;
-  const b = blob.toLowerCase();
+  const b = semHifen(blob).toLowerCase();
   const frases: string[] = [];
   const semAspas = q.replace(/"([^"]+)"/g, (_, f) => { frases.push(f.trim().toLowerCase()); return ' '; });
   const frasesOk = frases.filter(f => f.length > 0);

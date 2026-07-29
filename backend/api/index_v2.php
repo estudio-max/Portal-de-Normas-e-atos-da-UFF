@@ -159,6 +159,16 @@ function cache_grava(string $arq, string $conteudo): void {
 //                      quem não usa nenhum operador, sem risco de regressão).
 function booleanize(string $s): string {
     $out = [];
+    // 0) hífen vira ESPAÇO, nunca vazio. O FULLTEXT do MySQL trata "-" como
+    // separador — "Vice-Reitor" está indexado como `vice` + `reitor` —, então
+    // APAGAR o caractere colava as duas metades num token que não existe em
+    // lugar nenhum. Medido em produção: "Vice-Reitor" devolvia 1 resultado
+    // contra 427 de "Vice Reitor"; "Pró-Reitoria", 2 contra 792;
+    // "pós-graduação", 3 contra 4.449. Como o hífen é a grafia CERTA em
+    // português, a busca punia justamente quem digitava direito.
+    // Cobre também os travessões Unicode (‐ ‑ ‒ – —), que aparecem no corpus
+    // colados em palavra.
+    $s = preg_replace('/[-\x{2010}-\x{2015}]/u', ' ', $s);
     // 1) frases entre aspas primeiro — extraídas ANTES do split por palavra,
     // senão cada palavra da frase vira um token solto e a ordem/adjacência
     // se perde (era exatamente esse o defeito: aspas eram só ignoradas).
