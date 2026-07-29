@@ -336,6 +336,35 @@ resumo operacional.
   desenho:** ela só age com gap ≥ 3 anos, então não vê a duplicata por citação
   de gap curto — um boletim de 2022 citando resolução de 2021 passa inteiro.
   Esse é outro problema, tratado na seção de pendências.
+- **O ANEXO repete o cabeçalho do ato — e come o ato real.** Um documento
+  anexo publicado logo depois do ato que o institui (Plano de Desenvolvimento
+  de Unidade, Manual de Atos) abre repetindo o título e, em seguida, a **folha
+  de rosto** da UFF (a lista de dirigentes: Reitor, Vice-Reitor, Chefe de
+  Gabinete, Pró-Reitorias, Superintendências). Esse bloco vira "ato" com a
+  MESMA chave natural do ato real e o importador colapsa os dois — e quem
+  sobra é o anexo. Medido: `res-cmb-1-2022` e `res-cmb-5-2025` estão em
+  produção com a folha de rosto como ementa; a ementa verdadeira ("Apresenta o
+  Plano de Desenvolvimento da Unidade…") não existe na base. Efeito colateral
+  que revelou o defeito: a lista de dirigentes entra no índice de busca, então
+  **todo ocupante de cargo de direção casa em busca por nome** nesses atos (um
+  Superintendente aparecia "citado" num plano de unidade que nunca o
+  mencionou). `descarta_anexo_de_folha_rosto()` corrige, com três condições
+  cumulativas — irmão de mesma chave, o primeiro NÃO sendo folha de rosto, e
+  este sendo (≥3 marcadores distintos nos primeiros 1200 chars). **Sem irmão
+  não descarta**, e se o primeiro já for folha de rosto também não mexe: é
+  indecidível, e a curadoria do CEPEx já provou que a cópia verdadeira nem
+  sempre é a primeira. Medido em 2022+2025 (15.115 atos): remove 3, todos
+  anexo; 2001+2005: remove ZERO. Regressão: `tools/teste_folha_rosto.py`.
+  **Só corrige daqui pra frente** — os atos já em produção precisam de
+  reprocessamento dos boletins afetados.
+- **Hífen na busca: vira ESPAÇO, nunca vazio.** O FULLTEXT trata `-` como
+  separador (`Vice-Reitor` está indexado como `vice`+`reitor`), então apagar o
+  caractere colava as metades num token inexistente. Medido antes do fix:
+  `Vice-Reitor` = 1 resultado contra 427 de `Vice Reitor`; `pós-graduação` = 3
+  contra 4.449. A grafia CERTA em português era a que não achava nada. Vale
+  para os travessões Unicode também, e a correção tem que entrar nos três
+  lugares que precisam concordar (`booleanize()` no PHP, `buscaCasa()` no
+  dataSource.ts, `busca_casa()` no mock).
 - **Collation do MySQL ≠ dedup do Python.** `DECISOES` == `DECISÕES` e
   `'001'` == `'01'` == `'1'` para o MySQL. Qualquer ETL precisa considerar isso.
 - **FULLTEXT tokeniza; para casar FRASE use LIKE.** O índice `texto_busca`
