@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """Varre o corpus atras de ANEXO COM FOLHA DE ROSTO (ver teste_folha_rosto.py).
 
-    python varrer_folha_rosto.py <ano> [ano...]      # ex.: 2001 2002 2003
+    python varrer_folha_rosto.py <saida.json> <ano> [ano...]
 
 Roda o extrator com a guarda DESLIGADA e reporta os casos que ela removeria:
 boletim, pagina, chave natural e as duas ementas (a real e a folha de rosto).
-Saida em JSON no stdout, para juntar as varreduras e virar SQL de correcao.
+
+A saida vai para ARQUIVO, nunca para o stdout: o MuPDF escreve avisos dele
+("MuPDF error: format error...") direto no descritor do processo, e isso
+CONTAMINA um JSON redirecionado com `>` -- aconteceu de verdade aqui, o
+arquivo saiu com o aviso colado antes do `[` e truncado no meio.
 
 Existe porque a guarda no extrator so vale para reprocessamento futuro -- os
 atos ja importados continuam com a folha de rosto no lugar da ementa real.
@@ -46,8 +50,12 @@ def varrer(pdf):
 
 
 def main():
+    if len(sys.argv) < 3:
+        print(__doc__)
+        return 1
+    destino = sys.argv[1]
     saida = []
-    for ano in sys.argv[1:]:
+    for ano in sys.argv[2:]:
         for pdf in sorted(glob.glob(os.path.join("dados", "boletins", ano, "*.pdf"))):
             achados, meta = varrer(pdf)
             for k, real, anexo, m in achados:
@@ -62,11 +70,13 @@ def main():
                     "ementa_real": (real.get("ementa") or "")[:300],
                     "ementa_anexo": (anexo.get("ementa") or "")[:160],
                 })
-    # ensure_ascii=True de proposito: no Windows o stdout e cp1252, e
-    # `ensure_ascii=False` grava acento em cp1252 -- o arquivo deixa de ser
-    # UTF-8 valido e quem ler depois com encoding='utf-8' quebra. Mesma
-    # armadilha que CLAUDE.md documenta para `curl | python`.
-    json.dump(saida, sys.stdout, ensure_ascii=True)
+    # encoding EXPLICITO: o default do Windows e cp1252, e quem ler depois
+    # com encoding='utf-8' quebraria no primeiro acento (mesma armadilha que
+    # CLAUDE.md documenta para `curl | python`).
+    with io.open(destino, "w", encoding="utf-8") as f:
+        json.dump(saida, f, ensure_ascii=False)
+    print(f"{len(saida)} caso(s) -> {destino}")
+    return 0
 
 
 if __name__ == "__main__":
