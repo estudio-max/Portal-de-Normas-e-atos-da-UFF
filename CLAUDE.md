@@ -376,6 +376,15 @@ resumo operacional.
   `destino_texto` continua gravado (a citação não se perde, só deixa de virar
   aresta falsa). O contador sai no log como "auto-referência barrada: N" —
   guarda silenciosa é guarda que ninguém confere.
+  **O estrago não era cosmético: era a VIGÊNCIA.** Aplicado em produção
+  (29/07/2026), o resolvedor reverteu **515 atos para Ativo** — revogados
+  1.241→1.132 e alterados 2.399→1.993. Eles constavam como revogados/alterados
+  porque "revogavam a si mesmos", e o cálculo de vigência lia a auto-aresta
+  como revogação real. Ou seja, o portal afirmava que 515 normas não valiam
+  mais, quando valem — num portal de normas, o pior erro possível. Caso-prova:
+  `port-reitoria-37059-2007`, cuja única relação apontava para ele mesmo;
+  hoje a citação segue registrada com `destino_ato_id` nulo e o status
+  "Revogado" vem de quem de fato o revogou (`ns-uff-659-2017`).
 - **Hífen na busca: vira ESPAÇO, nunca vazio.** O FULLTEXT trata `-` como
   separador (`Vice-Reitor` está indexado como `vice`+`reitor`), então apagar o
   caractere colava as metades num token inexistente. Medido antes do fix:
