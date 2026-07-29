@@ -62,7 +62,11 @@ def main():
                     "ementa_real": (real.get("ementa") or "")[:300],
                     "ementa_anexo": (anexo.get("ementa") or "")[:160],
                 })
-    json.dump(saida, sys.stdout, ensure_ascii=False)
+    # ensure_ascii=True de proposito: no Windows o stdout e cp1252, e
+    # `ensure_ascii=False` grava acento em cp1252 -- o arquivo deixa de ser
+    # UTF-8 valido e quem ler depois com encoding='utf-8' quebra. Mesma
+    # armadilha que CLAUDE.md documenta para `curl | python`.
+    json.dump(saida, sys.stdout, ensure_ascii=True)
 
 
 if __name__ == "__main__":
