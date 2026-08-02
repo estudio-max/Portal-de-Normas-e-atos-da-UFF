@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, Loader2, Info, ExternalLink, Building2, Users, FileText, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Jornada de trabalho": os dois modelos recentes de organização da
 // jornada na UFF, ambos registrados no BS —

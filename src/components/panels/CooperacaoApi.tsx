@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Handshake, Loader2, Info, ExternalLink, Globe2, Search, X } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Cooperação": acordos, protocolos e cotutelas que a UFF celebra com
 // outras instituições. Tudo vem da EMENTA, que nesses atos é muito estruturada:

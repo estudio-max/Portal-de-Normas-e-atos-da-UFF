@@ -3,8 +3,8 @@ import {
   Search, Plus, Edit2, Trash2, Download, Upload, Filter, X, Check, CheckSquare, Square, 
   ChevronDown, ChevronUp, Link, Clipboard, HelpCircle, Eye, RefreshCw, AlertCircle, Sparkles
 } from 'lucide-react';
-import { UffAct, ActType, ActRelation } from '../types';
-import { buscaCasa } from '../dataSource';
+import { UffAct, ActType, ActRelation } from '../../types';
+import { buscaCasa } from '../../dataSource';
 
 interface ActSpreadsheetProps {
   acts: UffAct[];

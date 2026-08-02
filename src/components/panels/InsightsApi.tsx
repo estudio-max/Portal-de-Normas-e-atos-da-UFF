@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays, Link2, Users, AlertTriangle, Hourglass, ExternalLink, ArrowRightLeft, MapPin } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Insights": painéis analíticos sobre o acervo indexado do Boletim de
 // Serviço. Tudo é agregação do que já está no banco (nada inventado): ritmo de

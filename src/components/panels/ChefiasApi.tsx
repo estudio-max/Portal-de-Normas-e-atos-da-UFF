@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Printer, Search, ExternalLink, Loader2, Info } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Chefias da UFF": relação de titulares (Chefe/Coordenador/Diretor...) por
 // setor, projetada das DESIGNAÇÕES/DISPENSAS publicadas no Boletim de Serviço.

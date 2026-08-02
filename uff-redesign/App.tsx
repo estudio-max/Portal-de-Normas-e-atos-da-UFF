@@ -2,12 +2,11 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AppShell } from './components/layout/AppShell';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { Skeleton } from './components/ui/Skeleton';
-import ActTable from './components/ActTable';
-import ActRelationsApi from './components/ActRelationsApi';
-import * as ds from './dataSource';
-import type { UffAct, UffStatistics } from './types';
+import { dataSource } from './dataSource';
+import type { UffAct } from './types';
 
 // Lazy load heavy panels to keep initial bundle small
+const ActSpreadsheet = lazy(() => import('./components/panels/ActSpreadsheet'));
 const ActRelationships = lazy(() => import('./components/panels/ActRelationships'));
 const InsightsApi = lazy(() => import('./components/panels/InsightsApi'));
 const DossieApi = lazy(() => import('./components/panels/DossieApi'));
@@ -49,89 +48,41 @@ const ABAS_VALIDAS = [
   'ajuda', 'privacidade', 'sobre',
 ];
 
-// Mapeia Stats do dataSource para UffStatistics do Dashboard
-function mapStats(s: ds.Stats | null): UffStatistics | null {
-  if (!s) return null;
-  return {
-    total: s.total,
-    ativoCount: s.vigentes,
-    revogadoCount: s.revogados,
-    alteradoCount: s.alterados,
-    porTipo: {} as Record<import('./types').ActType, number>,
-    porOrgao: {},
-    porAno: {},
-  };
-}
-
 export default function App() {
   const [aba, setAba] = useState<string>(abaDoHash());
   const [apiMode, setApiMode] = useState<boolean>(false);
-  const [stats, setStats] = useState<UffStatistics | null>(null);
-  const [portalStats, setPortalStats] = useState<ds.Stats | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [recentActs, setRecentActs] = useState<UffAct[]>([]);
   const [erro, setErro] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [buscaGlobal, setBuscaGlobal] = useState('');
-  const [fotofobia, setFotofobia] = useState(() => {
-    try { return localStorage.getItem('tema-fotofobia') === '1'; } catch { return false; }
-  });
 
+  // Detect API mode
   useEffect(() => {
-    document.documentElement.classList.toggle('fotofobia', fotofobia);
-    try { localStorage.setItem('tema-fotofobia', fotofobia ? '1' : '0'); } catch { /* armazenamento indisponível */ }
-  }, [fotofobia]);
-
-  // Inicializa dataSource (igual ao App antigo)
-  useEffect(() => {
-    const init = async () => {
-      const modo = await ds.init();
-      const isApi = modo === 'api';
-      setApiMode(isApi);
-      setCarregando(false);
-
-      // Carrega stats
+    const checkApi = async () => {
       try {
-        const s = await ds.getStats();
-        setStats(mapStats(s));
-        setPortalStats(s);
-      } catch (e) {
-        console.error('Erro ao carregar stats:', e);
-      }
-
-      // Carrega atos recentes
-      try {
-        if (isApi) {
-          const resp = await ds.listAtos({ por_pagina: 5, ordenar: 'dataAssinatura', dir: 'desc' });
-          // Converte AtoLista para UffAct parcial para o Dashboard
-          const acts: UffAct[] = resp.atos.map(a => ({
-            id: a.id,
-            tipoAto: a.tipo as import('./types').ActType,
-            numero: a.numero,
-            ano: a.ano,
-            dataAssinatura: a.dataAssinatura,
-            orgaoEmissor: a.sigla || '',
-            ementa: a.ementa,
-            status: a.status as 'Ativo' | 'Revogado' | 'Alterado',
-            processoSei: a.processoSei,
-            relacoes: [],
-            tags: [],
-            conteudoResumido: '',
-          }));
-          setRecentActs(acts);
-        } else {
-          // Modo estático: pega do cache
-          const todos = ds.todosAtos();
-          const recentes = [...todos]
-            .sort((a, b) => new Date(b.dataAssinatura).getTime() - new Date(a.dataAssinatura).getTime())
-            .slice(0, 5);
-          setRecentActs(recentes);
-        }
-      } catch (e) {
-        console.error('Erro ao carregar atos recentes:', e);
+        const res = await fetch('./api/atos?limit=1', { method: 'HEAD' });
+        setApiMode(res.ok);
+      } catch {
+        setApiMode(false);
       }
     };
-    init();
+    checkApi();
   }, []);
+
+  // Load stats + recent acts for dashboard
+  useEffect(() => {
+    if (!apiMode) return;
+    const load = async () => {
+      try {
+        const s = await dataSource.stats();
+        setStats(s);
+        const acts = await dataSource.atos({ limit: 5, sort: 'dataPublicacao', order: 'desc' });
+        setRecentActs(acts.data || []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [apiMode]);
 
   // Hash change listener
   useEffect(() => {
@@ -153,22 +104,6 @@ export default function App() {
     window.location.hash = path ? `#/${path}` : '#';
   };
 
-  const handleGlobalSearch = (query: string) => {
-    setBuscaGlobal(query);
-    if (query.trim().length >= 2) navigate('atos');
-  };
-
-  if (carregando) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAFBFC]">
-        <div className="flex items-center gap-2 text-[#A0AEC0]">
-          <div className="w-5 h-5 border-2 border-[#006400] border-t-transparent rounded-full animate-spin" />
-          Carregando o portal…
-        </div>
-      </div>
-    );
-  }
-
   const renderContent = () => {
     // Dashboard (default)
     if (aba === '') {
@@ -176,8 +111,8 @@ export default function App() {
     }
 
     // Navegar
-    if (aba === 'atos') return <ActTable buscaGlobal={buscaGlobal} />;
-    if (aba === 'relacoes') return apiMode ? <ActRelationsApi /> : <Suspense fallback={<PanelFallback />}><ActRelationships acts={ds.todosAtos()} /></Suspense>;
+    if (aba === 'atos') return <Suspense fallback={<PanelFallback />}><ActSpreadsheet /></Suspense>;
+    if (aba === 'relacoes') return <Suspense fallback={<PanelFallback />}><ActRelationships /></Suspense>;
     if (aba === 'insights') return <Suspense fallback={<PanelFallback />}><InsightsApi /></Suspense>;
 
     // Pessoal
@@ -201,8 +136,7 @@ export default function App() {
   };
 
   return (
-    <AppShell activePath={aba} onNavigate={navigate} apiMode={apiMode}
-      onSearch={handleGlobalSearch} onThemeToggle={() => setFotofobia(ativo => !ativo)} fotofobia={fotofobia} portalStats={portalStats}>
+    <AppShell activePath={aba} onNavigate={navigate} apiMode={apiMode}>
       {erro ? (
         <div className="max-w-[1400px] p-6 bg-[#FFF5F5] border border-[#E53E3E]/20 rounded-xl text-[#E53E3E] text-sm">
           {erro}

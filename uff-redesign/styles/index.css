@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-uff-green: #006400;
+  --color-uff-green-dark: #004d00;
+  --color-uff-gold: #C9A227;
+  --color-uff-dark: #1A3A1A;
+  --color-uff-light: #F0F7F0;
+  --color-uff-bg: #FAFBFC;
+
+  --color-status-active: #38A169;
+  --color-status-active-bg: #F0FFF4;
+  --color-status-revoked: #E53E3E;
+  --color-status-revoked-bg: #FFF5F5;
+  --color-status-altered: #D69E2E;
+  --color-status-altered-bg: #FFFBEB;
+  --color-status-info: #3182CE;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Focus visible */
+*:focus-visible {
+  outline: 2px solid var(--color-uff-green);
+  outline-offset: 2px;
+}
+
+/* Tabular nums for data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}

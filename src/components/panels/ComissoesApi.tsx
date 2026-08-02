@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Comissões": centraliza os COLEGIADOS PERMANENTES de alcance institucional
 // da UFF — comitês e comissões estáveis (CPA, CPPD, CEUA, Governança, ...). A

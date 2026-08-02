@@ -3,7 +3,7 @@ import {
   ArrowRight, Link, Eye, AlertTriangle, ShieldCheck, HelpCircle, 
   Search, ShieldAlert, GitBranch, ArrowUpRight, ArrowDownLeft, FileText
 } from 'lucide-react';
-import { UffAct } from '../types';
+import { UffAct } from '../../types';
 
 interface ActRelationshipsProps {
   acts: UffAct[];

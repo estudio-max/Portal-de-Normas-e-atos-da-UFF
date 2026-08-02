@@ -1,9 +1,96 @@
 @import "tailwindcss";
 
-/* Modo escuro (conforto p/ fotofobia): classe alternada em <html> por App.tsx.
-   Inverte as cores da UI inteira em vez de reescrever cada componente com
-   variantes dark: (o app nao tem <img>/fotos, so texto/SVG, entao inverter
-   tudo com seguranca reduz o brilho sem distorcer nada). */
+@theme {
+  --color-uff-green: #006400;
+  --color-uff-green-dark: #004d00;
+  --color-uff-gold: #C9A227;
+  --color-uff-dark: #1A3A1A;
+  --color-uff-light: #F0F7F0;
+  --color-uff-bg: #FAFBFC;
+
+  --color-status-active: #38A169;
+  --color-status-active-bg: #F0FFF4;
+  --color-status-revoked: #E53E3E;
+  --color-status-revoked-bg: #FFF5F5;
+  --color-status-altered: #D69E2E;
+  --color-status-altered-bg: #FFFBEB;
+  --color-status-info: #3182CE;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Modo escuro de baixo brilho: a classe fica na raiz para alcançar os painéis
+   carregados sob demanda. A paleta é declarada, sem inversão de cores. */
 html.fotofobia {
-  filter: invert(1) hue-rotate(180deg);
+  color-scheme: dark;
+  background: #101713;
+}
+html.fotofobia body,
+html.fotofobia #root {
+  background: #101713;
+  color: #e7f0e8;
+}
+html.fotofobia [class*="bg-white"],
+html.fotofobia [class*="bg-\[\#FAFBFC\]"],
+html.fotofobia [class*="bg-slate-50"],
+html.fotofobia [class*="bg-gray-50"] {
+  background-color: #18221b !important;
+}
+html.fotofobia [class*="bg-\[\#F7FAFC\]"],
+html.fotofobia [class*="bg-\[\#F0F7F0\]"] {
+  background-color: #203126 !important;
+}
+html.fotofobia [class*="border-"],
+html.fotofobia [class*="divide-"] {
+  border-color: #39503f !important;
+}
+html.fotofobia [class*="text-\[\#1A202C\]"],
+html.fotofobia [class*="text-slate-900"],
+html.fotofobia [class*="text-slate-800"],
+html.fotofobia [class*="text-slate-700"] {
+  color: #e7f0e8 !important;
+}
+html.fotofobia [class*="text-slate-500"],
+html.fotofobia [class*="text-slate-400"],
+html.fotofobia [class*="text-\[\#A0AEC0\]"] {
+  color: #c0d0c3 !important;
+}
+html.fotofobia input,
+html.fotofobia select,
+html.fotofobia textarea {
+  background-color: #101713 !important;
+  color: #f3faf4 !important;
+}
+html.fotofobia input::placeholder {
+  color: #c0d0c3;
+  opacity: 1;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Focus visible */
+*:focus-visible {
+  outline: 2px solid var(--color-uff-green);
+  outline-offset: 2px;
+}
+
+/* Tabular nums for data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }

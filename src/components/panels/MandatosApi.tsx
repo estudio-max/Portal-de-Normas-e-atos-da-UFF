@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarX2, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, HelpCircle } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Mandatos": setores SEM CHEFIA formalmente constituída, e há quanto tempo.
 //

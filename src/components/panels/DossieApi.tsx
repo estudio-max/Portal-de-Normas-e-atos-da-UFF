@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Meu SIAPE": digite a matrícula, receba os atos do Boletim que a citam,
 // com a referência do BS — para instruir processo.

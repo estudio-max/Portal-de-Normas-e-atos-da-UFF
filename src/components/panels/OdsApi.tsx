@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Target, Loader2, Info, ExternalLink, ChevronRight, ArrowLeft } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "ODS": os atos normativos da UFF lidos pela lente dos 17 Objetivos de
 // Desenvolvimento Sustentável (Agenda 2030/ONU) — o formato de evidência que

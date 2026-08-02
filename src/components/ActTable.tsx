@@ -7,7 +7,7 @@ import * as ds from '../dataSource';
 import { UffAct } from '../types';
 
 // Tabela com paginação/busca/filtros NO SERVIDOR (modo API). Read-only.
-export default function ActTable() {
+export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string }) {
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('todos');
   const [orgao, setOrgao] = useState('todos');
@@ -29,6 +29,7 @@ export default function ActTable() {
 
   const POR = 50;
   useEffect(() => { ds.getFiltros().then(setFiltros); }, []);
+  useEffect(() => { setBusca(buscaGlobal); setPagina(1); }, [buscaGlobal]);
 
   const buscar = useCallback(async () => {
     setCarregando(true);

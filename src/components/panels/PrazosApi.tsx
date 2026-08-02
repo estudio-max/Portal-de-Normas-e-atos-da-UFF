@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users, Scale, GitBranch, ChevronDown, ChevronRight } from 'lucide-react';
-import * as ds from '../dataSource';
+import * as ds from '../../dataSource';
 
 // Aba "Prazos": radar de datas-limite extraídas do texto dos atos (inscrições,
 // recursos, entregas, prazos de contrato, validades). Heurística assistiva —
