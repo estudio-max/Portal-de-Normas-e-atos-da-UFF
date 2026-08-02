@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import * as ds from '../dataSource';
 import { UffAct } from '../types';
+import { ActListCard } from './acts/ActListCard';
 
 // Tabela com paginação/busca/filtros NO SERVIDOR (modo API). Read-only.
 export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string }) {
@@ -113,7 +114,10 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
 
       {/* Tabela */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="md:hidden p-2 space-y-2">
+          {!resp || resp.atos.length === 0 ? <p className="py-8 text-center text-sm text-slate-400">{carregando ? 'Carregando…' : 'Nenhum ato encontrado.'}</p> : resp.atos.map(a => <ActListCard key={a.id} act={a} onOpen={abrir} />)}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">

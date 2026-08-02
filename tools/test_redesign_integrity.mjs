@@ -62,6 +62,9 @@ assert.match(dashboard, /Array\.from\(\{ length: 26 \}/,
 const actCard = await read('src/components/acts/ActCard.tsx');
 assert.doesNotMatch(actCard, /w-1\.5 shrink-0/, 'Act cards must not rely on decorative colored side stripes.');
 
+const actListCard = await read('src/components/acts/ActListCard.tsx');
+assert.match(actListCard, /md:hidden/, 'Act list card must be mobile-only.');
+
 const app = await read('src/App.tsx');
 assert.match(dataSource, /porAno: Record<number, number>/,
   'Stats must expose real annual totals.');
@@ -89,6 +92,7 @@ assert.match(sidebar, /const compactItems = \[\.\.\.NAV_SECTIONS\.flatMap\(secti
 assert.match(sidebar, /\{compactItems\.map\(item => \(/, 'The compact navigation must render every compact destination.');
 
 const actTable = await read('src/components/ActTable.tsx');
+assert.match(actTable, /<ActListCard/, 'The main act list must render mobile cards.');
 assert.match(actTable, /buscaGlobal\?: string/, 'The acts table must accept a query from the global search.');
 assert.match(actTable, /setBusca\(buscaGlobal\)/, 'The acts table must apply the global query to its existing search filter.');
 
