@@ -447,17 +447,47 @@ function stats(PDO $pdo): void {
         FROM boletim b
         ORDER BY b.ano DESC, b.numero DESC
         LIMIT 1")->fetch();
+    $porAno = [];
+    foreach ($pdo->query("SELECT ano, COUNT(*) AS total FROM ato
+                         WHERE ano BETWEEN 2001 AND 2026
+                         GROUP BY ano ORDER BY ano") as $r) {
+        $porAno[(int)$r['ano']] = (int)$r['total'];
+    }
+    $atosUltimoBoletim = [];
+    if ($ult) {
+        $st = $pdo->prepare("
+            SELECT a.uid AS id, t.nome AS tipo, o.sigla, a.numero, a.ano,
+                   a.data_ato AS dataAssinatura, a.ementa, a.status,
+                   a.processo_sei AS processoSei, b.url_pdf AS linkBoletim
+              FROM ato a
+              JOIN tipo_ato t ON t.id = a.tipo_id
+              JOIN orgao o ON o.id = a.orgao_id
+              JOIN boletim b ON b.id = a.boletim_id
+             WHERE b.arquivo = :arquivo
+             ORDER BY a.data_ato DESC, a.id ASC");
+        $st->execute([':arquivo' => $ult['arquivo']]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $a) {
+            $atosUltimoBoletim[] = [
+                'id' => $a['id'], 'tipo' => $a['tipo'], 'sigla' => $a['sigla'] ?? '',
+                'numero' => $a['numero'], 'ano' => (int)$a['ano'],
+                'dataAssinatura' => $a['dataAssinatura'], 'ementa' => $a['ementa'] ?? '',
+                'status' => $a['status'], 'processoSei' => $a['processoSei'],
+                'linkBoletim' => $a['linkBoletim'],
+            ];
+        }
+    }
     responder_json([
         'total' => (int)$row['total'], 'vigentes' => (int)$row['vigentes'],
         'revogados' => (int)$row['revogados'], 'alterados' => (int)$row['alterados'],
         'orgaos' => (int)$row['orgaos'], 'comSei' => (int)$row['com_sei'],
-        'boletins' => $boletins,
+        'boletins' => $boletins, 'porAno' => $porAno,
         'ultimaAtualizacao' => $ultData ?: null,
         'ultimoBoletim' => $ult ? [
             'arquivo' => $ult['arquivo'],
             'numero'  => $ult['numero'],
             'ano'     => (int)$ult['ano'],
             'link'    => $ult['link'],
+            'atos'    => $atosUltimoBoletim,
         ] : null,
     ]);
 }

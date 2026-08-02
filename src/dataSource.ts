@@ -22,11 +22,21 @@ export interface AtoLista {
 export interface ListaResp {
   total: number; pagina: number; por_pagina: number; paginas: number; atos: AtoLista[];
 }
+export interface DashboardAct {
+  id: string; tipo: string; sigla: string; numero: string; ano: number;
+  dataAssinatura: string; ementa: string; status: string;
+  processoSei: string | null; linkBoletim: string | null;
+}
+
 export interface Stats {
   total: number; vigentes: number; revogados: number; alterados: number;
   orgaos: number; comSei: number; boletins: number;
+  porAno: Record<number, number>;
   ultimaAtualizacao?: string | null;                       // yyyy-mm-dd
-  ultimoBoletim?: { arquivo: string; numero: string; ano: number; link: string | null } | null;
+  ultimoBoletim?: {
+    arquivo: string; numero: string; ano: number; link: string | null;
+    atos: DashboardAct[];
+  } | null;
 }
 
 let MODO: 'api' | 'estatico' = 'estatico';
@@ -208,10 +218,11 @@ export async function getAto(id: string): Promise<UffAct | null> {
 export async function getStats(): Promise<Stats> {
   if (MODO === 'api') return (await fetch(`${API_BASE}/stats`)).json();
   const c = { Ativo: 0, Revogado: 0, Alterado: 0 } as any;
-  const orgs = new Set<string>(); const bols = new Set<string>(); let sei = 0;
+  const orgs = new Set<string>(); const bols = new Set<string>(); const porAno: Record<number, number> = {}; let sei = 0;
   for (const a of CACHE) {
     c[a.status] = (c[a.status] || 0) + 1;
     orgs.add(a.orgaoEmissor || ''); bols.add((a as any).arquivo || '');
+    if (a.ano >= 2001 && a.ano <= 2026) porAno[a.ano] = (porAno[a.ano] || 0) + 1;
     if (a.processoSei) sei++;
   }
   // Último boletim indexado (maior numeração "NN-AA.pdf") e a data mais
@@ -227,11 +238,23 @@ export async function getStats(): Promise<Stats> {
     else if (arq === ultArq && (a.dataAssinatura || '') > ultData) ultData = a.dataAssinatura;
   }
   const m = /^(\d+)-(\d+)/.exec(ultArq);
+  const atosUltimoBoletim: DashboardAct[] = CACHE
+    .filter((a: any) => a.arquivo === ultArq)
+    .sort((a, b) => (b.dataAssinatura || '').localeCompare(a.dataAssinatura || '') || a.id.localeCompare(b.id))
+    .map(a => ({
+      id: a.id, tipo: a.tipoAto, sigla: a.orgaoEmissor || '', numero: a.numero,
+      ano: a.ano, dataAssinatura: a.dataAssinatura, ementa: a.ementa || '',
+      status: a.status, processoSei: a.processoSei || null, linkBoletim: a.linkBoletim || null,
+    }));
   return {
     total: CACHE.length, vigentes: c.Ativo || 0, revogados: c.Revogado || 0,
     alterados: c.Alterado || 0, orgaos: orgs.size, comSei: sei, boletins: bols.size,
+    porAno,
     ultimaAtualizacao: ultData || null,
-    ultimoBoletim: ultArq ? { arquivo: ultArq, numero: m ? m[1] : ultArq, ano: m ? 2000 + parseInt(m[2], 10) : 0, link: ultLink } : null,
+    ultimoBoletim: ultArq ? {
+      arquivo: ultArq, numero: m ? m[1] : ultArq, ano: m ? 2000 + parseInt(m[2], 10) : 0,
+      link: ultLink, atos: atosUltimoBoletim,
+    } : null,
   };
 }
 

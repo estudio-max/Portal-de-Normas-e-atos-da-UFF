@@ -59,7 +59,25 @@ function mapStats(s: ds.Stats | null): UffStatistics | null {
     alteradoCount: s.alterados,
     porTipo: {} as Record<import('./types').ActType, number>,
     porOrgao: {},
-    porAno: {},
+    porAno: s.porAno,
+  };
+}
+
+function mapDashboardAct(a: ds.DashboardAct): UffAct {
+  return {
+    id: a.id,
+    tipoAto: a.tipo as import('./types').ActType,
+    numero: a.numero,
+    ano: a.ano,
+    dataAssinatura: a.dataAssinatura,
+    orgaoEmissor: a.sigla || '',
+    ementa: a.ementa,
+    status: a.status as 'Ativo' | 'Revogado' | 'Alterado',
+    processoSei: a.processoSei,
+    relacoes: [],
+    tags: [],
+    conteudoResumido: '',
+    linkBoletim: a.linkBoletim || undefined,
   };
 }
 
@@ -69,6 +87,7 @@ export default function App() {
   const [stats, setStats] = useState<UffStatistics | null>(null);
   const [portalStats, setPortalStats] = useState<ds.Stats | null>(null);
   const [recentActs, setRecentActs] = useState<UffAct[]>([]);
+  const [latestBulletin, setLatestBulletin] = useState<ds.Stats['ultimoBoletim']>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [buscaGlobal, setBuscaGlobal] = useState('');
@@ -94,41 +113,12 @@ export default function App() {
         const s = await ds.getStats();
         setStats(mapStats(s));
         setPortalStats(s);
+        setLatestBulletin(s.ultimoBoletim || null);
+        setRecentActs((s.ultimoBoletim?.atos || []).map(mapDashboardAct));
       } catch (e) {
         console.error('Erro ao carregar stats:', e);
       }
 
-      // Carrega atos recentes
-      try {
-        if (isApi) {
-          const resp = await ds.listAtos({ por_pagina: 5, ordenar: 'dataAssinatura', dir: 'desc' });
-          // Converte AtoLista para UffAct parcial para o Dashboard
-          const acts: UffAct[] = resp.atos.map(a => ({
-            id: a.id,
-            tipoAto: a.tipo as import('./types').ActType,
-            numero: a.numero,
-            ano: a.ano,
-            dataAssinatura: a.dataAssinatura,
-            orgaoEmissor: a.sigla || '',
-            ementa: a.ementa,
-            status: a.status as 'Ativo' | 'Revogado' | 'Alterado',
-            processoSei: a.processoSei,
-            relacoes: [],
-            tags: [],
-            conteudoResumido: '',
-          }));
-          setRecentActs(acts);
-        } else {
-          // Modo estático: pega do cache
-          const todos = ds.todosAtos();
-          const recentes = [...todos]
-            .sort((a, b) => new Date(b.dataAssinatura).getTime() - new Date(a.dataAssinatura).getTime())
-            .slice(0, 5);
-          setRecentActs(recentes);
-        }
-      } catch (e) {
-        console.error('Erro ao carregar atos recentes:', e);
-      }
     };
     init();
   }, []);
@@ -172,7 +162,7 @@ export default function App() {
   const renderContent = () => {
     // Dashboard (default)
     if (aba === '') {
-      return <Dashboard stats={stats} recentActs={recentActs} apiMode={apiMode} onNavigate={navigate} />;
+      return <Dashboard stats={stats} recentActs={recentActs} latestBulletin={latestBulletin} apiMode={apiMode} onNavigate={navigate} />;
     }
 
     // Navegar
@@ -197,7 +187,7 @@ export default function App() {
     if (aba === 'privacidade') return <Suspense fallback={<PanelFallback />}><PrivacidadeLGPD /></Suspense>;
     if (aba === 'sobre') return <Suspense fallback={<PanelFallback />}><Sobre /></Suspense>;
 
-    return <Dashboard stats={stats} recentActs={recentActs} apiMode={apiMode} onNavigate={navigate} />;
+    return <Dashboard stats={stats} recentActs={recentActs} latestBulletin={latestBulletin} apiMode={apiMode} onNavigate={navigate} />;
   };
 
   return (

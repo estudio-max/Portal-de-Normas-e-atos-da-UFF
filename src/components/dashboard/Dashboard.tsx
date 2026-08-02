@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { StatCard } from './StatCard';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
-import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import { ActCard } from '../acts/ActCard';
-import { FileText, CheckCircle2, XCircle, AlertTriangle, TrendingUp, ArrowRight } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 import type { UffAct, UffStatistics } from '../../types';
 
 interface DashboardProps {
   stats: UffStatistics | null;
   recentActs: UffAct[];
+  latestBulletin: { numero: string; ano: number } | null | undefined;
   apiMode: boolean;
   onNavigate: (path: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, apiMode, onNavigate }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestBulletin, apiMode, onNavigate }) => {
   const [loading, setLoading] = useState(!stats);
 
   useEffect(() => {
@@ -32,6 +32,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, apiMode
   const vigentes = stats?.ativoCount || 0;
   const revogados = stats?.revogadoCount || 0;
   const alterados = stats?.alteradoCount || 0;
+  const annualEntries = Array.from({ length: 26 }, (_, index) => {
+    const ano = 2001 + index;
+    return [ano, Number(stats?.porAno?.[ano] || 0)] as const;
+  });
+  const maxAnnualCount = Math.max(0, ...annualEntries.map(([, count]) => count));
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -91,7 +96,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, apiMode
         <div className="lg:col-span-3 space-y-4">
           <Card>
             <CardHeader className="flex items-center justify-between">
-              <CardTitle>Últimos atos publicados</CardTitle>
+              <CardTitle>
+                {latestBulletin
+                  ? `Boletim de Serviço nº ${latestBulletin.numero}/${latestBulletin.ano} · ${recentActs.length} atos`
+                  : 'Últimos atos publicados'}
+              </CardTitle>
               <button
                 onClick={() => onNavigate('atos')}
                 className="text-[12px] text-[#3182CE] font-medium hover:underline flex items-center gap-1"
@@ -110,7 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, apiMode
               ) : recentActs.length === 0 ? (
                 <p className="text-[13px] text-[#A0AEC0] py-4 text-center">Nenhum ato recente disponível</p>
               ) : (
-                recentActs.slice(0, 5).map(act => (
+                recentActs.map(act => (
                   <ActCard
                     key={act.id}
                     act={act}
@@ -147,37 +156,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, apiMode
               <CardTitle>Atos por ano</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end gap-1.5 h-[120px]">
-                {stats?.porAno ? (
-                  Object.entries(stats.porAno)
-                    .sort(([a], [b]) => Number(a) - Number(b))
-                    .slice(-15)
-                    .map(([ano, count], i, arr) => {
-                      const max = Math.max(...arr.map(([, c]) => c as number));
-                      const h = max ? ((count as number) / max) * 100 : 0;
+              {annualEntries.length === 0 ? (
+                <p className="text-[13px] text-[#A0AEC0] py-10 text-center">Série anual indisponível</p>
+              ) : (
+                <>
+                  <div className="flex items-end gap-px h-[120px]" role="img" aria-label="Quantidade de atos por ano">
+                    {annualEntries.map(([ano, count]) => {
+                      const height = maxAnnualCount ? (count / maxAnnualCount) * 100 : 0;
                       return (
                         <div
                           key={ano}
-                          className="flex-1 bg-[#006400] rounded-t transition-all hover:opacity-80"
-                          style={{ height: `${h}%`, opacity: 0.3 + (i / arr.length) * 0.7 }}
+                          className="flex-1 min-w-0 bg-[#006400] rounded-t transition-opacity hover:opacity-80"
+                          style={{ height: `${height}%` }}
                           title={`${ano}: ${count} atos`}
+                          aria-label={`${ano}: ${count} atos`}
                         />
                       );
-                    })
-                ) : (
-                  [35, 48, 42, 58, 51, 67, 63, 74, 70, 82, 76, 90, 84, 96, 88].map((height, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 bg-[#006400] rounded-t"
-                      style={{ height: `${height}%`, opacity: 0.3 + (i / 15) * 0.7 }}
-                    />
-                  ))
-                )}
-              </div>
-              <div className="flex justify-between mt-2 text-[10px] text-[#A0AEC0]">
-                <span>{stats?.porAno ? Object.keys(stats.porAno).sort((a, b) => Number(a) - Number(b))[0] : '2010'}</span>
-                <span>{stats?.porAno ? Object.keys(stats.porAno).sort((a, b) => Number(a) - Number(b)).pop() : '2025'}</span>
-              </div>
+                    })}
+                  </div>
+                  <div className="grid mt-2 text-[9px] text-[#A0AEC0]" style={{ gridTemplateColumns: `repeat(${annualEntries.length}, minmax(0, 1fr))` }}>
+                    {annualEntries.map(([ano], index) => (
+                      <span key={ano} className="text-center truncate">
+                        {index === 0 || index === annualEntries.length - 1 || ano % 5 === 0 ? ano : ''}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

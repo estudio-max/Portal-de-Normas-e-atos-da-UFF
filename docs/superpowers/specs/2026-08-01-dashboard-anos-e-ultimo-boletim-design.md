@@ -9,7 +9,7 @@ represente integralmente o Boletim de Serviço mais recente indexado.
 
 ### Série anual
 
-- Exibir uma barra para cada ano de 2001 a 2026 que exista no acervo.
+- Exibir uma barra para cada ano de 2001 a 2026; anos sem atos recebem valor zero.
 - Calcular a quantidade a partir do ano de cada ato; nenhuma barra usa dados
   simulados.
 - Proporcionar a altura das barras ao maior valor da série.

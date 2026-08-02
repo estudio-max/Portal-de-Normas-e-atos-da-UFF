@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
+const dataSource = await read('src/dataSource.ts');
 
 const tsconfig = JSON.parse(await read('tsconfig.json'));
 assert.deepEqual(
@@ -51,11 +52,25 @@ assert.match(topBar, /Atualização mais recente em/, 'The top bar must render t
 const dashboard = await read('src/components/dashboard/Dashboard.tsx');
 assert.doesNotMatch(dashboard, /1\.247 este mês/, 'Dashboard metrics must not show a hard-coded monthly value.');
 assert.doesNotMatch(dashboard, /Math\.random\(\)/, 'Dashboard chart placeholders must not change on every render.');
+assert.doesNotMatch(dashboard, /\[35, 48, 42, 58/, 'Annual chart must not use placeholder bars.');
+assert.doesNotMatch(dashboard, /recentActs\.slice\(0, 5\)/, 'The latest bulletin list must not be truncated.');
+assert.match(dashboard, /aria-label=\{`\$\{ano\}: \$\{count\} atos`\}/,
+  'Each annual bar must expose its value.');
+assert.match(dashboard, /Array\.from\(\{ length: 26 \}/,
+  'Annual chart must render every year from 2001 through 2026.');
 
 const actCard = await read('src/components/acts/ActCard.tsx');
 assert.doesNotMatch(actCard, /w-1\.5 shrink-0/, 'Act cards must not rely on decorative colored side stripes.');
 
 const app = await read('src/App.tsx');
+assert.match(dataSource, /porAno: Record<number, number>/,
+  'Stats must expose real annual totals.');
+assert.match(dataSource, /atos: DashboardAct\[\]/,
+  'The latest bulletin must expose all of its acts.');
+assert.match(app, /porAno: s\.porAno/,
+  'App must pass annual totals to the Dashboard.');
+assert.doesNotMatch(app, /por_pagina: 5/,
+  'Dashboard must not truncate the latest bulletin to five acts.');
 assert.match(app, /import ActTable from '\.\/components\/ActTable';/, 'The acts route must use the read-only table that supports both API and static modes.');
 assert.match(app, /if \(aba === 'atos'\) return <ActTable buscaGlobal=\{buscaGlobal\} \/>;/, 'The acts route must use the read-only table with the global query applied.');
 assert.match(app, /import ActRelationsApi from '\.\/components\/ActRelationsApi';/, 'The relations route must import the API-capable relationship panel.');

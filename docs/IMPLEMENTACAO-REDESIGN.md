@@ -86,6 +86,24 @@ Dashboard agora levam à lista de Atos, que já possui abertura de ficha em moda
 Uma tela de detalhe compartilhável pode ser criada depois como uma evolução
 separada, com carregamento via `ds.getAto(uid)` e tratamento de UID inexistente.
 
+## Dashboard: série anual e último boletim
+
+O gráfico **Atos por ano** mostra as 26 barras de 2001 a 2026. As quantidades
+vêm da agregação de `ano`: a rota `/api/stats` calcula a série no banco e o
+modo estático calcula a mesma série a partir de `portal-data.json`. Quando o
+arquivo estático não possui atos de algum ano, a barra correspondente fica em
+zero; nenhum valor é ilustrativo.
+
+O quadro de atos agora é identificado pelo Boletim de Serviço mais recente e
+lista todos os seus atos, ordenados por data de assinatura. A API inclui essa
+lista na resposta cacheada de `/api/stats`; o fallback estático seleciona o
+mesmo arquivo pelo nome `NN-AA.pdf`. A invalidação do cache da API continua
+sendo responsabilidade do fluxo de importação existente.
+
+Para publicar essa alteração, envie o novo frontend de `dist/` e atualize
+também `backend/api/index_v2.php` no arquivo publicado como `api/index.php`,
+preservando o `config.php` do servidor.
+
 ## Preparação para commit e deploy
 
 Revise o `git status` porque o checkout já possuía alterações não commitadas
