@@ -19,9 +19,12 @@
 //  onde parou — e repetir um lote é inofensivo (regrava o mesmo resultado).
 //
 //  Uso (navegador, protegido por token):
-//    .../importar/backfill_ato_ods_auto.php?token=SEU_TOKEN&limpar=1
-//    ...&token=SEU_TOKEN&desde=<ultimo_id_do_lote_anterior>
-//  O script imprime a URL do próximo lote ao fim de cada rodada.
+//    .../importar/backfill_ato_ods_auto.php?token=SEU_TOKEN&limpar=1&auto=1
+//  Com `&auto=1` ele encadeia os lotes sozinho (meta-refresh) até o fim — é o
+//  modo recomendado: o acervo inteiro custaria ~52 cliques manuais, e cada
+//  clique é uma chance de perder o cursor. Sem `auto`, o script imprime a URL
+//  do próximo lote e você continua à mão. `&lote=` (100..10000) ajusta o
+//  tamanho; se um lote estourar o tempo do servidor, reduza.
 //
 //  `&limpar=1` (só na PRIMEIRA chamada): apaga todas as linhas metodo='ia'
 //  antes de começar. Use quando quiser trocar a carga antiga inteira pela nova
@@ -40,9 +43,14 @@ require_once __DIR__ . '/ods_match.php';
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
+$auto = false;
 if (!$cli) {
     ignore_user_abort(true);
-    header('Content-Type: text/plain; charset=utf-8');
+    // `&auto=1` encadeia os lotes sozinho por meta-refresh. Sem ele o acervo
+    // inteiro custa ~52 cliques manuais, e cada clique é uma chance de perder
+    // o cursor. Em HTML só por causa do refresh; o conteúdo continua texto.
+    $auto = !empty($_GET['auto']);
+    header('Content-Type: ' . ($auto ? 'text/html' : 'text/plain') . '; charset=utf-8');
     header('X-Accel-Buffering: no');
     while (ob_get_level()) { @ob_end_flush(); }
     $token = $cfg['import_token'] ?? '';
@@ -54,6 +62,7 @@ if (!$cli) {
     $lote   = min(max((int)($_GET['lote'] ?? 1500), 100), 10000);
     $limpar = !empty($_GET['limpar']);
     $tudo   = false;
+    if ($auto) echo "<!doctype html><meta charset=\"utf-8\"><title>Backfill ODS</title><pre>\n";
 } else {
     $desde  = 0;
     $lote   = 1500;
@@ -147,12 +156,28 @@ $restam = (int)$st->fetchColumn();
 
 if ($restam > 0) {
     log_('');
-    log_("FALTAM $restam ato(s). Continue de onde parou:");
+    log_("FALTAM $restam ato(s).");
     if ($cli) {
         log_("  php backfill_ato_ods_auto.php --tudo     (faz o resto de uma vez)");
     } else {
         $base = strtok($_SERVER['REQUEST_URI'] ?? '', '?');
-        log_("  $base?token=SEU_TOKEN&desde=$ultimoId");
+        $q = $_GET;
+        $q['desde'] = $ultimoId;
+        unset($q['limpar']);          // limpar é só da primeira chamada
+        $prox = $base . '?' . http_build_query($q);
+        if ($auto) {
+            $faltam = (int)ceil($restam / max($lote, 1));
+            log_("Continuando sozinho — faltam ~$faltam lote(s). Não feche a aba.");
+            // O refresh vai no fim do corpo: o navegador só o executa depois de
+            // receber a página, então o log do lote fica visível antes de virar.
+            echo '</pre><meta http-equiv="refresh" content="2;url='
+                 . htmlspecialchars($prox, ENT_QUOTES, 'UTF-8') . '">';
+        } else {
+            log_("Continue de onde parou:");
+            log_("  $prox");
+            log_('Dica: acrescente &auto=1 para o script encadear os lotes sozinho,');
+            log_('e &lote=10000 para fazer menos rodadas.');
+        }
     }
     log_('(o cache da API só é invalidado no lote final)');
     exit(0);
