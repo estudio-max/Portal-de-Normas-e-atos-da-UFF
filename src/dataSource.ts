@@ -1017,8 +1017,13 @@ export interface OdsResumo {
   proposta: number; execucao: number; pesquisa: number; ensino: number;
   total: number; anoMin: number | null; anoMax: number | null;
 }
+// `cobertura` detecta classificação PARADA. Desde 03/08/2026 o importador
+// classifica sozinho, então defasagem deixou de ser o estado normal —
+// `diasParado` é a distância entre o ato normativo mais recente do acervo e o
+// mais recente com vínculo. Opcional porque a API antiga não devolve o campo.
 export interface OdsResp {
   lista: OdsResumo[]; linhas: number; atosDistintos: number; curados: number;
+  cobertura?: { ate: string | null; ultimoNormativo: string | null; diasParado: number | null };
   indisponivel?: boolean; motivo?: string;
 }
 export interface OdsAtoRef {

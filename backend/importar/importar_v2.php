@@ -27,6 +27,7 @@ require $raiz . '/api/db.php';
 require_once __DIR__ . '/extrair_prazos.php';                // Radar genérico
 require_once __DIR__ . '/extrair_prazos_pad_sinve.php';      // PAD/SINVE (alta confiança)
 require_once __DIR__ . '/comissoes_match.php';               // aba Comissões (tagueia por frase)
+require_once __DIR__ . '/ods_match.php';                     // aba ODS (classifica pelo dispositivo)
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
@@ -332,6 +333,14 @@ try {
     $delPrazo = $pdo->prepare("DELETE FROM prazo WHERE ato_id=:id");
     $insPrazo = $pdo->prepare("INSERT INTO prazo (ato_id,tipo,data_limite,conf,base,publico,trecho)
                                VALUES (:id,:tp,:dl,:cf,:bs,:pb,:tr)");
+    // ODS: o DELETE preserva a curadoria humana — é a única tabela-fato do
+    // import com essa ressalva. Quem revisou à mão vale mais que o classificador,
+    // e o INSERT IGNORE respeita a UNIQUE (ato_id, ods): se a curadoria já
+    // cravou aquela ODS para aquele ato, a linha automática nem entra.
+    $delOds = $pdo->prepare("DELETE FROM ato_ods WHERE ato_id=:id AND metodo <> 'curadoria'");
+    $insOds = $pdo->prepare("INSERT IGNORE INTO ato_ods
+                               (ato_id,ods,vinculo,confianca,meta,justificativa,metodo)
+                               VALUES (:id,:o,:v,:c,:m,:j,'ia')");
 
     $novos = 0; $atualizados = 0;
     foreach ($dados as $a) {
@@ -404,6 +413,21 @@ try {
         }
         foreach (array_unique($slugsCom) as $slug) {
             $insCom->execute([':id' => $atoId, ':c' => $slug]);
+        }
+
+        // ODS (docs/METODOLOGIA-ODS.md). Classificação DETERMINÍSTICA pelo
+        // dispositivo — mesmos clusters auditados que geraram a carga em
+        // produção, agora rodando a cada import. Antes disto a `ato_ods` só
+        // era preenchida pelo backfill offline, então boletim novo entrava sem
+        // vínculo ODS e a aba ficava parada até alguém rodar uma carga à mão.
+        //
+        // Sem cluster o ato NÃO recebe rótulo: vira resíduo para curadoria. É
+        // de propósito — o painel é dossiê de evidência, e chute contamina.
+        $delOds->execute([':id' => $atoId]);
+        foreach (ods_do_ato($tipoNome, (string)($a['ementa'] ?? ''), $texto) as $lin) {
+            $insOds->execute([':id' => $atoId, ':o' => $lin['ods'], ':v' => $lin['vinculo'],
+                              ':c' => $lin['confianca'], ':m' => $lin['meta'],
+                              ':j' => mb_substr($lin['justificativa'], 0, 400)]);
         }
 
         // tags

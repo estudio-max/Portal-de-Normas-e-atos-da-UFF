@@ -226,9 +226,21 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   THE/IPEA que a ancora e a `justificativa`. Sem essa separação o painel contaria
   1.368 "evidências" em vez das 191 propostas reais. `metodo='curadoria'` marca a
   linha revisada por humano e o backfill **nunca** a sobrescreve.
-  A carga é offline (classificação híbrida IA + curadoria lendo o CORPO, não a
-  ementa) e entra por `importar/backfill_ato_ods.php`; a carga e a trilha de
-  auditoria do que ficou de fora vivem em `../backfill-ods/`.
+  **A classificação roda no IMPORT, desde 03/08/2026** (`importar/ods_match.php`,
+  chamado pelo `importar_v2.php`): é determinística — os mesmos clusters
+  auditados que geraram a carga original, aplicados ao dispositivo. Antes disso
+  a `ato_ods` só era preenchida pelo backfill offline, e boletim novo entrava
+  sem vínculo ODS nenhum até alguém rodar a carga à mão.
+  **A curadoria humana é soberana:** o import apaga só o que é automático
+  (`DELETE ... WHERE metodo <> 'curadoria'`) e o `INSERT IGNORE` respeita a
+  UNIQUE `(ato_id, ods)` — linha revisada à mão nunca é sobrescrita.
+  **Sem cluster, o ato NÃO recebe rótulo** — vira resíduo para curadoria. É de
+  propósito: o painel é dossiê de evidência, e chute contamina. Falso-negativo
+  se conserta com um padrão novo; falso-positivo estraga o dossiê inteiro.
+  Regressão obrigatória: `php backend/importar/teste_ods_match.php` (roda no CI)
+  — cada caso ali é uma isca que já esteve em produção.
+  O backfill (`importar/backfill_ato_ods.php`) segue existindo para reclassificar
+  o acervo antigo de uma vez; a trilha de auditoria vive em `../backfill-ods/`.
   **Critério, âncoras e armadilhas medidas em [`docs/METODOLOGIA-ODS.md`](docs/METODOLOGIA-ODS.md)** —
   leia antes de mexer. A armadilha-mãe: o termo-ODS costuma estar no NOME de
   alguém (parceiro do convênio, área do concurso, cargo de quem recebe o ato,

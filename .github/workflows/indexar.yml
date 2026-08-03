@@ -81,5 +81,23 @@ jobs:
           else
             git commit -m "Atualiza índice de atos (automático) — $(date +%F)"
             git push
-            echo "Índice publicado. O site no ar refletirá em ~5 min."
+            echo "Índice publicado no repositório."
+            echo
+            echo "O QUE ISTO ATUALIZOU: apenas o public/portal-data.json, que"
+            echo "alimenta o MODO ESTÁTICO de contingência (o front o lê do raw"
+            echo "do GitHub quando a API não responde)."
+            echo
+            echo "O QUE ISTO **NÃO** ATUALIZOU: o site em produção. O banco"
+            echo "MySQL e a API PHP no HostGator não são tocados por este"
+            echo "workflow — não há SSH nem deploy automático. Enquanto o"
+            echo "importador não rodar, o portal no ar segue sem estes atos."
+            echo
+            echo "Para publicar de verdade (passo manual, ver CLAUDE.md):"
+            echo "  1. suba public/portal-data.json para a pasta importar/ do servidor;"
+            echo "  2. visite importar/importar_v2.php?token=<import_token>&arquivo=<nome>.json"
+            echo "     (é idempotente: o upsert casa por chave natural e não duplica);"
+            echo "  3. ele chama o resolver_relacoes_v2.php e zera o cache da API sozinho."
+            echo
+            echo "A aba ODS é a exceção: ato_ods não é preenchida pelo importador."
+            echo "Boletim novo entra sem vínculo ODS até rodar backfill_ato_ods.php."
           fi

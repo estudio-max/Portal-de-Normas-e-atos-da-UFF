@@ -2101,11 +2101,31 @@ function ods(PDO $pdo, string $n): void {
     $tot = $pdo->query("SELECT COUNT(*) AS linhas, COUNT(DISTINCT ato_id) AS atos,
                                SUM(metodo = 'curadoria') AS curados
                           FROM ato_ods")->fetch(PDO::FETCH_ASSOC);
+
+    // COBERTURA — detector de classificação PARADA, não de "atos por avaliar".
+    //
+    // Desde 03/08/2026 o importador classifica sozinho (ods_match.php roda a
+    // cada import), então a defasagem deixou de ser o estado normal. Mas o
+    // painel é uma AMOSTRA por desenho: a imensa maioria dos atos não casa
+    // cluster nenhum, e isso é o certo. Contar "atos não classificados" daria
+    // um número enorme que não significa atraso — por isso a métrica é a
+    // DISTÂNCIA entre o ato normativo mais recente do acervo e o mais recente
+    // que recebeu vínculo. Se ela abre muito, a classificação parou de rodar
+    // (importador desatualizado, ou base antiga que nunca passou pelo backfill).
+    $ate = $pdo->query("SELECT MAX(a.data_ato) FROM ato_ods ao
+                          JOIN ato a ON a.id = ao.ato_id")->fetchColumn() ?: null;
+    $ultNorm = $pdo->query("SELECT MAX(a.data_ato) FROM ato a
+                              JOIN tipo_ato t ON t.id = a.tipo_id
+                             WHERE t.nome IN ('Resolução','Decisão','Instrução Normativa',
+                                              'Norma de Serviço','Portaria')")->fetchColumn() ?: null;
+    $gap = ($ate && $ultNorm) ? (int)floor((strtotime($ultNorm) - strtotime($ate)) / 86400) : null;
+
     responder_json([
         'lista' => $lista,
         'linhas' => (int)$tot['linhas'],
         'atosDistintos' => (int)$tot['atos'],
         'curados' => (int)$tot['curados'],
+        'cobertura' => ['ate' => $ate, 'ultimoNormativo' => $ultNorm, 'diasParado' => $gap],
     ]);
 }
 

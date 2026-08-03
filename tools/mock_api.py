@@ -653,9 +653,23 @@ def ods_payload(n=""):
               "anoMin": mn if p + e + q_ + en else None,
               "anoMax": mx if p + e + q_ + en else None}
              for (n_, nome, cor, p, e, q_, en, mn, mx) in _ODS]
+    # Cobertura da curadoria. O registro acima é sintético, então a data de
+    # corte é simulada: pega a assinatura mais recente do acervo e recua 90
+    # dias, para o aviso de defasagem aparecer no dev com um número real de
+    # atos posteriores. No banco isto é MAX(data_ato) sobre ato_ods.
+    datas = sorted(a.get("dataAssinatura") or "" for a in ATOS if a.get("dataAssinatura"))
+    ate = ult_norm = None
+    gap = None
+    if datas:
+        ult_norm = datas[-1][:10]
+        # O registro acima e sintetico: simula um vinculo recente (30 dias de
+        # distancia), abaixo do limiar de 90 que dispara o aviso de parada.
+        ate = (datetime.date.fromisoformat(ult_norm) - datetime.timedelta(days=30)).isoformat()
+        gap = (datetime.date.fromisoformat(ult_norm) - datetime.date.fromisoformat(ate)).days
     return {"lista": lista, "linhas": sum(x["total"] for x in lista),
             "atosDistintos": int(sum(x["total"] for x in lista) * 0.84),
-            "curados": 17}
+            "curados": 17,
+            "cobertura": {"ate": ate, "ultimoNormativo": ult_norm, "diasParado": gap}}
 
 
 # ---- /chefias: titular atual de cada (unidade, cargo) ----------------------

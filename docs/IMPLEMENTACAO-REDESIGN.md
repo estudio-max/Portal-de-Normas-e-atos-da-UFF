@@ -249,6 +249,35 @@ Medição a 320 px, nas 12 rotas: **nenhuma rola horizontalmente**. Sobram apena
 os gráficos que rolam de propósito — o mapa-múndi e o gráfico empilhado da
 Cooperação e o combo da Jornada. A regra vale para listas, não para cartografia.
 
+## ODS: classificação automática no import
+
+A `ato_ods` passou a ser preenchida **a cada importação**
+(`backend/importar/ods_match.php`, chamado pelo `importar_v2.php`), como já
+acontecia com `ato_comissao` e `prazo`. Antes ela só vinha do backfill offline,
+então boletim novo entrava sem vínculo ODS e a aba ficava parada.
+
+O que roda no import é **determinístico** — o mesmo recorte e os mesmos clusters
+auditados que geraram a carga em produção, portados do Python para PHP. Não há
+IA em tempo de execução.
+
+Duas invariantes que o teste de integridade agora exige:
+
+- **A curadoria humana vence.** O import apaga só o que é automático e grava com
+  `INSERT IGNORE`; a UNIQUE `(ato_id, ods)` faz a linha revisada à mão prevalecer.
+- **Sem cluster não há rótulo.** Ato que não casa vira resíduo para curadoria.
+  Falso-negativo se conserta com um padrão novo; falso-positivo contamina o dossiê.
+
+A barreira contra falso-positivo é `backend/importar/teste_ods_match.php`: 22
+casos, cada um uma isca que já esteve em produção (o cargo de quem recebe o ato,
+a governança no nome do emissor, o parceiro "Socioambiental", a creche na
+programação da Agenda Acadêmica). Roda no CI, num job com PHP.
+
+O aviso de cobertura na aba mudou de sentido: não anuncia mais "atos por
+avaliar" — o painel é amostra por desenho e esse número seria alarmista. Ele
+agora detecta **classificação parada**, comparando o ato normativo mais recente
+do acervo com o mais recente que recebeu vínculo, e só aparece acima de 90 dias
+de distância.
+
 ## Mock de desenvolvimento
 
 `tools/mock_api.py` cobre hoje **todas as rotas que o front chama**: `stats`,

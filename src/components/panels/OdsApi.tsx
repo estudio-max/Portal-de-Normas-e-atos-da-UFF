@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Target, Loader2, Info, ExternalLink, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Target, Loader2, Info, ExternalLink, ChevronRight, ArrowLeft, AlertTriangle } from 'lucide-react';
 import * as ds from '../../dataSource';
 
 // Aba "ODS": os atos normativos da UFF lidos pela lente dos 17 Objetivos de
@@ -198,6 +198,26 @@ export default function OdsApi() {
           {r.atosDistintos} atos, {r.linhas} ligações, {comEvidencia} ODS com evidência.
         </p>
       </div>
+
+      {/* Detector de classificação parada. A classificação roda no import
+          (ods_match.php), então distância grande entre o ato normativo mais
+          recente e o último com vínculo significa que ela deixou de rodar —
+          importador desatualizado, ou base que nunca passou pelo backfill.
+          90 dias: acima disso não é a amostra sendo seletiva, é defeito. */}
+      {r.cobertura?.diasParado != null && r.cobertura.diasParado > 90 && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <span>
+            A classificação ODS parece <strong>parada</strong>: o vínculo mais recente é de{' '}
+            <strong>{r.cobertura.ate?.slice(0, 10).split('-').reverse().join('/')}</strong>, mas o
+            acervo já tem atos normativos até{' '}
+            <strong>{r.cobertura.ultimoNormativo?.slice(0, 10).split('-').reverse().join('/')}</strong>{' '}
+            ({r.cobertura.diasParado} dias de distância). Normalmente a classificação roda a cada
+            importação; uma distância desta ordem indica importador desatualizado ou acervo que
+            ainda não passou pela carga. O que está abaixo segue válido, mas pode estar incompleto.
+          </span>
+        </div>
+      )}
 
       <div className="flex items-start gap-2 text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
         <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />

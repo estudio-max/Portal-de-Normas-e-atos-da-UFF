@@ -1,6 +1,7 @@
-name: CI do frontend
+name: CI
 
-# Barreira de qualidade: todo push/PR passa por type-check e build.
+# Barreira de qualidade: todo push/PR passa por type-check, build e pelos
+# testes de regressão que rodam sem o corpus.
 # Não valida o extrator aqui — os testes dele (tools/teste_*.py) comparam
 # contra o corpus de boletins, que é local e não vive no repositório.
 on:
@@ -9,6 +10,8 @@ on:
     paths:
       - "src/**"
       - "public/**"
+      - "backend/**"
+      - "tools/**"
       - "package.json"
       - "package-lock.json"
       - "tsconfig*.json"
@@ -41,3 +44,30 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Regressão estrutural do redesign
+        run: node tools/test_redesign_integrity.mjs
+
+  # A classificação ODS roda no import (backend/importar/ods_match.php) e é a
+  # única parte do backend que dá para testar sem banco: é regex puro sobre o
+  # dispositivo. Cada caso do teste é um falso-positivo que já esteve em
+  # produção — sem esta barreira, mexer nos padrões reintroduz defeito pago.
+  ods:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Sintaxe da API e do importador
+        run: |
+          php -l backend/api/index_v2.php
+          php -l backend/importar/importar_v2.php
+          php -l backend/importar/ods_match.php
+
+      - name: Regressão da classificação ODS
+        run: php backend/importar/teste_ods_match.php

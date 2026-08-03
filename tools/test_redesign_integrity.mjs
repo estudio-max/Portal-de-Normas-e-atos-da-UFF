@@ -87,6 +87,40 @@ assert.match(php, /ano BETWEEN 2001 AND YEAR\(CURDATE\(\)\)/,
 assert.doesNotMatch(mockPy, /2001 <= ano <= 2026/,
   'The mock annual series must not stop at a hard-coded year.');
 
+// A curadoria ODS não entra pelo importador (ato_ods vem do backfill), então a
+// aba tem que DIZER até quando alcança. Sem isso ela mostrava menos evidência
+// que o acervo tem, sem nada indicando que havia atos por avaliar.
+assert.match(php, /'cobertura' => \['ate' => \$ate, 'ultimoNormativo' => \$ultNorm, 'diasParado' => \$gap\]/,
+  'The ODS route must report how far the curation reaches.');
+assert.match(mockPy, /"cobertura": \{"ate": ate, "ultimoNormativo": ult_norm, "diasParado": gap\}/,
+  'The mock ODS route must report the curation cutoff too.');
+assert.match(dataSource, /cobertura\?: \{ ate: string \| null; ultimoNormativo: string \| null; diasParado: number \| null \}/,
+  'The ODS response type must carry the staleness signal.');
+const odsPanel = await read('src/components/panels/OdsApi.tsx');
+assert.match(odsPanel, /r\.cobertura\?\.diasParado != null && r\.cobertura\.diasParado > 90/,
+  'The ODS panel must warn only when the classification has demonstrably stopped.');
+
+// A classificação ODS roda no import: sem isso a aba fica parada até alguém
+// rodar uma carga à mão, que foi o estado até 03/08/2026.
+const importador = await read('backend/importar/importar_v2.php');
+assert.match(importador, /require_once __DIR__ \. '\/ods_match\.php'/,
+  'The importer must load the ODS classifier.');
+assert.match(importador, /ods_do_ato\(\$tipoNome/,
+  'The importer must classify each act against the ODS clusters.');
+// A curadoria humana é soberana: o DELETE do import não pode tocá-la.
+assert.match(importador, /DELETE FROM ato_ods WHERE ato_id=:id AND metodo <> 'curadoria'/,
+  'The import must never delete human-curated ODS links.');
+assert.match(importador, /INSERT IGNORE INTO ato_ods/,
+  'Automatic ODS links must yield to a curated row for the same (ato, ods).');
+
+// O workflow diário só publica o índice estático. Dizer que o site reflete em
+// minutos é falso — produção exige o passo manual do importador.
+const workflow = await read('.github/workflows/indexar.yml');
+assert.doesNotMatch(workflow, /O site no ar refletirá/,
+  'The workflow must not claim it updates the live site.');
+assert.match(workflow, /NÃO\*\* ATUALIZOU: o site em produção/,
+  'The workflow must say plainly that it does not touch production.');
+
 const actCard = await read('src/components/acts/ActCard.tsx');
 assert.doesNotMatch(actCard, /w-1\.5 shrink-0/, 'Act cards must not rely on decorative colored side stripes.');
 

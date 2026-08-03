@@ -340,6 +340,41 @@ ser *"falta padrão"*, não *"não é evidência"*. Por isso a cauda vai para o
 procura o que ficou de fora. Este caso foi achado pelo mantenedor lendo o
 painel, não pelos testes.
 
+## 7-A. A classificação roda no import (desde 03/08/2026)
+
+Até aqui este documento descreve como a carga foi CONSTRUÍDA. O que mudou: as
+etapas (A) recorte e (C) rotulagem por clusters — que são **determinísticas,
+regex sobre o dispositivo** — foram portadas para
+[`backend/importar/ods_match.php`](../backend/importar/ods_match.php) e passaram
+a rodar a cada importação, como já acontecia com `ato_comissao` e `prazo`.
+
+Antes disso a `ato_ods` só era preenchida pelo backfill offline: boletim novo
+entrava **sem vínculo ODS nenhum**, e a aba ficava parada até alguém rodar uma
+carga à mão. Depender 100% de passo manual num painel que a diretoria consulta
+não se sustenta.
+
+**O que NÃO foi automatizado, de propósito:**
+
+- A **curadoria humana** continua sendo a autoridade final. O import apaga só o
+  que é automático (`DELETE FROM ato_ods WHERE ato_id=:id AND metodo <>
+  'curadoria'`) e grava com `INSERT IGNORE`, então a UNIQUE `(ato_id, ods)` faz
+  a linha revisada à mão vencer a automática. Revisar um ato é definitivo.
+- O **resíduo**. Ato que passa pelo recorte mas não casa cluster **não recebe
+  rótulo** — não se chuta. É a assimetria que sustenta o painel: falso-negativo
+  se conserta com um padrão novo (foi assim que a CPEG entrou, §8-B);
+  falso-positivo contamina o dossiê e só se descobre lendo o painel no ar.
+
+**A barreira contra falso-positivo é um teste, não uma intenção.**
+[`backend/importar/teste_ods_match.php`](../backend/importar/teste_ods_match.php)
+fixa 22 casos, e cada um é uma isca que **já esteve em produção**: o cargo de
+quem recebe o ato (nutricionista → ODS 2), a governança no nome do emissor
+(EGGP, 193 atos), o parceiro "Socioambiental", a vaga reservada em nomeação
+anulada, a creche citada na programação da Agenda Acadêmica, o "inclusão de
+disciplina" do jargão curricular. Junto vão os verdadeiros-positivos que já
+sumiram uma vez — a CPEG à frente. Roda no CI a cada push que toque `backend/`.
+
+Mexer nos regex sem rodar esse teste é reintroduzir defeito já pago.
+
 ## 8. Governança da classificação
 
 - **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle
