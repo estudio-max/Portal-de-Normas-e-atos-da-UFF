@@ -62,6 +62,19 @@ o JSON estático do GitHub).
   ferramentas de manutenção precisa de um `.htaccess` bloqueando essas
   extensões (`api/.htaccess` já protege `config.php`; `importar/` teve
   que ganhar o dele à parte).
+- **A aba Importar do phpMyAdmin DESCARTA o resultado de `SELECT`.** Ela é
+  para carregar dados: devolve "N consultas executadas" ou o erro, e mais
+  nada. Um arquivo de verificação inteiro passa por ali sem exibir uma
+  linha — parece falha muda do banco. **SQL de migração vai pela Importar
+  (é DDL, não tem saída); SQL de verificação vai pela aba SQL.**
+- **Referência a `information_schema` vira o banco corrente para as
+  consultas SEGUINTES do mesmo arquivo.** Medido em 03/08/2026: com
+  `SELECT DATABASE()` devolvendo `fanara87_governanca` corretamente, a
+  consulta logo depois de um `FROM information_schema.TABLES` estourou com
+  "#1109 Tabela 'evidencia_fato' desconhecida em 'information_schema'". Num
+  arquivo que mistura os dois, **ponha as consultas às tabelas do projeto
+  primeiro e as de `information_schema` no fim** — é o que
+  `backend/db/verificar_inteligencia.sql` faz e por quê.
 
 ## Empacotando um deploy de dados (padrão a repetir)
 

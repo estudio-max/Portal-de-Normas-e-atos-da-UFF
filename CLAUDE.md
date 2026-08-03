@@ -509,25 +509,29 @@ resumo operacional.
 
 ## Pendências
 
-- **Núcleo de inteligência institucional: schema escrito, NÃO aplicado.**
-  `backend/db/inteligencia_institucional.sql` cria as doze tabelas dos cinco
-  módulos analíticos (política, obrigação, comissão, indicador, mudança). É
-  aditivo — não altera nada do v2 e não tem `DROP` —, mas **nenhuma dessas
-  tabelas existe em produção ainda**: a API não as consulta e o importador não
-  as escreve. Aplicar pelo phpMyAdmin e conferir com
-  `backend/db/verificar_inteligencia.sql`, cujos blocos 5 a 12 são as travas de
-  publicação (evidência órfã, item público sem trecho, indicador fora da faixa,
-  curadoria preservada). A regressão estática do arquivo roda no CI:
+- **Núcleo de inteligência institucional: tabelas em produção, VAZIAS e sem
+  consumidor.** `backend/db/inteligencia_institucional.sql` (doze tabelas dos
+  cinco módulos analíticos — política, obrigação, comissão, indicador, mudança)
+  **foi aplicado em 03/08/2026** e verificado com
+  `backend/db/verificar_inteligencia.sql`. Nada mais mudou: a API não consulta
+  essas tabelas, o importador não escreve nelas e `api_versao()` continua
+  `2026-08-03.1`. Do ponto de vista de quem usa o portal, o deploy foi
+  invisível — e é para continuar assim até o módulo seguinte.
+  A verificação tem 14 blocos; os de 3 a 9 são as travas de publicação
+  (evidência órfã, item público sem trecho, indicador fora da faixa, curadoria
+  preservada). **Rode-a pela aba SQL do phpMyAdmin, nunca pela Importar** — ver
+  a lição no skill de deploy. A regressão estática do schema roda no CI:
   `node tools/teste_schema_inteligencia.mjs`. Racional das decisões em
   `docs/ARQUITETURA-BASE-DADOS.md` §3.6 — em especial por que `comissao` é
   chaveada pelo slug, e por que **não** há FK de `obrigacao` para `prazo` (o
   importador recicla `prazo.id` a cada import).
-  O que falta para o próximo passo: semear os catálogos (política a partir dos
-  atos com `ato_ods.vinculo='proposta'`; comissão a partir de
-  `tools/registro_comissoes.py`) e escrever o detector de obrigação, que **tem
-  que chamar `extrair_prazos()`** para resolver data — aquela lógica já tem três
-  espelhos que precisam concordar, e um quarto seria dois códigos discordando
-  sobre a mesma cláusula.
+  O que falta: semear os catálogos (política a partir dos atos com
+  `ato_ods.vinculo='proposta'`; comissão a partir de
+  `tools/registro_comissoes.py` — o bloco 7 da verificação acusa **26 slugs sem
+  catálogo** e é esse número que o seed tem que zerar) e escrever o detector de
+  obrigação, que **tem que chamar `extrair_prazos()`** para resolver data:
+  aquela lógica já tem três espelhos que precisam concordar, e um quarto seria
+  dois códigos discordando sobre a mesma cláusula.
 
 - **RDD individual não vira ato próprio (lacuna, não regressão).** O fix de
   fronteira (abaixo) impede que um ato absorva a "Resumo de Despachos e
