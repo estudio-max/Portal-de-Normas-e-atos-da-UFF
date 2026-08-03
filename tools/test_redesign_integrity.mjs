@@ -128,6 +128,16 @@ for (const chave of ['porAno', 'ultimaAtualizacao', 'ultimoBoletim']) {
   assert.match(mock, new RegExp(`"${chave}"`),
     `mock_api.py must mirror the /stats contract, including ${chave}.`);
 }
+// Toda rota que o front chama tem que existir no mock, senao o painel cai no
+// estado vazio no dev e parece tela quebrada.
+for (const rota of ['chefias', 'mandatos', 'prazos', 'pad_cadeia', 'insights',
+                    'analitico', 'jornada', 'cooperacao', 'comissoes', 'ods', 'dossie']) {
+  assert.match(mock, new RegExp(`recurso == "${rota}"`),
+    `mock_api.py must serve /${rota}, which the frontend calls.`);
+}
+// O classificador PAD/SINVE vem do importador; copia paralela volta a divergir.
+assert.match(mock, /from extrair_prazos_pad_sinve import/,
+  'The mock must reuse the importer PAD/SINVE classifier instead of copying it.');
 
 const app = await read('src/App.tsx');
 assert.match(dataSource, /porAno: Record<number, number>/,

@@ -145,11 +145,11 @@ export default function InsightsApi() {
             <Heatmap porDia={data.porDia} ano={ano ? Number(ano) : null} dataMin={k.dataMin} dataMax={k.dataMax} P={P} />
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             {/* Ranking de órgãos + cobertura SEI */}
             <Card titulo="Quem mais publica" icone={<Building2 className="w-4 h-4 text-yellow-500" />}
               sub="Atos por órgão emissor. A parte escura da barra tem processo SEI vinculado.">
-              <div className="flex items-center gap-4 mb-2 text-[11px] text-slate-500 font-medium">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[11px] text-slate-500 font-medium">
                 <Legenda cor={P.barSei} texto="com SEI" />
                 <Legenda cor={P.bar} texto="sem SEI" />
               </div>
@@ -163,7 +163,7 @@ export default function InsightsApi() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             {/* Composição por tipo */}
             <Card titulo="Composição por tipo de ato" icone={<BarChart3 className="w-4 h-4 text-yellow-500" />}
               sub="Que instrumentos normativos a UFF mais usa.">
@@ -184,7 +184,7 @@ export default function InsightsApi() {
             <span className="text-[10px] text-slate-400">todo o período · ignora o filtro de ano</span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             <Card titulo="Cadeiras que mais giram" icone={<Users className="w-4 h-4 text-yellow-500" />}
               sub="Rotatividade de chefias: nº de titulares por posição e permanência média entre eles.">
               <Rotatividade rot={an?.rotatividade} P={P} />
@@ -196,10 +196,10 @@ export default function InsightsApi() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             <Card titulo="Aposentadorias concedidas por ano" icone={<Users className="w-4 h-4 text-yellow-500" />}
               sub="Concessões publicadas no Boletim, classificadas pelo dispositivo do ato (rótulo direto ou, na ausência dele, a base legal do art. 40 da Constituição).">
-              <div className="flex items-center gap-4 mb-2 text-[11px] text-slate-500 font-medium">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[11px] text-slate-500 font-medium">
                 <Legenda cor={P.bar} texto="voluntária" />
                 <Legenda cor={P.vig.revogado} texto="compulsória" />
                 <Legenda cor={P.apos3} texto="invalidez" />
@@ -233,7 +233,7 @@ export default function InsightsApi() {
 
           <Card titulo="Remoção × Redistribuição por ano" icone={<ArrowRightLeft className="w-4 h-4 text-yellow-500" />}
             sub="Remoção = servidor muda de setor DENTRO da UFF (art. 36). Redistribuição = cargo entra na UFF vindo de outro órgão (art. 37).">
-            <div className="flex items-center gap-4 mb-2 text-[11px] text-slate-500 font-medium">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[11px] text-slate-500 font-medium">
               <Legenda cor={P.bar} texto="remoções (internas)" />
               <Legenda cor={P.tipo} texto="redistribuições para a UFF (entrada)" />
             </div>
@@ -242,7 +242,7 @@ export default function InsightsApi() {
             <DiagnosticoRedistribuicao serie={an?.deslocamento?.serie} />
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             <Card titulo="Por que os servidores são removidos" icone={<Info className="w-4 h-4 text-yellow-500" />}
               sub="Motivo da remoção pelo dispositivo do ato (art. 36): a pedido, de ofício (interesse da Administração) ou casos específicos.">
               <MotivosRemocao motivos={an?.deslocamento?.motivos} P={P} />
@@ -499,13 +499,13 @@ function Rotatividade({ rot, P }: { rot?: ds.Analitico['rotatividade']; P: Retur
       <div className="space-y-1.5">
         {rot.cadeiras.map((c, i) => (
           <div key={i} className="flex items-center gap-2 text-[11px]" title={`${c.cargo} — ${c.unidade}: ${c.titulares} titulares, permanência média ${c.permMedia} meses`}>
-            <span className="w-40 text-right text-slate-600 truncate shrink-0">
+            <span className="w-24 md:w-40 text-right text-slate-600 truncate shrink-0">
               <span className="font-semibold text-slate-700">{c.cargo}</span> · {c.unidade}
             </span>
             <div className="flex-1 h-3.5 rounded-sm" style={{ background: 'transparent' }}>
               <div className="h-full rounded-sm" style={{ width: `${(c.titulares / max) * 100}%`, background: P.tipo }} />
             </div>
-            <span className="w-24 text-left text-slate-500 shrink-0 whitespace-nowrap">
+            <span className="w-16 md:w-24 text-left text-slate-500 shrink-0 whitespace-nowrap">
               <strong className="text-slate-700">{c.titulares}</strong> tit. · {c.permMedia}m
             </span>
           </div>

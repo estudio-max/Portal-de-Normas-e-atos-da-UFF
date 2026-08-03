@@ -228,13 +228,34 @@ Medição a 320 px, nas 12 rotas: **nenhuma rola horizontalmente**. Sobram apena
 os gráficos que rolam de propósito — o mapa-múndi e o gráfico empilhado da
 Cooperação e o combo da Jornada. A regra vale para listas, não para cartografia.
 
-### Limite conhecido do mock de desenvolvimento
+## Mock de desenvolvimento
 
-`tools/mock_api.py` não implementa `chefias`, `prazos`, `insights`, `analitico`
-nem `pad_cadeia`. Esses painéis caem no estado vazio quando o dev roda com
-`?api=http://127.0.0.1:8900` — não é defeito da tela. Para conferi-los no dev,
-use o modo estático (sem `?api=`), que projeta os mesmos dados do
-`portal-data.json`. É lacuna anterior ao redesign.
+`tools/mock_api.py` cobre hoje **todas as rotas que o front chama**: `stats`,
+`filtros`, `atos`, `atos/{id}`, `chefias`, `mandatos`, `prazos`, `pad_cadeia`,
+`insights`, `analitico`, `jornada`, `cooperacao`, `comissoes`, `ods` e `dossie`.
+Antes faltavam cinco (`chefias`, `prazos`, `insights`, `analitico`,
+`pad_cadeia`), e os painéis correspondentes caíam no estado vazio com
+`?api=http://127.0.0.1:8900` — indistinguível de tela quebrada.
+
+Duas decisões que sustentam o mock:
+
+- **O classificador PAD/SINVE é importado, não recopiado.** `prazos` e
+  `pad_cadeia` chamam `classifica_tipo`/`classifica_papel`/`extrai_dias` de
+  `backend/importar/extrair_prazos_pad_sinve.py` — a mesma regra que roda na
+  importação. Cópia divergente foi exatamente o que fez o `/stats` do mock ficar
+  para trás do contrato da API.
+- **O resto espelha a projeção estática do `dataSource.ts`**, que por sua vez
+  espelha o SQL: mesma regra de titular por posição em `chefias`, mesma janela
+  de 90 dias em `prazos`, mesmas agregações em `insights` e `analitico`.
+
+Conferido contra o acervo carregado: 167 chefias (igual ao modo estático), 109
+prazos dos quais 78 PAD/SINVE, cadeia de 3 atos num processo real, e `/stats`,
+`/insights` e a soma de `porTipo` concordando no mesmo total.
+
+O que o mock **não** reproduz, de propósito: o cache em disco da API PHP e o
+cabeçalho `X-Cache`. Tudo é calculado por requisição sobre o JSON em memória —
+o que também significa que o mock precisa ser reiniciado depois de o
+`portal-data.json` mudar.
 
 ## Preparação para commit e deploy
 

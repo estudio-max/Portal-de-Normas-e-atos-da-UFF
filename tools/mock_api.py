@@ -10,10 +10,26 @@ Uso:
     python tools/mock_api.py            # serve em http://127.0.0.1:8900
 Endpoints (iguais aos do PHP):
     /stats  /filtros  /atos?...  /atos/{id}   (também aceita ?r=...&id=...)
+    /chefias  /mandatos  /prazos  /pad_cadeia?processo=...
+    /insights?ano=...  /analitico
+    /jornada  /cooperacao  /comissoes  /ods  /dossie
+
+O que o mock NÃO reproduz, por desenho: o cache em disco da API PHP e o
+`X-Cache`. Tudo aqui é calculado a cada requisição sobre o JSON em memória.
 """
-import json, os, re, math
+import json, os, re, math, sys, datetime
+from collections import defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
+
+# O classificador PAD/SINVE é IMPORTADO do importador, não recopiado: é a mesma
+# regra que roda na carga, e foi justamente a cópia divergente que fez o /stats
+# do mock ficar para trás do contrato da API.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "backend", "importar"))
+from extrair_prazos_pad_sinve import (          # noqa: E402
+    classifica_tipo, classifica_papel, extrai_dias, norm as _norm_pad,
+)
 
 # Caminho da base: PORTAL_DATA permite apontar para outra safra (backfill,
 # lote reprocessado) — útil para conferir uma aba nova antes de a carga entrar
@@ -639,6 +655,514 @@ def ods_payload(n=""):
             "curados": 17}
 
 
+# ---- /chefias: titular atual de cada (unidade, cargo) ----------------------
+# Espelha chefias() do index_v2.php e getChefias() do dataSource.ts: vale o
+# evento de MAIOR data por posição, e só conta como titular se esse evento for
+# 'designar'.
+def chefias_payload():
+    hoje = datetime.date.today()
+    por_pos = {}
+    for a in ATOS:
+        data = a.get("dataAssinatura") or ""
+        if not data:
+            continue
+        for f in (a.get("funcoes") or []):
+            chave = f.get("unidade_chave") or f.get("unidadeChave") or ""
+            if not chave:
+                continue
+            nome = f.get("nome") or ""
+            if not nome and f.get("siape"):
+                nome = next((p.get("nome", "") for p in (a.get("pessoas") or [])
+                             if p.get("siape") == f["siape"]), "")
+            ev = {"acao": f.get("acao"), "cargo": f.get("cargo") or "",
+                  "unidade": f.get("unidade") or "", "nome": nome,
+                  "siape": f.get("siape") or "", "data": data, "atoId": a["id"],
+                  "atoLabel": f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
+                  "link": a.get("linkBoletim")}
+            k = f"{chave}|{ev['cargo'].lower()}"
+            cur = por_pos.get(k)
+            if not cur or ev["data"] > cur["data"] or (ev["data"] == cur["data"] and ev["atoId"] > cur["atoId"]):
+                por_pos[k] = ev
+
+    # Corte de mandato: sem ato novo há mais de 4 anos, é mais provável que a
+    # chave da unidade tenha mudado de grafia do que a pessoa seguir no posto.
+    limite = (hoje.replace(year=hoje.year - 4)).isoformat()
+    # Reitor é nomeado por decreto presidencial no DOU, nunca pelo BS — nunca
+    # captamos a designação, então exibir o cargo daria sempre errado ou vazio.
+    chefias = sorted(
+        ({"cargo": e["cargo"], "unidade": e["unidade"], "nome": e["nome"] or None,
+          "siape": e["siape"] or None, "desde": e["data"], "atoId": e["atoId"],
+          "atoLabel": e["atoLabel"], "linkBoletim": e["link"]}
+         for e in por_pos.values()
+         if e["acao"] == "designar" and e["data"] >= limite and e["cargo"].strip().lower() != "reitor"),
+        key=lambda c: (c["unidade"], c["cargo"]))
+    return {"total": len(chefias), "atualizadoEm": hoje.isoformat(), "chefias": chefias}
+
+
+# ---- /insights: agregações do acervo (opcionalmente recortadas por ano) -----
+def insights_payload(ano=""):
+    recorte = ano not in ("", "todos")
+    ano_sel = int(ano) if recorte else None
+    base = [a for a in ATOS if a.get("ano") == ano_sel] if ano_sel else ATOS
+    tem_sei = lambda a: bool(a.get("processoSei"))
+
+    com_sei = revogados = alterados = relacoes = 0
+    data_min = data_max = None
+    orgaos, por_dia, por_mes, por_orgao, por_tipo = set(), {}, {}, {}, {}
+    for a in base:
+        if tem_sei(a):
+            com_sei += 1
+        if a.get("status") == "Revogado":
+            revogados += 1
+        elif a.get("status") == "Alterado":
+            alterados += 1
+        relacoes += len(a.get("relacoes") or [])
+        sig = a.get("orgaoEmissor")
+        if sig:
+            orgaos.add(sig)
+            o = por_orgao.setdefault(sig, {"n": 0, "comSei": 0})
+            o["n"] += 1
+            if tem_sei(a):
+                o["comSei"] += 1
+        por_tipo[a.get("tipoAto")] = por_tipo.get(a.get("tipoAto"), 0) + 1
+        d = a.get("dataAssinatura") or ""
+        if re.match(r"^\d{4}-\d{2}-\d{2}", d):
+            dia = d[:10]
+            por_dia[dia] = por_dia.get(dia, 0) + 1
+            por_mes[dia[:7]] = por_mes.get(dia[:7], 0) + 1
+            if data_min is None or dia < data_min:
+                data_min = dia
+            if data_max is None or dia > data_max:
+                data_max = dia
+
+    total = len(base)
+    return {
+        "ano": ano_sel,
+        "anos": sorted({a["ano"] for a in ATOS if a.get("ano")}, reverse=True),
+        "kpis": {"total": total, "comSei": com_sei, "revogados": revogados,
+                 "alterados": alterados, "vigentes": total - revogados - alterados,
+                 "orgaos": len(orgaos), "relacoes": relacoes,
+                 "dataMin": data_min, "dataMax": data_max},
+        "porDia": [{"d": d, "n": n} for d, n in sorted(por_dia.items())],
+        "porMes": [{"ym": m, "n": n} for m, n in sorted(por_mes.items())],
+        "porOrgao": [{"sigla": s, "n": o["n"], "comSei": o["comSei"]}
+                     for s, o in sorted(por_orgao.items(), key=lambda kv: -kv[1]["n"])][:12],
+        "porTipo": [{"tipo": t, "n": n} for t, n in sorted(por_tipo.items(), key=lambda kv: -kv[1])],
+    }
+
+
+# ---- /analitico: rotatividade, citações defasadas e séries de RH ------------
+def _meses_entre(a, b):
+    da = datetime.date.fromisoformat(a[:10])
+    db = datetime.date.fromisoformat(b[:10])
+    return round((db - da).days / 30.44, 1)
+
+
+def analitico_payload():
+    # Rotatividade: quantos titulares distintos passaram por cada (unidade, cargo).
+    pos, total_eventos = {}, 0
+    for a in ATOS:
+        data = a.get("dataAssinatura") or ""
+        for f in (a.get("funcoes") or []):
+            chave = f.get("unidade_chave") or f.get("unidadeChave") or ""
+            if not chave or not data:
+                continue
+            total_eventos += 1
+            nome = (f.get("nome") or "").lower()
+            if not nome and f.get("siape"):
+                nome = next((p.get("nome", "") for p in (a.get("pessoas") or [])
+                             if p.get("siape") == f["siape"]), "").lower()
+            k = f"{chave}|{(f.get('cargo') or '').lower()}"
+            p = pos.setdefault(k, {"cargo": f.get("cargo"), "unidade": f.get("unidade"), "ev": []})
+            p["ev"].append({"acao": f.get("acao"), "data": data, "ident": f.get("siape") or nome})
+
+    permanencias, cadeiras = [], []
+    for p in pos.values():
+        p["ev"].sort(key=lambda e: e["data"])
+        titulares = []
+        for e in p["ev"]:
+            if e["acao"] != "designar":
+                continue
+            if not titulares or e["ident"] != titulares[-1]["ident"]:
+                titulares.append({"ident": e["ident"], "inicio": e["data"]})
+        if len(titulares) < 2:
+            continue
+        durs = [_meses_entre(titulares[i]["inicio"], titulares[i + 1]["inicio"])
+                for i in range(len(titulares) - 1)]
+        permanencias.extend(durs)
+        cadeiras.append({"unidade": p["unidade"], "cargo": p["cargo"],
+                         "titulares": len(titulares),
+                         "permMedia": round(sum(durs) / len(durs), 1)})
+    permanencias.sort()
+    mediana = round(permanencias[len(permanencias) // 2], 1) if permanencias else None
+    n_cad = len(cadeiras)
+    cadeiras.sort(key=lambda c: (-c["titulares"], c["permMedia"]))
+    cadeiras = cadeiras[:15]
+
+    # Citações defasadas ("zumbis"): ato que referencia norma DEPOIS de revogada.
+    zumbis = []
+    for alvo in ATOS:
+        if alvo.get("status") != "Revogado":
+            continue
+        refs = alvo.get("referenciadoPor") or []
+        datas_rev = sorted(d for d in
+                           ((POR_ID.get(r.get("porId")) or {}).get("dataAssinatura")
+                            for r in refs if r.get("relacao") == "Revoga") if d)
+        if not datas_rev:
+            continue
+        revogado_em = datas_rev[0]
+        alvo_label = f"{alvo.get('tipoAto')} nº {alvo.get('numero')}/{alvo.get('ano')}"
+        for ref in refs:
+            if ref.get("relacao") == "Revoga":
+                continue
+            cit = POR_ID.get(ref.get("porId"))
+            if not cit or not cit.get("dataAssinatura") or cit["id"] == alvo["id"]:
+                continue
+            if cit["dataAssinatura"] <= revogado_em:
+                continue
+            zumbis.append({
+                "citLabel": f"{cit.get('tipoAto')} nº {cit.get('numero')}/{cit.get('ano')}",
+                "citSigla": cit.get("orgaoEmissor") or "", "citData": cit.get("dataAssinatura"),
+                "citLink": cit.get("linkBoletim"), "relacao": ref.get("relacao") or "",
+                "alvoLabel": alvo_label, "alvoSigla": alvo.get("orgaoEmissor") or "",
+                "revogadoEm": revogado_em})
+    zumbis.sort(key=lambda z: z["citData"] or "", reverse=True)
+    del zumbis[60:]
+
+    # Série de RH: aposentadorias (campo estruturado) + vacância art. 33, VIII.
+    re_vago = re.compile(r"declara\w*\s+(?:vago|(?:a\s+)?vac[aâ]ncia)")
+    re_causa8 = re.compile(r"inciso viii,? do artigo 33|posse em outro cargo inacumul|tendo em vista a posse")
+    vazio = {"vol": 0, "comp": 0, "inval": 0, "indef": 0, "vac8": 0}
+    rh_ano = {}
+    for a in ATOS:
+        ano = a.get("ano")
+        if not isinstance(ano, int) or not (1990 <= ano <= 2100):
+            continue
+        tipo_apos = (a.get("aposentadoria") or {}).get("tipo")
+        t = f"{a.get('ementa') or ''} {a.get('conteudoResumido') or ''} {a.get('textoBusca') or ''}".lower()
+        vac8 = bool(re_vago.search(t) and re_causa8.search(t))
+        if not tipo_apos and not vac8:
+            continue
+        s = rh_ano.setdefault(ano, dict(vazio))
+        if tipo_apos == "Voluntária":
+            s["vol"] += 1
+        elif tipo_apos == "Compulsória":
+            s["comp"] += 1
+        elif tipo_apos == "Invalidez":
+            s["inval"] += 1
+        elif tipo_apos == "Indefinida":
+            s["indef"] += 1
+        if vac8:
+            s["vac8"] += 1
+    series_rh = [dict(ano=ano, **s) for ano, s in sorted(rh_ano.items())]
+
+    # Deslocamento (campo estruturado): remoção × redistribuição.
+    d_ano, motivos, setores = {}, {}, {}
+    for a in ATOS:
+        d = a.get("deslocamento")
+        if not d:
+            continue
+        ano = a.get("ano")
+        if isinstance(ano, int) and 1990 <= ano <= 2100:
+            s = d_ano.setdefault(ano, {"remocao": 0, "redEntra": 0, "redSaida": 0})
+            if d.get("tipo") == "Remoção":
+                s["remocao"] += 1
+            elif d.get("tipo") == "Redistribuição" and d.get("direcao") == "Entrada":
+                s["redEntra"] += 1
+            elif d.get("tipo") == "Redistribuição" and d.get("direcao") == "Saída":
+                s["redSaida"] += 1
+        if d.get("tipo") == "Remoção":
+            mot = d.get("motivo") or "Não especificado"
+            motivos[mot] = motivos.get(mot, 0) + 1
+            if d.get("setor") and ano:
+                k = f"{d['setor']}|{ano}"
+                r = setores.setdefault(k, {"setor": d["setor"], "ano": ano, "n": 0})
+                r["n"] += 1
+
+    return {
+        "rotatividade": {"posicoesComTroca": n_cad if n_cad < 15 else None,
+                         "totalEventos": total_eventos,
+                         "permanenciasMedidas": len(permanencias),
+                         "medianaMeses": mediana, "cadeiras": cadeiras},
+        "zumbis": zumbis,
+        "mortalidade": {"total": len(ATOS),
+                        "mexidos": sum(1 for a in ATOS if a.get("status") != "Ativo")},
+        "seriesRh": series_rh,
+        "deslocamento": {
+            "serie": [dict(ano=ano, **s) for ano, s in sorted(d_ano.items())],
+            "motivos": [{"motivo": m, "n": n} for m, n in sorted(motivos.items(), key=lambda kv: -kv[1])],
+            "setores": list(setores.values()),
+        },
+    }
+
+
+# ---- /prazos e /pad_cadeia --------------------------------------------------
+# Duas famílias, como no banco:
+#   base='PAD_SINVE'   — prazo disciplinar, classificado pelo MESMO módulo que
+#                        roda na importação (importado no topo deste arquivo).
+#   demais bases       — heurística de data no texto, espelhando extrairPrazos()
+#                        do dataSource.ts. É assistiva: cada prazo mostra o
+#                        trecho que o originou.
+_MES = {"janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4, "maio": 5,
+        "junho": 6, "julho": 7, "agosto": 8, "setembro": 9, "outubro": 10,
+        "novembro": 11, "dezembro": 12}
+_EXCLUI = re.compile(r"(período\s+aquisitivo|aquisitivo|ônus\s+limitad|afastament|licença|"
+                     r"capacitaç|suspens|penalidade|advertência|retroativ|\bfaltas?\b|ausência|"
+                     r"puniç|apenad|designaç|designad|exercício\s+financeiro|mandato)")
+_INSCR = re.compile(r"(inscriç|matrícul|requeriment|candidatur)")
+_RECURSO = re.compile(r"(recurso|impugnaç|interpos|contestaç)")
+_ENTREGA = re.compile(r"(entrega|envio|encaminh|apresentaç|protocol|submet|remess|preenchiment|manifestaç)")
+_VIGENCIA = re.compile(r"(comissã|banca|edital|credenciament|cadastr|chapa|portaria)")
+
+
+def _iso(y, m, d):
+    return "%04d-%02d-%02d" % (y, m, d)
+
+
+def _add_dias(base, n):
+    return (datetime.date.fromisoformat(base[:10]) + datetime.timedelta(days=n)).isoformat()
+
+
+def _add_meses(base, n):
+    d = datetime.date.fromisoformat(base[:10])
+    total = d.month - 1 + n
+    ano, mes = d.year + total // 12, total % 12 + 1
+    dia = min(d.day, [31, 29 if ano % 4 == 0 and (ano % 100 or ano % 400 == 0) else 28,
+                      31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1])
+    return _iso(ano, mes, dia)
+
+
+def _y4(y):
+    n = int(y)
+    return 2000 + n if n < 100 else n
+
+
+def _valida_data(s):
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", s)) and 2015 <= int(s[:4]) <= 2035
+
+
+def inferir_publico(ementa, contexto):
+    """Espelha inferirPublico() do dataSource.ts: para QUEM o prazo serve."""
+    f = f"{ementa or ''} {contexto or ''}".lower()
+    has = lambda p: bool(re.search(p, f))
+    if has(r"licitaç|pregão|contrataç|fornecedor|termo de referência|dispensa de licit|cotaç.o de preç|chamamento públic"):
+        return "Fornecedores"
+    if has(r"eleiç|consulta eleitoral|\bchapa|votaç|urna|escrutín|diretório acadêmic"):
+        return "Comunidade (eleição)"
+    dom = ("monitoria" if has(r"monitoria") else
+           "pós-graduação" if has(r"mestrad|doutorad|pós-?gradua|\bppg|stricto sensu|lato sensu|resid.ncia médic|especializaç") else
+           "seleção docente" if has(r"docente|professor|magistério|magisterio|processo seletivo simplificado|\bpss\b|concurso públic") else
+           "bolsa" if has(r"pibic|pibid|iniciaç.o cient|\bbolsa") else
+           "estágio" if has(r"estági") else
+           "graduação" if has(r"graduaç|graduand|discente|\balun[oa]s?\b|estudante") else None)
+    if has(r"inscriç|processo seletivo|seleç.o|candidat|concurso|\bedital|\bprova\b|classificaç"):
+        return f"Candidatos · {dom}" if dom else "Candidatos"
+    if dom:
+        return "Docentes" if dom == "seleção docente" else f"Discentes · {dom}"
+    if has(r"servidor|técnico-?administrativ|\btae\b"):
+        return "Servidores"
+    return "Comunidade acadêmica"
+
+
+def extrair_prazos(texto, data_ato):
+    """Espelha extrairPrazos() do dataSource.ts. Bias em PRECISÃO: só extrai
+    data que esteja perto de uma intenção de prazo declarada."""
+    if not texto:
+        return []
+    t = texto.lower()
+    out = []
+    def win(i, w=95):
+        return t[max(0, i - w):i + w]
+    def snip(i):
+        return "…" + re.sub(r"\s+", " ", t[max(0, i - 48):i + 55]).strip() + "…"
+    def push(dl, tipo, conf, base, i):
+        if _valida_data(dl) and not any(o["dataLimite"] == dl for o in out):
+            out.append({"dataLimite": dl, "tipo": tipo, "conf": conf, "base": base,
+                        "origem": snip(i), "ctx": t[max(0, i - 170):i + 170]})
+
+    # 1) janela "de X a Y" — só com intenção de inscrição/recurso
+    for m in re.finditer(r"de\s+(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\s+a\s+(\d{1,2})/(\d{1,2})/(\d{2,4})", t):
+        c = win(m.start(), 110)
+        if _EXCLUI.search(c):
+            continue
+        intent = "inscrição" if _INSCR.search(c) else "recurso" if _RECURSO.search(c) else None
+        if not intent:
+            continue
+        push(_iso(_y4(m.group(6)), int(m.group(5)), int(m.group(4))), intent, "alta", "data no texto", m.start())
+    # 2) "até DD/MM/AAAA" com intenção
+    for m in re.finditer(r"até\s+(?:o\s+dia\s+|as?\s+\d{1,2}h?\s+de\s+)?(\d{1,2})/(\d{1,2})/(\d{2,4})", t):
+        c = win(m.start())
+        if _EXCLUI.search(c):
+            continue
+        intent = ("inscrição" if _INSCR.search(c) else "recurso" if _RECURSO.search(c)
+                  else "entrega/requerimento" if _ENTREGA.search(c)
+                  else "vigência/validade" if _VIGENCIA.search(c) else None)
+        if not intent:
+            continue
+        push(_iso(_y4(m.group(3)), int(m.group(2)), int(m.group(1))), intent,
+             "média" if intent == "vigência/validade" else "alta", "data no texto", m.start())
+    # 3) "até DD de MÊS (de AAAA)?" com intenção
+    for m in re.finditer(r"até\s+(?:o\s+dia\s+)?(\d{1,2})\s+de\s+([a-zç]+)(?:\s+de\s+(\d{4}))?", t):
+        if m.group(2) not in _MES:
+            continue
+        c = win(m.start())
+        if _EXCLUI.search(c):
+            continue
+        intent = ("inscrição" if _INSCR.search(c) else "recurso" if _RECURSO.search(c)
+                  else "entrega/requerimento" if _ENTREGA.search(c) else None)
+        if not intent:
+            continue
+        ano = int(m.group(3)) if m.group(3) else (int(data_ato[:4]) if data_ato else 0)
+        if not ano:
+            continue
+        push(_iso(ano, _MES[m.group(2)], int(m.group(1))), intent, "alta", "data no texto", m.start())
+    # 4) relativo em DIAS a contar da publicação/assinatura
+    for m in re.finditer(r"(\d{1,3})\s*(?:\([^)]*\)\s*)?dias?\s+(?:úteis\s+)?(?:,?\s*)?"
+                         r"(?:a\s+contar|contad[oa]s?|a\s+partir)\s+d[ae]\s+(?:sua\s+)?"
+                         r"(public|assinatura|data|receb|notific|ciênc)", t):
+        if _EXCLUI.search(win(m.start())):
+            continue
+        if data_ato:
+            push(_add_dias(data_ato, int(m.group(1))), f"prazo ({m.group(1)} dias)",
+                 "média", "assinatura+N", m.start())
+    # 5) relativo em MESES/ANOS
+    for m in re.finditer(r"(\d{1,2})\s*(?:\([^)]*\)\s*)?(mês|meses|anos?)\s+"
+                         r"(?:a\s+contar|a\s+partir)\s+d[ae]\s+(?:sua\s+)?(assinatura|data|public)", t):
+        if _EXCLUI.search(win(m.start())):
+            continue
+        if data_ato:
+            mult = 12 if "ano" in m.group(2) else 1
+            push(_add_meses(data_ato, int(m.group(1)) * mult),
+                 f"prazo ({m.group(1)} {m.group(2)})", "média", "assinatura+N", m.start())
+    return out
+
+
+_ROTULO_PAPEL = {"INSTAURACAO": "instauração", "EXTENSAO": "prorrogação/recondução",
+                 "SOBRESTAMENTO": "sobrestamento"}
+_ROTULO_TIPO_PAD = {"PAD": "PAD", "PAD_SUMARIO": "PAD Sumário",
+                    "SINVE": "Sindicância Investigativa", "SINDACUS": "Sindicância Acusatória"}
+_PUBLICO_PAD = {"PAD": "Comissão de PAD", "PAD_SUMARIO": "Comissão de PAD Sumário",
+                "SINVE": "Comissão de Sindicância", "SINDACUS": "Comissão de Sindicância"}
+
+
+def _prazos_pad_sinve():
+    """Um registro por ato PAD/SINVE com prazo literal declarado. A
+    classificação vem do módulo do importador — aqui só se monta o payload."""
+    achados = []
+    for a in ATOS:
+        blob = _norm_pad(a.get("ementa") or "") + " " + _norm_pad(
+            f"{a.get('conteudoResumido') or ''} {a.get('textoBusca') or ''}")
+        tipo = classifica_tipo(blob)
+        if tipo is None:
+            continue
+        papel = classifica_papel(blob)
+        if papel == "OUTRO":
+            continue
+        dias = extrai_dias(blob)
+        if dias is None:
+            continue
+        data_ato = a.get("dataAssinatura") or ""
+        if not re.match(r"^\d{4}-\d{2}-\d{2}", data_ato):
+            continue
+        achados.append({
+            "ato": a, "tipo": tipo, "papel": papel, "dias": dias,
+            "dataLimite": _add_dias(data_ato, dias),
+            "publico": _PUBLICO_PAD.get(tipo, "Comissão"),
+            "origem": (f"{_ROTULO_TIPO_PAD.get(tipo, tipo)} · "
+                       f"{_ROTULO_PAPEL.get(papel, papel)} · prazo de {dias} dias"),
+        })
+    return achados
+
+
+def _mexido_depois(a):
+    return any(r.get("relacao") in ("Altera", "Revoga") for r in (a.get("referenciadoPor") or []))
+
+
+def prazos_payload():
+    corte = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
+    prazos = []
+
+    # (1) PAD/SINVE, alta confiança. cadeiaTotal = quantos atos do mesmo
+    # processo SEI compõem a cadeia (instauração → prorrogações).
+    pad = _prazos_pad_sinve()
+    cadeia = defaultdict(set)
+    for p in pad:
+        sei = p["ato"].get("processoSei")
+        if sei:
+            a = p["ato"]
+            cadeia[sei].add((a.get("tipoAto"), a.get("orgaoEmissor"), a.get("numero"), a.get("ano")))
+    for p in pad:
+        a = p["ato"]
+        sei = a.get("processoSei") or ""
+        prazos.append({
+            "atoId": a["id"], "atoLabel": f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
+            "sigla": a.get("orgaoEmissor") or "", "tipo": p["tipo"], "dataLimite": p["dataLimite"],
+            "conf": "alta", "base": "PAD_SINVE", "textoOrigem": p["origem"],
+            "linkBoletim": a.get("linkBoletim"), "dataAto": a.get("dataAssinatura"),
+            "mexidoDepois": _mexido_depois(a), "status": a.get("status") or "Ativo",
+            "ementa": a.get("ementa") or "", "publico": p["publico"],
+            "processoSei": sei, "cadeiaTotal": len(cadeia.get(sei, ())),
+        })
+
+    # (2) prazos gerais, heurísticos.
+    for a in ATOS:
+        texto = f"{a.get('ementa') or ''} . {a.get('conteudoResumido') or ''} . {a.get('textoBusca') or ''}"
+        for p in extrair_prazos(texto, a.get("dataAssinatura")):
+            prazos.append({
+                "atoId": a["id"], "atoLabel": f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
+                "sigla": a.get("orgaoEmissor") or "", "tipo": p["tipo"], "dataLimite": p["dataLimite"],
+                "conf": p["conf"], "base": p["base"], "textoOrigem": p["origem"],
+                "linkBoletim": a.get("linkBoletim"), "dataAto": a.get("dataAssinatura"),
+                "mexidoDepois": _mexido_depois(a), "status": a.get("status") or "Ativo",
+                "ementa": a.get("ementa") or "",
+                "publico": inferir_publico(a.get("ementa") or "", p["ctx"]),
+                "processoSei": a.get("processoSei") or "", "cadeiaTotal": 0,
+            })
+
+    # Mesma janela do PHP: nada que venceu há mais de 90 dias.
+    prazos = [p for p in prazos if p["dataLimite"] >= corte]
+    prazos.sort(key=lambda p: p["dataLimite"])
+    return {"prazos": prazos}
+
+
+def pad_cadeia_payload(proc):
+    """Cadeia completa de um processo PAD/SINVE, em ordem cronológica. Sem
+    filtro de data: aqui o que interessa é o histórico inteiro."""
+    proc = (proc or "").strip()
+    if not proc:
+        return {"erro": "processo ausente"}, 400
+    itens = [p for p in _prazos_pad_sinve() if (p["ato"].get("processoSei") or "") == proc]
+    itens.sort(key=lambda p: (p["ato"].get("dataAssinatura") or "", p["ato"]["id"]))
+    # Colapsa duplicata de chave natural (mesma portaria republicada em outro
+    # boletim vira uid -2/-3): na cadeia é um ato lógico só.
+    vistos, unicos = set(), []
+    for p in itens:
+        a = p["ato"]
+        sig = (f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
+               a.get("orgaoEmissor"), a.get("dataAssinatura"))
+        if sig in vistos:
+            continue
+        vistos.add(sig)
+        unicos.append(p)
+    n = len(unicos)
+    atos = []
+    for idx, p in enumerate(unicos):
+        a = p["ato"]
+        tr = (p["origem"] or "").lower()
+        papel = ("Sobrestamento" if "sobrest" in tr else
+                 "Prorrogação/recondução" if ("prorrog" in tr or "recondu" in tr) else
+                 "Instauração" if "instaura" in tr else "—")
+        atos.append({
+            "id": a["id"], "atoLabel": f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
+            "sigla": a.get("orgaoEmissor") or "", "tipo": p["tipo"], "papel": papel,
+            "dataAto": a.get("dataAssinatura"), "dataLimite": p["dataLimite"],
+            "ementa": a.get("ementa") or "", "status": a.get("status") or "Ativo",
+            "textoOrigem": p["origem"], "linkBoletim": a.get("linkBoletim"),
+            "vigente": idx == n - 1,   # o mais recente carrega o prazo vigente
+        })
+    return {"processo": proc, "total": n, "atos": atos}, 200
+
+
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -694,6 +1218,17 @@ class H(BaseHTTPRequestHandler):
             self._send(comissoes_payload(q.get("corpo", [""])[0]))
         elif recurso == "ods":
             self._send(ods_payload(q.get("n", [""])[0]))
+        elif recurso == "chefias":
+            self._send(chefias_payload())
+        elif recurso == "insights":
+            self._send(insights_payload(q.get("ano", [""])[0]))
+        elif recurso == "analitico":
+            self._send(analitico_payload())
+        elif recurso == "prazos":
+            self._send(prazos_payload())
+        elif recurso == "pad_cadeia":
+            obj, code = pad_cadeia_payload(q.get("processo", [""])[0])
+            self._send(obj, code)
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)
@@ -702,5 +1237,8 @@ class H(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print("Mock API em http://127.0.0.1:8900  (/stats /filtros /atos /atos/{id})")
+    print("Mock API em http://127.0.0.1:8900")
+    print("  /stats /filtros /atos /atos/{id} /chefias /mandatos /prazos")
+    print("  /pad_cadeia?processo= /insights?ano= /analitico /jornada")
+    print("  /cooperacao /comissoes /ods /dossie?siape=")
     ThreadingHTTPServer(("127.0.0.1", 8900), H).serve_forever()
