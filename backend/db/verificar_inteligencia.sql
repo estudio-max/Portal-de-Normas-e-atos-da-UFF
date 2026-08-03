@@ -10,6 +10,25 @@
 --  Percona Server 5.7: sem CTE, sem função de janela, sem REGEXP_REPLACE.
 -- ============================================================================
 
+-- 0) O BANCO CERTO ESTÁ SELECIONADO -----------------------------------------
+--    RODE ESTE BLOCO PRIMEIRO E PARE SE ELE NÃO BATER.
+--    ESPERADO: `fanara87_governanca` (ou o banco da UFF, depois do cutover) e
+--    ZERO na coluna `perigo`.
+--
+--    Sem isto o arquivo mente. Metade dos blocos abaixo espera ZERO linhas como
+--    sinal de saúde — e um banco padrão errado devolve zero em todos eles, por
+--    não achar tabela nenhuma. O sintoma que denuncia é o bloco 5 falhando com
+--    "#1109 Tabela 'evidencia_fato' desconhecida em 'information_schema'": os
+--    blocos 1 a 4 nomeiam `information_schema` por extenso e sobrevivem ao
+--    contexto errado, o 5 é o primeiro que depende do banco selecionado.
+--
+--    No phpMyAdmin: clique no NOME DO BANCO na árvore à esquerda (não numa
+--    tabela, não no nome do servidor) e só então abra a aba Importar. A trilha
+--    no topo tem que ler "Servidor … » Banco de dados: fanara87_governanca".
+SELECT DATABASE()                                            AS banco_atual,
+       (SELECT COUNT(*) FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ato') = 0 AS perigo;
+
 -- 1) AS DOZE TABELAS EXISTEM -------------------------------------------------
 --    ESPERADO: 12 linhas, todas InnoDB e utf8mb4.
 SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS
