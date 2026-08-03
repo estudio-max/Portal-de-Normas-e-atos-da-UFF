@@ -1,7 +1,13 @@
 -- ============================================================================
 --  Verificação pós-migração do núcleo de inteligência institucional.
---  Rode no phpMyAdmin (com o banco selecionado) DEPOIS de aplicar
---  `inteligencia_institucional.sql`, e de novo DEPOIS de cada backfill amplo.
+--  Rode DEPOIS de aplicar `inteligencia_institucional.sql`, e de novo depois
+--  de cada backfill amplo.
+--
+--  ⚠️ NO phpMyAdmin, USE A ABA **SQL**, NUNCA A ABA IMPORTAR. A aba Importar
+--  serve para carregar dados: ela executa e DESCARTA o resultado de SELECT,
+--  devolvendo só "N consultas executadas" ou o erro. Este arquivo é feito de
+--  SELECT — por ali ele roda inteiro sem exibir uma linha. Medido em produção
+--  em 03/08/2026, em duas tentativas seguidas que pareceram falhas mudas.
 --
 --  Cada bloco traz o resultado ESPERADO ao lado. Os blocos 1 a 4 conferem a
 --  migração; os blocos 5 a 9 são as TRAVAS DE PUBLICAÇÃO — enquanto qualquer
