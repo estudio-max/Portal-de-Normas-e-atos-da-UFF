@@ -117,10 +117,11 @@ para a pasta `importar/` do servidor e visite
 `basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
 É seguro repetir: o upsert casa por chave natural
 `(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
-chama o `resolver_relacoes_v2.php` sozinho. Confira que
-`extrair_prazos.php` e `extrair_prazos_pad_sinve.php` estão na mesma pasta: o
-importador faz `require_once` dos dois, e a falta deles dá HTTP 500 de corpo
-vazio. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
+chama o `resolver_relacoes_v2.php` sozinho. Confira que **os quatro** arquivos de
+`require_once` estão na mesma pasta — `extrair_prazos.php`,
+`extrair_prazos_pad_sinve.php`, `comissoes_match.php` e `ods_match.php`: a falta
+de qualquer um dá HTTP 500 de corpo vazio, e o `ods_match.php` é novo (03/08/2026),
+então **não está no servidor** de quem subiu o importador antes dessa data. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
 
 A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 `config.php` era da época em que ela tinha senha; ficou sem uso).
