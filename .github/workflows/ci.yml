@@ -48,6 +48,13 @@ jobs:
       - name: Regressão estrutural do redesign
         run: node tools/test_redesign_integrity.mjs
 
+      # A migração do núcleo analítico é aplicada à mão no phpMyAdmin, sem SSH e
+      # sem rollback barato. Este teste lê o .sql como texto e reprova o que só
+      # se descobriria no meio da janela de deploy: SQL de MySQL 8, tabela sem
+      # chave natural, coluna indexada acima do limite do InnoDB, FK faltando.
+      - name: Regressão do schema de inteligência institucional
+        run: node tools/teste_schema_inteligencia.mjs
+
   # A classificação ODS roda no import (backend/importar/ods_match.php) e é a
   # única parte do backend que dá para testar sem banco: é regex puro sobre o
   # dispositivo. Cada caso do teste é um falso-positivo que já esteve em

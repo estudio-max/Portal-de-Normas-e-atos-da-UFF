@@ -509,6 +509,26 @@ resumo operacional.
 
 ## Pendências
 
+- **Núcleo de inteligência institucional: schema escrito, NÃO aplicado.**
+  `backend/db/inteligencia_institucional.sql` cria as doze tabelas dos cinco
+  módulos analíticos (política, obrigação, comissão, indicador, mudança). É
+  aditivo — não altera nada do v2 e não tem `DROP` —, mas **nenhuma dessas
+  tabelas existe em produção ainda**: a API não as consulta e o importador não
+  as escreve. Aplicar pelo phpMyAdmin e conferir com
+  `backend/db/verificar_inteligencia.sql`, cujos blocos 5 a 12 são as travas de
+  publicação (evidência órfã, item público sem trecho, indicador fora da faixa,
+  curadoria preservada). A regressão estática do arquivo roda no CI:
+  `node tools/teste_schema_inteligencia.mjs`. Racional das decisões em
+  `docs/ARQUITETURA-BASE-DADOS.md` §3.6 — em especial por que `comissao` é
+  chaveada pelo slug, e por que **não** há FK de `obrigacao` para `prazo` (o
+  importador recicla `prazo.id` a cada import).
+  O que falta para o próximo passo: semear os catálogos (política a partir dos
+  atos com `ato_ods.vinculo='proposta'`; comissão a partir de
+  `tools/registro_comissoes.py`) e escrever o detector de obrigação, que **tem
+  que chamar `extrair_prazos()`** para resolver data — aquela lógica já tem três
+  espelhos que precisam concordar, e um quarto seria dois códigos discordando
+  sobre a mesma cláusula.
+
 - **RDD individual não vira ato próprio (lacuna, não regressão).** O fix de
   fronteira (abaixo) impede que um ato absorva a "Resumo de Despachos e
   Decisões" que vem depois — mas cada decisão INDIVIDUAL dentro dessa seção
