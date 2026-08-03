@@ -61,13 +61,73 @@ def emite_php_termos():
     return '\n'.join(linhas)
 
 
+def emite_sql_comissao():
+    """Seed da tabela `comissao` (backend/db/inteligencia_institucional.sql).
+
+    TERCEIRA projecao do registro, e a regra e a mesma das outras duas: sai
+    daqui, nunca da mao. `tipo` e `termos` ficam de fora de proposito -- quem
+    os consome e o painel atual, que segue lendo o registro PHP; a tabela
+    guarda so o que os modulos novos precisam (alvo de FK para
+    comissao_evento e obrigacao.comissao_slug).
+
+    O UPDATE do upsert refresca so o que ESTE arquivo manda. `ato_fundador_id`,
+    `orgao_id` e `fundamento_texto` sao campos de curadoria humana e ficam
+    fora dele de proposito: reaplicar o seed nao pode desfazer curadoria.
+    """
+    linhas = []
+    for slug, sigla, nome, _tipo, _termos, obrig in REGISTRO:
+        n = nome.replace("'", "''")
+        s = f"'{sigla}'" if sigla else 'NULL'
+        o = obrig if obrig else 'nao_classificada'
+        linhas.append(f"  ('{slug}', '{n}', {s}, '{o}', 'central', 1),")
+    # Sem `;` aqui: o statement so fecha depois do ON DUPLICATE KEY UPDATE.
+    corpo = '\n'.join(linhas).rstrip(',')
+    return f"""-- ============================================================================
+--  seed_comissao.sql — GERADO por tools/registro_comissoes.py. Nao edite aqui.
+--
+--  Regenerar:  python tools/registro_comissoes.py --sql
+--
+--  Popular a `comissao` com os {len(REGISTRO)} colegiados permanentes centrais do
+--  registro curado. Depois disto, o bloco 7 do verificar_inteligencia.sql tem
+--  que devolver {len(REGISTRO)} no catalogo e ZERO slugs sem catalogo -- e esse zero e a
+--  prova de que os slugs batem com os que a `ato_comissao` ja usa.
+--
+--  Idempotente: reaplicar refresca nome/sigla/obrigatoriedade a partir do
+--  gerador e preserva os campos de curadoria (ato_fundador_id, orgao_id,
+--  fundamento_texto), que ninguem gera automaticamente.
+--
+--  No phpMyAdmin: aba Importar (e DML, nao tem saida para exibir).
+-- ============================================================================
+INSERT INTO `comissao` (`slug`, `nome`, `sigla`, `obrigatoriedade`, `escopo`, `ativa_catalogo`)
+VALUES
+{corpo}
+
+ON DUPLICATE KEY UPDATE
+  `nome`            = VALUES(`nome`),
+  `sigla`           = VALUES(`sigla`),
+  `obrigatoriedade` = VALUES(`obrigatoriedade`),
+  `escopo`          = VALUES(`escopo`),
+  `ativa_catalogo`  = VALUES(`ativa_catalogo`);
+"""
+
+
 if __name__ == '__main__':
-    import io, sys
+    import io, os, sys
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     slugs = [r[0] for r in REGISTRO]
     assert len(slugs) == len(set(slugs)), 'slug duplicado!'
+    assert all(len(s) <= 32 for s in slugs), 'slug maior que o VARCHAR(32) da tabela!'
     from collections import Counter
     c = Counter(r[5] for r in REGISTRO)
+
+    if '--sql' in sys.argv:
+        destino = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               '..', 'backend', 'db', 'seed_comissao.sql')
+        with io.open(destino, 'w', encoding='utf-8', newline='\n') as fh:
+            fh.write(emite_sql_comissao())
+        print(f'gravado {os.path.normpath(destino)} com {len(REGISTRO)} corpos')
+        sys.exit(0)
+
     print(f'{len(REGISTRO)} corpos | lei={c["lei"]} controle={c["controle"]} sem={c[""]}')
     print()
     print('--- registro (index_v2.php) ---')
@@ -75,3 +135,5 @@ if __name__ == '__main__':
     print()
     print('--- termos (comissoes_match.php) ---')
     print(emite_php_termos())
+    print()
+    print('--- seed SQL: rode com --sql para gravar backend/db/seed_comissao.sql ---')

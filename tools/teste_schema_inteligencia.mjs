@@ -256,6 +256,67 @@ checa(!/`ato`\s*\(/.test(sql.replace(/REFERENCES\s+`ato`\s*\(`id`\)/g, '')),
   'o arquivo cria ou redefine a tabela `ato` — análise nova entra como tabela-fato');
 
 // ---------------------------------------------------------------------------
+// 11. O seed de comissões não divergiu do gerador
+//
+// `backend/db/seed_comissao.sql` é GERADO por tools/registro_comissoes.py. O
+// registro curado já vive em três projeções que não podem divergir; esta trava
+// existe para que a quarta (o .sql commitado) não passe a ser editada à mão.
+//
+// A primeira versão deste seed saiu do gerador com um `;` fechando o statement
+// ANTES do ON DUPLICATE KEY UPDATE — SQL inválido que só apareceria no
+// phpMyAdmin. Daí a checagem de statement único.
+// ---------------------------------------------------------------------------
+const SEED = 'backend/db/seed_comissao.sql';
+const GERADOR = 'tools/registro_comissoes.py';
+const seedBruto = await readFile(new URL(SEED, root), 'utf8');
+const seed = seedBruto.replace(/^\s*--.*$/gm, '');
+const py = await readFile(new URL(GERADOR, root), 'utf8');
+
+const RX_REGISTRO = /^\s*\('([\w-]+)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\),\s*$/gm;
+const registro = [...py.matchAll(RX_REGISTRO)].map((r) => ({
+  slug: r[1], sigla: r[2], nome: r[3], obrig: r[6] || 'nao_classificada',
+}));
+const RX_SEED_ROW = /^\s*\('([\w-]+)',\s*'((?:[^']|'')*)',\s*(?:'([^']*)'|NULL),\s*'(\w+)',\s*'(\w+)',\s*(\d)\),?\s*$/gm;
+const semeados = [...seed.matchAll(RX_SEED_ROW)].map((r) => ({
+  slug: r[1], nome: r[2].replace(/''/g, "'"), sigla: r[3] ?? '', obrig: r[4],
+}));
+
+checa(registro.length > 0, `${GERADOR}: não consegui ler o REGISTRO (o formato das tuplas mudou?)`);
+checa(semeados.length === registro.length,
+  `${SEED}: ${semeados.length} corpos semeados contra ${registro.length} no registro — rode: python tools/registro_comissoes.py --sql`);
+
+for (const r of registro) {
+  const s = semeados.find((x) => x.slug === r.slug);
+  if (!s) { falhas.push(`${SEED}: falta o corpo '${r.slug}' — regenere o arquivo`); continue; }
+  checa(s.nome === r.nome, `${SEED}: '${r.slug}' com nome divergente do gerador ("${s.nome}" ≠ "${r.nome}")`);
+  checa(s.sigla === r.sigla, `${SEED}: '${r.slug}' com sigla divergente do gerador`);
+  checa(s.obrig === r.obrig, `${SEED}: '${r.slug}' com obrigatoriedade divergente ("${s.obrig}" ≠ "${r.obrig}")`);
+  checa(r.slug.length <= 32, `${GERADOR}: slug '${r.slug}' não cabe no VARCHAR(32) da tabela`);
+}
+
+// Statement único e upsert que não desfaz curadoria.
+checa((seed.match(/;/g) ?? []).length === 1,
+  `${SEED}: precisa ser UM statement só — um ';' extra corta o ON DUPLICATE KEY UPDATE fora`);
+checa(/ON DUPLICATE KEY UPDATE/i.test(seed),
+  `${SEED}: sem ON DUPLICATE KEY UPDATE — reaplicar o seed daria erro de chave duplicada`);
+const upsert = seed.slice(seed.search(/ON DUPLICATE KEY UPDATE/i));
+for (const curado of ['ato_fundador_id', 'orgao_id', 'fundamento_texto']) {
+  checa(!upsert.includes(curado),
+    `${SEED}: o upsert escreve em \`${curado}\` — esse campo é curadoria humana e o seed não pode desfazê-lo`);
+}
+for (const proibido of ['DROP TABLE', 'TRUNCATE', 'DELETE FROM']) {
+  checa(!new RegExp(proibido, 'i').test(seed), `${SEED}: ${proibido} num arquivo de seed`);
+}
+
+// O ENUM da coluna tem que aceitar todas as obrigatoriedades emitidas.
+const colObrig = tabelas.find((t) => t.nome === 'comissao')?.colunas.get('obrigatoriedade');
+const valoresObrig = colObrig ? [...colObrig.arg.matchAll(/'([^']*)'/g)].map((v) => v[1]) : [];
+for (const s of semeados) {
+  checa(valoresObrig.includes(s.obrig),
+    `${SEED}: '${s.slug}' semeia obrigatoriedade '${s.obrig}', fora do ENUM (${valoresObrig.join(',')})`);
+}
+
+// ---------------------------------------------------------------------------
 for (const f of falhas) console.log(`FALHA  ${f}`);
-console.log(`\n${ok} verificação(ões) OK, ${falhas.length} falha(s) — ${ARQUIVO}`);
+console.log(`\n${ok} verificação(ões) OK, ${falhas.length} falha(s) — ${ARQUIVO} + ${SEED}`);
 if (falhas.length) process.exit(1);
