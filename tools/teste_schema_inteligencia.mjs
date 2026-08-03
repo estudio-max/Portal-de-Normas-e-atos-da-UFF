@@ -317,6 +317,87 @@ for (const s of semeados) {
 }
 
 // ---------------------------------------------------------------------------
+// 12. O seed de políticas é coerente com o schema e com o gerador
+//
+// `backend/db/seed_politica.sql` sai de tools/gerar_seed_politicas.py. Aqui
+// interessa o que o phpMyAdmin só diria tarde: papel/confiança fora do ENUM,
+// política publicada sem curadoria, e o vínculo repetido — que não daria erro
+// (o ON DUPLICATE KEY UPDATE o engoliria), só sumiria em silêncio.
+// ---------------------------------------------------------------------------
+const SEEDPOL = 'backend/db/seed_politica.sql';
+const GERPOL = 'tools/gerar_seed_politicas.py';
+const seedPolBruto = await readFile(new URL(SEEDPOL, root), 'utf8');
+const seedPol = seedPolBruto.replace(/^\s*--.*$/gm, '');
+const pyPol = await readFile(new URL(GERPOL, root), 'utf8');
+
+const tAtoPol = tabelas.find((t) => t.nome === 'ato_politica');
+const enumDe = (tab, col) => {
+  const c = tab?.colunas.get(col);
+  return c ? [...c.arg.matchAll(/'([^']*)'/g)].map((v) => v[1]) : [];
+};
+const papeis = enumDe(tAtoPol, 'papel');
+const confs = enumDe(tAtoPol, 'confianca');
+const metodos = enumDe(tAtoPol, 'metodo');
+
+const RX_VINCULO = /\(SELECT id FROM ato WHERE uid='([^']+)'\),\s*\(SELECT id FROM politica WHERE slug='([^']+)'\),\s*'(\w+)',\s*'(\w+)',\s*'([\w+]+)'/g;
+const vinculos = [...seedPol.matchAll(RX_VINCULO)].map((m) => ({
+  uid: m[1], slug: m[2], papel: m[3], confianca: m[4], metodo: m[5],
+}));
+checa(vinculos.length > 0, `${SEEDPOL}: nenhum vínculo ato↔política reconhecido (o formato mudou?)`);
+
+for (const v of vinculos) {
+  checa(papeis.includes(v.papel), `${SEEDPOL}: papel '${v.papel}' fora do ENUM de ato_politica`);
+  checa(confs.includes(v.confianca), `${SEEDPOL}: confiança '${v.confianca}' fora do ENUM`);
+  checa(metodos.includes(v.metodo), `${SEEDPOL}: método '${v.metodo}' fora do ENUM`);
+}
+
+// A UNIQUE é (ato_id, politica_id, papel): repetir a tripla faz a segunda
+// linha ser absorvida pelo ON DUPLICATE, sem erro e sem aviso.
+const triplas = new Set();
+for (const v of vinculos) {
+  const k = `${v.uid}|${v.slug}|${v.papel}`;
+  checa(!triplas.has(k), `${SEEDPOL}: vínculo repetido (${k}) — a UNIQUE o engoliria em silêncio`);
+  triplas.add(k);
+}
+
+// Os slugs do SQL têm que existir no catálogo do gerador, e vice-versa.
+const RX_CATALOGO = /^\s*\('([\w-]+)',\s*'[^']*',\s*'[^']*',$/gm;
+const catalogo = [...pyPol.matchAll(RX_CATALOGO)].map((m) => m[1]);
+checa(catalogo.length > 0, `${GERPOL}: não consegui ler o CATALOGO`);
+const slugsNoSql = new Set(
+  [...seedPol.matchAll(/INSERT INTO `politica`[\s\S]*?;/g)].flatMap((b) =>
+    [...b[0].matchAll(/^\s*\('([\w-]+)',/gm)].map((m) => m[1])));
+for (const s of catalogo) {
+  checa(slugsNoSql.has(s), `${SEEDPOL}: política '${s}' está no gerador e não no SQL — regenere`);
+}
+for (const v of vinculos) {
+  checa(slugsNoSql.has(v.slug), `${SEEDPOL}: vínculo aponta para política '${v.slug}', que o catálogo não cria`);
+}
+
+// Os aliases também. E aqui o silêncio é pior: o bloco é INSERT IGNORE, então
+// um slug com typo faz o subselect devolver NULL, o IGNORE engole a violação
+// de NOT NULL e a linha simplesmente não entra — sem erro, sem aviso.
+const blocoAlias = (seedPol.match(/INSERT IGNORE INTO `politica_alias`[\s\S]*?;/) ?? [''])[0];
+const aliases = [...blocoAlias.matchAll(/WHERE slug='([\w-]+)'\),\s*'([^']*)',\s*'(\w+)'/g)]
+  .map((m) => ({ slug: m[1], termo: m[2], tipo: m[3] }));
+checa(aliases.length > 0, `${SEEDPOL}: nenhum alias reconhecido (o formato mudou?)`);
+const tiposAlias = enumDe(tabelas.find((t) => t.nome === 'politica_alias'), 'tipo');
+for (const al of aliases) {
+  checa(slugsNoSql.has(al.slug),
+    `${SEEDPOL}: alias '${al.termo}' aponta para política '${al.slug}', que o catálogo não cria — o INSERT IGNORE o descartaria calado`);
+  checa(tiposAlias.includes(al.tipo), `${SEEDPOL}: alias '${al.termo}' com tipo '${al.tipo}' fora do ENUM`);
+}
+
+// Nada nasce público: o catálogo é curado antes de aparecer no portal.
+const blocoPol = (seedPol.match(/INSERT INTO `politica`[\s\S]*?;/) ?? [''])[0];
+checa(!/'publicada'/.test(blocoPol),
+  `${SEEDPOL}: política nascendo 'publicada' — o catálogo tem que entrar como rascunho`);
+for (const proibido of ['DROP TABLE', 'TRUNCATE', 'DELETE FROM']) {
+  checa(!new RegExp(proibido, 'i').test(seedPol), `${SEEDPOL}: ${proibido} num arquivo de seed`);
+}
+
+// ---------------------------------------------------------------------------
 for (const f of falhas) console.log(`FALHA  ${f}`);
-console.log(`\n${ok} verificação(ões) OK, ${falhas.length} falha(s) — ${ARQUIVO} + ${SEED}`);
+console.log(`\n${ok} verificação(ões) OK, ${falhas.length} falha(s)`);
+console.log(`   ${ARQUIVO}\n   ${SEED}\n   ${SEEDPOL} (${vinculos.length} vínculos)`);
 if (falhas.length) process.exit(1);
