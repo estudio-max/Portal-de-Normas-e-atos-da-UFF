@@ -401,6 +401,30 @@ cede quando a curadoria já cravou aquele par `(ato, ods)`.
 Ao terminar, confira o que o próprio script manda conferir — em especial que a
 contagem de `metodo='curadoria'` não caiu. Se caiu, pare e investigue.
 
+#### Linha de base para comparar (carga original, `ato_ods_backfill.json`)
+
+Depois do backfill a distribuição antiga some do banco, então fica registrada
+aqui. São as **1.336 linhas `metodo='ia'`** da carga de julho/2026, sobre 1.194
+atos distintos:
+
+| vínculo | linhas |
+|---|---|
+| execucao | 966 |
+| proposta | **191** |
+| ensino | 172 |
+| pesquisa | 7 |
+
+Por ODS: 17→748 · 8→115 · 10→103 · 16→86 · 4→80 · 3→42 · 12→39 · 15→33 ·
+5→23 · 1→17 · 2→15 · 14→12 · 9→11 · 13→5 · 6→3 · 11→3 · 7→1.
+
+Só as **propostas** (o número que rankings e controle olham): 10→45 · 4→32 ·
+16→30 · 8→19 · 5→14 · 1→11 · 3→9 · 2→8 · 12→10 · 15→4 · 13→4 · 17→3 · 9→2.
+
+**A ODS 17 já respondia por 56% das linhas** — não é novidade da reclassificação.
+O que a separação de vínculo garante é que ela apareça como `execucao`
+(instrumento individual), e não inflando as propostas: ali a ODS 17 tem só 3.
+É esse contraste que precisa sobreviver à nova passada.
+
 ## 8. Governança da classificação
 
 - **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle
