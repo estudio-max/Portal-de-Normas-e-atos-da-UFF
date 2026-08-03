@@ -66,8 +66,11 @@ navegação inconsistente: componente correto para atos, seleção de relações
 modo, ausência de rota de detalhe não implementada e itens completos na sidebar
 compacta.
 
-**Hoje o teste está VERMELHO** — ver a seção de avaliação abaixo. `npm run lint`
-e `npm run build` passam.
+Os três passam. Além das rotas, o teste hoje guarda as correções de 03/08/2026:
+identidade estável da busca global, cabeçalho sticky com o controle de tema
+sempre alcançável, cartão clicável com acesso por teclado, o par
+cartões-no-mobile + tabela-no-desktop em cada painel de lista, a cobertura da
+skin escura e o contrato de `/stats` no mock.
 
 ## Teste manual antes do deploy
 
@@ -110,8 +113,9 @@ preservando o `config.php` do servidor.
 ## Avaliação da implementação — 03/08/2026
 
 Revisão do código integrado, com medição no navegador (dev server, modo
-estático e modo API pelo `tools/mock_api.py`). **Nada abaixo foi corrigido
-ainda**; esta seção é o inventário do que a próxima etapa precisa fechar.
+estático e modo API pelo `tools/mock_api.py`). **Os nove defeitos abaixo foram
+corrigidos e reconferidos no navegador em 03/08/2026** — cada um traz a medição
+que fechou o caso.
 
 ### O que está sólido
 
@@ -126,89 +130,111 @@ ainda**; esta seção é o inventário do que a próxima etapa precisa fechar.
 - A lista de cartões de Chefias no mobile funciona: a 320 px são 167 cartões,
   a tabela fica em `display:none` e não há rolagem horizontal.
 
-### Defeitos encontrados
+### Defeitos encontrados e corrigidos
 
-**1. Bloqueador — a busca global prende a navegação.**
+**1. Bloqueador — a busca global prendia a navegação.**
 Com qualquer termo de 2+ caracteres na caixa do topo, **todo destino da sidebar
 volta sozinho para `#/atos`**. Medido: Cooperação, Ajuda, Dashboard e Prazos
 levaram os quatro a `#/atos`; limpar a caixa devolve a navegação. Na prática o
 portal fica travado numa aba só depois da primeira busca.
 Causa: `handleGlobalSearch` (`src/App.tsx:146`) é recriada a cada render e está
-no array de dependências do efeito do TopBar (`src/components/layout/TopBar.tsx:33-35`).
-Cada re-render do App muda a identidade da função, o efeito dispara de novo e
-reexecuta `navigate('atos')`. Conserto: `useCallback` no App e tirar `onSearch`
-das dependências, ou navegar por ação explícita (Enter/submit) em vez de por
-efeito sobre o valor debounced.
+no array de dependências do efeito do TopBar. Cada re-render do App mudava a
+identidade da função, o efeito disparava de novo e reexecutava `navigate('atos')`.
+**Corrigido** com duas guardas: `useCallback` no App e o callback numa `ref`
+fora das dependências do efeito do TopBar — só o termo debounced dispara a
+busca. Reconferido com o termo na caixa: Comissões, Ajuda, Dashboard, Prazos e
+Cooperação abrem os cinco.
 
-**2. Alta — os cartões de ato do Dashboard não são clicáveis.**
-`ActCard` passa `onClick` para `Card` (`src/components/acts/ActCard.tsx:23`), mas
-`CardProps` não declara a propriedade e o `Card` não a repassa para a `div`
-(`src/components/ui/Card.tsx:7-22`). O handler nunca chega ao DOM. Pior: o
-`hover` aplica `cursor-pointer`, então o cartão *parece* clicável. Como é `div`
-e não `button`, também não recebe foco nem responde ao teclado.
+**2. Alta — os cartões de ato do Dashboard não eram clicáveis.**
+`ActCard` passava `onClick` para `Card`, mas `CardProps` não declarava a
+propriedade e o `Card` não a repassava para a `div`. O handler nunca chegava ao
+DOM — e o `hover` aplicava `cursor-pointer`, então o cartão *parecia* clicável.
+**Corrigido:** o `Card` aceita `onClick` e, quando recebe, vira controle de
+verdade (`role="button"`, `tabIndex=0`, Enter e Espaço). Não virou `<button>`
+porque o conteúdo tem título e parágrafo, que não podem morar dentro de um botão
+sem HTML inválido. Medido: 59 cartões clicáveis, clique abre a consulta de atos.
 
-**3. Alta — o botão de modo escuro fica fora da tela no celular.**
-O conteúdo do cabeçalho ocupa 371 px numa caixa de 256 px a 320 px de viewport.
-O cabeçalho é `fixed`, não quebra linha e não rola: ficam fora da tela o
-indicador Online/Offline (parcial), o **botão de modo escuro (inteiro)** e o
-avatar "UFF". A 390 px (iPhone 14/15) o botão continua cortado — só aparece a
-partir de ~440 px. A skin de baixo brilho é recurso de acessibilidade, e é
-justamente em tela pequena que ela não pode ser ligada.
+**3. Alta — o botão de modo escuro ficava fora da tela no celular.**
+O conteúdo do cabeçalho ocupava 371 px numa caixa de 256 px a 320 px de
+viewport. O cabeçalho era `fixed`, não quebrava linha e não rolava: ficavam fora
+da tela o indicador Online/Offline, o **botão de modo escuro (inteiro)** e o
+selo "UFF". A 390 px continuava cortado — só aparecia a partir de ~440 px.
+**Corrigido** trocando `fixed` por `sticky` dentro da coluna de conteúdo: o
+cabeçalho herda a largura da coluna sozinho, sem repetir o recuo da sidebar à
+mão nem obrigar o `<main>` a compensar altura com padding chutado. Em tela
+estreita o rótulo Online/Offline recolhe para o ponto (com `title`) e o selo
+institucional sai. Medido a 320 px: cabeçalho 256/256, nada fora da tela, botão
+de tema em 272–304.
 
-**4. Média — a skin escura cobre só parte da paleta.**
-O bloco `html.fotofobia` (`src/index.css:34-58`) lista classes específicas.
-Ficaram de fora `text-slate-600` (67 usos) e `text-[#003366]` (36 usos), que
-continuam escuros sobre a superfície escura (#18221b). O contraste quebra dentro
-dos painéis, que é onde está a maior parte do texto.
+**4. Média — a skin escura cobria só parte da paleta.**
+O bloco `html.fotofobia` listava classes específicas. Ficavam de fora
+`text-slate-600` (67 usos) e `text-[#003366]` (36 usos), escuros sobre superfície
+escura. **Corrigido:** a lista passou a cobrir os tons de texto usados nos
+painéis e os chips coloridos (texto e fundo), mantendo a cor semântica. Medido
+no escuro: `text-[#003366]` a 15,4:1 e `text-slate-600` a 11,3:1 sobre o fundo
+— ambos acima do AAA.
 
 **5. Média — o `tools/mock_api.py` ficou para trás do contrato de `/stats`.**
 A API PHP devolve `porAno`, `ultimaAtualizacao` e `ultimoBoletim`
-(`backend/api/index_v2.php:483-485`); o mock devolve só as 7 chaves antigas. Como
-o CLAUDE.md documenta o mock como o jeito de testar o modo banco no dev, quem
-testar o redesign por ali vê "Nenhum ato recente disponível", o gráfico anual
-zerado e "Atualização mais recente indisponível" — indistinguível de um problema
-de dados de verdade.
+(`backend/api/index_v2.php:483-485`); o mock devolvia só as 7 chaves antigas.
+Como o CLAUDE.md documenta o mock como o jeito de testar o modo banco no dev,
+quem testasse o redesign por ali via "Nenhum ato recente disponível", o gráfico
+anual zerado e "Atualização mais recente indisponível" — indistinguível de um
+problema de dados de verdade. **Corrigido:** `stats_payload()` espelha as três
+chaves. Medido: 59 atos no último boletim.
 
-**6. Média — o trabalho de mobile está pela metade e o teste está vermelho.**
-`node tools/test_redesign_integrity.mjs` falha em `PrazosApi.tsx`. A Task 2 do
-plano tocou 3 dos 8 painéis. E o marcador escolhido para a asserção,
-`mobile-stack-table`, **não existe em CSS nenhum** — grep no `src/` só o acha
-nos 3 arquivos JSX. Ou seja, a asserção fica verde só de colar a string, sem
-comportamento algum. Dos 3 tocados, só Chefias virou lista de cartões de fato;
-Mandatos ganhou a classe num `div` que já era cartão, e ActSpreadsheet a ganhou
-numa tabela que continua dentro de `overflow-x-auto` com `min-w-[1000px]`.
-Sugestão: trocar o marcador pela asserção que o próprio plano escreveu
-(`/md:hidden/`), que ao menos exige a classe responsiva real.
+**6. Média — o trabalho de mobile estava pela metade, com asserção vazia.**
+A Task 2 do plano tocou 3 dos 8 painéis, e o marcador escolhido para a asserção,
+`mobile-stack-table`, **não existia em CSS nenhum**: bastava colar a string para
+o teste passar sem nada ficar responsivo. **Corrigido:** o marcador saiu, a
+conversão foi concluída (ver a seção de listas no mobile) e a asserção agora
+exige o par lista-de-cartões + tabela-escondida, além de barrar tabela
+interativa solta dentro de `overflow-x-auto`.
 
-**7. Baixa — `ActSpreadsheet.tsx` é código morto.**
-Nada em `src/` o importa (a rota de atos usa `ActTable`). Só o
-`tools/test_redesign_integrity.mjs` o menciona, duas vezes — inclusive na
-asserção nova de mobile. Um dos 8 arquivos que a tarefa de mobile precisa mudar
-nunca é renderizado.
+**7. Baixa — `ActSpreadsheet.tsx` era código morto.**
+Nada em `src/` o importava desde que a rota de atos passou a usar `ActTable`.
+**Removido do repo** (está no `git log` para arqueologia, como manda a regra da
+casa). O teste agora falha se o arquivo voltar.
 
-**8. Baixa — o dropdown da busca não preenche nada.**
-O TopBar abre um painel que exibe "Buscando..." para sempre, com um comentário
-dizendo que os resultados viriam do dataSource
-(`src/components/layout/TopBar.tsx:74-79`). Está em produção assim.
+**8. Baixa — o dropdown da busca não preenchia nada.**
+O TopBar abria um painel que exibia "Buscando..." para sempre, com um comentário
+dizendo que os resultados viriam do dataSource. **Removido** — a busca leva à
+consulta de atos com o termo aplicado, que é o caminho que de fato funciona.
 
-**9. Baixa — as setas de tendência dos StatCards afirmam o que não foi medido.**
-"↓ 1% do acervo" em Revogados lê-se como queda; é participação, não tendência.
-É o mesmo problema de honestidade que o teste já barra no "1.247 este mês".
+**9. Baixa — as setas de tendência dos StatCards afirmavam o que não foi medido.**
+"↓ 1% do acervo" em Revogados lia-se como queda; é participação, não tendência.
+**Corrigido:** a linha virou `nota`, sem seta e sem cor de alerta.
 
-### Rolagem horizontal a 320 px (medida)
+## Listas de atos no mobile
 
-Sobra a corrigir, no modo API: **Cooperação** (tabela rolando 182→760 px dentro
-de `overflow-x-auto`) e **Jornada** (página estoura 68 px, tabela 182→384 px).
-Comissões e ODS já são baseadas em cartões e passam. Atos, Chefias, Prazos,
-Mandatos, Relações, Insights e Dashboard não exigem rolagem de página.
+Abaixo de **768 px** (`md`), cada linha de tabela vira um **cartão** de largura
+total; do breakpoint para cima, a tabela do desktop continua intacta. As tabelas
+geradas para impressão (`window.print`) não foram tocadas.
 
-### Ordem sugerida
+O desenho do cartão mora em `src/components/ui/RecordCard.tsx` — título, selo de
+status, grade curta de metadados, texto longo em linha própria e ações — junto
+com os dois envoltórios que escolhem a apresentação (`RecordCardList`, com
+`md:hidden`, e `DesktopTable`, com `hidden md:block`). Ficou compartilhado de
+propósito: quem aprendeu a ler o cartão de Chefias lê o de Cooperação sem
+pensar.
 
-1. Defeito 1 (trava a navegação para todo mundo).
-2. Defeitos 2 e 3 (função anunciada que não funciona).
-3. Defeito 6 — refazer a asserção antes de continuar a Task 2, senão o resto
-   dos painéis entra com o mesmo marcador vazio.
-4. Defeitos 4, 5 e o resto.
+Painéis convertidos: **Chefias**, **Jornada** (flexibilização e Programa de
+Gestão), **Comissões** (atos do colegiado), **Cooperação** e **Meu SIAPE**
+(designações e atos que citam a matrícula). **Atos e Normas** já usava
+`ActListCard`; **Mandatos** e **Prazos** já eram listas de cartões e só
+precisaram que os filtros parassem de fixar largura mínima maior que a tela.
+
+Medição a 320 px, nas 12 rotas: **nenhuma rola horizontalmente**. Sobram apenas
+os gráficos que rolam de propósito — o mapa-múndi e o gráfico empilhado da
+Cooperação e o combo da Jornada. A regra vale para listas, não para cartografia.
+
+### Limite conhecido do mock de desenvolvimento
+
+`tools/mock_api.py` não implementa `chefias`, `prazos`, `insights`, `analitico`
+nem `pad_cadeia`. Esses painéis caem no estado vazio quando o dev roda com
+`?api=http://127.0.0.1:8900` — não é defeito da tela. Para conferi-los no dev,
+use o modo estático (sem `?api=`), que projeta os mesmos dados do
+`portal-data.json`. É lacuna anterior ao redesign.
 
 ## Preparação para commit e deploy
 
