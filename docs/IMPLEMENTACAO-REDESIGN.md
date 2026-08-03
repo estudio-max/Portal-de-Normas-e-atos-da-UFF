@@ -100,6 +100,21 @@ modo estático calcula a mesma série a partir de `portal-data.json`. Quando o
 arquivo estático não possui atos de algum ano, a barra correspondente fica em
 zero; nenhum valor é ilustrativo.
 
+**A faixa da série não é constante.** O piso é 2001 (`ANO_INICIO_ACERVO` em
+`src/config.ts`): antes disso o acervo só tem backlog legítimo — o boletim de
+2001, digitalizado, publica atos de 1998-2000 de verdade — e resíduo de OCR,
+que não pertencem ao gráfico. O **teto é o ano corrente**, decidido na camada
+de dados: `YEAR(CURDATE())` no `/api/stats`, `new Date().getFullYear()` no modo
+estático e no mock. O Dashboard não guarda faixa própria: ele lê o maior ano que
+recebeu e preenche os buracos, para ano sem ato virar barra zerada em vez de
+sumir.
+
+O teto já esteve fixado em **2026 em quatro lugares** que precisavam concordar
+(API, `dataSource`, Dashboard e mock). Em 01/01/2027 o gráfico pararia de
+crescer enquanto o total de atos continuava subindo — gráfico e KPI discordando
+sem nenhum aviso, que é o pior formato de erro para um painel. Corrigido em
+03/08/2026; o teste de integridade barra o retorno do número fixo nos quatro.
+
 O quadro de atos agora é identificado pelo Boletim de Serviço mais recente e
 lista todos os seus atos, ordenados por data de assinatura. A API inclui essa
 lista na resposta cacheada de `/api/stats`; o fallback estático seleciona o
@@ -109,6 +124,12 @@ sendo responsabilidade do fluxo de importação existente.
 Para publicar essa alteração, envie o novo frontend de `dist/` e atualize
 também `backend/api/index_v2.php` no arquivo publicado como `api/index.php`,
 preservando o `config.php` do servidor.
+
+**Os dois sobem juntos, na mesma janela.** A correção do teto da série mexeu na
+consulta do `/api/stats` e no Dashboard ao mesmo tempo. Subir só o `dist/`
+deixaria o front esperando um teto que a API antiga não devolve; subir só a API
+não muda nada visível. `api_versao()` foi para `2026-08-03.1` — confira em
+`GET /api/health` depois do upload, e rode `bash tools/smoke_test.sh`.
 
 ## Avaliação da implementação — 03/08/2026
 

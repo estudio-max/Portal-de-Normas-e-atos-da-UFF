@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { Skeleton } from '../ui/Skeleton';
 import { ActCard } from '../acts/ActCard';
 import { FileText, CheckCircle2, XCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { ANO_INICIO_ACERVO } from '../../config';
 import type { UffAct, UffStatistics } from '../../types';
 
 interface DashboardProps {
@@ -32,10 +33,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestB
   const vigentes = stats?.ativoCount || 0;
   const revogados = stats?.revogadoCount || 0;
   const alterados = stats?.alteradoCount || 0;
-  const annualEntries = Array.from({ length: 26 }, (_, index) => {
-    const ano = 2001 + index;
-    return [ano, Number(stats?.porAno?.[ano] || 0)] as const;
-  });
+  // A faixa vem do DADO, não de uma constante local: a camada de dados (API ou
+  // modo estático) já decide o intervalo, e aqui só se preenchem os buracos
+  // para que anos sem ato apareçam como barra zerada em vez de sumirem.
+  // Enquanto o fim era fixo (2026), em 01/01/2027 o gráfico pararia de crescer
+  // com o total ainda subindo — gráfico e KPI discordando sem aviso.
+  const anosComDado = Object.keys(stats?.porAno || {})
+    .map(Number)
+    .filter(n => Number.isFinite(n) && n >= ANO_INICIO_ACERVO);
+  const anoFim = anosComDado.length ? Math.max(...anosComDado) : new Date().getFullYear();
+  const annualEntries = Array.from(
+    { length: Math.max(0, anoFim - ANO_INICIO_ACERVO + 1) },
+    (_, index) => {
+      const ano = ANO_INICIO_ACERVO + index;
+      return [ano, Number(stats?.porAno?.[ano] || 0)] as const;
+    });
   const maxAnnualCount = Math.max(0, ...annualEntries.map(([, count]) => count));
 
   return (

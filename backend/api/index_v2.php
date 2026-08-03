@@ -399,7 +399,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-07-23.1'; }
+function api_versao(): string { return '2026-08-03.1'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -447,9 +447,15 @@ function stats(PDO $pdo): void {
         FROM boletim b
         ORDER BY b.ano DESC, b.numero DESC
         LIMIT 1")->fetch();
+    // Série anual do Dashboard. O teto é o ANO CORRENTE, não uma constante: com
+    // 2026 fixado aqui, em 01/01/2027 o gráfico pararia de crescer enquanto o
+    // total continuava subindo — gráfico e KPI discordando sem nenhum aviso.
+    // Ano à frente do calendário é typo de OCR, não ato, e segue de fora.
+    // O piso 2001 é de propósito: antes disso o acervo só tem backlog legítimo
+    // (o boletim de 2001 publica atos de 1998-2000) e resíduo de OCR.
     $porAno = [];
     foreach ($pdo->query("SELECT ano, COUNT(*) AS total FROM ato
-                         WHERE ano BETWEEN 2001 AND 2026
+                         WHERE ano BETWEEN 2001 AND YEAR(CURDATE())
                          GROUP BY ano ORDER BY ano") as $r) {
         $porAno[(int)$r['ano']] = (int)$r['total'];
     }

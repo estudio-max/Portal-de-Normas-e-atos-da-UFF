@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 const dataSource = await read('src/dataSource.ts');
+const mockPy = await read('tools/mock_api.py');
 
 const tsconfig = JSON.parse(await read('tsconfig.json'));
 assert.deepEqual(
@@ -66,8 +67,25 @@ assert.doesNotMatch(dashboard, /\[35, 48, 42, 58/, 'Annual chart must not use pl
 assert.doesNotMatch(dashboard, /recentActs\.slice\(0, 5\)/, 'The latest bulletin list must not be truncated.');
 assert.match(dashboard, /aria-label=\{`\$\{ano\}: \$\{count\} atos`\}/,
   'Each annual bar must expose its value.');
-assert.match(dashboard, /Array\.from\(\{ length: 26 \}/,
-  'Annual chart must render every year from 2001 through 2026.');
+// A faixa da série anual NÃO pode ser constante em lugar nenhum: com o fim
+// fixado em 2026, o gráfico pararia de crescer em 01/01/2027 enquanto o total
+// continuava subindo. O teto é o ano corrente, decidido na camada de dados.
+assert.doesNotMatch(dashboard, /Array\.from\(\{ length: 26 \}/,
+  'Annual chart must not hard-code a 26-year window.');
+assert.match(dashboard, /anoFim - ANO_INICIO_ACERVO \+ 1/,
+  'Annual chart must derive its range from the data it received.');
+assert.doesNotMatch(dataSource, /a\.ano <= 2026/,
+  'Static stats must not cap the annual series at a fixed year.');
+assert.match(dataSource, /a\.ano <= new Date\(\)\.getFullYear\(\)/,
+  'Static stats must cap the annual series at the current year.');
+
+const php = await read('backend/api/index_v2.php');
+assert.doesNotMatch(php, /ano BETWEEN 2001 AND 2026/,
+  'The API annual series must not stop at a hard-coded year.');
+assert.match(php, /ano BETWEEN 2001 AND YEAR\(CURDATE\(\)\)/,
+  'The API annual series must cap at the current year.');
+assert.doesNotMatch(mockPy, /2001 <= ano <= 2026/,
+  'The mock annual series must not stop at a hard-coded year.');
 
 const actCard = await read('src/components/acts/ActCard.tsx');
 assert.doesNotMatch(actCard, /w-1\.5 shrink-0/, 'Act cards must not rely on decorative colored side stripes.');
@@ -123,7 +141,7 @@ assert.doesNotMatch(statCard, /trendUp \? '↑' : '↓'/,
 
 // O mock tem que falar o mesmo /stats da API PHP, senão testar o modo banco no
 // dev mostra dashboard vazio e parece problema de dados.
-const mock = await read('tools/mock_api.py');
+const mock = mockPy;
 for (const chave of ['porAno', 'ultimaAtualizacao', 'ultimoBoletim']) {
   assert.match(mock, new RegExp(`"${chave}"`),
     `mock_api.py must mirror the /stats contract, including ${chave}.`);

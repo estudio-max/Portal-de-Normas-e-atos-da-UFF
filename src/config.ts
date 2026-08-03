@@ -17,3 +17,14 @@ export const API_BASE: string =
 export const JSON_FALLBACK: string =
   'https://raw.githubusercontent.com/estudio-max/' +
   'Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json';
+
+// Primeiro ano da SÉRIE ANUAL. Antes de 2001 o acervo só tem backlog legítimo
+// (o boletim de 2001, digitalizado, publica atos de 1998-2000 de verdade) e
+// resíduo de OCR — nenhum dos dois pertence ao gráfico do Dashboard.
+//
+// O FIM da série não é constante nenhuma: é o ano corrente, decidido na camada
+// de dados (`/api/stats` no banco, `getStats()` no modo estático). O limite
+// superior já esteve fixado em 2026 em quatro lugares que precisavam concordar;
+// em 01/01/2027 o gráfico pararia de crescer enquanto o total continuava
+// subindo — o KPI e o gráfico passariam a discordar sem avisar.
+export const ANO_INICIO_ACERVO = 2001;

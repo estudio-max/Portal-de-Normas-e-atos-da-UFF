@@ -310,10 +310,13 @@ def stats_payload():
     from collections import Counter
     c = Counter(a.get("status", "Ativo") for a in ATOS)
 
+    # Teto = ano corrente, espelhando o BETWEEN do /api/stats. Fixar 2026 aqui
+    # faria o gráfico parar de crescer em 01/01/2027 com o total ainda subindo.
     por_ano = {}
+    ano_fim = datetime.date.today().year
     for a in ATOS:
         ano = a.get("ano")
-        if isinstance(ano, int) and 2001 <= ano <= 2026:
+        if isinstance(ano, int) and 2001 <= ano <= ano_fim:
             por_ano[ano] = por_ano.get(ano, 0) + 1
 
     ult_arq = max((a.get("arquivo", "") for a in ATOS), key=_chave_boletim, default="")

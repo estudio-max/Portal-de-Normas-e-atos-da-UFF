@@ -2,7 +2,7 @@
 //   - modo 'api'      : consulta a API PHP (paginação/busca no servidor)
 //   - modo 'estatico' : lê o portal-data.json inteiro e filtra no navegador
 // As duas implementações devolvem EXATAMENTE o mesmo formato.
-import { API_BASE, JSON_FALLBACK } from './config';
+import { API_BASE, JSON_FALLBACK, ANO_INICIO_ACERVO } from './config';
 import { UffAct } from './types';
 
 export interface ListaParams {
@@ -222,7 +222,10 @@ export async function getStats(): Promise<Stats> {
   for (const a of CACHE) {
     c[a.status] = (c[a.status] || 0) + 1;
     orgs.add(a.orgaoEmissor || ''); bols.add((a as any).arquivo || '');
-    if (a.ano >= 2001 && a.ano <= 2026) porAno[a.ano] = (porAno[a.ano] || 0) + 1;
+    // Teto = ano corrente, não constante: espelha o BETWEEN do /api/stats.
+    // Ano à frente do calendário é typo de OCR, não ato — fica de fora.
+    if (a.ano >= ANO_INICIO_ACERVO && a.ano <= new Date().getFullYear())
+      porAno[a.ano] = (porAno[a.ano] || 0) + 1;
     if (a.processoSei) sei++;
   }
   // Último boletim indexado (maior numeração "NN-AA.pdf") e a data mais
