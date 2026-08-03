@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 // Aba "Comissões": centraliza os COLEGIADOS PERMANENTES de alcance institucional
 // da UFF — comitês e comissões estáveis (CPA, CPPD, CEUA, Governança, ...). A
@@ -64,7 +65,33 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
               {d.corpo.tipo} · {d.atos.length} ato(s) no Boletim que mencionam este colegiado.
             </p>
           </div>
-          <div className="overflow-x-auto">
+          <RecordCardList>
+            {d.atos.length === 0
+              ? <p className="py-6 text-center text-sm text-slate-400">Nenhum ato encontrado para este colegiado.</p>
+              : d.atos.map(a => (
+                <RecordCard
+                  key={a.id}
+                  titulo={`${a.sigla} nº ${a.numero}/${a.ano}`}
+                  selo={<StatusChip status={a.status} />}
+                  campos={[
+                    { rotulo: 'Data', valor: fmtData(a.data) },
+                    { rotulo: 'Processo SEI', valor: a.processoSei
+                      ? (a.linkSeiProcesso
+                          ? <a href={a.linkSeiProcesso} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">{a.processoSei}</a>
+                          : a.processoSei)
+                      : '—' },
+                  ]}
+                  texto={a.ementa}
+                  acoes={a.link && (
+                    <a href={a.link} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 underline">
+                      Abrir no Boletim <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                />
+              ))}
+          </RecordCardList>
+          <DesktopTable>
             <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px]">
                 <tr>
@@ -104,7 +131,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
                 )}
               </tbody>
             </table>
-          </div>
+          </DesktopTable>
         </>
       )}
     </div>
@@ -195,7 +222,7 @@ export default function ComissoesApi() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative max-w-xs flex-1 min-w-[180px]">
+        <div className="relative max-w-xs w-full sm:w-auto sm:flex-1 sm:min-w-[180px]">
           <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
           <input value={busca} onChange={e => setBusca(e.target.value)}
             placeholder="Filtrar por nome ou sigla…"

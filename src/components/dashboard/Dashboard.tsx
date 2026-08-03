@@ -67,24 +67,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestB
             <StatCard
               label="Atos vigentes"
               value={vigentes.toLocaleString('pt-BR')}
-              trend={`${total ? Math.round((vigentes / total) * 100) : 0}% do acervo`}
-              trendUp={true}
+              nota={`${total ? Math.round((vigentes / total) * 100) : 0}% do acervo`}
               icon={<CheckCircle2 size={18} />}
               color="green"
             />
             <StatCard
               label="Revogados"
               value={revogados.toLocaleString('pt-BR')}
-              trend={`${total ? Math.round((revogados / total) * 100) : 0}% do acervo`}
-              trendUp={false}
+              nota={`${total ? Math.round((revogados / total) * 100) : 0}% do acervo`}
               icon={<XCircle size={18} />}
               color="red"
             />
             <StatCard
               label="Alterados"
               value={alterados.toLocaleString('pt-BR')}
-              trend={`${total ? Math.round((alterados / total) * 100) : 0}% do acervo`}
-              trendUp={false}
+              nota={`${total ? Math.round((alterados / total) * 100) : 0}% do acervo`}
               icon={<AlertTriangle size={18} />}
               color="yellow"
             />

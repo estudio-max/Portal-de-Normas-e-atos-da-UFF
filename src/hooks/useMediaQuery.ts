@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+  // Estado inicial lido do próprio matchMedia. Começando em `false`, o primeiro
+  // render de um celular desenhava a sidebar larga e só depois colapsava — um
+  // quadro de layout errado a cada carga.
+  const [matches, setMatches] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches
+  );
 
   useEffect(() => {
     const media = window.matchMedia(query);

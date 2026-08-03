@@ -45,17 +45,50 @@ html.fotofobia [class*="border-"],
 html.fotofobia [class*="divide-"] {
   border-color: #39503f !important;
 }
+/* Texto principal. A lista tem que cobrir TODO tom escuro usado nos painéis,
+   não só os do shell: `text-slate-600` aparece 67x e o azul institucional
+   `text-[#003366]` 36x, e ambos ficavam escuros sobre superfície escura. */
 html.fotofobia [class*="text-\[\#1A202C\]"],
 html.fotofobia [class*="text-slate-900"],
 html.fotofobia [class*="text-slate-800"],
-html.fotofobia [class*="text-slate-700"] {
+html.fotofobia [class*="text-slate-700"],
+html.fotofobia [class*="text-\[\#003366\]"],
+html.fotofobia [class*="text-\[\#1A3A1A\]"] {
   color: #e7f0e8 !important;
 }
+/* Texto de apoio: um degrau abaixo, ainda acima do mínimo de contraste. */
+html.fotofobia [class*="text-slate-600"],
 html.fotofobia [class*="text-slate-500"],
 html.fotofobia [class*="text-slate-400"],
+html.fotofobia [class*="text-gray-600"],
+html.fotofobia [class*="text-gray-500"],
+html.fotofobia [class*="text-\[\#4A5568\]"],
 html.fotofobia [class*="text-\[\#A0AEC0\]"] {
   color: #c0d0c3 !important;
 }
+/* Chips e selos coloridos. O fundo claro deles sobrevive à skin (o texto
+   escuro por cima continua legível), mas as variantes de 700/800 sobre fundo
+   escuro herdado precisam clarear. Só o TOM é ajustado; a cor semântica
+   (verde=vigente, vermelho=revogado, âmbar=alterado) permanece. */
+html.fotofobia [class*="text-green-700"], html.fotofobia [class*="text-emerald-700"] { color: #7fd39b !important; }
+html.fotofobia [class*="text-red-700"], html.fotofobia [class*="text-rose-700"] { color: #f19a9a !important; }
+html.fotofobia [class*="text-amber-700"], html.fotofobia [class*="text-yellow-700"] { color: #e8c473 !important; }
+html.fotofobia [class*="text-blue-700"], html.fotofobia [class*="text-blue-800"],
+html.fotofobia [class*="text-indigo-700"] { color: #9dc0ea !important; }
+html.fotofobia [class*="text-purple-700"], html.fotofobia [class*="text-violet-700"] { color: #c4a9e8 !important; }
+html.fotofobia [class*="text-teal-700"] { color: #7fcfc6 !important; }
+/* Fundos claros de chip: escurece para a mesma família, mantendo o matiz. */
+html.fotofobia [class*="bg-green-100"], html.fotofobia [class*="bg-green-50"],
+html.fotofobia [class*="bg-emerald-50"] { background-color: #1d3326 !important; }
+html.fotofobia [class*="bg-red-100"], html.fotofobia [class*="bg-red-50"],
+html.fotofobia [class*="bg-rose-100"], html.fotofobia [class*="bg-rose-50"] { background-color: #3a2224 !important; }
+html.fotofobia [class*="bg-amber-100"], html.fotofobia [class*="bg-amber-50"],
+html.fotofobia [class*="bg-yellow-100"], html.fotofobia [class*="bg-yellow-50"] { background-color: #372f1c !important; }
+html.fotofobia [class*="bg-blue-100"], html.fotofobia [class*="bg-blue-50"],
+html.fotofobia [class*="bg-indigo-50"] { background-color: #1e2b3d !important; }
+html.fotofobia [class*="bg-purple-100"], html.fotofobia [class*="bg-purple-50"] { background-color: #2d2440 !important; }
+html.fotofobia [class*="bg-teal-100"], html.fotofobia [class*="bg-teal-50"] { background-color: #1a3230 !important; }
+html.fotofobia [class*="bg-slate-100"], html.fotofobia [class*="bg-slate-200"] { background-color: #223028 !important; }
 html.fotofobia input,
 html.fotofobia select,
 html.fotofobia textarea {

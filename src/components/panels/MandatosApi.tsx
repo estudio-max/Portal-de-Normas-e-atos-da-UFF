@@ -177,7 +177,7 @@ export default function MandatosApi() {
         </div>
 
         <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               value={busca}
@@ -187,12 +187,12 @@ export default function MandatosApi() {
             />
           </div>
           <select value={cargo} onChange={e => setCargo(e.target.value)}
-            className="px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700">
+            className="w-full sm:w-auto max-w-full px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700">
             <option value="todos">Todos os cargos</option>
             {cargos.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select value={origem} onChange={e => setOrigem(e.target.value)}
-            className="px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700">
+            className="w-full sm:w-auto max-w-full px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700">
             <option value="todas">Prazo: declarado e presumido</option>
             <option value="declarado">Só o que o ato declarou</option>
             <option value="presumido_cargo">Só o presumido pela regra</option>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 // Aba "Meu SIAPE": digite a matrícula, receba os atos do Boletim que a citam,
 // com a referência do BS — para instruir processo.
@@ -104,7 +105,32 @@ export default function DossieApi() {
   };
 
   const TabelaAtos = ({ atos }: { atos: ds.DossieAto[] }) => (
-    <div className="overflow-x-auto">
+    <>
+    <RecordCardList className="p-2">
+      {atos.map((a, i) => (
+        <RecordCard
+          key={a.id + i}
+          titulo={rotuloAto(a)}
+          selo={a.status !== 'Ativo' && (
+            <span className="inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+              {a.status}
+            </span>
+          )}
+          campos={[
+            { rotulo: 'Data', valor: fmtData(a.dataAto) },
+            { rotulo: 'Referência no BS', valor: <span className="font-mono">{refBS(a)}</span> },
+          ]}
+          texto={a.ementa || <span className="italic text-slate-400">sem ementa</span>}
+          acoes={a.linkBoletim && (
+            <a href={a.linkBoletim} target="_blank" referrerPolicy="no-referrer"
+              className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 underline">
+              Abrir no Boletim <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        />
+      ))}
+    </RecordCardList>
+    <DesktopTable>
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
@@ -139,7 +165,8 @@ export default function DossieApi() {
           ))}
         </tbody>
       </table>
-    </div>
+    </DesktopTable>
+    </>
   );
 
   // Modo estático não tem a rota — nem adianta pedir senha.
@@ -192,7 +219,7 @@ export default function DossieApi() {
               className="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px]">
             <UserSearch className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               value={nome}
@@ -286,7 +313,35 @@ export default function DossieApi() {
                   Cargo e unidade lidos do <strong>dispositivo do ato</strong> — é a mesma base das abas Chefias e Mandatos.
                 </p>
               </div>
-              <div className="overflow-x-auto">
+              <RecordCardList className="p-2">
+                {r.funcoes.map((f, i) => (
+                  <RecordCard
+                    key={f.atoId + f.cargo + i}
+                    titulo={f.cargo || '—'}
+                    subtitulo={f.unidade || undefined}
+                    selo={
+                      <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                        f.acao === 'designar'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        {f.acao === 'designar' ? 'Designação' : 'Dispensa'}
+                      </span>
+                    }
+                    campos={[
+                      { rotulo: 'Data', valor: fmtData(f.dataAto) },
+                      { rotulo: 'Ato', valor: f.atoLabel },
+                    ]}
+                    acoes={f.linkBoletim && (
+                      <a href={f.linkBoletim} target="_blank" referrerPolicy="no-referrer"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 underline">
+                        Abrir no Boletim <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  />
+                ))}
+              </RecordCardList>
+              <DesktopTable>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
@@ -324,7 +379,7 @@ export default function DossieApi() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DesktopTable>
             </div>
           )}
 

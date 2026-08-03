@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AppShell } from './components/layout/AppShell';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { Skeleton } from './components/ui/Skeleton';
@@ -139,14 +139,21 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const navigate = (path: string) => {
+  const navigate = useCallback((path: string) => {
     window.location.hash = path ? `#/${path}` : '#';
-  };
+  }, []);
 
-  const handleGlobalSearch = (query: string) => {
+  // Identidade ESTÁVEL, e isto não é detalhe de performance: o TopBar chama
+  // onSearch dentro de um efeito. Enquanto esta função era recriada a cada
+  // render, o efeito redisparava a cada render e reexecutava navigate('atos') —
+  // com termo na caixa, TODO destino da sidebar voltava sozinho para #/atos e
+  // o portal ficava preso numa aba só até alguém limpar a busca.
+  const handleGlobalSearch = useCallback((query: string) => {
     setBuscaGlobal(query);
     if (query.trim().length >= 2) navigate('atos');
-  };
+  }, [navigate]);
+
+  const alternarTema = useCallback(() => setFotofobia(ativo => !ativo), []);
 
   if (carregando) {
     return (
@@ -192,7 +199,7 @@ export default function App() {
 
   return (
     <AppShell activePath={aba} onNavigate={navigate} apiMode={apiMode}
-      onSearch={handleGlobalSearch} onThemeToggle={() => setFotofobia(ativo => !ativo)} fotofobia={fotofobia} portalStats={portalStats}>
+      onSearch={handleGlobalSearch} onThemeToggle={alternarTema} fotofobia={fotofobia} portalStats={portalStats}>
       {erro ? (
         <div className="max-w-[1400px] p-6 bg-[#FFF5F5] border border-[#E53E3E]/20 rounded-xl text-[#E53E3E] text-sm">
           {erro}

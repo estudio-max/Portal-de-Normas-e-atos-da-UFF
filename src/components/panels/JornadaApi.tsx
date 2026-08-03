@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, Loader2, Info, ExternalLink, Building2, Users, FileText, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 // Aba "Jornada de trabalho": os dois modelos recentes de organização da
 // jornada na UFF, ambos registrados no BS —
@@ -84,7 +85,7 @@ function CartaoFlex({ dados }: { dados: ds.JornadaModeloFlex }) {
   const saidos = dados.setores.filter(s => s.status !== 'Ativo').length;
   const anos = dados.serie.map(l => l.ano);
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3 flex-1 min-w-[240px]">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3 w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
       <div className="flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_FLEX }} />
         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Flexibilização da jornada</span>
@@ -115,7 +116,7 @@ function CartaoPgd({ dados }: { dados: ds.JornadaModelo }) {
   const servidores = Math.max(...dados.serie.map(l => l.servidores), 0);
   const anos = dados.serie.filter(l => l.atos > 0).map(l => l.ano);
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3 flex-1 min-w-[240px]">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3 w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
       <div className="flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_PGD }} />
         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Programa de Gestão (teletrabalho)</span>
@@ -167,9 +168,11 @@ function PortariaLink({ p }: { p: ds.JornadaPortariaRef | null }) {
 const COR_PONTO: Record<string, string> = { entrada: 'bg-emerald-500', alt: 'bg-amber-500', saida: 'bg-slate-400' };
 function PassoLinha({ rotulo, cor, p }: { rotulo: string; cor: string; p: ds.JornadaPortariaRef }) {
   return (
-    <li className="flex items-center gap-2 text-xs">
+    // flex-wrap e rótulo de largura fixa só no desktop: dentro do cartão do
+    // mobile a linha não cabe, e sem quebrar ela estourava a largura do cartão.
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
       <span className={`w-2 h-2 rounded-full shrink-0 ${COR_PONTO[cor]}`} />
-      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 w-24 shrink-0">{rotulo}</span>
+      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 md:w-24 shrink-0">{rotulo}</span>
       <PortariaLink p={p} />
       <span className="text-slate-400 text-[11px]">{fmtData(p.data)}</span>
     </li>
@@ -247,14 +250,44 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
   const [todos, setTodos] = useState(false);
   const lista = todos ? setores : setores.slice(0, 15);
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden flex-1 min-w-[300px]">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden w-full md:w-auto md:flex-1 md:min-w-[300px]">
       <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_FLEX }} />
         <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
           Flexibilização — setores ({setores.length})
         </span>
       </div>
-      <div className="overflow-x-auto">
+      <RecordCardList className="p-2">
+        {lista.map((s, i) => (
+          <RecordCard
+            key={s.setor + i}
+            titulo={s.setor}
+            subtitulo={s.processoSei && (s.linkSeiProcesso
+              ? <a href={s.linkSeiProcesso} target="_blank" rel="noopener noreferrer" className="underline">SEI {s.processoSei}</a>
+              : `SEI ${s.processoSei}`)}
+            selo={<BadgeStatus status={s.status} />}
+            campos={[
+              { rotulo: 'Aprovação', valor: <><PortariaLink p={s.aprovacao} /> <span className="text-slate-400">{fmtData(s.aprovacao?.data ?? null)}</span></> },
+              { rotulo: 'Revogação', valor: s.revogacao
+                ? <><PortariaLink p={s.revogacao} /> <span className="text-slate-400">{fmtData(s.revogacao.data)}</span></>
+                : '—' },
+              { rotulo: 'Alterações', valor: s.alteracoes.length
+                ? `${s.alteracoes.length} ${s.alteracoes.length === 1 ? 'alteração' : 'alterações'}`
+                : '—', largo: true },
+            ]}
+            texto={s.alteracoes.length > 0 && (
+              <ol className="space-y-1">
+                {s.alteracoes.map((a, j) => (
+                  <React.Fragment key={a.numero + a.ano + j}>
+                    <PassoLinha rotulo={a.tipo} cor="alt" p={a} />
+                  </React.Fragment>
+                ))}
+              </ol>
+            )}
+          />
+        ))}
+      </RecordCardList>
+      <DesktopTable>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
@@ -269,7 +302,7 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
             {lista.map((s, i) => <React.Fragment key={s.setor + i}><LinhaSetorFlex s={s} /></React.Fragment>)}
           </tbody>
         </table>
-      </div>
+      </DesktopTable>
       {setores.length > 15 && (
         <button onClick={() => setTodos(v => !v)}
           className="w-full py-1.5 text-[11px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
@@ -284,14 +317,27 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
   const [todos, setTodos] = useState(false);
   const lista = todos ? setores : setores.slice(0, 15);
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden flex-1 min-w-[300px]">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden w-full md:w-auto md:flex-1 md:min-w-[300px]">
       <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_PGD }} />
         <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
           Programa de Gestão — setores ({setores.length})
         </span>
       </div>
-      <div className="overflow-x-auto">
+      <RecordCardList className="p-2">
+        {lista.map(s => (
+          <RecordCard
+            key={s.sigla}
+            titulo={s.sigla}
+            selo={<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{s.atos} ato(s)</span>}
+            campos={[
+              { rotulo: 'Primeiro ato', valor: fmtData(s.primeiro) },
+              { rotulo: 'Último ato', valor: fmtData(s.ultimo) },
+            ]}
+          />
+        ))}
+      </RecordCardList>
+      <DesktopTable>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
@@ -312,7 +358,7 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </DesktopTable>
       {setores.length > 15 && (
         <button onClick={() => setTodos(v => !v)}
           className="w-full py-1.5 text-[11px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">

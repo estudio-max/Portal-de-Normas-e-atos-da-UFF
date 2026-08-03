@@ -188,7 +188,7 @@ export default function PrazosApi() {
 
         {/* Filtros */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <div className="flex rounded-md border border-slate-200 overflow-hidden">
+          <div className="flex flex-wrap rounded-md border border-slate-200 overflow-hidden">
             {JANELAS.map(j => (
               <button key={j.k} onClick={() => setJanela(j.k)}
                 className={`px-2.5 py-1.5 text-[11px] font-bold border-r border-slate-200 last:border-0 ${janela === j.k ? 'bg-[#003366] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
@@ -197,7 +197,7 @@ export default function PrazosApi() {
             ))}
           </div>
           {temPadSinve && (
-            <div className="flex rounded-md border border-slate-200 overflow-hidden" title="Categoria do prazo">
+            <div className="flex flex-wrap rounded-md border border-slate-200 overflow-hidden" title="Categoria do prazo">
               {([['todos', 'Todos'], ['padsinve', '⚖ PAD/Sindicância'], ['gerais', 'Gerais']] as const).map(([k, rot]) => (
                 <button key={k} onClick={() => setCat(k)}
                   className={`px-2.5 py-1.5 text-[11px] font-bold border-r border-slate-200 last:border-0 ${cat === k ? (k === 'padsinve' ? 'bg-rose-700 text-white' : 'bg-[#003366] text-white') : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
@@ -220,7 +220,7 @@ export default function PrazosApi() {
             className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold border ${soAlta ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-600 border-slate-200'}`}>
             só alta confiança
           </button>
-          <div className="relative flex-1 min-w-[160px]">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[160px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar ato, órgão, trecho…"
               className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -334,7 +334,7 @@ function PrazoCard({ p }: { p: ds.Prazo }) {
           <div className="text-[10px] text-slate-400">{p.dataLimite.slice(0, 4)}</div>
           <div className={`text-[10px] font-bold mt-1 ${URG[u].texto}`}>{contagem(d)}</div>
         </div>
-        <div className="flex-1 min-w-[180px]">
+        <div className="w-full sm:w-auto sm:flex-1 sm:min-w-[180px]">
           <div className="flex items-center gap-2 flex-wrap">
             {ehPadSinve(p) && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-rose-600 text-white border-rose-700" title="Prazo de comissão disciplinar — extração estruturada por lei (alta confiança)">

@@ -183,7 +183,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                     </span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase">{act.orgaoEmissor}</span>
-                  <p className="text-[10px] text-slate-400 line-clamp-1 font-medium mt-0.5">"{act.ementa}"</p>
+                  <p className="text-[10px] text-slate-400 line-clamp-1 break-all font-medium mt-0.5">"{act.ementa}"</p>
                 </button>
               );
             })
@@ -204,7 +204,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                       Órgão Emissor: {selectedAct.orgaoEmissor}
                     </span>
                     {selectedAct.processoSei && (
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono text-slate-400 break-all">
                         Processo SEI: {selectedAct.processoSei}
                       </span>
                     )}
@@ -376,7 +376,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                           <div className="font-bold text-slate-800 text-[11px]">
                             {inw.originAct.tipoAto} nº {inw.originAct.numero}/{inw.originAct.ano}
                           </div>
-                          <p className="text-[10px] text-slate-400 line-clamp-1 font-medium italic mt-0.5">"{inw.originAct.ementa}"</p>
+                          <p className="text-[10px] text-slate-400 line-clamp-1 break-all font-medium italic mt-0.5">"{inw.originAct.ementa}"</p>
                           {inw.details && (
                             <p className="text-slate-500 font-medium mt-0.5 leading-normal text-[10px]">
                               justificativa: {inw.details}

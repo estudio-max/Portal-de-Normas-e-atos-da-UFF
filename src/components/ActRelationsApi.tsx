@@ -66,7 +66,7 @@ export default function ActRelationsApi() {
                   <span className={`text-[9px] px-1.5 rounded font-bold uppercase border ${corStatus(a.status)}`}>{a.status === 'Ativo' ? 'Vigente' : a.status}</span>
                 </div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase">{a.sigla}</span>
-                <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">"{a.ementa}"</p>
+                <p className="text-[10px] text-slate-400 line-clamp-1 break-all mt-0.5">"{a.ementa}"</p>
               </button>
             ))}
         </div>
@@ -85,7 +85,7 @@ export default function ActRelationsApi() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-bold text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded uppercase border border-yellow-200">Órgão: {sel.orgaoEmissor}</span>
-                    {sel.processoSei && <span className="text-[10px] font-mono text-slate-400">Processo SEI: {sel.processoSei}</span>}
+                    {sel.processoSei && <span className="text-[10px] font-mono text-slate-400 break-all">Processo SEI: {sel.processoSei}</span>}
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 mt-1">{sel.tipoAto} nº {sel.numero}/{sel.ano}</h3>
                   <p className="text-[10px] text-slate-400 font-mono mt-0.5">Assinado em: {(sel.dataAssinatura || '').split('-').reverse().join('/')}</p>

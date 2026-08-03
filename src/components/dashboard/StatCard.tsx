@@ -5,8 +5,10 @@ import { cn } from '../../lib/utils';
 interface StatCardProps {
   label: string;
   value: string | number;
-  trend?: string;
-  trendUp?: boolean;
+  /** Linha de apoio sob o número. É PARTICIPAÇÃO no acervo, não série
+   *  temporal: nada aqui foi comparado com período anterior. Por isso não
+   *  leva seta — "↓ 1% do acervo" se lia como queda de 1%, que ninguém mediu. */
+  nota?: string;
   icon?: React.ReactNode;
   color?: 'green' | 'blue' | 'red' | 'yellow' | 'gray';
 }
@@ -22,8 +24,7 @@ const colorMap = {
 export const StatCard: React.FC<StatCardProps> = ({
   label,
   value,
-  trend,
-  trendUp,
+  nota,
   icon,
   color = 'green',
 }) => {
@@ -34,11 +35,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         <div className="space-y-1">
           <p className="text-[13px] text-[#A0AEC0]">{label}</p>
           <p className="text-[28px] font-semibold text-[#1A202C] tabular-nums leading-tight">{value}</p>
-          {trend && (
-            <p className={cn('text-[11px] font-medium', trendUp ? 'text-[#38A169]' : 'text-[#E53E3E]')}>
-              {trendUp ? '↑' : '↓'} {trend}
-            </p>
-          )}
+          {nota && <p className="text-[11px] font-medium text-[#A0AEC0]">{nota}</p>}
         </div>
         {icon && (
           <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', c.iconBg)}>

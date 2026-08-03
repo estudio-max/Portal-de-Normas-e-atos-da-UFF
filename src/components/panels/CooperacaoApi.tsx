@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Handshake, Loader2, Info, ExternalLink, Globe2, Search, X } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 // Aba "Cooperação": acordos, protocolos e cotutelas que a UFF celebra com
 // outras instituições. Tudo vem da EMENTA, que nesses atos é muito estruturada:
@@ -231,7 +232,7 @@ export default function CooperacaoApi() {
 
           {/* Filtros */}
           <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px]">
               <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input value={busca} onChange={e => setBusca(e.target.value)}
                 placeholder="Buscar instituição, país, nº do ato…"
@@ -300,7 +301,40 @@ export default function CooperacaoApi() {
                 Acordos ({filtrados.length})
               </span>
             </div>
-            <div className="overflow-x-auto">
+            <RecordCardList className="p-2">
+              {(todos ? filtrados : filtrados.slice(0, 40)).map((a, i) => (
+                <RecordCard
+                  key={a.id + i}
+                  titulo={a.instituicao || '(instituição não identificada)'}
+                  selo={
+                    <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white"
+                      style={{ background: corDe(a.categoria, cats) }}>{a.categoria}</span>
+                  }
+                  campos={[
+                    {
+                      rotulo: 'País',
+                      valor: a.pais
+                        ? <span title={a.paisInferido
+                            ? 'País identificado por curadoria/propagação — o ato não o declara'
+                            : 'País declarado no próprio ato'}>
+                            {a.pais}{a.paisInferido && <span className="text-slate-400">*</span>}
+                          </span>
+                        : '—',
+                    },
+                    { rotulo: 'Ano', valor: `${a.ano} · ${fmtData(a.data)}` },
+                    { rotulo: 'Ato', valor: `${a.numero} — ${a.sigla}`, largo: true },
+                  ]}
+                  texto={a.ementa}
+                  acoes={a.link && (
+                    <a href={a.link} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 underline">
+                      Abrir no Boletim <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                />
+              ))}
+            </RecordCardList>
+            <DesktopTable>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
@@ -347,7 +381,7 @@ export default function CooperacaoApi() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DesktopTable>
             {filtrados.length > 40 && (
               <button onClick={() => setTodos(v => !v)}
                 className="w-full py-1.5 text-[11px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">

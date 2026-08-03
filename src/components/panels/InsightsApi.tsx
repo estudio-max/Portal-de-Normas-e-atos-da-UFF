@@ -101,7 +101,7 @@ export default function InsightsApi() {
           <select
             value={ano}
             onChange={e => setAno(e.target.value)}
-            className="px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700"
+            className="w-full sm:w-auto max-w-full px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700"
             aria-label="Filtrar por ano"
           >
             <option value="">Todos os anos</option>

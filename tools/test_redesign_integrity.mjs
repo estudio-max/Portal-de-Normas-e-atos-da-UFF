@@ -14,7 +14,6 @@ assert.deepEqual(
 
 const migratedPanels = [
   'src/components/panels/ActRelationships.tsx',
-  'src/components/panels/ActSpreadsheet.tsx',
   'src/components/panels/ChefiasApi.tsx',
   'src/components/panels/ComissoesApi.tsx',
   'src/components/panels/CooperacaoApi.tsx',
@@ -37,9 +36,20 @@ for (const panel of migratedPanels) {
 
 const appShell = await read('src/components/layout/AppShell.tsx');
 const topBar = await read('src/components/layout/TopBar.tsx');
-assert.match(appShell, /<TopBar apiMode=\{apiMode\} compact=\{isMobile\}/, 'The top bar must align with the collapsed navigation on smaller screens.');
-assert.match(topBar, /compact: boolean/, 'The top bar must receive the responsive navigation state.');
-assert.match(topBar, /compact \? 'left-16' : 'left-56'/, 'The top bar must use the same responsive offset as the content area.');
+// O cabeçalho mora DENTRO da coluna de conteúdo (sticky). Enquanto era fixed,
+// ele repetia o recuo da sidebar à mão e o <main> compensava a altura com um
+// padding chutado — a 320 px o conteúdo do cabeçalho media 371 px numa caixa de
+// 256 px e o botão de modo escuro ficava fora da tela, inalcançável.
+assert.match(topBar, /<header className="sticky top-0/,
+  'The top bar must be sticky inside the content column, not fixed with a hand-copied offset.');
+assert.doesNotMatch(topBar, /left-16|left-56/,
+  'The top bar must not re-derive the sidebar offset.');
+assert.doesNotMatch(appShell, /pt-32/,
+  'The content area must not compensate for the header height with a magic padding.');
+assert.match(topBar, /hidden sm:inline/,
+  'The API status label must collapse to the dot on narrow screens so the controls still fit.');
+assert.match(topBar, /w-8 h-8 shrink-0 rounded-lg/,
+  'The theme toggle must never shrink out of reach.');
 assert.match(appShell, /onThemeToggle: \(\) => void/, 'The app shell must expose the theme toggle to the top bar.');
 assert.match(appShell, /onSearch=\{onSearch\} onThemeToggle=\{onThemeToggle\}/, 'The app shell must forward search and theme interactions.');
 assert.match(topBar, /onThemeToggle: \(\) => void/, 'The top bar theme control must have a real callback.');
@@ -65,6 +75,60 @@ assert.doesNotMatch(actCard, /w-1\.5 shrink-0/, 'Act cards must not rely on deco
 const actListCard = await read('src/components/acts/ActListCard.tsx');
 assert.match(actListCard, /md:hidden/, 'Act list card must be mobile-only.');
 
+// Listas no mobile: cada linha de tabela vira um cartão abaixo de 768 px.
+// A asserção exige o PAR — a lista de cartões e a tabela escondida —, não uma
+// classe marcadora: a versão anterior procurava `mobile-stack-table`, string que
+// não existia em CSS nenhum, então bastava colá-la num arquivo para o teste
+// passar sem que nada ficasse responsivo.
+for (const file of ['ChefiasApi.tsx', 'JornadaApi.tsx', 'ComissoesApi.tsx', 'CooperacaoApi.tsx', 'DossieApi.tsx']) {
+  const source = await read(`src/components/panels/${file}`);
+  assert.match(source, /<RecordCardList/,
+    `${file} must render one card per row on mobile.`);
+  assert.match(source, /<DesktopTable/,
+    `${file} must keep its table for the desktop breakpoint.`);
+  assert.doesNotMatch(source, /<div className="overflow-x-auto">\s*<table/,
+    `${file} must not leave an interactive table in a raw horizontal scroller.`);
+}
+
+const recordCard = await read('src/components/ui/RecordCard.tsx');
+assert.match(recordCard, /md:hidden/, 'The card list must be mobile-only.');
+assert.match(recordCard, /hidden md:block/, 'The desktop table wrapper must hide below the breakpoint.');
+
+// Painéis que já eram lista de cartões: só não podem voltar a fixar largura
+// mínima maior que a viewport estreita.
+for (const file of ['MandatosApi.tsx', 'PrazosApi.tsx']) {
+  assert.doesNotMatch(await read(`src/components/panels/${file}`), /flex-1 min-w-\[\d+px\]/,
+    `${file} filters must be allowed to shrink on a narrow screen.`);
+}
+
+// A planilha de curadoria antiga saiu do repo: nada em src/ a importava desde
+// que a rota de atos passou a usar ActTable.
+await assert.rejects(() => read('src/components/panels/ActSpreadsheet.tsx'),
+  'The dead curation spreadsheet must stay deleted.');
+
+// Cartão clicável: o Card precisa REPASSAR o onClick. Enquanto ele só declarava
+// children/className/hover, o handler do ActCard era descartado em silêncio e o
+// cartão do Dashboard exibia cursor-pointer sem fazer nada.
+const card = await read('src/components/ui/Card.tsx');
+assert.match(card, /onClick\?: \(\) => void/, 'Card must accept a click handler.');
+assert.match(card, /role="button"/, 'A clickable card must announce itself as a control.');
+assert.match(card, /tabIndex=\{0\}/, 'A clickable card must be reachable by keyboard.');
+assert.match(card, /e\.key === 'Enter' \|\| e\.key === ' '/, 'A clickable card must respond to Enter and Space.');
+assert.match(actCard, /onClick=\{onClick\}/, 'The act card must hand its click to the Card.');
+
+// Setas de tendência: o número é participação no acervo, não série temporal.
+const statCard = await read('src/components/dashboard/StatCard.tsx');
+assert.doesNotMatch(statCard, /trendUp \? '↑' : '↓'/,
+  'Stat cards must not draw a trend arrow for a share of the collection.');
+
+// O mock tem que falar o mesmo /stats da API PHP, senão testar o modo banco no
+// dev mostra dashboard vazio e parece problema de dados.
+const mock = await read('tools/mock_api.py');
+for (const chave of ['porAno', 'ultimaAtualizacao', 'ultimoBoletim']) {
+  assert.match(mock, new RegExp(`"${chave}"`),
+    `mock_api.py must mirror the /stats contract, including ${chave}.`);
+}
+
 const app = await read('src/App.tsx');
 assert.match(dataSource, /porAno: Record<number, number>/,
   'Stats must expose real annual totals.');
@@ -80,9 +144,23 @@ assert.match(app, /import ActRelationsApi from '\.\/components\/ActRelationsApi'
 assert.match(app, /if \(aba === 'relacoes'\) return apiMode \? <ActRelationsApi \/> : <Suspense fallback=\{<PanelFallback \/>\}><ActRelationships acts=\{ds\.todosAtos\(\)\} \/><\/Suspense>;/, 'The relations route must select a component that receives data in both API and static modes.');
 assert.match(app, /const \[fotofobia, setFotofobia\]/, 'The app must own the persistent low-light theme state.');
 assert.match(app, /document\.documentElement\.classList\.toggle\('fotofobia', fotofobia\)/, 'The app must apply the selected theme to the document root.');
-assert.match(app, /const handleGlobalSearch = \(query: string\)/, 'The app must receive queries from the global search.');
+// A busca prendia a navegação: como handleGlobalSearch era recriada a cada
+// render e entrava nas dependências do efeito do TopBar, o efeito redisparava e
+// reexecutava navigate('atos') — com termo na caixa, TODO destino da sidebar
+// voltava para a aba de atos. Duas guardas: identidade estável no App e o
+// callback fora das dependências no TopBar.
+assert.match(app, /const handleGlobalSearch = useCallback\(\(query: string\)/,
+  'The global search handler must keep a stable identity across renders.');
+assert.match(topBar, /const onSearchRef = useRef\(onSearch\)/,
+  'The top bar must hold the search callback in a ref.');
+assert.match(topBar, /onSearchRef\.current\?\.\(debouncedQuery\);\s*\}, \[debouncedQuery\]\);/,
+  'Only the debounced term may re-trigger the global search.');
+assert.doesNotMatch(topBar, /\}, \[debouncedQuery, onSearch\]\);/,
+  'The search effect must not depend on the callback identity.');
+assert.doesNotMatch(topBar, /Buscando\.\.\./,
+  'The top bar must not ship a dropdown that never fills.');
 assert.match(app, /<ActTable buscaGlobal=\{buscaGlobal\} \/>/, 'The acts route must receive the global query.');
-assert.match(app, /onSearch=\{handleGlobalSearch\} onThemeToggle=\{\(\) => setFotofobia\(ativo => !ativo\)\}/, 'The shell must connect global search and theme state.');
+assert.match(app, /onSearch=\{handleGlobalSearch\} onThemeToggle=\{alternarTema\}/, 'The shell must connect global search and theme state.');
 assert.match(app, /portalStats=\{portalStats\}/, 'The shell must receive the source statistics for the update indicator.');
 
 assert.doesNotMatch(dashboard, /onNavigate\(`atos\/\$\{act\.id\}`\)/, 'Dashboard cards must not navigate to an unimplemented act-detail hash route.');
@@ -99,5 +177,12 @@ assert.match(actTable, /setBusca\(buscaGlobal\)/, 'The acts table must apply the
 const css = await read('src/index.css');
 assert.match(css, /html\.fotofobia \{/, 'The stylesheet must define the low-light skin.');
 assert.doesNotMatch(css, /filter: invert\(1\)/, 'The low-light skin must use deliberate colors instead of inverting the interface.');
+// A skin cobria só as classes do shell. Os tons mais usados DENTRO dos painéis
+// ficavam escuros sobre fundo escuro: text-slate-600 (67 usos) e o azul
+// institucional text-[#003366] (36 usos).
+for (const classe of ['text-slate-600', 'text-\\[\\#003366\\]']) {
+  assert.ok(css.includes(`html.fotofobia [class*="${classe}"]`),
+    `The low-light skin must cover ${classe.replace(/\\/g, '')}, used throughout the panels.`);
+}
 
 console.log('Redesign structure is safe for TypeScript compilation.');

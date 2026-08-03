@@ -6,18 +6,23 @@ import type { Stats } from '../../dataSource';
 
 interface TopBarProps {
   apiMode: boolean;
-  compact: boolean;
   onSearch?: (query: string) => void;
   onThemeToggle: () => void;
   fotofobia: boolean;
   portalStats: Stats | null;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ apiMode, compact, onSearch, onThemeToggle, fotofobia, portalStats }) => {
+export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle, fotofobia, portalStats }) => {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 300);
+
+  // O callback fica numa ref para NÃO entrar nas dependências do efeito abaixo.
+  // Com ele na lista, um pai que passe função inline redispara a busca a cada
+  // render — e como a busca navega, o portal ficava preso na aba de atos.
+  const onSearchRef = useRef(onSearch);
+  useEffect(() => { onSearchRef.current = onSearch; }, [onSearch]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -30,17 +35,21 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, compact, onSearch, onTh
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Só o termo dispara a busca. Ver a ref acima.
   useEffect(() => {
-    onSearch?.(debouncedQuery);
-  }, [debouncedQuery, onSearch]);
+    onSearchRef.current?.(debouncedQuery);
+  }, [debouncedQuery]);
 
   return (
-    <header className={cn(
-      'min-h-28 bg-white border-b border-[#E2E8F0] px-4 py-2 fixed top-0 right-0 z-30',
-      compact ? 'left-16' : 'left-56'
-    )}>
-      <div className="flex items-center gap-3">
-      <div className="flex-1 max-w-xl relative">
+    // sticky, não fixed: o cabeçalho mora DENTRO da coluna de conteúdo, então
+    // acompanha a largura da coluna sozinho e cresce sem cobrir o conteúdo. Na
+    // versão fixed ele repetia o recuo da sidebar à mão e o <main> compensava a
+    // altura com um padding chutado: a 320 px o conteúdo do cabeçalho media
+    // 371 px numa caixa de 256 px e o botão de modo escuro simplesmente ficava
+    // fora da tela, sem rolagem que o alcançasse.
+    <header className="sticky top-0 z-30 bg-white border-b border-[#E2E8F0] px-4 py-2">
+      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex-1 min-w-0 max-w-xl relative">
         <div
           className={cn(
             'flex items-center gap-2 px-3 py-2 rounded-xl border transition-all',
@@ -70,13 +79,6 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, compact, onSearch, onTh
           </kbd>
         </div>
 
-        {/* Search dropdown */}
-        {isFocused && query.length >= 2 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-[#E2E8F0] shadow-lg z-50 py-2">
-            <div className="px-3 py-1.5 text-xs text-[#A0AEC0] uppercase tracking-wider">Buscando...</div>
-            {/* Resultados seriam preenchidos pelo dataSource */}
-          </div>
-        )}
       </div>
 
       <div className="hidden lg:flex items-center gap-2">
@@ -88,28 +90,32 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, compact, onSearch, onTh
         </a>
       </div>
 
-      {/* API Status */}
-      <div className="flex items-center gap-2 text-xs">
+      {/* Estado da API. Em tela estreita fica só o ponto + ícone; o rótulo sai
+          para caber, mas o title/aria mantêm a informação legível. */}
+      <div className="flex shrink-0 items-center gap-1.5 text-xs"
+        title={apiMode ? 'Portal online (consultando o banco)' : 'Portal offline (índice estático de contingência)'}>
         <span className={cn('w-2 h-2 rounded-full', apiMode ? 'bg-[#38A169]' : 'bg-[#D69E2E]')} />
-        <span className={apiMode ? 'text-[#38A169] font-medium' : 'text-[#D69E2E] font-medium'}>
+        <span className={cn('hidden sm:inline font-medium', apiMode ? 'text-[#38A169]' : 'text-[#D69E2E]')}>
           {apiMode ? 'Online' : 'Offline'}
         </span>
-        {apiMode ? <Wifi size={14} className="text-[#38A169]" /> : <WifiOff size={14} className="text-[#D69E2E]" />}
+        {apiMode
+          ? <Wifi size={14} className="text-[#38A169]" aria-label="Portal online" />
+          : <WifiOff size={14} className="text-[#D69E2E]" aria-label="Portal offline" />}
       </div>
 
       <button type="button" onClick={onThemeToggle} aria-pressed={fotofobia}
         aria-label={fotofobia ? 'Desativar modo escuro' : 'Ativar modo escuro'}
         title={fotofobia ? 'Desativar modo escuro' : 'Ativar modo escuro'}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#4A5568] hover:bg-gray-100 transition-colors">
+        className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#4A5568] hover:bg-gray-100 transition-colors">
         {fotofobia ? <Sun size={16} /> : <Moon size={16} />}
       </button>
 
-      {/* User avatar */}
-      <div className="w-8 h-8 rounded-full bg-[#006400] flex items-center justify-center text-white text-xs font-semibold">
+      {/* Selo institucional — decorativo, primeiro a sair quando falta espaço. */}
+      <div className="hidden sm:flex w-8 h-8 shrink-0 rounded-full bg-[#006400] items-center justify-center text-white text-xs font-semibold">
         UFF
       </div>
       </div>
-      <div className="mt-2 flex items-center gap-2 border-t border-[#E2E8F0] pt-2 text-xs text-[#4A5568]">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[#E2E8F0] pt-2 text-xs text-[#4A5568]">
         <span className="h-2 w-2 shrink-0 rounded-full bg-[#38A169]" />
         {portalStats?.ultimaAtualizacao ? <>Atualização mais recente em <strong>{portalStats.ultimaAtualizacao.slice(0, 10).split('-').reverse().join('/')}</strong></> : 'Atualização mais recente indisponível'}
         {portalStats?.ultimoBoletim && <><span>·</span>{portalStats.ultimoBoletim.link ? <a className="font-semibold underline" href={portalStats.ultimoBoletim.link} target="_blank" rel="noreferrer">BS nº {portalStats.ultimoBoletim.numero}/{portalStats.ultimoBoletim.ano} (PDF)</a> : <strong>BS nº {portalStats.ultimoBoletim.numero}/{portalStats.ultimoBoletim.ano}</strong>}</>}

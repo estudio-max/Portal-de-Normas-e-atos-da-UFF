@@ -36,10 +36,12 @@ export const AppShell: React.FC<AppShellProps> = ({
         collapsed={isMobile}
       />
 
-      {/* Main content area */}
+      {/* Coluna de conteúdo. O recuo compensa a sidebar, que é fixed; o TopBar
+          é sticky DENTRO desta coluna, então herda a largura certa sozinho —
+          não repete o recuo nem obriga o <main> a compensar altura à mão. */}
       <div className={isMobile ? 'ml-16' : 'ml-56'}>
-        <TopBar apiMode={apiMode} compact={isMobile} onSearch={onSearch} onThemeToggle={onThemeToggle} fotofobia={fotofobia} portalStats={portalStats} />
-        <main className="pt-32 p-6 min-h-screen">
+        <TopBar apiMode={apiMode} onSearch={onSearch} onThemeToggle={onThemeToggle} fotofobia={fotofobia} portalStats={portalStats} />
+        <main className="p-4 sm:p-6 min-h-screen">
           {children}
         </main>
       </div>

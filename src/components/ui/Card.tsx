@@ -5,20 +5,41 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
+  /** Quando presente, o cartão vira botão de verdade: clicável e alcançável
+   *  pelo teclado. Antes o `onClick` era passado pelo ActCard e simplesmente
+   *  descartado aqui — o cartão exibia `cursor-pointer` e não fazia nada. */
+  onClick?: () => void;
+  /** Rótulo acessível do cartão clicável (vai no `aria-label` do botão). */
+  ariaLabel?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className, hover = false }) => {
-  return (
-    <div
-      className={cn(
-        'bg-white rounded-xl border border-[#E2E8F0] shadow-sm',
-        hover && 'transition-shadow hover:shadow-md cursor-pointer',
-        className
-      )}
-    >
-      {children}
-    </div>
+export const Card: React.FC<CardProps> = ({ children, className, hover = false, onClick, ariaLabel }) => {
+  const base = cn(
+    'bg-white rounded-xl border border-[#E2E8F0] shadow-sm',
+    (hover || onClick) && 'transition-shadow hover:shadow-md cursor-pointer',
+    className
   );
+
+  // role/tabIndex em vez de <button>: o conteúdo do cartão tem título e
+  // parágrafo, que não podem morar dentro de um <button> sem HTML inválido.
+  if (onClick) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        onClick={onClick}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); }
+        }}
+        className={base}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return <div className={base}>{children}</div>;
 };
 
 export const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (

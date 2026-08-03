@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Printer, Search, ExternalLink, Loader2, Info } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 // Aba "Chefias da UFF": relação de titulares (Chefe/Coordenador/Diretor...) por
 // setor, projetada das DESIGNAÇÕES/DISPENSAS publicadas no Boletim de Serviço.
@@ -86,7 +87,7 @@ export default function ChefiasApi() {
         </div>
 
         <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               value={busca}
@@ -98,7 +99,7 @@ export default function ChefiasApi() {
           <select
             value={cargo}
             onChange={e => setCargo(e.target.value)}
-            className="px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700"
+            className="w-full sm:w-auto max-w-full px-3 py-2 text-sm rounded-md border border-slate-300 bg-white font-medium text-slate-700"
           >
             <option value="todos">Todos os cargos</option>
             {cargos.map(c => <option key={c} value={c}>{c}</option>)}
@@ -124,7 +125,27 @@ export default function ChefiasApi() {
             <span>{filtrada.length} de {lista.length} função(ões)</span>
             <span>Atualizado em {fmtData(atualizadoEm)}</span>
           </div>
-          <div className="overflow-x-auto">
+          <RecordCardList className="p-2">
+            {filtrada.map((c, i) => (
+              <RecordCard
+                key={c.atoId + c.cargo + c.unidade + i}
+                titulo={c.unidade}
+                subtitulo={c.nome || 'servidor não identificado'}
+                selo={<span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-bold text-blue-700">{c.cargo}</span>}
+                campos={[
+                  { rotulo: 'SIAPE', valor: c.siape || '—' },
+                  { rotulo: 'Desde', valor: fmtData(c.desde) },
+                ]}
+                acoes={c.linkBoletim
+                  ? <a href={c.linkBoletim} target="_blank" referrerPolicy="no-referrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 underline">
+                      {c.atoLabel} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  : <span className="text-xs text-slate-500">{c.atoLabel}</span>}
+              />
+            ))}
+          </RecordCardList>
+          <DesktopTable>
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
@@ -158,7 +179,7 @@ export default function ChefiasApi() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesktopTable>
         </div>
       )}
 

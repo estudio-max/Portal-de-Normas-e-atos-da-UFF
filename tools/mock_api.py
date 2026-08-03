@@ -279,14 +279,56 @@ def ficha_payload(aid):
         "ano": a.get("ano"), "dataAssinatura": a.get("dataAssinatura", ""), "relacoes": relacoes}
 
 
+def _chave_boletim(arq):
+    """Ordena 'NN-AA.pdf' pelo ano e depois pelo número, como o ORDER BY do PHP."""
+    m = re.match(r"(\d+)-(\d+)", arq or "")
+    return (int(m.group(2)) * 1000 + int(m.group(1))) if m else -1
+
+
 def stats_payload():
+    """Espelha stats() do index_v2.php. As três últimas chaves — porAno,
+    ultimaAtualizacao e ultimoBoletim — alimentam o gráfico anual, a linha de
+    atualização do cabeçalho e o quadro do último boletim no Dashboard. Sem
+    elas o portal desenha 26 barras zeradas e "Nenhum ato recente disponível",
+    que é indistinguível de um problema de dados de verdade."""
     from collections import Counter
     c = Counter(a.get("status", "Ativo") for a in ATOS)
+
+    por_ano = {}
+    for a in ATOS:
+        ano = a.get("ano")
+        if isinstance(ano, int) and 2001 <= ano <= 2026:
+            por_ano[ano] = por_ano.get(ano, 0) + 1
+
+    ult_arq = max((a.get("arquivo", "") for a in ATOS), key=_chave_boletim, default="")
+    do_ultimo = [a for a in ATOS if a.get("arquivo") == ult_arq] if ult_arq else []
+    do_ultimo.sort(key=lambda a: ((a.get("dataAssinatura") or ""), a.get("id") or ""),
+                   reverse=True)
+    m = re.match(r"(\d+)-(\d+)", ult_arq or "")
+    ultimo_boletim = {
+        "arquivo": ult_arq,
+        "numero": m.group(1) if m else ult_arq,
+        "ano": 2000 + int(m.group(2)) if m else 0,
+        "link": next((a.get("linkBoletim") for a in do_ultimo if a.get("linkBoletim")), None),
+        "atos": [{"id": a.get("id"), "tipo": a.get("tipoAto"),
+                  "sigla": a.get("orgaoEmissor", ""), "numero": a.get("numero", ""),
+                  "ano": a.get("ano"), "dataAssinatura": a.get("dataAssinatura"),
+                  "ementa": a.get("ementa", ""), "status": a.get("status", "Ativo"),
+                  "processoSei": a.get("processoSei"),
+                  "linkBoletim": a.get("linkBoletim")} for a in do_ultimo],
+    } if ult_arq else None
+
     return {"total": len(ATOS), "vigentes": c.get("Ativo", 0),
             "revogados": c.get("Revogado", 0), "alterados": c.get("Alterado", 0),
             "orgaos": len({a.get("orgaoEmissor", "") for a in ATOS}),
             "comSei": sum(1 for a in ATOS if a.get("processoSei")),
-            "boletins": len({a.get("arquivo", "") for a in ATOS})}
+            "boletins": len({a.get("arquivo", "") for a in ATOS}),
+            "porAno": por_ano,
+            # No banco esta data é o MAX(criado_em) — quando o ato NOVO entrou.
+            # O JSON não guarda isso, então aqui vale a assinatura mais recente
+            # do último boletim, que é a melhor aproximação disponível.
+            "ultimaAtualizacao": (do_ultimo[0].get("dataAssinatura") or None) if do_ultimo else None,
+            "ultimoBoletim": ultimo_boletim}
 
 
 def filtros_payload():

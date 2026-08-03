@@ -20,7 +20,8 @@ export const ActCard: React.FC<ActCardProps> = ({ act, onClick }) => {
   const relCount = (act.relacoes?.length || 0) + (act.referenciadoPor?.length || 0);
 
   return (
-    <Card hover className="overflow-hidden" onClick={onClick}>
+    <Card className="overflow-hidden" onClick={onClick}
+      ariaLabel={`Abrir ${act.tipoAto} nº ${act.numero}/${act.ano} na consulta de atos`}>
       <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
