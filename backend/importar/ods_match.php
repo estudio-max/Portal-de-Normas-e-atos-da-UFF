@@ -33,10 +33,17 @@ function ods_norm(?string $s): string {
 }
 
 // Só tipos NORMATIVOS entram. Ato de pessoal e expediente não propõem política.
+//
+// DIVERGÊNCIA DELIBERADA do rotulador Python: 'RESOLUCAOADREFERENDUM' entra.
+// O tipo "Resolução ad referendum" nasceu DEPOIS da classificação original (é a
+// série própria do CEPEx, ver CLAUDE.md), então o `NORM` de lá não o conhece e
+// os ~68 atos dessa série nunca seriam classificados. Uma resolução ad
+// referendum é uma resolução — só muda o rito de aprovação, não a natureza
+// normativa. Coberto por caso no teste_ods_match.php.
 function ods_tipo_normativo(string $tipo): bool {
     $t = preg_replace('/[^A-Z]/', '', mb_strtoupper(ods_norm($tipo), 'UTF-8'));
-    return in_array($t, ['RESOLUCAO', 'DECISAO', 'INSTRUCAONORMATIVA',
-                         'NORMADESERVICO', 'PORTARIA'], true);
+    return in_array($t, ['RESOLUCAO', 'RESOLUCAOADREFERENDUM', 'DECISAO',
+                         'INSTRUCAONORMATIVA', 'NORMADESERVICO', 'PORTARIA'], true);
 }
 
 // O DISPOSITIVO, não a ementa: do marcador "RESOLVE:/DECIDE:" em diante.

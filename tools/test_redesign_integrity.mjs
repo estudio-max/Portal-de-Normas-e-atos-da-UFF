@@ -113,6 +113,18 @@ assert.match(importador, /DELETE FROM ato_ods WHERE ato_id=:id AND metodo <> 'cu
 assert.match(importador, /INSERT IGNORE INTO ato_ods/,
   'Automatic ODS links must yield to a curated row for the same (ato, ods).');
 
+// O backfill automático dá a passada uniforme no acervo antigo com o MESMO
+// classificador do import — e preserva a curadoria com a mesma regra.
+const backfillOds = await read('backend/importar/backfill_ato_ods_auto.php');
+assert.match(backfillOds, /require_once __DIR__ \. '\/ods_match\.php'/,
+  'The ODS backfill must reuse the importer classifier, not a copy.');
+assert.match(backfillOds, /DELETE FROM ato_ods WHERE metodo <> 'curadoria'/,
+  'The backfill reset must spare human curation.');
+assert.match(backfillOds, /DELETE FROM ato_ods WHERE ato_id = \? AND metodo <> 'curadoria'/,
+  'The per-act rewrite must spare human curation.');
+assert.match(backfillOds, /LIMIT \$lote/,
+  'The backfill must run in resumable batches — the corpus does not fit one request.');
+
 // O workflow diário só publica o índice estático. Dizer que o site reflete em
 // minutos é falso — produção exige o passo manual do importador.
 const workflow = await read('.github/workflows/indexar.yml');

@@ -240,8 +240,14 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   se conserta com um padrão novo; falso-positivo estraga o dossiê inteiro.
   Regressão obrigatória: `php backend/importar/teste_ods_match.php` (roda no CI)
   — cada caso ali é uma isca que já esteve em produção.
-  O backfill (`importar/backfill_ato_ods.php`) segue existindo para reclassificar
-  o acervo antigo de uma vez; a trilha de auditoria vive em `../backfill-ods/`.
+  Para dar uma passada uniforme no acervo ANTIGO (importado antes de 03/08/2026,
+  que carrega a carga original gerada em rodadas diferentes), use
+  `importar/backfill_ato_ods_auto.php` — mesmo classificador, lendo o corpo do
+  próprio banco, **em lotes com cursor** (`&desde=`), porque os ~69 mil atos
+  normativos não cabem numa requisição. `&limpar=1` na primeira chamada troca a
+  carga antiga inteira; a curadoria sobrevive a qualquer modo. O
+  `backfill_ato_ods.php` (carga por JSON) segue existindo para reaplicar uma
+  curadoria offline; a trilha de auditoria vive em `../backfill-ods/`.
   **Critério, âncoras e armadilhas medidas em [`docs/METODOLOGIA-ODS.md`](docs/METODOLOGIA-ODS.md)** —
   leia antes de mexer. A armadilha-mãe: o termo-ODS costuma estar no NOME de
   alguém (parceiro do convênio, área do concurso, cargo de quem recebe o ato,

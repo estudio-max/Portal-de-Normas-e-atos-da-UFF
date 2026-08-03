@@ -180,6 +180,13 @@ recusa('tipo nao normativo nao entra', 'Determinacao de Servico',
     'Institui a politica de gestao de riscos.',
     $R . 'Instituir a politica de gestao de riscos.', null);
 
+// "Resolução ad referendum" é série PRÓPRIA do CEPEx, criada depois da
+// classificação original — o rotulador Python não a conhece e os ~68 atos dela
+// ficariam de fora. Muda o rito de aprovação, não a natureza normativa.
+aceita('resolucao ad referendum e normativa', 'Resolução ad referendum',
+    'Institui a politica de gestao de riscos da UFF.',
+    $R . 'Instituir a politica de gestao de riscos no ambito da Universidade.', 16, 'proposta');
+
 // Aposentadoria/pensão: ato de pessoal puro.
 recusa('concessao de aposentadoria', 'Portaria',
     'Concede aposentadoria a servidora da area de saude mental.',

@@ -375,6 +375,32 @@ sumiram uma vez — a CPEG à frente. Roda no CI a cada push que toque `backend/
 
 Mexer nos regex sem rodar esse teste é reintroduzir defeito já pago.
 
+**Uma divergência deliberada do rotulador Python:** o tipo
+**"Resolução ad referendum"** entra no recorte. Ele nasceu depois da
+classificação original (é a série própria do CEPEx — ver `CLAUDE.md`), então o
+`NORM` do Python não o conhece e os ~68 atos dessa série nunca seriam
+classificados. Ad referendum muda o rito de aprovação, não a natureza normativa.
+
+### Reclassificar o acervo antigo
+
+Os atos importados antes de 03/08/2026 carregam a carga original, montada em
+várias rodadas. Para dar uma passada uniforme com o classificador atual:
+[`backend/importar/backfill_ato_ods_auto.php`](../backend/importar/backfill_ato_ods_auto.php).
+
+Ele lê o corpo do próprio banco (não depende de JSON) e usa o **mesmo**
+`ods_match.php` do import, então backfill e import produzem linhas idênticas.
+Roda **em lotes com cursor** — são ~69 mil atos normativos com texto completo, o
+que não cabe numa requisição de shared hosting; o script imprime a URL do
+próximo lote e repetir um lote é inofensivo.
+
+`&limpar=1` na primeira chamada apaga as linhas automáticas antes de começar
+(troca a carga antiga inteira pela nova). Em qualquer modo, **a curadoria é
+preservada**: o `DELETE` sempre exclui `metodo='curadoria'` e o `INSERT IGNORE`
+cede quando a curadoria já cravou aquele par `(ato, ods)`.
+
+Ao terminar, confira o que o próprio script manda conferir — em especial que a
+contagem de `metodo='curadoria'` não caiu. Se caiu, pare e investigue.
+
 ## 8. Governança da classificação
 
 - **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle

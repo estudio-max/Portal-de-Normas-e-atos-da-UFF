@@ -63,11 +63,10 @@ jobs:
         with:
           php-version: "8.3"
 
-      - name: Sintaxe da API e do importador
+      - name: Sintaxe do PHP versionado
         run: |
-          php -l backend/api/index_v2.php
-          php -l backend/importar/importar_v2.php
-          php -l backend/importar/ods_match.php
+          for f in $(git ls-files '*.php'); do php -l "$f" > /dev/null || { php -l "$f"; exit 1; }; done
+          echo "$(git ls-files '*.php' | wc -l) arquivo(s) PHP sem erro de sintaxe."
 
       - name: Regressão da classificação ODS
         run: php backend/importar/teste_ods_match.php
