@@ -43,7 +43,7 @@
 #
 #  `ods_match.php` fica de fora de propósito: é biblioteca (o importador e o
 #  backfill fazem require dela), nunca é chamada pela web.
-<FilesMatch "^(importar_v2|resolver_relacoes_v2|corrigir_siapes|backfill_ato_ods|backfill_ato_ods_auto|backfill_ato_comissao|backfill_ato_processo|backfill_prazos_pad_sinve)\.php$">
+<FilesMatch "^(importar_v2|resolver_relacoes_v2|corrigir_siapes|backfill_ato_ods|backfill_ato_ods_auto|backfill_ato_comissao|backfill_ato_politica|backfill_ato_processo|backfill_prazos_pad_sinve)\.php$">
   Require all granted
 </FilesMatch>
 
