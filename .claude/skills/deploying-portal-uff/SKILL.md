@@ -52,6 +52,19 @@ o JSON estático do GitHub).
 - `cp -r dist/* destino/` **não copia** o `.htaccess` (dotfile) →
   `index.html` fica sem revalidação de cache → usuário pode ver tela
   branca em cache velho. Use `cp -a dist/. destino/`.
+- **Pacote parcial montado "pelo que eu editei" derrubou o portal inteiro**
+  (03/08/2026). Os painéis são `lazy()`: cada aba é um chunk próprio com
+  hash no nome (`ComissoesApi-hT10-kmb.js`), e o `index.html` **não os
+  referencia** — são pedidos em runtime, ao clicar na aba. Ficaram 20 de
+  fora, todos 404, e toda aba quebrou. Pior: eles mudam de nome TODOS
+  JUNTOS quando um módulo compartilhado muda (bastou editar
+  `dataSource.ts`, que todo painel importa).
+  **O que entra no pacote não se deduz do que se editou — pergunta-se ao
+  servidor:** `python tools/pacote_delta.py` compara cada arquivo do
+  `dist/` por hash contra a produção e monta a pasta só com o que falta.
+  Exceção conhecida: o `.htaccess` não dá para comparar (o Apache responde
+  403 ao próprio arquivo, corretamente) — decida por
+  `git log -- public/.htaccess`.
 - Subir `index_v2.php` **com esse nome** deixa a API inerte — o
   `api/.htaccess` só roteia `/api/*` para `api/index.php`.
 - Recarregar um backfill sem `&recomecar=1`: linhas que saíram da
