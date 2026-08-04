@@ -20,6 +20,33 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
+/* Tokens dos gráficos. Ficam em custom properties porque o modo fotofobia deste
+   projeto age por SELETOR DE CLASSE do Tailwind (`[class*="bg-white"]`), e um
+   `fill` dentro de SVG não é alcançado por isso — o gráfico ficaria escuro sobre
+   escuro. Com token, o tema troca a variável e o SVG acompanha.
+
+   Os valores foram validados: marca 6,54:1 no claro e 5,35:1 no escuro contra a
+   superfície; texto de eixo 4,76:1 e 7,11:1; grade deliberadamente recessiva
+   (1,2:1), que é o papel dela. */
+:root {
+  --chart-mark: #1B6B3A;
+  --chart-mark-2: #2E8B57;
+  --chart-fill: rgba(27, 107, 58, .13);
+  --chart-fill-2: rgba(27, 107, 58, .05);
+  --chart-grid: #E2E8F0;
+  --chart-axis: #64748B;
+  --chart-hover: rgba(27, 107, 58, .08);
+}
+html.fotofobia {
+  --chart-mark: #4FA46E;
+  --chart-mark-2: #6FBE8B;
+  --chart-fill: rgba(79, 164, 110, .20);
+  --chart-fill-2: rgba(79, 164, 110, .07);
+  --chart-grid: #2C3A31;
+  --chart-axis: #9BB0A2;
+  --chart-hover: rgba(79, 164, 110, .12);
+}
+
 /* Modo escuro de baixo brilho: a classe fica na raiz para alcançar os painéis
    carregados sob demanda. A paleta é declarada, sem inversão de cores. */
 html.fotofobia {

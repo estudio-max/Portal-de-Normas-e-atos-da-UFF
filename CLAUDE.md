@@ -311,6 +311,27 @@ brigaria com o `base: './'` que mantém o bundle portável. A raiz sem hash cai 
 aba padrão sem sujar a URL com `#planilha`. Aba nova = uma linha em
 `ABAS_VALIDAS`.
 
+## Gráficos: a cor sai de token, nunca de classe
+
+Os gráficos do Dashboard vivem em `src/components/dashboard/Graficos.tsx`
+(`AreaPorAno`, `ComposicaoDoBoletim`, `OrgaosDoBoletim`). Quem decide a FAIXA da
+série anual é o `Dashboard.tsx` — o gráfico só desenha o que recebe.
+
+**O modo fotofobia age por seletor de CLASSE** (`[class*="bg-white"]` e afins), e
+`fill`/`stroke` dentro de SVG não são alcançados por isso: gráfico pintado com
+classe do Tailwind ou hex literal fica escuro sobre escuro no tema escuro, sem
+erro nenhum no console. Por isso toda marca sai de custom property `--chart-*`
+(definidas nos dois temas em `src/index.css`), e o
+`tools/test_redesign_integrity.mjs` reprova hex literal em `fill`/`stroke`.
+
+Uma matiz só, de propósito: as três séries medem UMA coisa (quantidade de atos)
+ao longo de um eixo. A posição já codifica o valor — pintar cada barra de uma cor
+codificaria nada e ainda criaria um problema de daltonismo para resolver.
+
+Os dois painéis do boletim saem de `ultimoBoletim.atos`, que a home já recebe:
+tipo, órgão e processo SEI vêm juntos. **Nenhuma chamada nova à API** — a trava
+reprova `fetch`/`useEffect` nesse arquivo.
+
 ## Regras do domínio que já custaram retrabalho
 
 O catálogo completo está em [`docs/GUIA-EXTRACAO-BS.md`](docs/GUIA-EXTRACAO-BS.md)

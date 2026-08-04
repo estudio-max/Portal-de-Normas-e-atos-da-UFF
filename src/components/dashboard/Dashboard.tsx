@@ -3,6 +3,7 @@ import { StatCard } from './StatCard';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { Skeleton } from '../ui/Skeleton';
 import { ActCard } from '../acts/ActCard';
+import { AreaPorAno, ComposicaoDoBoletim, OrgaosDoBoletim } from './Graficos';
 import { FileText, CheckCircle2, XCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 import { ANO_INICIO_ACERVO } from '../../config';
 import type { UffAct, UffStatistics } from '../../types';
@@ -48,7 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestB
       const ano = ANO_INICIO_ACERVO + index;
       return [ano, Number(stats?.porAno?.[ano] || 0)] as const;
     });
-  const maxAnnualCount = Math.max(0, ...annualEntries.map(([, count]) => count));
+  const serieAnos = annualEntries.map(([ano, count]) => [ano, count] as [number, number]);
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -162,36 +163,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestB
 
           <Card>
             <CardHeader>
-              <CardTitle>Atos por ano</CardTitle>
+              <CardTitle>Atos publicados por ano</CardTitle>
             </CardHeader>
             <CardContent>
-              {annualEntries.length === 0 ? (
-                <p className="text-[13px] text-[#A0AEC0] py-10 text-center">Série anual indisponível</p>
-              ) : (
-                <>
-                  <div className="flex items-end gap-px h-[120px]" role="img" aria-label="Quantidade de atos por ano">
-                    {annualEntries.map(([ano, count]) => {
-                      const height = maxAnnualCount ? (count / maxAnnualCount) * 100 : 0;
-                      return (
-                        <div
-                          key={ano}
-                          className="flex-1 min-w-0 bg-[#006400] rounded-t transition-opacity hover:opacity-80"
-                          style={{ height: `${height}%` }}
-                          title={`${ano}: ${count} atos`}
-                          aria-label={`${ano}: ${count} atos`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="grid mt-2 text-[9px] text-[#A0AEC0]" style={{ gridTemplateColumns: `repeat(${annualEntries.length}, minmax(0, 1fr))` }}>
-                    {annualEntries.map(([ano], index) => (
-                      <span key={ano} className="text-center truncate">
-                        {index === 0 || index === annualEntries.length - 1 || ano % 5 === 0 ? ano : ''}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
+              <AreaPorAno dados={serieAnos} />
+            </CardContent>
+          </Card>
+
+          {/* Os dois painéis abaixo falam do MESMO boletim que a coluna da
+              esquerda lista. A home é sobre a edição mais recente; somar os
+              atos dela por tipo e por unidade responde "o que veio hoje?" sem
+              obrigar a percorrer a lista inteira. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {latestBulletin ? `O que veio no BS nº ${latestBulletin.numero}/${latestBulletin.ano}` : 'O que veio neste boletim'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[150px]" /> : <ComposicaoDoBoletim atos={recentActs} />}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quem publicou</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[150px]" /> : <OrgaosDoBoletim atos={recentActs} />}
             </CardContent>
           </Card>
         </div>

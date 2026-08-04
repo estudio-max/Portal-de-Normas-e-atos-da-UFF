@@ -65,8 +65,28 @@ assert.doesNotMatch(dashboard, /1\.247 este mês/, 'Dashboard metrics must not s
 assert.doesNotMatch(dashboard, /Math\.random\(\)/, 'Dashboard chart placeholders must not change on every render.');
 assert.doesNotMatch(dashboard, /\[35, 48, 42, 58/, 'Annual chart must not use placeholder bars.');
 assert.doesNotMatch(dashboard, /recentActs\.slice\(0, 5\)/, 'The latest bulletin list must not be truncated.');
-assert.match(dashboard, /aria-label=\{`\$\{ano\}: \$\{count\} atos`\}/,
-  'Each annual bar must expose its value.');
+// Os gráficos moraram dentro do Dashboard até 04/08/2026; hoje são o
+// Graficos.tsx. O Dashboard segue decidindo a FAIXA da série (abaixo) — quem
+// desenha não escolhe até que ano vai.
+const graficos = await read('src/components/dashboard/Graficos.tsx');
+assert.match(graficos, /aria-label=\{`\$\{ano\}: \$\{fmt\(dados\[i\]\[1\]\)\} atos`\}/,
+  'Each annual data point must expose its value.');
+// O modo fotofobia age por seletor de CLASSE (`[class*="bg-white"]`), e `fill`
+// dentro de SVG não é alcançado por isso: gráfico pintado por classe do
+// Tailwind fica escuro sobre escuro no tema escuro, sem erro nenhum. A marca
+// tem que sair de custom property.
+assert.match(graficos, /stroke="var\(--chart-mark\)"/,
+  'Chart marks must be painted from theme tokens, not Tailwind classes.');
+assert.doesNotMatch(graficos, /(fill|stroke)="#[0-9A-Fa-f]{3,6}"/,
+  'No literal hex may paint a chart mark — it would not follow the dark theme.');
+// Cada gráfico tem que ter tabela equivalente: forma sem número é conteúdo que
+// só existe para quem enxerga.
+assert.equal((graficos.match(/<TabelaDados/g) || []).length, 3,
+  'Every chart must ship its equivalent table.');
+// Os painéis do boletim leem os atos que a home JÁ recebeu. Se um dia passarem
+// a buscar sozinhos, a home faz duas viagens para a mesma pergunta.
+assert.doesNotMatch(graficos, /fetch\(|useEffect/,
+  'The bulletin charts must derive from the acts already on the page.');
 // A faixa da série anual NÃO pode ser constante em lugar nenhum: com o fim
 // fixado em 2026, o gráfico pararia de crescer em 01/01/2027 enquanto o total
 // continuava subindo. O teto é o ano corrente, decidido na camada de dados.
