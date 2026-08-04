@@ -525,13 +525,16 @@ resumo operacional.
   `docs/ARQUITETURA-BASE-DADOS.md` §3.6 — em especial por que `comissao` é
   chaveada pelo slug, e por que **não** há FK de `obrigacao` para `prazo` (o
   importador recicla `prazo.id` a cada import).
-  **Os seeds estão escritos e ainda NÃO aplicados:** `backend/db/seed_comissao.sql`
-  (26 colegiados, de `tools/registro_comissoes.py`) e `backend/db/seed_politica.sql`
-  (7 políticas, 41 aliases, 93 vínculos, de `tools/gerar_seed_politicas.py`).
-  Os dois saem de gerador — editar o `.sql` à mão reprova no CI. Depois de
-  aplicados, o bloco 7 da verificação vai de `0/26/0` para **`26/0/0`**, e esse
-  zero do meio é a prova de que os slugs do catálogo são os que a `ato_comissao`
-  já usa.
+  **Os catálogos foram semeados em 03/08/2026** e conferidos em produção:
+  `comissao` 26, `politica` 7, `politica_alias` 40, `ato_politica` 93; as demais
+  seguem vazias. Os seeds são `backend/db/seed_comissao.sql` (de
+  `tools/registro_comissoes.py`) e `backend/db/seed_politica.sql` (de
+  `tools/gerar_seed_politicas.py`) — os dois saem de gerador, e editar o `.sql`
+  à mão reprova no CI.
+  O bloco 7 da verificação foi de `0/26/0` para **`26/0/0`**. O zero do meio é a
+  prova de que os slugs do catálogo são os mesmos que a `ato_comissao` usa: as
+  três projeções do registro curado concordam. O terceiro zero diz que **nenhum
+  dos 26 corpos é letra morta** — todos têm ao menos um ato no acervo.
   **Como o catálogo de políticas foi montado** (medições em
   `tools/analisar_politicas.py`, reproduzíveis): a semente são os atos com
   `ato_ods.vinculo='proposta'` — 243 linhas em 136 atos. Três achados que valem
