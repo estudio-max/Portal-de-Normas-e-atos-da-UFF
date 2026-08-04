@@ -35,16 +35,31 @@ REGISTRO = [
     ('cgirc',     'CGIRC', 'Comitê de Governança, Integridade, Riscos e Controles', 'Comitê', 'governança, integridade|comitê de governança da uff', 'controle'),
     ('cgi',       '',      'Comitê de Gestão da Integridade',                    'Comitê',   'gestão da integridade', 'controle'),
     ('cgestao-inf', '',    'Comitê de Gestão da Informação',                     'Comitê',   'comitê de gestão da informação', 'controle'),
-    ('acessib',   '',      'Comissão de Acessibilidade e Inclusão (UFF Acessível)', 'Comissão', 'acessibilidade e inclusão', 'controle'),
+    # Cada unidade tem a sua comissão de acessibilidade (curso de Jornalismo,
+    # GAG, MIP, SDC...). Medido: 'acessibilidade e inclusão' casava 23 atos,
+    # 18 deles de unidade. O qualificador 'da UFF' e o apelido 'UFF Acessível'
+    # isolam os 5 do corpo central.
+    ('acessib',   '',      'Comissão de Acessibilidade e Inclusão (UFF Acessível)', 'Comissão', 'acessibilidade e inclusão da uff|uff acessível', 'controle'),
     ('cipa',      '',      'Comissão Interna de Prevenção de Acidentes e de Assédio', 'Comissão', 'prevenção de acidentes e de assédio', 'controle'),
     # --- permanentes/centrais, sem obrigatoriedade formal -------------------
     ('cppta',     'CPPTA', 'Comissão Permanente de Pessoal Técnico-Administrativo', 'Comissão', 'permanente de pessoal técnico', ''),
     ('csi',       'CSI',   'Comitê de Segurança da Informação',                  'Comitê',   'segurança da informação', ''),
     ('cti',       '',      'Comitê de Tecnologia da Informação',                 'Comitê',   'comitê de tecnologia da informação', ''),
-    ('assessor-pesq', '',  'Comitê Assessor de Pesquisa',                        'Comitê',   'assessor de pesquisa', ''),
+    # Departamentos têm o seu próprio comitê assessor ('Comitê Assessor de
+    # Pesquisa e Extensão do Departamento de Nutrição'). Medido: o termo solto
+    # casava 36, sendo 22 de unidade. O radical 'da pró' foi escolhido em vez
+    # de 'da pró-reitoria' porque o acervo tem 'Pró- Reitoria' com espaço
+    # depois do hífen — um ato se perdia por isso.
+    ('assessor-pesq', '',  'Comitê Assessor de Pesquisa',                        'Comitê',   'assessor de pesquisa da pró', ''),
     ('multi-pesq', '',     'Comitê Multidisciplinar de Pesquisa',                'Comitê',   'multidisciplinar de pesquisa', ''),
     ('patrim-gen', '',     'Comitê de Acesso ao Patrimônio Genético',            'Comitê',   'acesso ao patrimônio genético', ''),
-    ('afide',     'AFIDE', 'Comissão Permanente de Ações Afirmativas, Diversidade e Equidade', 'Comissão', 'ações afirmativas', ''),
+    # 'ações afirmativas' casava o TEMA, não o corpo: dos 48 atos, 33 eram
+    # editais de verificação de identidade para estudantes ingressantes, GTs
+    # de pós-graduação e até a constituição de OUTRAS comissões (a CPPIQ e a
+    # Permanente de Políticas Afirmativas Transvestigêneres). O nome completo
+    # do corpo é o discriminador — e ele também exclui a Assessoria homônima,
+    # que é cargo, não colegiado.
+    ('afide',     'AFIDE', 'Comissão Permanente de Ações Afirmativas, Diversidade e Equidade', 'Comissão', 'permanente de ações afirmativas, diversidade e equidade', ''),
     ('cppiq',     'CPPIQ', 'Comissão Permanente de Políticas para Indígenas e Quilombolas', 'Comissão', 'indígenas e quilombolas', ''),
     ('cps',       'CPS',   'Comissão Permanente de Sustentabilidade',            'Comissão', 'permanente de sustentabilidade', ''),
     ('cpt',       'CPT',   'Comissão Permanente de Telefonia',                   'Comissão', 'permanente de telefonia', ''),
