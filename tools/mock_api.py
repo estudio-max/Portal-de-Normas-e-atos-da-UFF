@@ -704,10 +704,28 @@ def politicas_payload(slug=""):
                 "justificativa": f"frase: {meta[1].lower()[:24]}",
                 "ementa": f"Ato de {papel} da política de {meta[1].lower()} no âmbito da UFF.",
             })
+        # etapas: quando cada uma apareceu pela 1a e pela ultima vez
+        etapas = {}
+        for a_ in atos:
+            e = etapas.setdefault(a_["papel"], {"n": 0, "primeira": a_["data"], "ultima": a_["data"]})
+            e["n"] += 1
+            e["primeira"] = min(e["primeira"], a_["data"])
+            e["ultima"] = max(e["ultima"], a_["data"])
+        # historico: a serie so ganha linha quando o vetor MUDA. No mock, dois
+        # pontos — o de hoje e um anterior sem monitoramento — para o dev ver
+        # como a tela apresenta "ganhou etapa em".
+        vetor = {k: meta[7].get(k, 0) for k in
+                 ("fundador", "regulamentacao", "governanca", "execucao",
+                  "monitoramento", "avaliacao")}
+        antes = dict(vetor); antes["monitoramento"] = 0
+        historico = [{"em": f"{_HOJE.isoformat()} 12:00:00", "etapas": vetor, "mesesSemAto": 2}]
+        if vetor.get("monitoramento"):
+            historico.append({"em": f"{meta[5]}-01-15 12:00:00", "etapas": antes, "mesesSemAto": 9})
         return {"politica": {"slug": meta[0], "nome": meta[1], "descricao":
                              f"Catálogo piloto — {meta[1].lower()}.",
                              "categoria": meta[2], "estagio": meta[3]},
-                "atos": atos, "avisos": _POL_AVISOS}
+                "atos": atos, "etapas": etapas, "historico": historico,
+                "avisos": _POL_AVISOS}
     pols = []
     for (s, n, cat, est, a, mn, mx, papeis) in _POLITICAS:
         pols.append({

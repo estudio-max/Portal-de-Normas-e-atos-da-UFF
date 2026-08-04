@@ -1072,9 +1072,22 @@ export interface PoliticaAtoRef {
   papel: PoliticaPapel; confianca: 'alta' | 'media' | 'baixa';
   metodo: string; justificativa: string | null; ementa: string;
 }
+/** Uma etapa do ciclo, com quando apareceu pela primeira e pela última vez. */
+export interface PoliticaEtapa { n: number; primeira: string | null; ultima: string | null }
+
+/** Um ponto da série histórica. A série só ganha linha quando o vetor de
+ *  etapas MUDA — por isso é curta, e por isso cada ponto significa algo. */
+export interface PoliticaSnapshot {
+  em: string;
+  etapas: Partial<Record<PoliticaPapel, number>>;
+  mesesSemAto: number;
+}
+
 export interface PoliticaDetalhe {
   politica: Pick<PoliticaResumo, 'slug' | 'nome' | 'descricao' | 'categoria' | 'estagio'>;
   atos: PoliticaAtoRef[];
+  etapas: Partial<Record<PoliticaPapel, PoliticaEtapa>>;
+  historico: PoliticaSnapshot[];
   avisos: string[];
 }
 

@@ -107,6 +107,84 @@ function Ciclo({ papeis }: { papeis: Partial<Record<ds.PoliticaPapel, number>> }
   );
 }
 
+// ---- as etapas do ciclo, e quando cada uma apareceu ------------------------
+//
+// Este bloco existe no lugar de uma NOTA. A pontuação prevista no projeto foi
+// simulada sobre os dados reais e reprovada: cinco das sete políticas
+// empatavam, a assistência estudantil (38 atos) empatava com a acessibilidade
+// (8), e o assédio — a única com plano central — aparecia como a menos madura.
+// Contagem e data são fato; nota exigiria arbitrar pesos que o projeto não
+// define, e o número apareceria na tela como se fosse medida.
+function EtapasDaPolitica({ etapas, historico }: {
+  etapas: Partial<Record<ds.PoliticaPapel, ds.PoliticaEtapa>>;
+  historico: ds.PoliticaSnapshot[];
+}) {
+  // "Ganhou monitoramento em março" só se sabe comparando um snapshot com o
+  // anterior. A série vem do mais novo para o mais antigo, e só ganha ponto
+  // quando o vetor muda — então cada par consecutivo é uma mudança real.
+  const ganhos = useMemo(() => {
+    const out: { etapa: ds.PoliticaPapel; em: string }[] = [];
+    for (let i = 0; i < historico.length - 1; i++) {
+      const novo = historico[i].etapas, velho = historico[i + 1].etapas;
+      for (const { papel } of CICLO) {
+        if ((novo[papel] ?? 0) > 0 && (velho[papel] ?? 0) === 0) {
+          out.push({ etapa: papel, em: historico[i].em });
+        }
+      }
+    }
+    return out;
+  }, [historico]);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-3 mb-3">
+      <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
+        Etapas do ciclo — quando cada uma apareceu
+      </h4>
+      <ul className="space-y-1.5">
+        {CICLO.map(({ papel, rotulo }) => {
+          const e = etapas[papel];
+          return (
+            <li key={papel} className="flex flex-wrap items-baseline gap-2 text-[12px]">
+              <span className="w-32 shrink-0">
+                <PapelChip papel={papel} />
+              </span>
+              {e ? (
+                <span className="text-slate-600">
+                  <strong>{e.n}</strong> ato(s) ·{' '}
+                  {e.primeira === e.ultima
+                    ? <>em {fmtData(e.primeira)}</>
+                    : <>de {fmtData(e.primeira)} a {fmtData(e.ultima)}</>}
+                </span>
+              ) : (
+                <span className="text-slate-400 italic">
+                  sem evidência localizada no Boletim
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {ganhos.length > 0 && (
+        <div className="mt-2.5 pt-2.5 border-t border-slate-100">
+          <p className="text-[11px] text-slate-500">
+            {ganhos.map((g, i) => (
+              <span key={`${g.etapa}-${i}`}>
+                {i > 0 && ' · '}
+                {/* o rótulo do CICLO é substantivo ("Monitoramento"); o de
+                    ROTULO_PAPEL é verbo ("Monitora") e não cabe depois de
+                    "ganhou". */}
+                ganhou <strong>{(CICLO.find(c => c.papel === g.etapa)?.rotulo ?? g.etapa).toLowerCase()}</strong> em{' '}
+                {fmtData(g.em.slice(0, 10))}
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- detalhe: a linha do tempo de uma política ----------------------------
 function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
   const [d, setD] = useState<ds.PoliticaDetalhe | null>(null);
@@ -168,6 +246,8 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
               </ul>
             </div>
           )}
+
+          <EtapasDaPolitica etapas={d.etapas} historico={d.historico} />
 
           {papeisPresentes.length > 1 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-3">

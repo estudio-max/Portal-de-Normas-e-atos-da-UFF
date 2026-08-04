@@ -401,7 +401,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-04.1'; }
+function api_versao(): string { return '2026-08-04.2'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -2201,6 +2201,57 @@ function politicas(PDO $pdo, string $slug): void {
                 'ementa' => mb_substr(preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? '')), 0, 300),
             ];
         }
+        // ETAPAS do ciclo, com a data em que cada uma apareceu pela primeira e
+        // pela última vez. Calculado ao vivo sobre `ato_politica` — são poucos
+        // atos por política e o dado é sempre o de agora, sem depender de
+        // snapshot ter rodado.
+        $st = $pdo->prepare("
+            SELECT ap.papel, COUNT(*) AS n,
+                   MIN(a.data_ato) AS primeira, MAX(a.data_ato) AS ultima
+              FROM ato_politica ap
+              JOIN politica p ON p.id = ap.politica_id
+              JOIN ato a      ON a.id = ap.ato_id
+             WHERE p.slug = :slug
+          GROUP BY ap.papel");
+        $st->execute([':slug' => $slug]);
+        $etapas = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $etapas[$r['papel']] = ['n' => (int)$r['n'],
+                                    'primeira' => $r['primeira'], 'ultima' => $r['ultima']];
+        }
+
+        // HISTÓRICO: a série de snapshots, que só ganha linha quando o vetor de
+        // etapas muda. É o que responde "quando esta política ganhou
+        // monitoramento?" — e por isso a série é curta e legível de propósito.
+        //
+        // Degrada como o resto do módulo: servidor sem a tabela devolve série
+        // vazia em vez de derrubar a rota.
+        $historico = [];
+        try {
+            $st = $pdo->prepare("
+                SELECT pi.calculado_em, pi.instituicao, pi.regulamentacao, pi.governanca,
+                       pi.execucao, pi.monitoramento, pi.revisao, pi.continuidade
+                  FROM politica_indicador pi
+                  JOIN politica p ON p.id = pi.politica_id
+                 WHERE p.slug = :slug AND pi.versao_metodologia = 'etapas-v1'
+              ORDER BY pi.calculado_em DESC LIMIT 30");
+            $st->execute([':slug' => $slug]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $historico[] = [
+                    'em' => $r['calculado_em'],
+                    'etapas' => [
+                        'fundador' => (int)$r['instituicao'],
+                        'regulamentacao' => (int)$r['regulamentacao'],
+                        'governanca' => (int)$r['governanca'],
+                        'execucao' => (int)$r['execucao'],
+                        'monitoramento' => (int)$r['monitoramento'],
+                        'avaliacao' => (int)$r['revisao'],
+                    ],
+                    'mesesSemAto' => (int)$r['continuidade'],
+                ];
+            }
+        } catch (Throwable $e) { $historico = []; }
+
         responder_json([
             'politica' => [
                 'slug' => $pol['slug'], 'nome' => $pol['nome'],
@@ -2208,6 +2259,8 @@ function politicas(PDO $pdo, string $slug): void {
                 'estagio' => $pol['status_curadoria'],
             ],
             'atos' => $atos,
+            'etapas' => $etapas,
+            'historico' => $historico,
             'avisos' => politicas_avisos(),
         ]);
     }
