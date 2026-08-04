@@ -75,6 +75,12 @@ o JSON estático do GitHub).
   ferramentas de manutenção precisa de um `.htaccess` bloqueando essas
   extensões (`api/.htaccess` já protege `config.php`; `importar/` teve
   que ganhar o dele à parte).
+- **SQL rodado à mão NÃO invalida o cache da API.** O `api/cache/*.json` só é
+  apagado pelo `importar_v2.php` ao fim de uma importação. Depois de aplicar
+  um seed ou uma correção pelo phpMyAdmin, a rota cacheada segue devolvendo o
+  valor antigo por até 10 min (o `cache_ttl()`) — dá para conferir no
+  cabeçalho `X-Cache: HIT|MISS`. Conferir imediatamente e ver o valor velho
+  parece SQL que não pegou; espere o TTL ou confirme direto no phpMyAdmin.
 - **A aba Importar do phpMyAdmin DESCARTA o resultado de `SELECT`.** Ela é
   para carregar dados: devolve "N consultas executadas" ou o erro, e mais
   nada. Um arquivo de verificação inteiro passa por ali sem exibir uma
