@@ -584,8 +584,25 @@ resumo operacional.
   Metodologia completa em [`docs/METODOLOGIA-POLITICAS.md`](docs/METODOLOGIA-POLITICAS.md),
   incluindo as limitações conhecidas (o ato fundador de `acessibilidade` é uma
   cartilha, e duas políticas não têm fundador localizado).
-  O que falta: o detector de obrigação — que **tem que chamar
-  `extrair_prazos()`** para resolver data:
+  **O Radar de Obrigações (4.1) foi MEDIDO e o desenho original não se
+  sustenta** — `python tools/medir_obrigacoes.py` reproduz. O `deverá` do corpus
+  é texto de EDITAL e de REGIMENTO dirigido a uma PESSOA: no top 45 de sujeitos
+  do modal, 556 ocorrências são pessoa (candidato, aluno, interessado), 781 são
+  documento ou procedimento (inscrição, recurso, chapa) e **19 são órgão**.
+  Obrigação de candidato não tem responsável institucional, não gera evidência
+  posterior de cumprimento e não interessa a controle. Os padrões
+  institucionais do §6 do projeto somam 253 atos (1,2%), e mesmo esses são, um
+  a um, procedimento recorrente ("o colegiado se reunirá anualmente") ou o ato
+  SENDO a entrega ("divulgar o resultado do programa de gestão"), não obrigação
+  de entregar. Varrer o acervo produziria painel de ruído — e ruído contamina o
+  dossiê, mesma lição da METODOLOGIA-ODS. O caminho que sobra é o inverso:
+  procurar obrigação DENTRO das políticas e comissões já catalogadas, onde o
+  universo é pequeno e o responsável é conhecido. **Pré-requisito para medir
+  isso: a API expõe ementa, não corpo** (`ficha()` não devolve
+  `ato_texto.texto_original`), e o extrato local não cobre os atos do catálogo
+  (0 de 136 casam por uid).
+  Se e quando o detector for escrito, ele **tem que chamar `extrair_prazos()`**
+  para resolver data:
   aquela lógica já tem três espelhos que precisam concordar, e um quarto seria
   dois códigos discordando sobre a mesma cláusula.
 
