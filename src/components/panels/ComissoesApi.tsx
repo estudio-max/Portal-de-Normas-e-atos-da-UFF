@@ -26,6 +26,37 @@ function ObrigChip({ obrig }: { obrig: string }) {
   return null;
 }
 
+// Estado DOCUMENTAL. O rótulo nunca afirma inatividade: "sem evidência recente
+// localizada" é o teto do que o acervo sustenta. Uma comissão que trabalha e
+// não publica é idêntica, no Boletim, a uma esquecida.
+const ESTADO: Record<ds.ComissaoEstado, { rot: string; cor: string; ajuda: string }> = {
+  recente: {
+    rot: 'Com evidência recente', cor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    ajuda: 'Há ato publicado dentro da janela escolhida.',
+  },
+  recomposicao: {
+    rot: 'Recomposição possivelmente necessária', cor: 'bg-amber-50 text-amber-800 border-amber-200',
+    ajuda: 'O mandato tem fim previsto já transcorrido e não há ato posterior localizado. Pode ter havido recomposição sem publicação.',
+  },
+  sem_recente: {
+    rot: 'Sem evidência recente localizada', cor: 'bg-slate-100 text-slate-600 border-slate-300',
+    ajuda: 'Nenhum ato na janela escolhida. NÃO significa que o colegiado esteja inativo — atividade pode ocorrer fora do Boletim.',
+  },
+  insuficiente: {
+    rot: 'Dados insuficientes', cor: 'bg-slate-50 text-slate-400 border-slate-200',
+    ajuda: 'Um ato ou nenhum: não há série documental para ler.',
+  },
+};
+
+function EstadoChip({ estado }: { estado: ds.ComissaoEstado }) {
+  const e = ESTADO[estado] ?? ESTADO.insuficiente;
+  return (
+    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${e.cor}`} title={e.ajuda}>
+      {e.rot}
+    </span>
+  );
+}
+
 function StatusChip({ status }: { status: string }) {
   const cor = status === 'Revogado' ? 'bg-rose-50 text-rose-700 border-rose-200'
     : status === 'Alterado' ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -62,9 +93,46 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
               <ObrigChip obrig={d.corpo.obrig} />
             </div>
             <p className="text-[12px] text-blue-100 mt-1">
-              {d.corpo.tipo} · {d.atos.length} ato(s) no Boletim que mencionam este colegiado.
+              {d.corpo.tipo} · {d.atos.length} ato(s) no Boletim que mencionam este colegiado
+              {d.ultimaData ? <> · última evidência em {fmtData(d.ultimaData)}</> : null}.
             </p>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <EstadoChip estado={d.estado} />
+              <span className="text-[10px] text-blue-200">
+                {d.eventos.m12} ato(s) em 12 meses · {d.eventos.m24} em 24 · {d.eventos.m36} em 36
+              </span>
+            </div>
           </div>
+
+          {d.mandatos.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-lg p-3 mb-3">
+              <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Mandatos com fim previsto ({d.mandatos.length})
+              </h4>
+              <ul className="space-y-1 text-[12px] text-slate-600">
+                {d.mandatos.slice(0, 6).map((m, i) => (
+                  <li key={`${m.atoId}-${i}`} className="flex flex-wrap items-baseline gap-1.5">
+                    <strong className={new Date(m.fim) < new Date() ? 'text-amber-700' : 'text-slate-700'}>
+                      até {fmtData(m.fim)}
+                    </strong>
+                    <span className="text-slate-400">·</span>
+                    <span className="text-slate-500">{m.atoId}</span>
+                    {m.conf && m.conf !== 'alta' && (
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
+                        title={m.trecho ?? 'Data inferida do texto do ato'}>⚠ conf. {m.conf}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {d.avisos.length > 0 && (
+            <div className="flex items-start gap-2 text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 mb-3">
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+              <ul className="space-y-0.5">{d.avisos.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            </div>
+          )}
           <RecordCardList>
             {d.atos.length === 0
               ? <p className="py-6 text-center text-sm text-slate-400">Nenhum ato encontrado para este colegiado.</p>
@@ -145,12 +213,15 @@ export default function ComissoesApi() {
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState('');
   const [obrigF, setObrigF] = useState('');   // '' | 'lei' | 'controle'
+  const [estadoF, setEstadoF] = useState('');
+  const [janela, setJanela] = useState(24);   // 12 | 24 | 36 meses
   const [sel, setSel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!apiMode) { setCarregando(false); return; }
-    ds.getComissoes().then(setR).finally(() => setCarregando(false));
-  }, [apiMode]);
+    setCarregando(true);
+    ds.getComissoes(janela).then(setR).finally(() => setCarregando(false));
+  }, [apiMode, janela]);
 
   const contagem = useMemo(() => {
     const c = { lei: 0, controle: 0 };
@@ -163,7 +234,8 @@ export default function ComissoesApi() {
     const q = busca.trim().toLowerCase();
     const filtra = (c: ds.ComissaoCorpo) =>
       (!q || c.nome.toLowerCase().includes(q) || c.sigla.toLowerCase().includes(q)) &&
-      (!obrigF || c.obrig === obrigF);
+      (!obrigF || c.obrig === obrigF) &&
+      (!estadoF || c.estado === estadoF);
     const porTipo = new Map<string, ds.ComissaoCorpo[]>();
     for (const c of r.corpos) {
       if (!filtra(c)) continue;
@@ -172,7 +244,7 @@ export default function ComissoesApi() {
     // dentro de cada tipo, mais atos primeiro
     for (const arr of porTipo.values()) arr.sort((a, b) => b.atos - a.atos);
     return [...porTipo.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [r, busca, obrigF]);
+  }, [r, busca, obrigF, estadoF]);
 
   if (!apiMode) {
     return (
@@ -221,6 +293,13 @@ export default function ComissoesApi() {
         </span>
       </div>
 
+      {r.avisos?.length > 0 && (
+        <div className="flex items-start gap-2 text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+          <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+          <ul className="space-y-0.5">{r.avisos.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs w-full sm:w-auto sm:flex-1 sm:min-w-[180px]">
           <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
@@ -235,6 +314,37 @@ export default function ComissoesApi() {
               ? 'bg-[#003366] text-white border-[#003366]'
               : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>{rot}</button>
         ))}
+      </div>
+
+      {/* A janela muda o ESTADO de cada corpo, não só a contagem: um colegiado
+          que se reúne a cada dois anos é "sem evidência recente" em 12 meses e
+          "com evidência recente" em 36. Deixar a régua na mão de quem lê é mais
+          honesto que fixar uma e não dizer qual. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+          Evidência recente =
+        </span>
+        {([12, 24, 36] as const).map(m => (
+          <button key={m} onClick={() => setJanela(m)}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${janela === m
+              ? 'bg-[#003366] text-white border-[#003366]'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+            {m} meses
+          </button>
+        ))}
+        <span className="text-slate-300">|</span>
+        {(['', 'recente', 'sem_recente', 'recomposicao', 'insuficiente'] as const).map(k => {
+          const n = k ? (r.corpos ?? []).filter(c => c.estado === k).length : (r.corpos ?? []).length;
+          if (k && n === 0) return null;
+          return (
+            <button key={k || 'todos'} onClick={() => setEstadoF(k)}
+              className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${estadoF === k
+                ? 'bg-[#003366] text-white border-[#003366]'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+              {k ? ESTADO[k].rot : 'Todos'} ({n})
+            </button>
+          );
+        })}
       </div>
 
       {grupos.map(([tipo, corpos]) => (
@@ -257,6 +367,19 @@ export default function ComissoesApi() {
                       ? <>{c.atos} ato(s){c.anoMin ? ` · ${c.anoMin}–${c.anoMax}` : ''}</>
                       : <span className="text-slate-400 italic">sem atos localizados ainda</span>}
                   </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    <EstadoChip estado={c.estado} />
+                    {c.ultimaData && (
+                      <span className="text-[10px] text-slate-400">
+                        última em {fmtData(c.ultimaData)}
+                      </span>
+                    )}
+                  </div>
+                  {c.mandato && (
+                    <div className="text-[10px] text-slate-400 mt-0.5">
+                      mandato com fim previsto em {fmtData(c.mandato.fim)}
+                    </div>
+                  )}
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#003366] shrink-0 mt-0.5" />
               </button>
