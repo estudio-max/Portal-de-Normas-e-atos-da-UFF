@@ -98,7 +98,13 @@ PAPEL = [
                         r'\bcomissao (interna|local|permanente|temporaria)',
                         r'\bgrupo de trabalho', r'\bcomite local', r'\binclui novo membro']),
     ('execucao',       [r'\bfixa(r)? as diretrizes', r'\bexecucao do programa']),
-    ('regulamentacao', [r'\bregulamenta', r'\bregimento interno', r'\bnormatiza',
+    # "Institui a Cartilha de acessibilidade atitudinal" casava `\binstitui` e
+    # virava ATO FUNDADOR da política de acessibilidade -- foi o que a aba
+    # exibiu em produção. Cartilha, manual e guia detalham COMO cumprir; não
+    # fundam a política. Vêm antes de `fundador` de propósito: aqui a ordem das
+    # regras é a correção.
+    ('regulamentacao', [r'\binstitui (?:a |o )?(?:cartilha|manual|guia|caderno)',
+                        r'\bregulamenta', r'\bregimento interno', r'\bnormatiza',
                         r'\bdispoe sobre (o|a|os|as)']),
     # `relatorio`/`prestacao de contas` sao monitoramento. PLANO nao e: o
     # "Plano de Enfrentamento ao Assedio" aprovado pelo CGIRC em 2025 e o ato
@@ -205,6 +211,18 @@ def main():
             linhas.append(f"  ((SELECT id FROM politica WHERE slug='{slug}'), '{esc(t)}', 'frase_estrita'),")
     linhas[-1] = linhas[-1].rstrip(',') + ';'
     L.extend(linhas)
+    L.append('')
+    L.append('-- O `papel` faz parte da chave natural (ato_id, politica_id, papel).')
+    L.append('-- Reclassificar um ato — que foi o caso da cartilha de acessibilidade,')
+    L.append('-- de `fundador` para `regulamentacao` — não é UPDATE: o upsert enxerga')
+    L.append('-- uma chave nova e INSERE, deixando a linha velha viva. O ato passaria a')
+    L.append('-- aparecer duas vezes na linha do tempo, com dois papéis.')
+    L.append('--')
+    L.append('-- Daí o DELETE: o mesmo desenho da `ato_ods` no importador. A passada')
+    L.append('-- automática apaga só o que ela mesma escreveu; qualquer linha que passou')
+    L.append('-- por mão humana sobrevive.')
+    L.append('DELETE ap FROM `ato_politica` ap')
+    L.append(" WHERE ap.`metodo` NOT IN ('curadoria','regra+curadoria','ia+curadoria');")
     L.append('')
     L.append('INSERT INTO `ato_politica`')
     L.append('  (`ato_id`, `politica_id`, `papel`, `confianca`, `metodo`, `justificativa`)')

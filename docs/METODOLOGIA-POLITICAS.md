@@ -112,7 +112,9 @@ documental vai depender.
 | `referencia` | nada acima casou | menção sem dispositivo |
 
 A ordem importa: a primeira regra que casa vence, da ação mais forte para a mais
-fraca.
+fraca. `institui a cartilha|manual|guia|caderno` fica em `regulamentacao` e vem
+ANTES de `fundador` — material de orientação detalha como cumprir a política,
+não a institui.
 
 **Designar comissão é `governanca`, não `execucao`.** Sem essa separação, uma
 política com dez designações e nenhuma entrega apareceria como a mais ativa de
@@ -162,12 +164,13 @@ entre informar e acusar.
 
 ## 8. Limitações conhecidas
 
-- **O ato fundador nem sempre é o certo.** Em `acessibilidade`, o mais antigo
-  com papel `fundador` é a Instrução Normativa que institui uma *cartilha* de
-  acessibilidade atitudinal — porque casou `institui`. O ato que cria a Comissão
-  Permanente de Acessibilidade (2019) ficou como `governanca`, o que é
-  tecnicamente correto. Resultado: o cartão exibe um ato fundador fraco. É o
-  primeiro item que a curadoria deve corrigir.
+- ~~O ato fundador de `acessibilidade` é uma cartilha.~~ **Corrigido.** A
+  Instrução Normativa que institui a *Cartilha de acessibilidade atitudinal*
+  casava `institui` e virava ato fundador da política. Cartilha, manual, guia e
+  caderno detalham COMO cumprir; não fundam. Passaram para `regulamentacao`, e a
+  regra vem antes de `fundador` na ordem — aqui a ordem das regras é a correção.
+  Resultado: `acessibilidade` passou a dizer "ato instituidor não localizado no
+  acervo", que é a verdade.
 - **`assistencia-estudantil` e `acoes-afirmativas` não têm ato fundador
   localizado.** Não é falha da regra: o acervo registra a política em atividade
   sem registrar o ato que a instituiu.
@@ -187,4 +190,24 @@ node  tools/teste_schema_inteligencia.mjs
 
 O último valida o `.sql` gerado contra o catálogo do gerador: papel e confiança
 dentro do ENUM, vínculo sem tripla repetida, alias apontando para política que
-existe, e política nascendo em rascunho.
+existe, política nascendo em rascunho, e todo `DELETE` carregando a guarda de
+curadoria.
+
+## 10. Reclassificar um ato exige DELETE, não UPDATE
+
+`papel` faz parte da chave natural `(ato_id, politica_id, papel)`. Quando um ato
+muda de papel — foi o caso da cartilha —, o upsert enxerga uma **chave nova** e
+INSERE, deixando a linha antiga viva: o ato passa a aparecer duas vezes na linha
+do tempo, com dois papéis, e nenhum erro é levantado.
+
+Por isso o seed abre o bloco de vínculos com:
+
+```sql
+DELETE ap FROM `ato_politica` ap
+ WHERE ap.`metodo` NOT IN ('curadoria','regra+curadoria','ia+curadoria');
+```
+
+É o mesmo desenho da `ato_ods` no importador: a passada automática apaga só o
+que ela mesma escreveu, e qualquer linha revisada por humano sobrevive. O CI
+reprova qualquer `DELETE` sem essa guarda — sem ela, uma reaplicação do seed
+varreria a curadoria e ninguém perceberia, porque o painel continuaria cheio.

@@ -392,8 +392,26 @@ for (const al of aliases) {
 const blocoPol = (seedPol.match(/INSERT INTO `politica`[\s\S]*?;/) ?? [''])[0];
 checa(!/'publicada'/.test(blocoPol),
   `${SEEDPOL}: política nascendo 'publicada' — o catálogo tem que entrar como rascunho`);
-for (const proibido of ['DROP TABLE', 'TRUNCATE', 'DELETE FROM']) {
+for (const proibido of ['DROP TABLE', 'TRUNCATE']) {
   checa(!new RegExp(proibido, 'i').test(seedPol), `${SEEDPOL}: ${proibido} num arquivo de seed`);
+}
+
+// DELETE é PERMITIDO neste seed, e necessário: `papel` faz parte da chave
+// natural, então reclassificar um ato (a cartilha de acessibilidade saiu de
+// `fundador` para `regulamentacao`) não é UPDATE — o upsert enxerga chave nova
+// e insere, deixando a linha velha viva e o ato duplicado na linha do tempo.
+//
+// Mas ele só pode apagar o que a máquina escreveu. Sem a guarda, uma
+// reaplicação do seed varre a curadoria humana e ninguém percebe: o painel
+// continua cheio, só que com os rótulos automáticos de volta.
+const GUARDA = /metodo`?\s+NOT IN\s*\(\s*'curadoria'\s*,\s*'regra\+curadoria'\s*,\s*'ia\+curadoria'\s*\)/i;
+for (const arquivo of [[SEEDPOL, seedPol], [SEED, seed]]) {
+  const [nome, texto] = arquivo;
+  for (const stmt of texto.split(';')) {
+    if (!/\bDELETE\b/i.test(stmt)) continue;
+    checa(GUARDA.test(stmt),
+      `${nome}: DELETE sem a guarda de curadoria — reaplicar o seed apagaria revisão humana`);
+  }
 }
 
 // ---------------------------------------------------------------------------

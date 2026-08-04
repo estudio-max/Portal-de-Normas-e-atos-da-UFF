@@ -71,6 +71,18 @@ VALUES
   ((SELECT id FROM politica WHERE slug='sustentabilidade'), 'gestao socioambiental', 'frase_estrita'),
   ((SELECT id FROM politica WHERE slug='sustentabilidade'), 'logistica sustentavel', 'frase_estrita');
 
+-- O `papel` faz parte da chave natural (ato_id, politica_id, papel).
+-- Reclassificar um ato — que foi o caso da cartilha de acessibilidade,
+-- de `fundador` para `regulamentacao` — não é UPDATE: o upsert enxerga
+-- uma chave nova e INSERE, deixando a linha velha viva. O ato passaria a
+-- aparecer duas vezes na linha do tempo, com dois papéis.
+--
+-- Daí o DELETE: o mesmo desenho da `ato_ods` no importador. A passada
+-- automática apaga só o que ela mesma escreveu; qualquer linha que passou
+-- por mão humana sobrevive.
+DELETE ap FROM `ato_politica` ap
+ WHERE ap.`metodo` NOT IN ('curadoria','regra+curadoria','ia+curadoria');
+
 INSERT INTO `ato_politica`
   (`ato_id`, `politica_id`, `papel`, `confianca`, `metodo`, `justificativa`)
 VALUES
@@ -130,7 +142,7 @@ VALUES
   ((SELECT id FROM ato WHERE uid='res-uff-160-2013'), (SELECT id FROM politica WHERE slug='acoes-afirmativas'), 'regulamentacao', 'alta', 'regra', 'frase: nome social'),
   ((SELECT id FROM ato WHERE uid='dec-cgirc-1-2025'), (SELECT id FROM politica WHERE slug='assedio'), 'fundador', 'alta', 'regra', 'frase: assedio'),
   ((SELECT id FROM ato WHERE uid='port-reitoria-68876-2025'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'governanca', 'alta', 'regra', 'frase: acessibilidade'),
-  ((SELECT id FROM ato WHERE uid='in-sdc-16-2025'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'fundador', 'alta', 'regra', 'frase: acessibilidade'),
+  ((SELECT id FROM ato WHERE uid='in-sdc-16-2025'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'regulamentacao', 'alta', 'regra', 'frase: acessibilidade'),
   ((SELECT id FROM ato WHERE uid='res-ese-4-2023'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'governanca', 'alta', 'regra', 'frase: acessibilidade'),
   ((SELECT id FROM ato WHERE uid='port-reitoria-63254-2019'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'governanca', 'alta', 'regra', 'frase: acessibilidade'),
   ((SELECT id FROM ato WHERE uid='res-cuv-528-2025'), (SELECT id FROM politica WHERE slug='sustentabilidade'), 'regulamentacao', 'alta', 'regra', 'frase: sustentavel'),
