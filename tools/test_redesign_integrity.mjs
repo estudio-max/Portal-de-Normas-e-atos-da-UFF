@@ -147,6 +147,12 @@ for (const chave of chaves) {
   const entrada = corpo.split(/\n {2}\}/)[0];
   assert.match(entrada, /resumo:/, `Help entry "${chave}" must say what the tab is.`);
   assert.match(entrada, /passos:/, `Help entry "${chave}" must say how to use it.`);
+  // O "por que" é o que faz a pessoa QUERER usar a aba; os passos só ensinam a
+  // operá-la. Sem isto a ajuda vira manual — e manual ninguém abre.
+  assert.match(entrada, /porQue:/, `Help entry "${chave}" must explain why the tab exists.`);
+  const porQue = entrada.split('porQue:')[1]?.split(/\n {4}\],/)[0] ?? '';
+  assert.ok(porQue.replace(/<[^>]*>/g, '').trim().length > 320,
+    `The "why" for "${chave}" is too short to convey the tab's value.`);
 }
 
 // A aba mais usada é o Meu SIAPE, e o conselho que muda o resultado ali é
