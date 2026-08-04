@@ -12,6 +12,7 @@ import {
   Clock,
   Landmark,
   BookMarked,
+  Megaphone,
   Globe,
   Target,
   HelpCircle,
@@ -34,6 +35,7 @@ const NAV_SECTIONS = [
       { id: 'atos', label: 'Atos e Normas', icon: <FileSearch size={18} /> },
       { id: 'relacoes', label: 'Mapa de Relações', icon: <GitBranch size={18} /> },
       { id: 'insights', label: 'Insights', icon: <BarChart3 size={18} /> },
+      { id: 'mudancas', label: 'O que mudou', icon: <Megaphone size={18} /> },
     ],
   },
   {

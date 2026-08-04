@@ -1117,6 +1117,41 @@ export async function getPoliticaAtos(slug: string): Promise<PoliticaDetalhe | n
   } catch { return null; }
 }
 
+// --- Mudanças (o feed "o que mudou, e para quem?") -------------------------
+// O item traz a EMENTA DO ATO, não um resumo gerado. E a relevância vem de fato
+// apurado — política, colegiado, vigência, prazo —, cada ponto com um motivo
+// nomeável que a interface mostra.
+export interface MudancaItem {
+  id: string; numero: string; ano: number; data: string | null; status: string;
+  sigla: string; tipo: string; link: string | null; ementa: string;
+  politicas: string[]; comissoes: string[];
+  mudaVigencia: boolean;
+  prazo: string | null;
+  publico: string | null;
+  relevancia: number;
+  motivos: string[];
+}
+export interface MudancasResp {
+  itens: MudancaItem[]; total: number; janelaDias: number;
+  publicos: string[]; avisos: string[];
+  indisponivel?: boolean; motivo?: string;
+}
+
+export async function getMudancas(dias = 180, publico = ''): Promise<MudancasResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const qs = new URLSearchParams({ dias: String(dias) });
+    if (publico) qs.set('publico', publico);
+    const r = await fetch(`${API_BASE}/mudancas?${qs.toString()}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j) return null;
+    if (j.indisponivel) return j as MudancasResp;
+    if (!Array.isArray(j.itens)) return null;
+    return j as MudancasResp;
+  } catch { return null; }
+}
+
 // ---- ODS (dossiê de evidência nas 17 ODS — docs/METODOLOGIA-ODS.md) --------
 export interface OdsResumo {
   n: number; nome: string; cor: string;

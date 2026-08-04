@@ -195,7 +195,7 @@ for (const chave of ['porAno', 'ultimaAtualizacao', 'ultimoBoletim']) {
 // Toda rota que o front chama tem que existir no mock, senao o painel cai no
 // estado vazio no dev e parece tela quebrada.
 for (const rota of ['chefias', 'mandatos', 'prazos', 'pad_cadeia', 'insights',
-                    'analitico', 'jornada', 'cooperacao', 'comissoes', 'politicas', 'ods',
+                    'analitico', 'jornada', 'cooperacao', 'comissoes', 'politicas', 'mudancas', 'ods',
                     'dossie']) {
   assert.match(mock, new RegExp(`recurso == "${rota}"`),
     `mock_api.py must serve /${rota}, which the frontend calls.`);

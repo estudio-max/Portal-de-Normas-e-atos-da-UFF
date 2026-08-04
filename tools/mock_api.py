@@ -684,6 +684,53 @@ _POL_AVISOS = [
 ]
 
 
+_MUD_AVISOS = [
+    "Este feed reúne atos com vínculo institucional já apurado — política, colegiado permanente ou alteração de vigência. Não é a lista completa do que foi publicado no Boletim.",
+    "Atos de efeito individual (designação, exoneração, concessão a servidor nomeado) ficam FORA por regra de privacidade.",
+    "O texto exibido é a ementa do próprio ato, não um resumo gerado.",
+]
+
+
+def mudancas_payload(dias="", publico=""):
+    dias = int(dias) if str(dias) in ("30", "90", "180", "365") else 180
+    base = [
+        ("Resolução", "CUV", "443", 2024, "Dispõe sobre a aprovação do novo Regimento Interno da Comissão de Biossegurança da UFF.",
+         [], ["biosseg"], False, None, None),
+        ("Instrução Normativa", "PROAES", "41", 2026, "Fixa as diretrizes para a execução do Programa Auxílio Alimentação para Estudantes Ingressantes.",
+         ["assistencia-estudantil"], [], False, "2026-09-30", "Discentes · graduação"),
+        ("Decisão", "CGIRC", "1", 2025, "Aprovação do Plano de Enfrentamento ao Assédio e Discriminação.",
+         ["assedio"], ["cgirc"], False, None, None),
+        ("Portaria", "Reitoria", "68.824", 2025, "Designa nova composição da Comissão Interna de Biossegurança da Pró-Reitoria de Pesquisa.",
+         [], ["biosseg"], True, None, None),
+        ("Resolução", "CUV", "528", 2025, "Dispõe sobre o Plano Diretor de Logística Sustentável da UFF.",
+         ["sustentabilidade"], [], True, None, None),
+    ]
+    # A rota real ordena por data_ato DESC. O mock precisa fazer o mesmo, senao
+    # o agrupamento por mes sai embaralhado no dev e parece defeito da tela.
+    hoje = _HOJE
+    itens = []
+    for i, (tipo, sig, num, ano, em, pol, com, vig, prazo, pub) in enumerate(base):
+        d = hoje - datetime.timedelta(days=12 * i + 3)
+        motivos, rel = [], 0
+        if pol: rel += 35; motivos.append("ligado a política institucional")
+        if vig: rel += 30; motivos.append("muda a vigência de outra norma")
+        if prazo: rel += 20; motivos.append("tem prazo em aberto")
+        if com: rel += 15; motivos.append("envolve colegiado permanente")
+        itens.append({
+            "id": f"mud-{i}", "numero": num, "ano": ano,
+            "data": d.isoformat(), "status": "Ativo",
+            "sigla": sig, "tipo": tipo, "link": "https://boletimdeservico.uff.br/",
+            "ementa": em, "politicas": pol, "comissoes": com,
+            "mudaVigencia": vig, "prazo": prazo, "publico": pub,
+            "relevancia": min(100, rel), "motivos": motivos,
+        })
+    if publico:
+        itens = [i for i in itens if i["publico"] == publico]
+    pubs = sorted({i["publico"] for i in itens if i["publico"]})
+    return {"itens": itens, "total": len(itens), "janelaDias": dias,
+            "publicos": pubs, "avisos": _MUD_AVISOS}
+
+
 def politicas_payload(slug=""):
     if slug:
         meta = next((p for p in _POLITICAS if p[0] == slug), None)
@@ -1372,6 +1419,8 @@ class H(BaseHTTPRequestHandler):
         elif recurso == "comissoes":
             self._send(comissoes_payload(q.get("corpo", [""])[0],
                                          q.get("janela", [""])[0]))
+        elif recurso == "mudancas":
+            self._send(mudancas_payload(q.get("dias", [""])[0], q.get("publico", [""])[0]))
         elif recurso == "politicas":
             self._send(politicas_payload(q.get("slug", [""])[0]))
         elif recurso == "ods":

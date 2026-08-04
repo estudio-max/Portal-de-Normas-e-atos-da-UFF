@@ -17,6 +17,7 @@ const PrazosApi = lazy(() => import('./components/panels/PrazosApi'));
 const JornadaApi = lazy(() => import('./components/panels/JornadaApi'));
 const ComissoesApi = lazy(() => import('./components/panels/ComissoesApi'));
 const PoliticasApi = lazy(() => import('./components/panels/PoliticasApi'));
+const MudancasApi = lazy(() => import('./components/panels/MudancasApi'));
 const CooperacaoApi = lazy(() => import('./components/panels/CooperacaoApi'));
 const OdsApi = lazy(() => import('./components/panels/OdsApi'));
 const HelpGuide = lazy(() => import('./components/panels/HelpGuide'));
@@ -48,6 +49,7 @@ const ABAS_VALIDAS = [
   'pessoal/siape', 'pessoal/chefias', 'pessoal/mandatos', 'pessoal/prazos', 'pessoal/jornada',
   'institucional/comissoes', 'institucional/politicas',
   'institucional/cooperacao', 'institucional/ods',
+  'mudancas',
   'ajuda', 'privacidade', 'sobre',
 ];
 
@@ -189,6 +191,7 @@ export default function App() {
     // Institucional
     if (aba === 'institucional/comissoes') return <Suspense fallback={<PanelFallback />}><ComissoesApi /></Suspense>;
     if (aba === 'institucional/politicas') return <Suspense fallback={<PanelFallback />}><PoliticasApi /></Suspense>;
+    if (aba === 'mudancas') return <Suspense fallback={<PanelFallback />}><MudancasApi /></Suspense>;
     if (aba === 'institucional/cooperacao') return <Suspense fallback={<PanelFallback />}><CooperacaoApi /></Suspense>;
     if (aba === 'institucional/ods') return <Suspense fallback={<PanelFallback />}><OdsApi /></Suspense>;
 
