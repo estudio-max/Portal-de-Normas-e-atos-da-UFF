@@ -1889,7 +1889,7 @@ function comissoes_registro(): array {
         ['cpa', 'CPA', 'Comissão Própria de Avaliação', 'Comissão', 'lei'],
         ['cppd', 'CPPD', 'Comissão Permanente de Pessoal Docente', 'Comissão', 'lei'],
         ['ceua', 'CEUA', 'Comissão de Ética no Uso de Animais', 'Comissão', 'lei'],
-        ['biosseg', '', 'Comissão Interna de Biossegurança', 'Comissão', 'lei'],
+        ['biosseg', 'CBio', 'Comissão de Biossegurança da UFF', 'Comissão', 'lei'],
         ['etica', '', 'Comissão de Ética da UFF', 'Comissão', 'lei'],
         ['cep', 'CEP', 'Comitê de Ética em Pesquisa', 'Comitê', 'lei'],
         ['cis', 'CIS', 'Comissão Interna de Supervisão do Plano de Carreira (PCCTAE)', 'Comissão', 'lei'],

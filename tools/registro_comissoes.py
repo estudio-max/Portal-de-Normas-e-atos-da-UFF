@@ -17,7 +17,16 @@ REGISTRO = [
     ('cpa',       'CPA',   'Comissão Própria de Avaliação',                      'Comissão', 'própria de avaliação', 'lei'),
     ('cppd',      'CPPD',  'Comissão Permanente de Pessoal Docente',             'Comissão', 'permanente de pessoal docente', 'lei'),
     ('ceua',      'CEUA',  'Comissão de Ética no Uso de Animais',                'Comissão', 'ética no uso de animais', 'lei'),
-    ('biosseg',   '',      'Comissão Interna de Biossegurança',                  'Comissão', 'interna de biossegurança', 'lei'),
+    # CBio: o corpo CENTRAL. Cada unidade tem a sua — o acervo tem 145 atos
+    # citando biossegurança, espalhados por 15 órgãos. E os dois nomes são
+    # usados dos dois lados: há 'CBio/IQ/UFF' que é do Instituto de Química, e
+    # há 'Comissão INTERNA de Biossegurança da Pró Reitoria' que é a central.
+    # O discriminador não é interna×não-interna: é o QUALIFICADOR — 'da UFF'
+    # ou 'da Pró-Reitoria'. Mesmo recurso que 'ética da uff' já usa aqui.
+    # Medido: o termo antigo ('interna de biossegurança') trazia 7 comissões
+    # de unidade e PERDIA 2 dos 3 atos centrais, entre eles o Regimento
+    # (RESOLUÇÃO CUV 443/2024). O termo novo casa 3 de 145, os três centrais.
+    ('biosseg',   'CBio',  'Comissão de Biossegurança da UFF',                   'Comissão', 'biossegurança da uff|biossegurança da pró reitoria|biossegurança da pró-reitoria', 'lei'),
     ('etica',     '',      'Comissão de Ética da UFF',                           'Comissão', 'ética da uff|ética pública', 'lei'),
     ('cep',       'CEP',   'Comitê de Ética em Pesquisa',                        'Comitê',   'ética em pesquisa|ética na pesquisa', 'lei'),
     ('cis',       'CIS',   'Comissão Interna de Supervisão do Plano de Carreira (PCCTAE)', 'Comissão', 'interna de supervisão', 'lei'),

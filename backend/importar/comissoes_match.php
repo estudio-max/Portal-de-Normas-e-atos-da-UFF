@@ -25,7 +25,13 @@ if (!function_exists('comissoes_termos')) {
             'cpa'           => 'própria de avaliação',
             'cppd'          => 'permanente de pessoal docente',
             'ceua'          => 'ética no uso de animais',
-            'biosseg'       => 'interna de biossegurança',
+            // Cada unidade tem a sua comissão de biossegurança, e os dois
+            // nomes são usados dos dois lados: 'CBio/IQ/UFF' é do Instituto
+            // de Química, e 'Comissão INTERNA de Biossegurança da Pró
+            // Reitoria' é a central. O discriminador é o QUALIFICADOR, não a
+            // palavra 'interna'. Medido em 145 atos: o termo antigo trazia 7
+            // comissões de unidade e perdia o Regimento (RES. CUV 443/2024).
+            'biosseg'       => 'biossegurança da uff|biossegurança da pró reitoria|biossegurança da pró-reitoria',
             'etica'         => 'ética da uff|ética pública',
             'cep'           => 'ética em pesquisa|ética na pesquisa',
             'cis'           => 'interna de supervisão',

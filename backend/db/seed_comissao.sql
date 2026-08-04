@@ -19,7 +19,7 @@ VALUES
   ('cpa', 'Comissão Própria de Avaliação', 'CPA', 'lei', 'central', 1),
   ('cppd', 'Comissão Permanente de Pessoal Docente', 'CPPD', 'lei', 'central', 1),
   ('ceua', 'Comissão de Ética no Uso de Animais', 'CEUA', 'lei', 'central', 1),
-  ('biosseg', 'Comissão Interna de Biossegurança', NULL, 'lei', 'central', 1),
+  ('biosseg', 'Comissão de Biossegurança da UFF', 'CBio', 'lei', 'central', 1),
   ('etica', 'Comissão de Ética da UFF', NULL, 'lei', 'central', 1),
   ('cep', 'Comitê de Ética em Pesquisa', 'CEP', 'lei', 'central', 1),
   ('cis', 'Comissão Interna de Supervisão do Plano de Carreira (PCCTAE)', 'CIS', 'lei', 'central', 1),
