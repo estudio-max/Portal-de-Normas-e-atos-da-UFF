@@ -28,6 +28,7 @@ require_once __DIR__ . '/extrair_prazos.php';                // Radar genérico
 require_once __DIR__ . '/extrair_prazos_pad_sinve.php';      // PAD/SINVE (alta confiança)
 require_once __DIR__ . '/comissoes_match.php';               // aba Comissões (tagueia por frase)
 require_once __DIR__ . '/ods_match.php';                     // aba ODS (classifica pelo dispositivo)
+require_once __DIR__ . '/politicas_match.php';               // aba Políticas (vínculo + papel)
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
@@ -338,6 +339,15 @@ try {
     // e o INSERT IGNORE respeita a UNIQUE (ato_id, ods): se a curadoria já
     // cravou aquela ODS para aquele ato, a linha automática nem entra.
     $delOds = $pdo->prepare("DELETE FROM ato_ods WHERE ato_id=:id AND metodo <> 'curadoria'");
+    // Políticas: mesma ressalva de curadoria da ato_ods, com um detalhe a mais
+    // — aqui o `metodo` tem três formas curadas, porque um vínculo pode nascer
+    // de regra e ser corrigido à mão depois (metodo='regra+curadoria').
+    $delPol = $pdo->prepare("DELETE FROM ato_politica WHERE ato_id=:id
+                              AND metodo NOT IN ('curadoria','regra+curadoria','ia+curadoria')");
+    $insPol = $pdo->prepare("INSERT IGNORE INTO ato_politica
+                               (ato_id, politica_id, papel, confianca, metodo, justificativa, extracao_id)
+                             SELECT :id, p.id, :pa, :c, 'regra', :j, :ex
+                               FROM politica p WHERE p.slug = :slug");
     $insOds = $pdo->prepare("INSERT IGNORE INTO ato_ods
                                (ato_id,ods,vinculo,confianca,meta,justificativa,metodo)
                                VALUES (:id,:o,:v,:c,:m,:j,'ia')");
@@ -428,6 +438,24 @@ try {
             $insOds->execute([':id' => $atoId, ':o' => $lin['ods'], ':v' => $lin['vinculo'],
                               ':c' => $lin['confianca'], ':m' => $lin['meta'],
                               ':j' => mb_substr($lin['justificativa'], 0, 400)]);
+        }
+
+        // políticas: liga o ato ao dossiê temático, com o PAPEL que ele cumpre.
+        // Falha silenciosa é aceitável aqui e SÓ aqui: se a tabela ato_politica
+        // não existir (servidor que ainda não aplicou a migração), o import não
+        // pode parar por causa de um módulo analítico — o acervo é o que
+        // importa. O painel de políticas fica sem os atos novos e diz isso.
+        try {
+            $delPol->execute([':id' => $atoId]);
+            foreach (politicas_do_ato((string)($a['ementa'] ?? ''), $siglaOrig) as $lin) {
+                $insPol->execute([':id' => $atoId, ':slug' => $lin['politica'],
+                                  ':pa' => $lin['papel'], ':c' => $lin['confianca'],
+                                  ':j' => mb_substr($lin['justificativa'], 0, 500),
+                                  ':ex' => $extracaoId]);
+            }
+        } catch (Throwable $e) {
+            static $avisouPol = false;
+            if (!$avisouPol) { $avisouPol = true; log_("AVISO: ato_politica indisponível — " . $e->getMessage()); }
         }
 
         // tags

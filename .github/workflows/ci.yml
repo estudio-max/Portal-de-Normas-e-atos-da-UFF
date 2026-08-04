@@ -77,3 +77,10 @@ jobs:
 
       - name: Regressão da classificação ODS
         run: php backend/importar/teste_ods_match.php
+
+      # O vínculo ato<->política roda no import diário e é dossiê: ele afirma
+      # que um ato construiu uma política e diz que papel cumpriu. Rótulo
+      # errado aqui não é imprecisão de contagem — é atribuir a uma política
+      # um ato que não é dela.
+      - name: Regressão do vínculo ato↔política
+        run: php backend/importar/teste_politicas_match.php

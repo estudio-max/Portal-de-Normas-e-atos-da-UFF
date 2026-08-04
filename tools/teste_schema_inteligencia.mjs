@@ -272,7 +272,7 @@ const seedBruto = await readFile(new URL(SEED, root), 'utf8');
 const seed = seedBruto.replace(/^\s*--.*$/gm, '');
 const py = await readFile(new URL(GERADOR, root), 'utf8');
 
-const RX_REGISTRO = /^\s*\('([\w-]+)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\),\s*$/gm;
+const RX_REGISTRO = /^\s*\('([\w-]+)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\),\s*\r?$/gm;
 const registro = [...py.matchAll(RX_REGISTRO)].map((r) => ({
   slug: r[1], sigla: r[2], nome: r[3], obrig: r[6] || 'nao_classificada',
 }));
@@ -361,7 +361,12 @@ for (const v of vinculos) {
 }
 
 // Os slugs do SQL têm que existir no catálogo do gerador, e vice-versa.
-const RX_CATALOGO = /^\s*\('([\w-]+)',\s*'[^']*',\s*'[^']*',$/gm;
+// Tolerar CRLF é obrigatório, e a lição é recente: na árvore de trabalho o git
+// deixa os arquivos em CRLF, e o `$` do JS casa antes do LF — o CR fica
+// sobrando e o padrão para de casar. A trava então deixa de checar EM SILÊNCIO,
+// que é o pior modo de falha possível num teste. Daí o `?$` em todo padrão
+// que ancora em fim de linha sobre código-fonte.
+const RX_CATALOGO = /^\s*\('([\w-]+)',\s*'[^']*',\s*'[^']*',\r?$/gm;
 const catalogo = [...pyPol.matchAll(RX_CATALOGO)].map((m) => m[1]);
 checa(catalogo.length > 0, `${GERPOL}: não consegui ler o CATALOGO`);
 const slugsNoSql = new Set(
@@ -412,6 +417,58 @@ for (const arquivo of [[SEEDPOL, seedPol], [SEED, seed]]) {
     checa(GUARDA.test(stmt),
       `${nome}: DELETE sem a guarda de curadoria — reaplicar o seed apagaria revisão humana`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// 13. O matcher do importador não divergiu do gerador do seed
+//
+// `politicas_match.php` roda no import diário; `gerar_seed_politicas.py` gera a
+// carga offline. Os dois classificam os MESMOS atos e têm que concordar — se
+// divergirem, o ato que entrar pelo import ganha um rótulo e o mesmo ato,
+// recarregado pelo seed, ganha outro.
+//
+// É a lição que o projeto já pagou três vezes: `extrair_prazos` tem três
+// espelhos que precisam concordar, e o registro de comissões, quatro.
+// ---------------------------------------------------------------------------
+const MATCHER = 'backend/importar/politicas_match.php';
+const matcher = (await readFile(new URL(MATCHER, root), 'utf8')).replace(/^\s*\/\/.*$/gm, '');
+
+const termosPhp = Object.fromEntries(
+  [...matcher.matchAll(/^\s*'([\w-]+)'\s*=>\s*'([^']+)',$/gm)].map((m) => [m[1], m[2]]));
+// O CATALOGO do gerador: slug na 1ª linha da tupla, termos na lista que segue.
+// `\s*` e nunca `\n\s*` entre os campos: `\s` já cobre CR e LF, e exigir o LF
+// literal foi o que fez este padrão casar zero entradas na primeira tentativa.
+const RX_CAT_ENTRADA = /\('([\w-]+)',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*\[([\s\S]*?)\],\s*\[([^\]]*)\]\)/g;
+const catalogoPy = {};
+const emissoresPy = {};
+for (const m of pyPol.matchAll(RX_CAT_ENTRADA)) {
+  catalogoPy[m[1]] = [...m[2].matchAll(/'([^']+)'/g)].map((t) => t[1]);
+  emissoresPy[m[1]] = [...m[3].matchAll(/'([^']+)'/g)].map((t) => t[1]);
+}
+
+checa(Object.keys(catalogoPy).length > 0, `${GERPOL}: não consegui ler os termos do CATALOGO`);
+for (const [slug, termos] of Object.entries(catalogoPy)) {
+  const php = termosPhp[slug];
+  if (!php) { falhas.push(`${MATCHER}: falta a política '${slug}', que o gerador tem`); continue; }
+  // O PHP guarda os termos ACENTUADOS (o fold tira na hora); o Python guarda
+  // já normalizados. Comparo pela contagem e pelo conjunto normalizado.
+  const semAcento = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const doPhp = php.split('|').map(semAcento).sort();
+  const doPy = termos.map(semAcento).sort();
+  checa(JSON.stringify(doPhp) === JSON.stringify(doPy),
+    `${MATCHER}: termos de '${slug}' divergem do gerador\n     php: ${doPhp.join(', ')}\n     py : ${doPy.join(', ')}`);
+}
+for (const slug of Object.keys(termosPhp)) {
+  if (slug === 'PROAES') continue;   // o mapa de emissores, não de termos
+  checa(slug in catalogoPy || Object.values(emissoresPy).flat().includes(slug),
+    `${MATCHER}: política '${slug}' não existe no gerador`);
+}
+// O emissor é o 2º sinal e também não pode divergir.
+const emissorPhp = [...matcher.matchAll(/'([A-Z]{3,})'\s*=>\s*'([\w-]+)'/g)]
+  .map((m) => [m[1], m[2]]);
+for (const [sigla, slug] of emissorPhp) {
+  checa((emissoresPy[slug] ?? []).includes(sigla),
+    `${MATCHER}: emissor ${sigla}→${slug} não está no gerador`);
 }
 
 // ---------------------------------------------------------------------------
