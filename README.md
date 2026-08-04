@@ -14,7 +14,7 @@ que cada uma faz — é isto:
 | Etapa | Tecnologia | Onde no repositório |
 |---|---|---|
 | Baixar e ler os PDFs do Boletim | **Python** (PyMuPDF; Tesseract no OCR de 2001) | [`tools/`](tools/) |
-| Guardar os atos | **MySQL** 8, InnoDB, utf8mb4, schema normalizado | [`backend/db/`](backend/db/) |
+| Guardar os atos | **Percona Server 5.7** (não MySQL 8), InnoDB, utf8mb4, schema normalizado | [`backend/db/`](backend/db/) |
 | Servir as consultas | **PHP** 8.3, arquivo único, sem framework | [`backend/api/`](backend/api/) |
 | Interface | **React + TypeScript**, build com Vite | [`src/`](src/) |
 | Rodar tudo todo dia | **GitHub Actions** | [`.github/workflows/`](.github/workflows/) |
@@ -39,6 +39,8 @@ antes de mexer em qualquer coisa.
 | [`docs/ARQUITETURA-BASE-DADOS.md`](docs/ARQUITETURA-BASE-DADOS.md) | Por que o banco é modelado assim (estrela, PK substituta, tabelas-fato). |
 | [`docs/REGEX.md`](docs/REGEX.md) | Os 55 padrões que transformam PDF em registro, um a um, com o que cada um reconhece e por quê. Gerado do código. |
 | [`docs/GUIA-EXTRACAO-BS.md`](docs/GUIA-EXTRACAO-BS.md) | O corpus: como o formato do boletim mudou em 25 anos e cada armadilha que isso criou. |
+| [`docs/METODOLOGIA-ODS.md`](docs/METODOLOGIA-ODS.md) | Como um ato é ligado a um Objetivo de Desenvolvimento Sustentável: as âncoras THE/IPEA, o que foi descartado e as armadilhas medidas. |
+| [`docs/METODOLOGIA-POLITICAS.md`](docs/METODOLOGIA-POLITICAS.md) | Como um ato é ligado a uma política e que papel cumpre nela — os dois sinais, as duas guardas e o que fica de fora. |
 | [`docs/MIGRACAO-UFF.md`](docs/MIGRACAO-UFF.md) | Runbook do cutover para o domínio oficial da UFF. |
 | [`docs/PROMPTS-DOCUMENTACAO-VISUAL.md`](docs/PROMPTS-DOCUMENTACAO-VISUAL.md) | Como explicar o portal a quem não é de TI: figuras, mapas e diagramas. |
 

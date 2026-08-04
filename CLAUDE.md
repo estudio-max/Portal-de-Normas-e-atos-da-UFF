@@ -77,7 +77,9 @@ bundle antigo. A justificativa LGPD da abertura está na aba Privacidade.
   `ato_deslocamento`, `prazo`, `ato_processo` (todos os nºs de processo citados,
   não só o 1º — ver aba de busca por processo), `ato_comissao` (liga o ato ao
   colegiado permanente que ele cita — alimenta a aba Comissões), `ato_ods`
-  (liga o ato a uma das 17 ODS, com tipo de vínculo — alimenta a aba ODS)
+  (liga o ato a uma das 17 ODS, com tipo de vínculo — alimenta a aba ODS),
+  `ato_politica` (liga o ato a uma política com o PAPEL que ele cumpre —
+  alimenta a aba Políticas; catálogo em `politica`/`politica_alias`)
 - Proveniência: `extracao`
 
 Consequência prática: **análise nova vira `INSERT` numa tabela-fato, não coluna
@@ -162,7 +164,8 @@ regra estabilizar (aí sim vale o modelo em estrela).
 ## Cache de resposta
 
 Os painéis diário-estáticos (`stats`, `filtros`, `jornada`, `cooperacao`,
-`comissoes`, `insights`, `analitico`, `prazos`, `pad_cadeia`, `ods`) são
+`comissoes`, `politicas`, `insights`, `analitico`, `prazos`, `pad_cadeia`,
+`ods`) são
 cacheados em disco (`api/cache/`). Medido: jornada/cooperacao/insights custam ~0,5s de CPU
 por requisição, e dão a MESMA resposta para todos entre uma importação e outra
 (o acervo muda 1x/dia). Servidos do cache custam ~0,005s e **nem conectam no
@@ -183,7 +186,7 @@ centenas de acessos simultâneos.
 
 ## Painéis com tabela-fato + registro curado
 
-Três abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
+Quatro abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
 e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
 
 - **Busca por processo** (`/api/atos?processo=…`): casa por DÍGITOS na tabela
@@ -220,6 +223,27 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   positivos —, mas o NOME do órgão deles não bate termo de comissão nenhum
   (medido em 925 órgãos: só o do CGIRC casa, daí sem guarda). Generaliza sozinho:
   colegiado curado como órgão na dimensão passa a ter os atos que assina ligados.
+- **Políticas** (`/api/politicas`): o dossiê temático — o assunto e a sequência
+  de atos que o construiu. Catálogo CURADO em `tools/gerar_seed_politicas.py`
+  (fonte única; o `.sql` é gerado e o CI reprova edição à mão), 7 políticas no
+  piloto. **O que a distingue é o `papel`**: o que o ato FAZ pela política —
+  fundador, regulamentação, governança, execução, monitoramento. Designar
+  comissão é GOVERNANÇA, não execução; sem isso, política com dez designações e
+  nenhuma entrega pareceria a mais ativa de todas.
+  **Dois sinais ligam ato↔política**, como nas comissões: (1) frase estrita na
+  ementa (confiança alta); (2) o ÓRGÃO EMISSOR, quando a ementa não nomeia a
+  política — "Fixa as diretrizes para execução do Programa Auxílio Alimentação"
+  só se identifica pela PROAES, e **24 dos 37 atos de assistência estudantil
+  entram só por aí**.
+  Duas guardas medidas: o termo no NOME DO EMISSOR (`integridade` casava a
+  cláusula de abertura do CGIRC e trazia o Plano Socioambiental, o Bem Viver e o
+  relatório do PDI — exigir `plano/programa/política de integridade` tira os
+  três) e a EMENTA INUTILIZÁVEL (15 dos 136: sem ementa formal, OCR espaçado,
+  fragmento, rodapé — vão para curadoria, não recebem rótulo).
+  A interface mostra a etapa sem ato como **"sem evidência localizada no
+  Boletim"**, nunca como omissão: o Boletim cobre o que foi publicado nele.
+  Critério, limitações e o que ficou de fora em
+  [`docs/METODOLOGIA-POLITICAS.md`](docs/METODOLOGIA-POLITICAS.md).
 - **ODS** (`/api/ods`): liga o ato a uma das 17 ODS da Agenda 2030 pela tabela
   `ato_ods`. **Não é "17 baldes de atos" — é dossiê de evidência**: cada linha
   carrega um `vinculo` (`proposta` = ato fundador de política, o que rankings e
@@ -508,6 +532,79 @@ resumo operacional.
   interno concordam entre si e discordam do nome.
 
 ## Pendências
+
+- **Núcleo de inteligência institucional: a aba Políticas está NO AR; os outros
+  quatro módulos, não.** `backend/db/inteligencia_institucional.sql` (doze tabelas dos
+  cinco módulos analíticos — política, obrigação, comissão, indicador, mudança)
+  **foi aplicado em 03/08/2026** e verificado com
+  `backend/db/verificar_inteligencia.sql`. A rota `/api/politicas` e a aba
+  `#/institucional/politicas` subiram no mesmo dia (`api_versao 2026-08-03.2`).
+  As outras oito tabelas seguem vazias e sem consumidor: `politica_evento`,
+  `obrigacao`, `obrigacao_evidencia`, `evidencia_fato`, `comissao_evento`,
+  `comissao_membro_evento`, `politica_indicador` e `mudanca_relevante`.
+  A verificação tem 14 blocos; os de 3 a 9 são as travas de publicação
+  (evidência órfã, item público sem trecho, indicador fora da faixa, curadoria
+  preservada). **Rode-a pela aba SQL do phpMyAdmin, nunca pela Importar** — ver
+  a lição no skill de deploy. A regressão estática do schema roda no CI:
+  `node tools/teste_schema_inteligencia.mjs`. Racional das decisões em
+  `docs/ARQUITETURA-BASE-DADOS.md` §3.6 — em especial por que `comissao` é
+  chaveada pelo slug, e por que **não** há FK de `obrigacao` para `prazo` (o
+  importador recicla `prazo.id` a cada import).
+  **Os catálogos foram semeados em 03/08/2026** e conferidos em produção:
+  `comissao` 26, `politica` 7, `politica_alias` 40, `ato_politica` 93; as demais
+  seguem vazias. Os seeds são `backend/db/seed_comissao.sql` (de
+  `tools/registro_comissoes.py`) e `backend/db/seed_politica.sql` (de
+  `tools/gerar_seed_politicas.py`) — os dois saem de gerador, e editar o `.sql`
+  à mão reprova no CI.
+  O bloco 7 da verificação foi de `0/26/0` para **`26/0/0`**. O zero do meio é a
+  prova de que os slugs do catálogo são os mesmos que a `ato_comissao` usa: as
+  três projeções do registro curado concordam. O terceiro zero diz que **nenhum
+  dos 26 corpos é letra morta** — todos têm ao menos um ato no acervo.
+  **Como o catálogo de políticas foi montado** (medições em
+  `tools/analisar_politicas.py`, reproduzíveis): a semente são os atos com
+  `ato_ods.vinculo='proposta'` — 243 linhas em 136 atos. Três achados que valem
+  para qualquer módulo novo:
+  (a) `integridade` solto casa o NOME DO EMISSOR — o CGIRC abre seus atos com
+  "O COMITÊ DE GOVERNANÇA, INTEGRIDADE, RISCOS E CONTROLES", e levava junto o
+  Plano Socioambiental, o Bem Viver e o relatório do PDI; exigir o dispositivo
+  (`plano/programa/política de integridade`) tira os quatro. É a armadilha-mãe
+  da METODOLOGIA-ODS outra vez.
+  (b) a assistência estudantil **não se anuncia na ementa** — quem a identifica
+  é o emissor, a PROAES; 24 dos 37 atos entram só por esse sinal, mesma lição
+  do `comissoes_do_orgao`.
+  (c) 15 atos têm ementa inutilizável (sem ementa formal, fragmento, rodapé, ou
+  OCR que espaça letra a letra) e vão para curadoria, não para o catálogo.
+  Assédio não veio da camada ODS (tinha 1 ato lá): veio de varredura da ementa
+  no acervo inteiro — 16 atos, 1 central (Plano do CGIRC, 2025) e 10 comissões
+  LOCAIS de unidade entre 2018 e 2026. As 4 sindicâncias ficam de fora por
+  efeito individual. PGD não entrou: os únicos atos eram flexibilização de
+  jornada de 2016/2018, território que a aba Jornada já cobre.
+  Fora do seed, em `../dados/curadoria_politicas.csv`: 48 sem cluster, 10 de
+  duplicata de acervo, 4 de efeito individual.
+  Metodologia completa em [`docs/METODOLOGIA-POLITICAS.md`](docs/METODOLOGIA-POLITICAS.md),
+  incluindo as limitações conhecidas (o ato fundador de `acessibilidade` é uma
+  cartilha, e duas políticas não têm fundador localizado).
+  **O Radar de Obrigações (4.1) foi MEDIDO e o desenho original não se
+  sustenta** — `python tools/medir_obrigacoes.py` reproduz. O `deverá` do corpus
+  é texto de EDITAL e de REGIMENTO dirigido a uma PESSOA: no top 45 de sujeitos
+  do modal, 556 ocorrências são pessoa (candidato, aluno, interessado), 781 são
+  documento ou procedimento (inscrição, recurso, chapa) e **19 são órgão**.
+  Obrigação de candidato não tem responsável institucional, não gera evidência
+  posterior de cumprimento e não interessa a controle. Os padrões
+  institucionais do §6 do projeto somam 253 atos (1,2%), e mesmo esses são, um
+  a um, procedimento recorrente ("o colegiado se reunirá anualmente") ou o ato
+  SENDO a entrega ("divulgar o resultado do programa de gestão"), não obrigação
+  de entregar. Varrer o acervo produziria painel de ruído — e ruído contamina o
+  dossiê, mesma lição da METODOLOGIA-ODS. O caminho que sobra é o inverso:
+  procurar obrigação DENTRO das políticas e comissões já catalogadas, onde o
+  universo é pequeno e o responsável é conhecido. **Pré-requisito para medir
+  isso: a API expõe ementa, não corpo** (`ficha()` não devolve
+  `ato_texto.texto_original`), e o extrato local não cobre os atos do catálogo
+  (0 de 136 casam por uid).
+  Se e quando o detector for escrito, ele **tem que chamar `extrair_prazos()`**
+  para resolver data:
+  aquela lógica já tem três espelhos que precisam concordar, e um quarto seria
+  dois códigos discordando sobre a mesma cláusula.
 
 - **RDD individual não vira ato próprio (lacuna, não regressão).** O fix de
   fronteira (abaixo) impede que um ato absorva a "Resumo de Despachos e

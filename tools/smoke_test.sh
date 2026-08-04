@@ -60,6 +60,12 @@ checa_json "/api/atos?por_pagina=1"    "isinstance(d.get('atos'), list) and len(
 checa_json "/api/jornada"              "'flex' in d and 'pgd' in d"
 checa_json "/api/cooperacao"           "isinstance(d.get('acordos'), list) and len(d['acordos']) > 0"
 checa_json "/api/prazos"               "isinstance(d, (list, dict))"
+checa_json "/api/comissoes"            "isinstance(d.get('corpos'), list) and len(d['corpos']) > 0"
+checa_json "/api/ods"                  "isinstance(d.get('lista'), list) and len(d['lista']) == 17"
+# Políticas: a rota degrada com `indisponivel` quando a tabela não existe, e
+# essa resposta é 200. Aceitar só `politicas` faria o smoke passar num servidor
+# onde o SQL não rodou — por isso o teste exige a lista de verdade.
+checa_json "/api/politicas"            "isinstance(d.get('politicas'), list) and len(d['politicas']) > 0"
 
 # 3) ficha por PATH_INFO (o roteamento /api/atos/{id} — quebra silenciosa
 #    clássica quando .htaccess/rewrite não subiu junto).

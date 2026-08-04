@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target } from 'lucide-react';
+import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked } from 'lucide-react';
+import * as ds from '../../dataSource';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -57,7 +58,51 @@ function Figura({ arquivo, alt, legenda, w, h }: {
   );
 }
 
+const fmt = (v: number) => v.toLocaleString('pt-BR');
+
+/** Os números desta página vêm da API, não do texto.
+ *
+ *  Esta aba já carregou duas vezes um número envelhecido: a contagem de
+ *  vínculos ODS ficou parada em 1.662/205 depois de uma recarga, e a legenda da
+ *  figura dizia "onze painéis" quando eram dez. Número escrito à mão numa
+ *  página estática não envelhece com aviso — ele só passa a mentir.
+ *
+ *  As duas rotas usadas já são cacheadas em disco no servidor, então o custo é
+ *  o de dois GET que quase nunca tocam o banco.
+ *
+ *  Quando a API não responde (modo de contingência, ou build estático), a
+ *  frase é escrita SEM o número em vez de cair num valor fixo — dizer menos é
+ *  melhor que dizer errado. */
+interface Numeros {
+  vinculos: number;      // linhas em ato_ods
+  propostas: number;     // as que são ato fundador de política
+  politicas: number;     // políticas no catálogo
+  atosPolitica: number;  // vínculos ato↔política
+  assedioLocais: number; // comissões locais no dossiê de assédio
+}
+
+function useNumeros(): Numeros | null {
+  const [n, setN] = React.useState<Numeros | null>(null);
+  React.useEffect(() => {
+    let vivo = true;
+    Promise.all([ds.getOds(), ds.getPoliticas()]).then(([ods, pol]) => {
+      if (!vivo || !ods || !pol?.politicas) return;
+      const assedio = pol.politicas.find(p => p.slug === 'assedio');
+      setN({
+        vinculos: ods.linhas,
+        propostas: ods.lista.reduce((s, o) => s + o.proposta, 0),
+        politicas: pol.politicas.length,
+        atosPolitica: pol.total,
+        assedioLocais: assedio?.papeis.governanca ?? 0,
+      });
+    }).catch(() => { /* sem números: as frases saem sem eles */ });
+    return () => { vivo = false; };
+  }, []);
+  return n;
+}
+
 export default function Sobre() {
+  const n = useNumeros();
   return (
     <div className="space-y-3 max-w-4xl mx-auto">
       <div className="bg-[#003366] text-white rounded-lg p-5">
@@ -85,8 +130,8 @@ export default function Sobre() {
         </p>
         <Figura
           arquivo="7-abas-do-portal.svg"
-          w={960} h={540}
-          alt="Grade com os onze painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação, Comissões e ODS."
+          w={960} h={606}
+          alt="Grade com os painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação, Comissões, Políticas e ODS."
           legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
         />
         <p>
@@ -160,8 +205,10 @@ export default function Sobre() {
           <strong>execução</strong>. O ato que <em>institui</em> o Programa Bem Viver é uma
           proposta; os atos que <em>designam membros</em> da comissão que o executa não são.
           Ratificar um convênio com uma universidade estrangeira é executar a política de
-          cooperação que já existe, não propor uma nova. Sem essa separação, o acervo exibiria
-          1.662 "evidências"; com ela, exibe <strong>205 propostas</strong> — e cada uma se
+          cooperação que já existe, não propor uma nova. Sem essa separação, o acervo exibiria{' '}
+          {n ? <><strong>{fmt(n.vinculos)}</strong> "evidências"; com ela, exibe{' '}
+          <strong>{fmt(n.propostas)} propostas</strong></> : <>todas as ligações como
+          equivalentes; com ela, exibe só as propostas</>} — e cada uma se
           defende sozinha diante de quem perguntar.
         </p>
         <p>
@@ -185,6 +232,54 @@ export default function Sobre() {
           >
             documento de metodologia
           </a>.
+        </p>
+      </Secao>
+
+      <Secao icon={<BookMarked className="w-4 h-4" />} titulo="De atos avulsos a políticas com história">
+        <p>
+          A classificação por ODS deixou um subproduto que ninguém tinha pedido: ao separar{' '}
+          <em>proposta</em> de <em>execução</em>, ela identificou, um a um, os{' '}
+          <strong>atos fundadores</strong> do acervo — os que instituem uma política, um plano,
+          um programa{n ? <>. São <strong>{fmt(n.propostas)}</strong>, espalhados por 25 anos</> : null}.
+          Eles viraram a semente da aba <strong>🏛️ Políticas</strong>.
+        </p>
+        <p>
+          A pergunta desta aba é diferente das outras. A busca responde “que atos falam de
+          assédio?”. Esta responde <em>“como a UFF construiu essa política ao longo do
+          tempo?”</em> — e para isso não basta agrupar por tema: é preciso saber o{' '}
+          <strong>papel</strong> de cada ato. Instituir uma política, regulamentá-la, montar a
+          comissão que cuida dela e efetivamente executá-la são coisas distintas, e tratá-las
+          como equivalentes produz uma leitura falsa. Uma política com dez designações e
+          nenhuma entrega pareceria a mais ativa de todas.
+        </p>
+        <p>
+          O caso que melhor mostra para que serve a aba é o do <strong>assédio</strong>. Há um
+          único ato central — o Plano de Enfrentamento aprovado pelo Comitê de Governança em{' '}
+          <strong>2025</strong>. Antes dele, o que existe são{' '}
+          <strong>{n?.assedioLocais ? `${n.assedioLocais} comissões locais` : 'comissões locais'}</strong>,
+          criadas por unidades isoladas entre 2018 e 2026: uma faculdade aqui, um instituto
+          ali, cada um resolvendo por conta própria. A resposta institucional ao assédio foi
+          descentralizada por sete anos antes de haver política central. Isso estava inteiro no
+          acervo, e não era visível em lugar nenhum.
+        </p>
+        <p>
+          A aba mostra também o que <strong>não</strong> encontrou. Cada política tem uma faixa
+          de etapas — instituição, regulamentação, governança, execução, monitoramento,
+          avaliação — e a etapa sem ato aparece apagada, dizendo{' '}
+          <em>“sem evidência localizada no Boletim”</em>. Essa formulação é deliberada e é o
+          ponto mais delicado do painel: <strong>lacuna de cobertura documental não é omissão
+          institucional</strong>. O Boletim registra o que foi publicado nele; muita coisa
+          acontece fora. Um portal que confundisse as duas coisas estaria produzindo acusação a
+          partir de silêncio.
+        </p>
+        <p className="text-slate-500 text-xs">
+          São <strong>{n ? `${n.politicas} políticas` : 'poucas políticas'} de um piloto</strong>
+          {n ? <>, com {fmt(n.atosPolitica)} vínculos ato↔política,</> : null} e não o conjunto
+          das políticas da UFF —
+          o catálogo é curado e cresce aos poucos. Os vínculos foram propostos por regra (frase
+          estrita na ementa, ou o órgão emissor quando a ementa não nomeia a política) e
+          carregam o selo <strong>catálogo em revisão</strong> enquanto não passam por revisão
+          humana. Como em todo o resto do portal, o ato de origem prevalece.
         </p>
       </Secao>
 

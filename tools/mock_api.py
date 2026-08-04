@@ -12,7 +12,7 @@ Endpoints (iguais aos do PHP):
     /stats  /filtros  /atos?...  /atos/{id}   (também aceita ?r=...&id=...)
     /chefias  /mandatos  /prazos  /pad_cadeia?processo=...
     /insights?ano=...  /analitico
-    /jornada  /cooperacao  /comissoes  /ods  /dossie
+    /jornada  /cooperacao  /comissoes  /politicas  /ods  /dossie
 
 O que o mock NÃO reproduz, por desenho: o cache em disco da API PHP e o
 `X-Cache`. Tudo aqui é calculado a cada requisição sobre o JSON em memória.
@@ -580,27 +580,147 @@ _COMISSOES = [
     ("acessib", "", "Comissão de Acessibilidade e Inclusão (UFF Acessível)", "Comissão", "controle", 14, 2019, 2026),
     ("cps", "CPS", "Comissão Permanente de Sustentabilidade", "Comissão", "", 24, 2020, 2026),
     ("rsc", "RSC", "Comissão Especial de Reconhecimento de Saberes e Competências (RSC)", "Comissão", "", 20, 2021, 2026),
+    # Os quatro abaixo existem para o dev VER os estados que produção tem. Sem
+    # colegiado parado no mock, "sem evidência recente" e "dados insuficientes"
+    # nunca aparecem no dev e o painel parece sempre verde. Números reais de
+    # 03/08/2026: cgestao-inf é exigida por órgão de controle e está em 2018.
+    ("cgestao-inf", "", "Comitê de Gestão da Informação", "Comitê", "controle", 2, 2016, 2018),
+    ("cpt", "CPT", "Comissão Permanente de Telefonia", "Comissão", "", 6, 2007, 2011),
+    ("cppta", "CPPTA", "Comissão Permanente de Pessoal Técnico-Administrativo", "Comissão", "", 5, 2001, 2005),
+    ("doc-sig", "", "Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa", "Comissão", "", 1, 2005, 2005),
 ]
 
 
-def comissoes_payload(corpo=""):
+_HOJE = datetime.date.today()
+
+_COM_AVISOS = [
+    "O estado é DOCUMENTAL: descreve o que o Boletim registra, não a atividade real do colegiado.",
+    "Atividade pode ocorrer fora do Boletim de Serviço — ausência de ato não comprova ausência de trabalho.",
+    "A composição vigente não é exibida: o dispositivo dos atos de designação ainda não é extraído em forma estruturada.",
+]
+
+
+def _com_estado(total, ano_max, janela):
+    """Espelha comissao_estado() do index_v2.php, na forma que o mock permite:
+    aqui só existe o ANO do último ato, então a janela é comparada em anos."""
+    if total <= 1:
+        return "insuficiente"
+    if ano_max >= _HOJE.year - max(1, janela // 12):
+        return "recente"
+    return "sem_recente"
+
+
+def comissoes_payload(corpo="", janela=""):
+    janela = int(janela) if str(janela) in ("12", "24", "36") else 24
     if corpo:
         meta = next((c for c in _COMISSOES if c[0] == corpo), None)
         if not meta:
             return {"erro": "desconhecida"}
         atos = [{
-            "id": f"port-reitoria-{68000 + i}-2026", "numero": str(68000 + i), "ano": 2026 - i,
-            "data": f"{2026 - i}-05-1{i}", "status": ["Ativo", "Alterado", "Revogado"][i % 3],
+            "id": f"port-reitoria-{68000 + i}-{meta[7] - i}", "numero": str(68000 + i),
+            "ano": meta[7] - i,
+            "data": f"{meta[7] - i}-05-1{i}", "status": ["Ativo", "Alterado", "Revogado"][i % 3],
             "sigla": "Reitoria", "link": "https://boletimdeservico.uff.br/",
             "processoSei": "23069.100000/2026-00" if i % 2 else None,
             "linkSeiProcesso": "https://sei.uff.br/" if i % 2 else None,
             "ementa": f"Designa novos membros para compor a {meta[2]}.",
         } for i in range(min(meta[5], 6))]
-        return {"corpo": {"slug": meta[0], "sigla": meta[1], "nome": meta[2], "tipo": meta[3], "obrig": meta[4]}, "atos": atos}
+        return {"corpo": {"slug": meta[0], "sigla": meta[1], "nome": meta[2],
+                          "tipo": meta[3], "obrig": meta[4]},
+                "atos": atos,
+                "ultimaData": atos[0]["data"] if atos else None,
+                "eventos": {"m12": min(len(atos), 2), "m24": min(len(atos), 4),
+                            "m36": len(atos)},
+                "mandatos": ([{"atoId": atos[0]["id"], "fim": f"{meta[7]}-12-31",
+                               "conf": "média", "trecho": "…com vigência até 31/12…"}]
+                             if atos else []),
+                "estado": _com_estado(meta[5], meta[7], janela),
+                "janela": janela,
+                "avisos": _COM_AVISOS[:1] + _COM_AVISOS[2:]}
     corpos = [{"slug": s, "sigla": sg, "nome": n, "tipo": t, "obrig": ob, "atos": a,
-               "anos": max(1, (mx - mn) // 2), "anoMin": mn, "anoMax": mx}
+               "anos": max(1, (mx - mn) // 2), "anoMin": mn, "anoMax": mx,
+               "ultimaData": f"{mx}-06-15",
+               "ultimoAto": {"id": f"port-reitoria-{68000 + a}-{mx}",
+                             "label": f"Portaria nº {68000 + a}/{mx}",
+                             "data": f"{mx}-06-15", "status": "Ativo"},
+               "eventos": {"m12": (1 if mx >= _HOJE.year else 0),
+                           "m24": (2 if mx >= _HOJE.year - 1 else 0),
+                           "m36": (3 if mx >= _HOJE.year - 2 else 0)},
+               "porTipo": {"Portaria": max(1, a // 2), "Decisão": a - max(1, a // 2)},
+               "mandato": ({"atoId": f"port-reitoria-{68000 + a}-{mx}",
+                            "fim": f"{mx + 2}-12-31", "conf": "média",
+                            "trecho": "…com vigência até 31/12…"} if a > 3 else None),
+               "estado": _com_estado(a, mx, janela)}
               for (s, sg, n, t, ob, a, mn, mx) in _COMISSOES]
-    return {"corpos": corpos, "total": sum(c["atos"] for c in corpos), "orfaos": []}
+    return {"corpos": corpos, "total": sum(c["atos"] for c in corpos), "orfaos": [],
+            "janela": janela, "avisos": _COM_AVISOS}
+
+
+# Espelha /politicas: o catalogo curado e os vinculos ato<->politica. Os numeros
+# sao os medidos na carga de 03/08/2026 (tools/gerar_seed_politicas.py), para o
+# dev ver a mesma distribuicao desigual que a producao tem -- assistencia
+# estudantil com 38 atos ao lado de integridade com 5.
+# (slug, nome, categoria, estagio, atos, anoMin, anoMax, papeis)
+_POLITICAS = [
+    ("assistencia-estudantil", "Assistência estudantil", "Estudantes", "rascunho", 38, 2021, 2026,
+     {"alteracao": 21, "execucao": 15, "regulamentacao": 1, "governanca": 1}),
+    ("acessibilidade", "Acessibilidade e inclusão", "Direitos", "rascunho", 8, 2017, 2026,
+     {"governanca": 4, "referencia": 1, "alteracao": 1, "execucao": 1, "fundador": 1}),
+    ("acoes-afirmativas", "Ações afirmativas, diversidade e equidade", "Direitos", "rascunho", 12, 2013, 2026,
+     {"governanca": 4, "execucao": 2, "regulamentacao": 2, "alteracao": 2, "referencia": 2}),
+    ("assedio", "Prevenção e enfrentamento ao assédio", "Direitos", "rascunho", 12, 2018, 2026,
+     {"governanca": 9, "alteracao": 2, "fundador": 1}),
+    ("integridade-riscos", "Integridade, riscos e controles", "Governança", "rascunho", 5, 2021, 2025,
+     {"regulamentacao": 3, "monitoramento": 1, "fundador": 1}),
+    ("seguranca-informacao", "Segurança da informação e proteção de dados", "Governança", "rascunho", 7, 2020, 2025,
+     {"governanca": 3, "fundador": 2, "regulamentacao": 2}),
+    ("sustentabilidade", "Sustentabilidade", "Governança", "rascunho", 11, 2006, 2025,
+     {"governanca": 6, "regulamentacao": 2, "fundador": 2, "referencia": 1}),
+]
+
+_POL_AVISOS = [
+    "Ausência de evidência no Boletim não comprova ausência de execução — o acervo cobre o que foi publicado no Boletim de Serviço.",
+    "O vínculo entre ato e política é inferido por regra (frase estrita na ementa ou órgão emissor) e revisado por curadoria.",
+]
+
+
+def politicas_payload(slug=""):
+    if slug:
+        meta = next((p for p in _POLITICAS if p[0] == slug), None)
+        if not meta:
+            return {"erro": "política desconhecida"}
+        papeis = list(meta[7].items())
+        atos = []
+        for i, (papel, _n) in enumerate(papeis):
+            ano = meta[6] - i
+            atos.append({
+                "id": f"port-reitoria-{68800 + i}-{ano}", "numero": str(68800 + i), "ano": ano,
+                "data": f"{ano}-0{(i % 9) + 1}-15", "status": ["Ativo", "Ativo", "Alterado"][i % 3],
+                "sigla": "Reitoria", "tipo": "Portaria",
+                "link": "https://boletimdeservico.uff.br/",
+                "processoSei": None, "linkSeiProcesso": None,
+                "papel": papel, "confianca": "alta" if i % 2 == 0 else "media",
+                "metodo": "regra",
+                "justificativa": f"frase: {meta[1].lower()[:24]}",
+                "ementa": f"Ato de {papel} da política de {meta[1].lower()} no âmbito da UFF.",
+            })
+        return {"politica": {"slug": meta[0], "nome": meta[1], "descricao":
+                             f"Catálogo piloto — {meta[1].lower()}.",
+                             "categoria": meta[2], "estagio": meta[3]},
+                "atos": atos, "avisos": _POL_AVISOS}
+    pols = []
+    for (s, n, cat, est, a, mn, mx, papeis) in _POLITICAS:
+        pols.append({
+            "slug": s, "nome": n, "descricao": f"Catálogo piloto — {n.lower()}.",
+            "categoria": cat, "estagio": est, "atos": a,
+            "anoMin": mn, "anoMax": mx, "ultimaData": f"{mx}-06-01",
+            "papeis": papeis,
+            "fundador": ({"id": f"port-reitoria-{68000 + a}-{mn}",
+                          "label": f"Portaria nº {68000 + a}/{mn}",
+                          "sigla": "Reitoria", "data": f"{mn}-03-10", "ano": mn}
+                         if papeis.get("fundador") else None),
+        })
+    return {"politicas": pols, "total": sum(p["atos"] for p in pols), "avisos": _POL_AVISOS}
 
 
 # ODS: espelha /api/ods (índice ato_ods, docs/METODOLOGIA-ODS.md). Números
@@ -1232,7 +1352,10 @@ class H(BaseHTTPRequestHandler):
         elif recurso == "cooperacao":
             self._send(cooperacao_payload())
         elif recurso == "comissoes":
-            self._send(comissoes_payload(q.get("corpo", [""])[0]))
+            self._send(comissoes_payload(q.get("corpo", [""])[0],
+                                         q.get("janela", [""])[0]))
+        elif recurso == "politicas":
+            self._send(politicas_payload(q.get("slug", [""])[0]))
         elif recurso == "ods":
             self._send(ods_payload(q.get("n", [""])[0]))
         elif recurso == "chefias":
@@ -1257,5 +1380,5 @@ if __name__ == "__main__":
     print("Mock API em http://127.0.0.1:8900")
     print("  /stats /filtros /atos /atos/{id} /chefias /mandatos /prazos")
     print("  /pad_cadeia?processo= /insights?ano= /analitico /jornada")
-    print("  /cooperacao /comissoes /ods /dossie?siape=")
+    print("  /cooperacao /comissoes /politicas /ods /dossie?siape=")
     ThreadingHTTPServer(("127.0.0.1", 8900), H).serve_forever()

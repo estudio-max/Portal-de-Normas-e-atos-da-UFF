@@ -52,6 +52,19 @@ o JSON estático do GitHub).
 - `cp -r dist/* destino/` **não copia** o `.htaccess` (dotfile) →
   `index.html` fica sem revalidação de cache → usuário pode ver tela
   branca em cache velho. Use `cp -a dist/. destino/`.
+- **Pacote parcial montado "pelo que eu editei" derrubou o portal inteiro**
+  (03/08/2026). Os painéis são `lazy()`: cada aba é um chunk próprio com
+  hash no nome (`ComissoesApi-hT10-kmb.js`), e o `index.html` **não os
+  referencia** — são pedidos em runtime, ao clicar na aba. Ficaram 20 de
+  fora, todos 404, e toda aba quebrou. Pior: eles mudam de nome TODOS
+  JUNTOS quando um módulo compartilhado muda (bastou editar
+  `dataSource.ts`, que todo painel importa).
+  **O que entra no pacote não se deduz do que se editou — pergunta-se ao
+  servidor:** `python tools/pacote_delta.py` compara cada arquivo do
+  `dist/` por hash contra a produção e monta a pasta só com o que falta.
+  Exceção conhecida: o `.htaccess` não dá para comparar (o Apache responde
+  403 ao próprio arquivo, corretamente) — decida por
+  `git log -- public/.htaccess`.
 - Subir `index_v2.php` **com esse nome** deixa a API inerte — o
   `api/.htaccess` só roteia `/api/*` para `api/index.php`.
 - Recarregar um backfill sem `&recomecar=1`: linhas que saíram da
@@ -62,6 +75,19 @@ o JSON estático do GitHub).
   ferramentas de manutenção precisa de um `.htaccess` bloqueando essas
   extensões (`api/.htaccess` já protege `config.php`; `importar/` teve
   que ganhar o dele à parte).
+- **A aba Importar do phpMyAdmin DESCARTA o resultado de `SELECT`.** Ela é
+  para carregar dados: devolve "N consultas executadas" ou o erro, e mais
+  nada. Um arquivo de verificação inteiro passa por ali sem exibir uma
+  linha — parece falha muda do banco. **SQL de migração vai pela Importar
+  (é DDL, não tem saída); SQL de verificação vai pela aba SQL.**
+- **Referência a `information_schema` vira o banco corrente para as
+  consultas SEGUINTES do mesmo arquivo.** Medido em 03/08/2026: com
+  `SELECT DATABASE()` devolvendo `fanara87_governanca` corretamente, a
+  consulta logo depois de um `FROM information_schema.TABLES` estourou com
+  "#1109 Tabela 'evidencia_fato' desconhecida em 'information_schema'". Num
+  arquivo que mistura os dois, **ponha as consultas às tabelas do projeto
+  primeiro e as de `information_schema` no fim** — é o que
+  `backend/db/verificar_inteligencia.sql` faz e por quê.
 
 ## Empacotando um deploy de dados (padrão a repetir)
 

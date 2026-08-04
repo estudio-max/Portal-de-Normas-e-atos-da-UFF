@@ -333,6 +333,47 @@ Reprocessar um escopo = criar uma `extracao` nova, inserir os fatos com o novo i
 remover os do escopo anterior — **sem tocar nas PKs de `ato`**, então nenhum link
 quebra. É o que torna a base "preparada para mudanças".
 
+### 3.6 Núcleo de inteligência institucional (aditivo)
+
+Doze tabelas para os cinco módulos analíticos — política, obrigação, comissão,
+indicador e mudança. Migração em `backend/db/inteligencia_institucional.sql`,
+verificação em `backend/db/verificar_inteligencia.sql`, regressão estática em
+`tools/teste_schema_inteligencia.mjs` (roda no CI, sem banco).
+
+| Tabela | Papel |
+|---|---|
+| `politica`, `politica_alias` | catálogo curado de políticas + nomes históricos |
+| `ato_politica` | o PAPEL do ato na política (fundador, regulamentação, execução…) |
+| `politica_evento` | a unidade da linha do tempo |
+| `comissao` | projeção do registro curado de colegiados (PK = slug) |
+| `comissao_evento`, `comissao_membro_evento` | atividade e composição do colegiado |
+| `obrigacao`, `obrigacao_evidencia` | cláusula acompanhável + ato posterior que age sobre ela |
+| `evidencia_fato` | proveniência transversal dos cinco módulos |
+| `politica_indicador` | snapshot versionado da maturidade documental |
+| `mudanca_relevante` | feed editorial, com candidato e descartado preservados |
+
+Seis decisões que valem além destas tabelas:
+
+1. **Toda tabela tem chave natural `UNIQUE`.** Sem ela, reprocessar um ato duplica
+   o fato — e importação idempotente é regra, não preferência.
+2. **`comissao` é chaveada pelo slug**, não por um BIGINT novo: `ato_comissao.comissao`
+   já guarda esse slug, e um id substituto criaria dois identificadores para a mesma
+   entidade. A tabela é a TERCEIRA projeção do registro curado (as outras são
+   `comissoes_registro()` e `comissoes_termos()`) e sai do mesmo gerador,
+   `tools/registro_comissoes.py` — nunca da mão.
+3. **Não existe FK de `obrigacao` para `prazo`.** O importador faz `DELETE`+`INSERT`
+   em `prazo` a cada importação do ato, então `prazo.id` é reciclado todo dia.
+4. **As datas da obrigação vêm de `extrair_prazos()`**, não de regex novo — aquela
+   lógica já tem três espelhos que precisam concordar. O detector de obrigação
+   acrescenta o que não existe: modal obrigatório, responsável e evidência posterior.
+   Limite herdado: `_pz_valida()` só aceita 2015–2035; fora disso a obrigação entra
+   com `data_limite` NULL e `data_base_origem='fora_da_janela'`.
+5. **Curadoria é soberana**, no desenho da `ato_ods`: a passada automática só apaga
+   `metodo NOT IN ('curadoria','regra+curadoria','ia+curadoria')`.
+6. **`evidencia_fato` é polimórfica sem FK**, de propósito — cinco FKs opcionais
+   mutuamente exclusivas seriam piores. O preço é órfão não barrado pelo banco;
+   o bloco 5 do `verificar_inteligencia.sql` é quem os encontra.
+
 ---
 
 ## 4. Por que isso "prevê mudanças"

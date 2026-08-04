@@ -326,10 +326,10 @@ def peca5():
 
 # ---------------------------------------------------------------- PECA 7
 def peca7():
-    W, H = 960, 500
+    W, H = 960, 606
     p = []
     p.append(texto(40, 42, 'O que tem em cada aba do portal', 19, AZUL, '700'))
-    p.append(texto(40, 66, 'Dez painéis, cada um respondendo uma pergunta diferente', 12.5, CINZA))
+    p.append(texto(40, 66, 'Doze painéis, cada um respondendo uma pergunta diferente', 12.5, CINZA))
 
     abas = [
         ('Planilha', ['Todos os atos, com filtro por', 'tipo, órgão, ano e palavra']),
@@ -342,6 +342,8 @@ def peca7():
         ('Jornada', ['Setores em trabalho flexível', 'ou programa de gestão']),
         ('Cooperação', ['Acordos com instituições, com', 'mapa e filtro por país']),
         ('Comissões', ['Comitês, comissões e GTs', 'permanentes num só lugar']),
+        ('Políticas', ['A sequência de atos que', 'construiu cada política']),
+        ('ODS', ['O que a UFF propôs em cada', 'Objetivo da Agenda 2030']),
     ]
     cw, ch, gx, gy = 282, 92, 14, 14
     x0, y0 = 40, 96
@@ -355,10 +357,10 @@ def peca7():
         for j, d in enumerate(desc):
             p.append(texto(x + 20, y + 54 + j * 15, d, 10.5, CINZA))
 
-    p.append(texto(40, H - 22, 'A aba "Comissões" separa os colegiados obrigatórios por lei '
-                   'dos exigidos por órgãos de controle.', 10.5, CINZA))
+    p.append(texto(40, H - 22, 'A aba "Políticas" mostra o PAPEL de cada ato — instituir, regulamentar, '
+                   'executar — e deixa visível a etapa sem evidência.', 10.5, CINZA))
     salvar('7-abas-do-portal.svg', ''.join(p), W, H,
-           'Grade com os dez painéis do portal e uma linha explicando o que cada um faz.')
+           'Grade com os doze painéis do portal e uma linha explicando o que cada um faz.')
 
 
 print('Gerando SVGs em docs/figuras/')

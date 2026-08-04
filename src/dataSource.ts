@@ -971,13 +971,33 @@ export async function getCooperacao(): Promise<CoopResp | null> {
 }
 
 // --- Comissões (colegiados permanentes centrais) ---------------------------
+// `estado` é DOCUMENTAL, nunca real. "sem_recente" quer dizer que o Boletim não
+// registra ato na janela — não que o colegiado parou. Comissão que trabalha e
+// não publica é indistinguível, aqui, de uma esquecida.
+export type ComissaoEstado = 'recente' | 'sem_recente' | 'recomposicao' | 'insuficiente';
+
+export interface ComissaoUltimoAto {
+  id: string; label: string; data: string | null; status: string;
+}
+export interface ComissaoMandato {
+  atoId: string; fim: string; conf: string | null; trecho: string | null;
+}
 export interface ComissaoCorpo {
   slug: string; sigla: string; nome: string; tipo: string;
   // '' | 'lei' (obrigatória por lei) | 'controle' (exigida por órgão de controle)
   obrig: string;
   atos: number; anos: number; anoMin: number | null; anoMax: number | null;
+  ultimaData: string | null;
+  ultimoAto: ComissaoUltimoAto | null;
+  eventos: { m12: number; m24: number; m36: number };
+  porTipo: Record<string, number>;
+  mandato: ComissaoMandato | null;
+  estado: ComissaoEstado;
 }
-export interface ComissoesResp { corpos: ComissaoCorpo[]; total: number; orfaos: string[] }
+export interface ComissoesResp {
+  corpos: ComissaoCorpo[]; total: number; orfaos: string[];
+  janela: number; avisos: string[];
+}
 
 export interface ComissaoAtoRef {
   id: string; numero: string; ano: number; data: string; status: string;
@@ -987,15 +1007,24 @@ export interface ComissaoAtoRef {
 export interface ComissaoDetalhe {
   corpo: { slug: string; sigla: string; nome: string; tipo: string; obrig: string };
   atos: ComissaoAtoRef[];
+  ultimaData: string | null;
+  eventos: { m12: number; m24: number; m36: number };
+  mandatos: ComissaoMandato[];
+  estado: ComissaoEstado;
+  janela: number;
+  avisos: string[];
 }
 
-export async function getComissoes(): Promise<ComissoesResp | null> {
+export async function getComissoes(janela = 24): Promise<ComissoesResp | null> {
   if (MODO !== 'api') return null;
   try {
-    const r = await fetch(`${API_BASE}/comissoes`);
+    const r = await fetch(`${API_BASE}/comissoes?janela=${janela}`);
     if (!r.ok) return null;
     const j = await r.json();
-    if (!j || !Array.isArray(j.corpos)) return null;   // API antiga -> shape errada
+    // `janela` só existe a partir de 2026-08-03.3. Exigi-la faz a API antiga
+    // cair no aviso de indisponível em vez de renderizar cartões sem estado —
+    // falha visível vale mais que painel meio pronto.
+    if (!j || !Array.isArray(j.corpos) || typeof j.janela !== 'number') return null;
     return j as ComissoesResp;
   } catch { return null; }
 }
@@ -1008,6 +1037,70 @@ export async function getComissaoAtos(slug: string): Promise<ComissaoDetalhe | n
     const j = await r.json();
     if (!j || !Array.isArray(j.atos)) return null;
     return j as ComissaoDetalhe;
+  } catch { return null; }
+}
+
+// --- Políticas (dossiê temático: o assunto e os atos que o construíram) ----
+// `papel` é o que o ato FAZ pela política, não o assunto de que ele trata. Sem
+// essa distinção, "designa comissão" contaria como execução e toda política com
+// muitas designações pareceria em andamento.
+export type PoliticaPapel =
+  | 'fundador' | 'regulamentacao' | 'execucao' | 'governanca' | 'monitoramento'
+  | 'avaliacao' | 'alteracao' | 'revogacao' | 'referencia';
+
+export interface PoliticaFundador {
+  id: string; label: string; sigla: string; data: string | null; ano: number;
+}
+export interface PoliticaResumo {
+  slug: string; nome: string; descricao: string | null; categoria: string | null;
+  // 'rascunho' = catálogo ainda em curadoria; a interface mostra o selo.
+  estagio: 'rascunho' | 'publicada' | 'arquivada';
+  atos: number; anoMin: number | null; anoMax: number | null;
+  ultimaData: string | null;
+  papeis: Partial<Record<PoliticaPapel, number>>;
+  fundador: PoliticaFundador | null;
+}
+export interface PoliticasResp {
+  politicas: PoliticaResumo[]; total: number; avisos: string[];
+  indisponivel?: boolean; motivo?: string;
+}
+
+export interface PoliticaAtoRef {
+  id: string; numero: string; ano: number; data: string | null; status: string;
+  sigla: string; tipo: string; link: string | null;
+  processoSei: string | null; linkSeiProcesso: string | null;
+  papel: PoliticaPapel; confianca: 'alta' | 'media' | 'baixa';
+  metodo: string; justificativa: string | null; ementa: string;
+}
+export interface PoliticaDetalhe {
+  politica: Pick<PoliticaResumo, 'slug' | 'nome' | 'descricao' | 'categoria' | 'estagio'>;
+  atos: PoliticaAtoRef[];
+  avisos: string[];
+}
+
+export async function getPoliticas(): Promise<PoliticasResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/politicas`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    // API anterior à rota cai no default listar() e devolve outra forma; e a
+    // resposta de indisponível é legítima (tabela ainda não criada).
+    if (!j) return null;
+    if (j.indisponivel) return j as PoliticasResp;
+    if (!Array.isArray(j.politicas)) return null;
+    return j as PoliticasResp;
+  } catch { return null; }
+}
+
+export async function getPoliticaAtos(slug: string): Promise<PoliticaDetalhe | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/politicas?slug=${encodeURIComponent(slug)}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !Array.isArray(j.atos)) return null;
+    return j as PoliticaDetalhe;
   } catch { return null; }
 }
 

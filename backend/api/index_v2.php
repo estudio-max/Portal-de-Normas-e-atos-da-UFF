@@ -86,7 +86,8 @@ switch ($recurso) {
     case 'prazos':   prazos($pdo); break;
     case 'jornada':  jornada($pdo); break;
     case 'cooperacao': cooperacao($pdo); break;
-    case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? ''); break;
+    case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? '', $_GET['janela'] ?? ''); break;
+    case 'politicas': politicas($pdo, $_GET['slug'] ?? ''); break;
     case 'ods':      ods($pdo, $_GET['n'] ?? ''); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
@@ -115,7 +116,8 @@ function cache_rotas(): array {
     // Só rotas cujo resultado é IGUAL para todos e muda 1x/dia. `dossie` é
     // pessoal (fica de fora); `atos`/`ato` variam demais e já são rápidas.
     static $r = ['stats', 'filtros', 'jornada', 'cooperacao', 'comissoes',
-                 'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods'];
+                 'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods',
+                 'politicas'];
     return $r;
 }
 function cache_cacheavel(string $recurso): bool {
@@ -399,7 +401,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-03.1'; }
+function api_versao(): string { return '2026-08-03.3'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1920,8 +1922,45 @@ function comissoes_registro(): array {
  * /api/comissoes?corpo=slug -> os atos de UM corpo, do mais novo ao mais antigo.
  * Lê do índice ato_comissao (montado pelo backfill/import), não casa texto aqui.
  */
-function comissoes(PDO $pdo, string $corpo): void {
+/**
+ * Janela de "evidência recente", em meses. 24 é o padrão recomendado no
+ * projeto; 12 e 36 ficam disponíveis porque a resposta certa depende do
+ * colegiado — comitê que se reúne trimestralmente e comissão que só age quando
+ * provocada não cabem na mesma régua. Whitelist: nunca interpolar entrada.
+ */
+function comissoes_janela(string $j): int {
+    $ok = [12, 24, 36];
+    $n = (int)$j;
+    return in_array($n, $ok, true) ? $n : 24;
+}
+
+/**
+ * Estado DOCUMENTAL do colegiado — nunca estado real.
+ *
+ * O vocabulário é escolhido para não afirmar o que o acervo não sustenta:
+ * "sem evidência recente localizada" e não "inativa". Uma comissão que
+ * trabalha e não publica é idêntica, no Boletim, a uma esquecida — e o
+ * CLAUDE.md já registra que essa distinção é indecidível aqui.
+ *
+ *   insuficiente   — 0 ou 1 ato no total: não há série para ler
+ *   recomposicao   — mandato com fim previsto transcorrido e nenhum ato depois
+ *   recente        — ato dentro da janela
+ *   sem_recente    — nenhum ato na janela (NÃO é "inativa")
+ */
+function comissao_estado(int $total, ?string $ultima, ?string $mandatoFim, int $janela): string {
+    if ($total <= 1) return 'insuficiente';
+    if ($mandatoFim !== null && strtotime($mandatoFim) < time()
+        && ($ultima === null || strtotime($ultima) <= strtotime($mandatoFim))) {
+        return 'recomposicao';
+    }
+    if ($ultima !== null
+        && strtotime($ultima) >= strtotime("-{$janela} months")) return 'recente';
+    return 'sem_recente';
+}
+
+function comissoes(PDO $pdo, string $corpo, string $janelaRaw = ''): void {
     $reg = comissoes_registro();
+    $janela = comissoes_janela($janelaRaw);
     $meta = [];
     foreach ($reg as $c) $meta[$c[0]] = ['slug' => $c[0], 'sigla' => $c[1],
                                          'nome' => $c[2], 'tipo' => $c[3], 'obrig' => $c[4]];
@@ -1948,33 +1987,130 @@ function comissoes(PDO $pdo, string $corpo): void {
                 'ementa' => mb_substr(preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? '')), 0, 260),
             ];
         }
-        responder_json(['corpo' => $meta[$corpo], 'atos' => $atos]);
+        // Mandato com fim previsto: prazo de vigência preso a um ato DESTE
+        // colegiado. É a única base honesta para "recomposição possivelmente
+        // necessária" — a data está escrita no ato, não estimada.
+        $st = $pdo->prepare("
+            SELECT a.uid, p.data_limite, p.conf, p.trecho
+              FROM prazo p
+              JOIN ato_comissao ac ON ac.ato_id = p.ato_id
+              JOIN ato a           ON a.id = p.ato_id
+             WHERE ac.comissao = :slug AND p.tipo = 'vigência/validade'
+               AND p.data_limite IS NOT NULL
+          ORDER BY p.data_limite DESC");
+        $st->execute([':slug' => $corpo]);
+        $mandatos = array_map(fn($r) => [
+            'atoId' => $r['uid'], 'fim' => $r['data_limite'],
+            'conf' => $r['conf'], 'trecho' => $r['trecho'],
+        ], $st->fetchAll(PDO::FETCH_ASSOC));
+
+        // Os atos já vêm do mais novo para o mais antigo.
+        $ultima = $atos[0]['data'] ?? null;
+        $jan = fn($m) => count(array_filter($atos, fn($x) =>
+            $x['data'] !== null && strtotime($x['data']) >= strtotime("-{$m} months")));
+
+        responder_json([
+            'corpo' => $meta[$corpo],
+            'atos' => $atos,
+            'ultimaData' => $ultima,
+            'eventos' => ['m12' => $jan(12), 'm24' => $jan(24), 'm36' => $jan(36)],
+            'mandatos' => $mandatos,
+            'estado' => comissao_estado(count($atos), $ultima,
+                                        $mandatos[0]['fim'] ?? null, $janela),
+            'janela' => $janela,
+            'avisos' => [
+                'O estado é DOCUMENTAL: descreve o que o Boletim registra, não a atividade real do colegiado.',
+                'A composição vigente não é exibida: o dispositivo dos atos de designação ainda não é extraído em forma estruturada.',
+            ],
+        ]);
     }
 
     // Visão de lista: contagem/período por corpo, direto do índice.
+    // As janelas saem numa passada só — `SUM(condição)` é o COUNTIF do MySQL e
+    // evita três consultas, ou uma função de janela que o 5.7 não tem.
     $ag = $pdo->query("
         SELECT ac.comissao AS slug, COUNT(*) AS n,
                MIN(a.ano) AS ano_min, MAX(a.ano) AS ano_max,
                COUNT(DISTINCT a.ano) AS anos,
-               SUM(a.data_ato = (SELECT MAX(a2.data_ato) FROM ato_comissao ac2
-                    JOIN ato a2 ON a2.id = ac2.ato_id WHERE ac2.comissao = ac.comissao)) AS x
+               MAX(a.data_ato) AS ultima,
+               SUM(a.data_ato >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)) AS e12,
+               SUM(a.data_ato >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)) AS e24,
+               SUM(a.data_ato >= DATE_SUB(CURDATE(), INTERVAL 36 MONTH)) AS e36
           FROM ato_comissao ac
           JOIN ato a ON a.id = ac.ato_id
       GROUP BY ac.comissao")->fetchAll(PDO::FETCH_ASSOC);
     $porSlug = [];
     foreach ($ag as $r) $porSlug[$r['slug']] = $r;
 
+    // Último ato de cada corpo, com rótulo clicável. Uma consulta ordenada e o
+    // primeiro de cada slug em PHP — subconsulta correlacionada por linha custa
+    // caro e o 5.7 não tem ROW_NUMBER().
+    $ultimo = [];
+    foreach ($pdo->query("
+        SELECT ac.comissao AS slug, a.uid, a.data_ato, a.status,
+               CONCAT(t.nome, ' nº ', a.numero, '/', a.ano) AS label
+          FROM ato_comissao ac
+          JOIN ato a      ON a.id = ac.ato_id
+          JOIN tipo_ato t ON t.id = a.tipo_id
+      ORDER BY a.data_ato DESC, a.ano DESC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        if (!isset($ultimo[$r['slug']])) {
+            $ultimo[$r['slug']] = ['id' => $r['uid'], 'label' => $r['label'],
+                                   'data' => $r['data_ato'], 'status' => $r['status']];
+        }
+    }
+
+    // Composição por TIPO de ato. É o mais perto que se chega hoje de separar
+    // governança de entrega: Portaria costuma ser designação da Reitoria;
+    // Decisão e Resolução, ato que o próprio colegiado produz.
+    $porTipo = [];
+    foreach ($pdo->query("
+        SELECT ac.comissao AS slug, t.nome AS tipo, COUNT(*) AS n
+          FROM ato_comissao ac
+          JOIN ato a      ON a.id = ac.ato_id
+          JOIN tipo_ato t ON t.id = a.tipo_id
+      GROUP BY ac.comissao, t.nome")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $porTipo[$r['slug']][$r['tipo']] = (int)$r['n'];
+    }
+
+    // Mandato com fim previsto: prazo de vigência/validade preso a um ato do
+    // colegiado. É o que permite dizer "recomposição possivelmente necessária"
+    // sem inventar — a data está escrita no ato.
+    $mandato = [];
+    foreach ($pdo->query("
+        SELECT ac.comissao AS slug, a.uid, p.data_limite, p.conf, p.trecho
+          FROM prazo p
+          JOIN ato_comissao ac ON ac.ato_id = p.ato_id
+          JOIN ato a           ON a.id = p.ato_id
+         WHERE p.tipo = 'vigência/validade' AND p.data_limite IS NOT NULL
+      ORDER BY p.data_limite DESC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        if (!isset($mandato[$r['slug']])) {
+            $mandato[$r['slug']] = ['atoId' => $r['uid'], 'fim' => $r['data_limite'],
+                                    'conf' => $r['conf'], 'trecho' => $r['trecho']];
+        }
+    }
+
     $corpos = [];
     foreach ($reg as $c) {
         $slug = $c[0];
         $s = $porSlug[$slug] ?? null;
+        $total = $s ? (int)$s['n'] : 0;
+        $ult = $s['ultima'] ?? null;
+        $man = $mandato[$slug] ?? null;
         $corpos[] = [
             'slug' => $slug, 'sigla' => $c[1], 'nome' => $c[2], 'tipo' => $c[3],
             'obrig' => $c[4],
-            'atos' => $s ? (int)$s['n'] : 0,
+            'atos' => $total,
             'anos' => $s ? (int)$s['anos'] : 0,
             'anoMin' => $s ? (int)$s['ano_min'] : null,
             'anoMax' => $s ? (int)$s['ano_max'] : null,
+            'ultimaData' => $ult,
+            'ultimoAto' => $ultimo[$slug] ?? null,
+            'eventos' => ['m12' => $s ? (int)$s['e12'] : 0,
+                          'm24' => $s ? (int)$s['e24'] : 0,
+                          'm36' => $s ? (int)$s['e36'] : 0],
+            'porTipo' => $porTipo[$slug] ?? [],
+            'mandato' => $man,
+            'estado' => comissao_estado($total, $ult, $man['fim'] ?? null, $janela),
         ];
     }
     // órfão: atos taggeados com slug fora do registro (não deveria acontecer,
@@ -1986,6 +2122,159 @@ function comissoes(PDO $pdo, string $corpo): void {
         'corpos' => $corpos,
         'total' => array_sum(array_map(fn($c) => $c['atos'], $corpos)),
         'orfaos' => $orfaos,
+        'janela' => $janela,
+        'avisos' => [
+            'O estado é DOCUMENTAL: descreve o que o Boletim registra, não a atividade real do colegiado.',
+            'Atividade pode ocorrer fora do Boletim de Serviço — ausência de ato não comprova ausência de trabalho.',
+            'A composição vigente não é exibida: o dispositivo dos atos de designação ainda não é extraído em forma estruturada.',
+        ],
+    ]);
+}
+
+// ===========================================================================
+//  POLÍTICAS — o dossiê temático: um assunto institucional e os atos que o
+//  construíram ao longo do tempo.
+//
+//  Lê `politica` + `ato_politica` (catálogo curado, semeado offline por
+//  tools/gerar_seed_politicas.py). Mesmo desenho das comissões e das ODS: a
+//  rota NÃO casa texto ao vivo, só lê o índice pronto.
+//
+//  O que distingue esta aba das outras: `papel` — o que o ato FAZ pela
+//  política. Sem ele, "designa comissão" e "fixa diretrizes de execução"
+//  contariam igual, e a política pareceria em execução por ter muitas
+//  designações. É a mesma separação que o `ato_ods.vinculo` faz.
+//
+//  `estagio` é o status de curadoria e vai EXPLÍCITO na resposta. Política em
+//  rascunho aparece marcada como tal — esconder seria pior: o portal já mostra
+//  confiança e método em toda inferência, e catálogo em revisão é a mesma
+//  categoria de informação.
+// ===========================================================================
+function politicas_avisos(): array {
+    return [
+        'Ausência de evidência no Boletim não comprova ausência de execução — o acervo cobre o que foi publicado no Boletim de Serviço.',
+        'O vínculo entre ato e política é inferido por regra (frase estrita na ementa ou órgão emissor) e revisado por curadoria.',
+    ];
+}
+
+function politicas(PDO $pdo, string $slug): void {
+    // Degradação graciosa: a rota pode subir antes de o SQL rodar no
+    // phpMyAdmin (deploy em duas mãos). Responder 200 com `indisponivel`, como
+    // a rota de ODS já faz — o painel mostra o aviso em vez de tela quebrada.
+    try {
+        $pdo->query("SELECT 1 FROM politica LIMIT 1");
+    } catch (Throwable $e) {
+        responder_json(['indisponivel' => true,
+                        'motivo' => 'A tabela politica ainda não foi criada/carregada.']);
+    }
+
+    if ($slug !== '') {
+        $st = $pdo->prepare("
+            SELECT p.slug, p.nome, p.descricao, p.categoria, p.status_curadoria
+              FROM politica p WHERE p.slug = :slug");
+        $st->execute([':slug' => $slug]);
+        $pol = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$pol) responder_json(['erro' => 'política desconhecida'], 404);
+
+        $st = $pdo->prepare("
+            SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa, a.status,
+                   a.processo_sei, o.sigla, t.nome AS tipo, b.url_pdf AS link,
+                   ap.papel, ap.confianca, ap.metodo, ap.justificativa
+              FROM ato_politica ap
+              JOIN politica p     ON p.id = ap.politica_id
+              JOIN ato a          ON a.id = ap.ato_id
+              JOIN orgao o        ON o.id = a.orgao_id
+              JOIN tipo_ato t     ON t.id = a.tipo_id
+              LEFT JOIN boletim b ON b.id = a.boletim_id
+             WHERE p.slug = :slug
+             ORDER BY a.data_ato DESC, a.ano DESC, a.numero_norm DESC");
+        $st->execute([':slug' => $slug]);
+        $atos = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $atos[] = [
+                'id' => $r['id'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+                'data' => $r['data_ato'], 'status' => $r['status'], 'sigla' => $r['sigla'],
+                'tipo' => $r['tipo'], 'link' => $r['link'],
+                'processoSei' => $r['processo_sei'] ?: null,
+                'linkSeiProcesso' => link_sei_processo((string)($r['processo_sei'] ?? '')),
+                'papel' => $r['papel'], 'confianca' => $r['confianca'],
+                'metodo' => $r['metodo'], 'justificativa' => $r['justificativa'] ?: null,
+                'ementa' => mb_substr(preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? '')), 0, 300),
+            ];
+        }
+        responder_json([
+            'politica' => [
+                'slug' => $pol['slug'], 'nome' => $pol['nome'],
+                'descricao' => $pol['descricao'], 'categoria' => $pol['categoria'],
+                'estagio' => $pol['status_curadoria'],
+            ],
+            'atos' => $atos,
+            'avisos' => politicas_avisos(),
+        ]);
+    }
+
+    // ---- lista: catálogo + agregados -------------------------------------
+    // Três consultas simples em vez de uma esperta: o 5.7 não tem função de
+    // janela, e agregar papel/fundador numa query só exigiria subconsulta
+    // correlacionada por linha. São 7 políticas — o custo é irrelevante e o
+    // SQL continua legível.
+    $base = $pdo->query("
+        SELECT p.slug, p.nome, p.descricao, p.categoria, p.status_curadoria,
+               COUNT(ap.id) AS n, MIN(a.ano) AS ano_min, MAX(a.ano) AS ano_max,
+               MAX(a.data_ato) AS ultima
+          FROM politica p
+          LEFT JOIN ato_politica ap ON ap.politica_id = p.id
+          LEFT JOIN ato a           ON a.id = ap.ato_id
+      GROUP BY p.id
+      ORDER BY p.nome")->fetchAll(PDO::FETCH_ASSOC);
+
+    $papeis = [];
+    foreach ($pdo->query("
+        SELECT p.slug, ap.papel, COUNT(*) AS n
+          FROM ato_politica ap JOIN politica p ON p.id = ap.politica_id
+      GROUP BY p.slug, ap.papel")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $papeis[$r['slug']][$r['papel']] = (int)$r['n'];
+    }
+
+    // Ato fundador: o MAIS ANTIGO com papel='fundador'. Política pode não ter
+    // nenhum — e isso é informação, não falha: significa que o acervo registra
+    // a política em atividade sem registrar o ato que a instituiu.
+    $fund = [];
+    foreach ($pdo->query("
+        SELECT p.slug, a.uid, a.data_ato, a.ano, o.sigla,
+               CONCAT(t.nome, ' nº ', a.numero, '/', a.ano) AS label
+          FROM ato_politica ap
+          JOIN politica p  ON p.id = ap.politica_id
+          JOIN ato a       ON a.id = ap.ato_id
+          JOIN orgao o     ON o.id = a.orgao_id
+          JOIN tipo_ato t  ON t.id = a.tipo_id
+         WHERE ap.papel = 'fundador'
+      ORDER BY a.data_ato ASC, a.ano ASC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        if (!isset($fund[$r['slug']])) {
+            $fund[$r['slug']] = ['id' => $r['uid'], 'label' => $r['label'],
+                                 'sigla' => $r['sigla'], 'data' => $r['data_ato'],
+                                 'ano' => (int)$r['ano']];
+        }
+    }
+
+    $politicas = [];
+    foreach ($base as $r) {
+        $politicas[] = [
+            'slug' => $r['slug'], 'nome' => $r['nome'],
+            'descricao' => $r['descricao'], 'categoria' => $r['categoria'],
+            'estagio' => $r['status_curadoria'],
+            'atos' => (int)$r['n'],
+            'anoMin' => $r['ano_min'] !== null ? (int)$r['ano_min'] : null,
+            'anoMax' => $r['ano_max'] !== null ? (int)$r['ano_max'] : null,
+            'ultimaData' => $r['ultima'],
+            'papeis' => $papeis[$r['slug']] ?? [],
+            'fundador' => $fund[$r['slug']] ?? null,
+        ];
+    }
+
+    responder_json([
+        'politicas' => $politicas,
+        'total' => array_sum(array_map(fn($p) => $p['atos'], $politicas)),
+        'avisos' => politicas_avisos(),
     ]);
 }
 
