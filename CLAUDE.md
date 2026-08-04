@@ -525,11 +525,36 @@ resumo operacional.
   `docs/ARQUITETURA-BASE-DADOS.md` §3.6 — em especial por que `comissao` é
   chaveada pelo slug, e por que **não** há FK de `obrigacao` para `prazo` (o
   importador recicla `prazo.id` a cada import).
-  O que falta: semear os catálogos (política a partir dos atos com
-  `ato_ods.vinculo='proposta'`; comissão a partir de
-  `tools/registro_comissoes.py` — o bloco 7 da verificação acusa **26 slugs sem
-  catálogo** e é esse número que o seed tem que zerar) e escrever o detector de
-  obrigação, que **tem que chamar `extrair_prazos()`** para resolver data:
+  **Os seeds estão escritos e ainda NÃO aplicados:** `backend/db/seed_comissao.sql`
+  (26 colegiados, de `tools/registro_comissoes.py`) e `backend/db/seed_politica.sql`
+  (7 políticas, 41 aliases, 93 vínculos, de `tools/gerar_seed_politicas.py`).
+  Os dois saem de gerador — editar o `.sql` à mão reprova no CI. Depois de
+  aplicados, o bloco 7 da verificação vai de `0/26/0` para **`26/0/0`**, e esse
+  zero do meio é a prova de que os slugs do catálogo são os que a `ato_comissao`
+  já usa.
+  **Como o catálogo de políticas foi montado** (medições em
+  `tools/analisar_politicas.py`, reproduzíveis): a semente são os atos com
+  `ato_ods.vinculo='proposta'` — 243 linhas em 136 atos. Três achados que valem
+  para qualquer módulo novo:
+  (a) `integridade` solto casa o NOME DO EMISSOR — o CGIRC abre seus atos com
+  "O COMITÊ DE GOVERNANÇA, INTEGRIDADE, RISCOS E CONTROLES", e levava junto o
+  Plano Socioambiental, o Bem Viver e o relatório do PDI; exigir o dispositivo
+  (`plano/programa/política de integridade`) tira os quatro. É a armadilha-mãe
+  da METODOLOGIA-ODS outra vez.
+  (b) a assistência estudantil **não se anuncia na ementa** — quem a identifica
+  é o emissor, a PROAES; 24 dos 37 atos entram só por esse sinal, mesma lição
+  do `comissoes_do_orgao`.
+  (c) 15 atos têm ementa inutilizável (sem ementa formal, fragmento, rodapé, ou
+  OCR que espaça letra a letra) e vão para curadoria, não para o catálogo.
+  Assédio não veio da camada ODS (tinha 1 ato lá): veio de varredura da ementa
+  no acervo inteiro — 16 atos, 1 central (Plano do CGIRC, 2025) e 10 comissões
+  LOCAIS de unidade entre 2018 e 2026. As 4 sindicâncias ficam de fora por
+  efeito individual. PGD não entrou: os únicos atos eram flexibilização de
+  jornada de 2016/2018, território que a aba Jornada já cobre.
+  Fora do seed, em `../dados/curadoria_politicas.csv`: 48 sem cluster, 10 de
+  duplicata de acervo, 4 de efeito individual.
+  O que falta depois disso: a rota `/api/politicas`, o painel, e o detector de
+  obrigação — que **tem que chamar `extrair_prazos()`** para resolver data:
   aquela lógica já tem três espelhos que precisam concordar, e um quarto seria
   dois códigos discordando sobre a mesma cláusula.
 
