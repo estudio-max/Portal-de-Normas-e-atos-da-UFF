@@ -30,9 +30,25 @@ A pasta-mãe tem só mais dois itens, e nenhum é código vivo: `dados/` (PDFs d
 boletins, cargas, dumps — bancada de trabalho) e `_arquivo/` (morto, não
 alimenta produção). Mapa em [`../LEIA-ME.md`](../LEIA-ME.md).
 
-A indexação diária **não roda nesta máquina** — roda no GitHub Actions
-(`.github/workflows/indexar.yml`, cron 22:10), que baixa os próprios boletins.
-Não há tarefa agendada local.
+**Nada disso roda nesta máquina, e há DOIS agendamentos, não um.**
+
+1. **GitHub Actions** (`.github/workflows/indexar.yml`, cron 22:10 UTC) baixa
+   os boletins, extrai os atos e commita `public/portal-data.json`. Isso
+   alimenta só o **modo estático de contingência** — não toca o banco.
+2. **Cron no cPanel do servidor**, **duas vezes por dia (12h e 20h)**, roda a
+   importação e é o que de fato atualiza o portal no ar.
+
+A consequência prática é o que mais se erra aqui: **tudo que o importador
+escreve se mantém sozinho** — `ato`, `relacao`, `prazo`, `ato_processo`,
+`ato_comissao`, `ato_ods` e, desde 04/08/2026, `ato_politica`. O que NÃO se
+mantém sozinho são os **catálogos curados** (`politica`, `politica_alias`,
+`comissao`, `obrigacao`): eles são seeds gerados offline e só mudam quando
+alguém regera e aplica.
+
+⚠️ **Não confirmei o que exatamente o cron invoca** (se roda o pipeline
+inteiro no servidor ou se busca o JSON já pronto do GitHub), nem por que o
+`banco_atualizado_em` de 03/08 marcava 18:00 — não bate com 12h nem com 20h,
+e pode ser fuso do servidor. Quem souber, corrija esta linha.
 
 Regra de fechamento: **todo trabalho termina em `git commit` + `git push`.** O
 GitHub é o espelho único; se não foi empurrado, não aconteceu.
@@ -119,11 +135,14 @@ para a pasta `importar/` do servidor e visite
 `basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
 É seguro repetir: o upsert casa por chave natural
 `(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
-chama o `resolver_relacoes_v2.php` sozinho. Confira que **os quatro** arquivos de
+chama o `resolver_relacoes_v2.php` sozinho. Confira que **os cinco** arquivos de
 `require_once` estão na mesma pasta — `extrair_prazos.php`,
-`extrair_prazos_pad_sinve.php`, `comissoes_match.php` e `ods_match.php`: a falta
-de qualquer um dá HTTP 500 de corpo vazio, e o `ods_match.php` é novo (03/08/2026),
-então **não está no servidor** de quem subiu o importador antes dessa data. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
+`extrair_prazos_pad_sinve.php`, `comissoes_match.php`, `ods_match.php` e
+`politicas_match.php`: **a falta de qualquer um dá HTTP 500 de corpo vazio**, e
+com o cron rodando 2x/dia isso significa portal parado sem ninguém notar. Os
+dois últimos são recentes (`ods_match.php` de 03/08/2026, `politicas_match.php`
+de 04/08/2026): quem subiu o importador antes dessas datas **não os tem**.
+Ao atualizar o importador, suba SEMPRE os `_match.php` ANTES dele. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
 
 A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 `config.php` era da época em que ela tinha senha; ficou sem uso).
