@@ -77,9 +77,15 @@ PDI_VERSAO = '2023-2027'
 # (slug, nome, eixo_pdi, subtema_pdi, base, descricao, termos, emissores)
 #
 # `termos` casam por FRASE ESTRITA na ementa. `emissores` e o segundo sinal:
-# a sigla do orgao que assina. Medido: 24 dos 37 atos de assistencia estudantil
-# entram SO pelo emissor -- "Fixa as diretrizes para execucao do Programa
-# Auxilio Alimentacao" nao tem frase que identifique a politica.
+# a sigla do orgao que assina. Medido no seed de 04/08/2026: 22 dos 38 vinculos
+# de assistencia estudantil entram SO pelo emissor -- ementa como "Fixa as
+# diretrizes para o Programa de Bolsa de Desenvolvimento Academico" nao tem
+# termo nenhum do catalogo; quem identifica a politica e a PROAES.
+#
+# NAO use "Programa Auxilio Alimentacao" como exemplo do segundo sinal:
+# `auxilio alimentacao` esta na lista acima, entao aquela ementa entra por FRASE
+# (confianca alta). O exemplo errado virou caso de teste e deixou o CI vermelho
+# por 8 commits -- ver teste_politicas_match.php.
 #
 # `assedio` nao veio da camada ODS (tinha 1 ato la). Veio de varredura da
 # ementa no acervo inteiro: 16 atos, dos quais 1 central (o Plano do CGIRC,

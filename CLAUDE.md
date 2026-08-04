@@ -56,8 +56,23 @@ inteiro no servidor ou se busca o JSON já pronto do GitHub), nem por que o
 `banco_atualizado_em` de 03/08 marcava 18:00 — não bate com 12h nem com 20h,
 e pode ser fuso do servidor. Quem souber, corrija esta linha.
 
-Regra de fechamento: **todo trabalho termina em `git commit` + `git push`.** O
-GitHub é o espelho único; se não foi empurrado, não aconteceu.
+Regra de fechamento: **todo trabalho termina em `git commit` + `git push` + o CI
+VERDE.** O GitHub é o espelho único; se não foi empurrado, não aconteceu — e se
+o CI está vermelho, também não.
+
+⚠️ **Conferir o CI não é opcional, e a razão é específica desta máquina: o PHP
+não roda aqui** (bloqueio de política do Windows). O portão local cobre
+TypeScript, a trava do redesign e o schema; os testes de PHP — sintaxe,
+`teste_ods_match`, `teste_politicas_match`, `teste_indicador_politica` — só
+existem no job `ods` do CI. Quem só roda o portão local acha que passou.
+
+Foi exatamente o que aconteceu em 04/08/2026: o `teste_politicas_match.php`
+entrou vermelho no commit que o criou e ficou assim por **8 commits**, porque o
+portão local passava e ninguém abriu o Actions. Sem `gh` instalado, confira por:
+
+```bash
+curl -s "https://api.github.com/repos/estudio-max/Portal-de-Normas-e-atos-da-UFF/commits/main/check-runs"
+```
 
 ## Os arquivos que importam
 
@@ -259,7 +274,7 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   **Dois sinais ligam ato↔política**, como nas comissões: (1) frase estrita na
   ementa (confiança alta); (2) o ÓRGÃO EMISSOR, quando a ementa não nomeia a
   política — "Fixa as diretrizes para execução do Programa Auxílio Alimentação"
-  só se identifica pela PROAES, e **24 dos 37 atos de assistência estudantil
+  só se identifica pela PROAES, e **22 dos 38 vínculos de assistência estudantil
   entram só por aí**.
   Duas guardas medidas: o termo no NOME DO EMISSOR (`integridade` casava a
   cláusula de abertura do CGIRC e trazia o Plano Socioambiental, o Bem Viver e o
@@ -705,7 +720,7 @@ resumo operacional.
   (`plano/programa/política de integridade`) tira os quatro. É a armadilha-mãe
   da METODOLOGIA-ODS outra vez.
   (b) a assistência estudantil **não se anuncia na ementa** — quem a identifica
-  é o emissor, a PROAES; 24 dos 37 atos entram só por esse sinal, mesma lição
+  é o emissor, a PROAES; 22 dos 38 vínculos entram só por esse sinal, mesma lição
   do `comissoes_do_orgao`.
   (c) 15 atos têm ementa inutilizável (sem ementa formal, fragmento, rodapé, ou
   OCR que espaça letra a letra) e vão para curadoria, não para o catálogo.

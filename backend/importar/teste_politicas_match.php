@@ -78,12 +78,26 @@ aceita('plano de integridade de verdade',
     'integridade-riscos');
 
 // ---------------------------------------------------------------------------
-// 2. O EMISSOR COMO SEGUNDO SINAL. A ementa não diz "assistência estudantil";
-//    quem diz é a PROAES. 24 dos 37 atos entram só por aqui.
+// 2. O EMISSOR COMO SEGUNDO SINAL. A ementa não nomeia a política; quem a
+//    nomeia é a PROAES, que assina. Medido no seed de 04/08/2026: 22 dos 38
+//    vínculos de assistência estudantil entram por emissor, 16 por frase.
+//
+//    CUIDADO AO ESCOLHER A EMENTA DESTE CASO. A primeira versão usava "Programa
+//    Auxílio Alimentação para Estudantes Ingressantes" — o exemplo que a
+//    METODOLOGIA cita —, mas `auxílio alimentação` ESTÁ na lista de termos:
+//    aquela ementa entra por FRASE, com confiança alta, e o caso exigia média.
+//    O teste nasceu vermelho por isso e ficou 8 commits assim. Para provar o
+//    segundo sinal, a ementa precisa não conter termo nenhum do catálogo.
 // ---------------------------------------------------------------------------
-aceita('PROAES sem a frase — entra pelo emissor',
-    'Fixa as diretrizes para a execução do Programa Auxílio Alimentação para Estudantes Ingressantes.',
+aceita('PROAES sem termo do catálogo — entra só pelo emissor',
+    'Fixa as diretrizes para o Programa de Bolsa de Desenvolvimento Acadêmico no exercício de 2026.',
     'assistencia-estudantil', 'execucao', 'media', 'PROAES');
+
+// O contra-exemplo, para ninguém "consertar" o caso acima de volta: esta ementa
+// TEM termo do catálogo (`auxílio alimentação`), então entra por frase.
+aceita('auxílio alimentação está no catálogo — confiança alta, não média',
+    'Fixa as diretrizes para a execução do Programa Auxílio Alimentação para Estudantes Ingressantes.',
+    'assistencia-estudantil', 'execucao', 'alta', 'PROAES');
 
 // Com a frase, a confiança é alta e o emissor não duplica a linha.
 aceita('frase presente — confiança alta',

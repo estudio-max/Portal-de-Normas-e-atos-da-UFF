@@ -22,7 +22,7 @@
 //
 //  O segundo não é luxo. "Fixa as diretrizes para execução do Programa Auxílio
 //  Alimentação" não tem frase que diga "assistência estudantil" — quem diz é a
-//  PROAES, que assina. Medido no seed: 24 dos 37 atos entram só por esse sinal.
+//  PROAES, que assina. Medido no seed: 22 dos 38 vinculos entram por esse sinal.
 // ============================================================================
 
 if (!function_exists('politicas_termos')) {

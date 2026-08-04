@@ -116,13 +116,22 @@ regra do casamento de comissões.
 
 Quando a ementa não nomeia a política, quem a nomeia é quem assina.
 
-> "Fixa as diretrizes para execução do Programa Auxílio Alimentação para
-> Estudantes Ingressantes"
+> "Fixa as diretrizes para o Programa de Bolsa de Desenvolvimento Acadêmico"
 
-Não há frase aqui que diga "assistência estudantil". O que diz é o emissor: a
-**PROAES**, Pró-Reitoria de Assuntos Estudantis. **Medido: 24 dos 37 atos de
-assistência estudantil entram só por este sinal** — sem ele, a maior política do
-piloto apareceria com um terço do tamanho.
+Não há frase aqui que diga "assistência estudantil" nem qualquer outro termo do
+catálogo. O que diz é o emissor: a **PROAES**, Pró-Reitoria de Assuntos
+Estudantis. **Medido no seed de 04/08/2026: 22 dos 38 vínculos de assistência
+estudantil entram só por este sinal** (16 entram por frase) — sem ele, a maior
+política do piloto apareceria com pouco mais de um terço do tamanho.
+
+> ⚠️ **O exemplo desta seção mudou em 04/08/2026, e a troca vale registro.** Ele
+> era *"Programa Auxílio Alimentação para Estudantes Ingressantes"* — só que
+> `auxílio alimentação` **está** na lista de termos, então aquela ementa entra
+> por FRASE, com confiança alta. O exemplo contradizia o que ilustrava. Pior: o
+> mesmo texto virou caso de teste em `teste_politicas_match.php`, exigindo
+> confiança média de uma ementa que produz alta — **o teste nasceu vermelho e
+> ficou 8 commits assim** até alguém olhar o CI. Hoje o teste cobre os dois
+> lados, e o contra-exemplo está lá para impedir a volta.
 
 É a mesma lição que o `comissoes_do_orgao` já tinha ensinado: o ato que um corpo
 assina sem se nomear na ementa só se identifica pelo emissor.
