@@ -122,6 +122,7 @@ flowchart LR
     disp --> analise["<b>Análise</b><br/>insights · analitico<br/>prazos · pad_cadeia"]
     disp --> ementa["<b>Derivados da ementa</b><br/>jornada · cooperacao"]
     disp --> curado["<b>Índice curado</b><br/>comissoes · politicas<br/>ods · (processo)"]
+    disp --> composto["<b>Composto</b><br/>mudancas"]
     disp --> saude["<b>health</b>"]
 
     acervo --> pdo[("PDO<br/>MySQL")]
@@ -129,9 +130,12 @@ flowchart LR
     analise --> pdo
     ementa --> pdo
     curado --> pdo
+    composto --> curado
+    composto --> analise
 
     style disp fill:#003366,color:#fff
     style ementa fill:#EAB308
+    style composto fill:#7C3AED,color:#fff
 ```
 
 Os grupos existem por **origem do dado**, e a distinção importa:
@@ -153,9 +157,18 @@ Os grupos existem por **origem do dado**, e a distinção importa:
   livre é ruído. O mesmo vale para as Políticas: o catálogo sai de
   `tools/gerar_seed_politicas.py`, e cada vínculo carrega o **papel** do ato na
   política — ver [`METODOLOGIA-POLITICAS.md`](METODOLOGIA-POLITICAS.md).
+- **Composto** (`mudancas`) é o único grupo que não tem fonte própria: ele
+  **soma vínculos que os outros grupos já apuraram** — política, colegiado,
+  alteração de vigência, prazo futuro. Cada sinal passou pela conferência da sua
+  própria aba; o feed só os junta. Foi decisão de desenho: um classificador novo
+  de "relevância" seria uma quarta régua para manter em acordo com as outras
+  três, e erraria sozinho. Por isso também **não materializa linha** — a tabela
+  `mudanca_relevante` existe no schema e segue vazia.
 
 Uma consequência prática: **análise nova é tabela-fato nova, não coluna nova**
 em `ato`. Quem pensa em `ALTER TABLE ato ADD COLUMN` parou no modelo antigo.
+O grupo Composto é a exceção que confirma a regra: quando a análise nova é
+**combinação** de análises já apuradas, ela não precisa de tabela nenhuma.
 
 ### Dentro do pipeline de extração
 

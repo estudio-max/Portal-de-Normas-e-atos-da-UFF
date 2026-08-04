@@ -40,10 +40,16 @@ alimenta produção). Mapa em [`../LEIA-ME.md`](../LEIA-ME.md).
 
 A consequência prática é o que mais se erra aqui: **tudo que o importador
 escreve se mantém sozinho** — `ato`, `relacao`, `prazo`, `ato_processo`,
-`ato_comissao`, `ato_ods` e, desde 04/08/2026, `ato_politica`. O que NÃO se
-mantém sozinho são os **catálogos curados** (`politica`, `politica_alias`,
-`comissao`, `obrigacao`): eles são seeds gerados offline e só mudam quando
-alguém regera e aplica.
+`ato_comissao`, `ato_ods` e, desde 04/08/2026, `ato_politica` e
+`politica_indicador`. O que NÃO se mantém sozinho são os **catálogos curados**
+(`politica`, `politica_alias`, `comissao`, `obrigacao`): eles são seeds gerados
+offline e só mudam quando alguém regera e aplica.
+
+**Corolário que já custou confusão:** o que o importador escreve só aparece
+**depois da primeira importação seguinte ao deploy**. Subir o painel de etapas às
+15h não enche `politica_indicador` — ele enche às 20h, quando o cron roda. Painel
+vazio na tarde do deploy é o esperado, não defeito; confira `banco_atualizado_em`
+em `/api/health` antes de investigar.
 
 ⚠️ **Não confirmei o que exatamente o cron invoca** (se roda o pipeline
 inteiro no servidor ou se busca o JSON já pronto do GitHub), nem por que o
@@ -135,14 +141,15 @@ para a pasta `importar/` do servidor e visite
 `basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
 É seguro repetir: o upsert casa por chave natural
 `(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
-chama o `resolver_relacoes_v2.php` sozinho. Confira que **os cinco** arquivos de
+chama o `resolver_relacoes_v2.php` sozinho. Confira que **os SEIS** arquivos de
 `require_once` estão na mesma pasta — `extrair_prazos.php`,
-`extrair_prazos_pad_sinve.php`, `comissoes_match.php`, `ods_match.php` e
-`politicas_match.php`: **a falta de qualquer um dá HTTP 500 de corpo vazio**, e
-com o cron rodando 2x/dia isso significa portal parado sem ninguém notar. Os
-dois últimos são recentes (`ods_match.php` de 03/08/2026, `politicas_match.php`
-de 04/08/2026): quem subiu o importador antes dessas datas **não os tem**.
-Ao atualizar o importador, suba SEMPRE os `_match.php` ANTES dele. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
+`extrair_prazos_pad_sinve.php`, `comissoes_match.php`, `ods_match.php`,
+`politicas_match.php` e `indicador_politica.php`: **a falta de qualquer um dá
+HTTP 500 de corpo vazio**, e com o cron rodando 2x/dia isso significa portal
+parado sem ninguém notar. Os três últimos são recentes (`ods_match.php` de
+03/08/2026, `politicas_match.php` e `indicador_politica.php` de 04/08/2026):
+quem subiu o importador antes dessas datas **não os tem**.
+Ao atualizar o importador, suba SEMPRE os auxiliares ANTES dele. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
 
 A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 `config.php` era da época em que ela tinha senha; ficou sem uso).
@@ -184,7 +191,7 @@ regra estabilizar (aí sim vale o modelo em estrela).
 
 Os painéis diário-estáticos (`stats`, `filtros`, `jornada`, `cooperacao`,
 `comissoes`, `politicas`, `insights`, `analitico`, `prazos`, `pad_cadeia`,
-`ods`) são
+`ods`, `mudancas`) são
 cacheados em disco (`api/cache/`). Medido: jornada/cooperacao/insights custam ~0,5s de CPU
 por requisição, e dão a MESMA resposta para todos entre uma importação e outra
 (o acervo muda 1x/dia). Servidos do cache custam ~0,005s e **nem conectam no
@@ -297,6 +304,31 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   órgão emissor, unidade remanejada), não no dispositivo — 292 atos de pessoal
   entraram assim na primeira carga. Cruzamento com o Relatório ODS oficial da
   UFF em [`docs/CRUZAMENTO-RELATORIO-ODS-2024.md`](docs/CRUZAMENTO-RELATORIO-ODS-2024.md).
+
+## "O que mudou": o feed sai de fato apurado, não de classificador novo
+
+`/api/mudancas` + aba `#/mudancas`. Não tem tabela-fato própria e **não escreve
+nada**: soma vínculos que outras abas já apuraram e conferiram — `ato_politica`
+(política), `ato_comissao` (colegiado), `relacao` com tipo `Revoga`/`Altera`
+(vigência) e `prazo` com data futura. Cada sinal já passou por medição própria; o
+feed só os junta e ordena.
+
+**A guarda central é por PRESENÇA de vínculo institucional, não por ausência de
+vínculo pessoal.** Medido: 64% dos atos recentes são de efeito individual, e o
+filtro óbvio — excluir quem cita SIAPE — vaza, porque só 30–70% dos atos
+registram matrícula e "Designa os servidores &lt;nome&gt;" passaria batido. Exigir
+laço apurado fecha isso; a regra negativa sozinha, não.
+
+**Nenhum texto é gerado.** Cada item mostra a ementa do próprio ato. O projeto
+previa resumo em linguagem simples revisado por humano; enquanto essa revisão não
+existir, escrever prosa automática sobre atos que afetam pessoas seria inventar.
+A relevância também nunca aparece como número: o que a interface mostra é o
+MOTIVO nomeado (política X, colegiado Y, muda vigência), porque o número sozinho
+pediria confiança que ele não tem.
+
+Janela padrão de 180 dias, whitelist `[30, 90, 180, 365]` — a entrada nunca é
+interpolada no SQL. A rota degrada com `indisponivel: true` se as tabelas do
+núcleo analítico não existirem, em vez de dar 500.
 
 ## URL por aba (roteamento por hash)
 
@@ -597,15 +629,35 @@ resumo operacional.
 
 ## Pendências
 
-- **Núcleo de inteligência institucional: a aba Políticas está NO AR; os outros
-  quatro módulos, não.** `backend/db/inteligencia_institucional.sql` (doze tabelas dos
-  cinco módulos analíticos — política, obrigação, comissão, indicador, mudança)
-  **foi aplicado em 03/08/2026** e verificado com
-  `backend/db/verificar_inteligencia.sql`. A rota `/api/politicas` e a aba
-  `#/institucional/politicas` subiram no mesmo dia (`api_versao 2026-08-03.2`).
-  As outras oito tabelas seguem vazias e sem consumidor: `politica_evento`,
-  `obrigacao`, `obrigacao_evidencia`, `evidencia_fato`, `comissao_evento`,
-  `comissao_membro_evento`, `politica_indicador` e `mudanca_relevante`.
+- **Núcleo de inteligência institucional: os cinco módulos foram atacados; TRÊS
+  têm tela no ar, e DOIS foram reprojetados depois de medidos.**
+  `backend/db/inteligencia_institucional.sql` (doze tabelas) **foi aplicado em
+  03/08/2026** e verificado com `backend/db/verificar_inteligencia.sql`.
+  Estado por módulo, em 04/08/2026 (`api_versao 2026-08-04.3`):
+  - **4.2 Políticas — NO AR.** `/api/politicas` + `#/institucional/politicas`,
+    desde 03/08. 7 políticas, 93 vínculos, catálogo publicado em 04/08.
+  - **4.3 Comissões — NO AR.** O Observatório (estado documental, janela,
+    mandato) subiu em 03/08 sobre a aba que já existia.
+  - **4.10 Mudanças — NO AR.** `/api/mudancas` + `#/mudancas`, desde 04/08. Ver
+    a seção própria acima; conferido em produção devolvendo 80 itens.
+  - **4.1 Radar de Obrigações — REPROJETADO.** O desenho original não se
+    sustentou na medição (ver o parágrafo adiante). O que ficou no lugar é um
+    **registro curado de 12 obrigações**, cada uma conferida em fonte oficial em
+    04/08/2026, gerada por `tools/registro_obrigacoes_legais.py` →
+    `backend/db/seed_obrigacao_legal.sql`. A obrigação vem da NORMA, não do ato
+    da UFF (`ato_origem_id` NULL de propósito): a CPA não deve relatório porque
+    uma portaria mandou — deve porque a Lei 10.861/2004 instituiu o SINAES.
+    **Ainda não tem rota nem aba** — a tabela tem dado e nenhum consumidor.
+  - **4.4 Indicador — REPROJETADO.** A nota do projeto foi simulada sobre os
+    dados reais e reprovada (cinco das sete políticas empatavam). No lugar
+    entrou a **série histórica de etapas**: `politica_indicador`, escrita a
+    cada import por `importar/indicador_politica.php`, e exibida no dossiê da
+    política. **A tabela só se enche na PRIMEIRA importação depois do deploy** —
+    até lá o painel não mostra etapa nenhuma, e isso não é defeito.
+  Seguem vazias e **sem consumidor**: `politica_evento`, `obrigacao_evidencia`,
+  `evidencia_fato`, `comissao_evento`, `comissao_membro_evento` e
+  `mudanca_relevante` — esta última porque o feed de Mudanças soma fato já
+  apurado em vez de materializar linha própria.
   A verificação tem 14 blocos; os de 3 a 9 são as travas de publicação
   (evidência órfã, item público sem trecho, indicador fora da faixa, curadoria
   preservada). **Rode-a pela aba SQL do phpMyAdmin, nunca pela Importar** — ver
