@@ -84,3 +84,9 @@ jobs:
       # um ato que não é dela.
       - name: Regressão do vínculo ato↔política
         run: php backend/importar/teste_politicas_match.php
+
+      # A série histórica de etapas só vale se ganhar linha quando algo
+      # acontece na política, e não quando o calendário anda. Com o cron
+      # 2x/dia, um snapshot gravado à toa vira 730 linhas por ano.
+      - name: Regressão do snapshot de etapas
+        run: php backend/importar/teste_indicador_politica.php

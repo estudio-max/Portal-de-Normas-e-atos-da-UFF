@@ -29,6 +29,7 @@ require_once __DIR__ . '/extrair_prazos_pad_sinve.php';      // PAD/SINVE (alta 
 require_once __DIR__ . '/comissoes_match.php';               // aba Comissões (tagueia por frase)
 require_once __DIR__ . '/ods_match.php';                     // aba ODS (classifica pelo dispositivo)
 require_once __DIR__ . '/politicas_match.php';               // aba Políticas (vínculo + papel)
+require_once __DIR__ . '/indicador_politica.php';            // snapshot das etapas da política
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
@@ -555,6 +556,22 @@ try {
     // 2) Resolve TODAS as relacoes e recalcula vigencia (autoridade unica).
     require_once __DIR__ . '/resolver_relacoes_v2.php';
     resolver_cross_ano_v2($pdo);
+
+    // 2b) Snapshot das etapas de cada politica. Roda UMA VEZ ao fim, nao por
+    // ato: rodar por ato gravaria estados intermediarios que nao correspondem a
+    // nada. So grava quando o vetor de etapas muda — com o cron 2x/dia, gravar
+    // sempre criaria 730 linhas por politica por ano, todas iguais, e a serie
+    // deixaria de dizer QUANDO algo aconteceu, que e a unica coisa que ela
+    // existe para dizer.
+    //
+    // Falha silenciosa aceitavel aqui pela mesma razao do bloco de politicas: o
+    // acervo nao pode parar por causa de um modulo analitico.
+    try {
+        [$snaps, $totalPol] = indicador_politica_atualizar($pdo);
+        log_("Etapas das politicas: $snaps snapshot(s) novo(s) de $totalPol politica(s).");
+    } catch (Throwable $e) {
+        log_("AVISO: snapshot de etapas indisponivel — " . $e->getMessage());
+    }
 
     // 3) Invalida o cache de resposta da API: o dado mudou, entao os paineis
     // diario-estaticos (jornada/cooperacao/comissoes/insights/stats...) precisam

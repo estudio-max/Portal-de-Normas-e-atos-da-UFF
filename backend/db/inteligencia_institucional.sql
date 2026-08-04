@@ -445,9 +445,26 @@ CREATE TABLE IF NOT EXISTS `politica_indicador` (
   `monitoramento`      TINYINT UNSIGNED NOT NULL,
   `revisao`            TINYINT UNSIGNED NOT NULL,
   `continuidade`       TINYINT UNSIGNED NOT NULL,
-  `cobertura`          TINYINT UNSIGNED NOT NULL,
-  `escore`             TINYINT UNSIGNED NOT NULL,
-  `classe`             ENUM('incipiente','formalizada','estruturada','em_execucao','monitorada') NOT NULL,
+  -- NULL nos três, e é uma decisão de método, não folga de modelagem.
+  --
+  -- A nota única foi MEDIDA sobre os dados reais e reprovada: com pontuação
+  -- binária, cinco das sete políticas empatam, a assistência estudantil (38
+  -- atos) empata com a acessibilidade (8), e o assédio — a única com plano
+  -- central — aparece como a menos madura, porque concentra em duas etapas.
+  -- Pior: `monitoramento` e `avaliacao` quase não são emitidos pelas regras de
+  -- papel, então 25 dos 100 pontos são inalcançáveis e o teto real fica em ~75.
+  -- Uma nota cujo máximo ninguém atinge não mede maturidade, mede a taxonomia.
+  --
+  -- `cobertura` também fica NULL: o projeto manda usá-la para limitar a
+  -- classificação, mas não define a fórmula. Qualquer peso que eu arbitrasse
+  -- apareceria na tela como fato.
+  --
+  -- O que o snapshot guarda em `versao_metodologia='etapas-v1'` são CONTAGENS
+  -- por etapa, não pontos — e é isso que sustenta a pergunta factual: quando
+  -- esta política ganhou monitoramento, há quanto tempo não tem execução.
+  `cobertura`          TINYINT UNSIGNED NULL,
+  `escore`             TINYINT UNSIGNED NULL,
+  `classe`             ENUM('incipiente','formalizada','estruturada','em_execucao','monitorada') NULL,
   `resumo_calculo`     TEXT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_pi_snapshot` (`politica_id`, `calculado_em`),
