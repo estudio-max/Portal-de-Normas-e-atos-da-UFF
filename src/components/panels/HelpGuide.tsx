@@ -3,7 +3,7 @@ import {
   Search, GitBranch, Sparkles, Link as LinkIcon, Database, ShieldCheck,
   ShieldAlert, GitBranch as Branch, FileText, Filter, User, Info, CheckCircle2,
   ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle, Scale,
-  Target
+  Target, BookMarked
 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
@@ -166,6 +166,56 @@ export default function HelpGuide() {
             ato posterior mexeu naquele — nesses casos o prazo pode ter mudado. Em PAD/Sindicância, cada
             <strong> prorrogação/recondução é um novo prazo</strong>: vale sempre o do <strong>ato mais recente</strong> do processo.
             <strong> Sempre confirme no ato de origem.</strong>
+          </span>
+        </div>
+      </Secao>
+
+      {/* Políticas */}
+      <Secao icon={<BookMarked className="w-4 h-4" />} titulo="🏛️ Políticas — a história de um assunto, e não atos soltos">
+        <p>
+          Buscar “assédio” devolve uma lista de atos em ordem de data. A aba{' '}
+          <strong>Políticas</strong> responde outra pergunta: <em>como esse assunto foi
+          construído na UFF ao longo do tempo?</em> Cada política reúne os atos que a
+          formaram, do que a instituiu ao que a executa hoje.
+        </p>
+        <p>
+          O que organiza tudo é o <strong>papel</strong> de cada ato — o que ele{' '}
+          <em>faz</em> pela política, não o assunto de que trata:
+        </p>
+        <ul className="space-y-1.5 mt-1">
+          <li><Badge cor="bg-blue-100 text-blue-800 border-blue-200">Institui</Badge> — o ato fundador: cria a política, o plano ou o programa.</li>
+          <li><Badge cor="bg-indigo-100 text-indigo-700 border-indigo-200">Regulamenta</Badge> — detalha como a política funciona (regimento, normatização).</li>
+          <li><Badge cor="bg-violet-100 text-violet-700 border-violet-200">Governança</Badge> — monta ou recompõe quem cuida dela (comissão, comitê, grupo de trabalho).</li>
+          <li><Badge cor="bg-emerald-100 text-emerald-700 border-emerald-200">Executa</Badge> — coloca a política para funcionar (fixa diretrizes, opera um programa).</li>
+          <li><Badge cor="bg-sky-100 text-sky-700 border-sky-200">Monitora</Badge> — relatório, prestação de contas, acompanhamento.</li>
+          <li><Badge cor="bg-amber-100 text-amber-800 border-amber-200">Altera</Badge> / <Badge cor="bg-rose-100 text-rose-700 border-rose-200">Revoga</Badge> — muda ou encerra o que já existia.</li>
+        </ul>
+        <p className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-900 flex gap-1.5">
+          <MousePointerClick className="w-4 h-4 shrink-0" />
+          <span>
+            Por que separar: <strong>designar uma comissão não é executar a política</strong>.
+            Sem essa distinção, uma política com muitas designações e nenhuma entrega
+            pareceria em pleno andamento. É a mesma razão pela qual a aba ODS separa
+            “proposta” de “execução”.
+          </span>
+        </p>
+        <p>
+          No cartão de cada política há uma <strong>faixa de etapas</strong>. Etapa colorida
+          significa que existe ato para ela; <strong>etapa apagada, em tracejado, significa
+          que nenhuma evidência foi localizada no Boletim</strong> — e isso é bem diferente de
+          dizer que a etapa não aconteceu. Passe o mouse para ver a contagem.
+        </p>
+        <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-xs text-amber-900 flex gap-1.5">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Como ler com cautela:</strong> são <strong>7 políticas de um piloto</strong>,
+            não o conjunto das políticas da UFF — o catálogo é curado e cresce aos poucos.
+            O selo <Badge cor="bg-slate-100 text-slate-600 border-slate-200">catálogo em revisão</Badge>{' '}
+            avisa que os vínculos foram propostos por regra e ainda não passaram por revisão
+            humana; o selo <Badge cor="bg-amber-100 text-amber-800 border-amber-200">⚠ confiança media</Badge>{' '}
+            marca o ato que entrou pelo <strong>órgão emissor</strong>, sem a frase da política
+            na ementa. E <strong>ausência de evidência no Boletim não comprova ausência de
+            execução</strong>: muita coisa acontece fora dele. Confirme sempre no ato de origem.
           </span>
         </div>
       </Secao>
