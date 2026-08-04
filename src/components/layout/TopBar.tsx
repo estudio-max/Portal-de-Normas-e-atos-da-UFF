@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Wifi, WifiOff, Moon, Sun, ExternalLink, FileText } from 'lucide-react';
+import { Search, X, Wifi, WifiOff, Moon, Sun, ExternalLink, FileText, HelpCircle } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { cn } from '../../lib/utils';
+import { ajudaDaAba } from '../help/ajudaConteudo';
+import { AjudaModal } from '../help/AjudaModal';
 import type { Stats } from '../../dataSource';
 
 interface TopBarProps {
@@ -10,13 +12,22 @@ interface TopBarProps {
   onThemeToggle: () => void;
   fotofobia: boolean;
   portalStats: Stats | null;
+  /** A aba aberta agora — a ajuda do "?" é a dela. */
+  activePath: string;
+  onNavigate: (path: string) => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle, fotofobia, portalStats }) => {
+export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle, fotofobia, portalStats, activePath, onNavigate }) => {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [ajudaAberta, setAjudaAberta] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 300);
+  const ajuda = ajudaDaAba(activePath);
+
+  // Trocar de aba com o modal aberto deixaria na tela a explicação da aba
+  // anterior — ajuda descrevendo outra página é pior que ajuda nenhuma.
+  useEffect(() => { setAjudaAberta(false); }, [activePath]);
 
   // O callback fica numa ref para NÃO entrar nas dependências do efeito abaixo.
   // Com ele na lista, um pai que passe função inline redispara a busca a cada
@@ -103,6 +114,18 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
           : <WifiOff size={14} className="text-[#D69E2E]" aria-label="Portal offline" />}
       </div>
 
+      {/* Ajuda da aba atual. Fica ao lado do controle de tema, no canto onde já
+          moram os comandos da página — e some quando a aba não tem entrada no
+          mapa, em vez de abrir um modal vazio. */}
+      {ajuda && (
+        <button type="button" onClick={() => setAjudaAberta(true)}
+          aria-label={`Ajuda sobre ${ajuda.titulo}`} aria-haspopup="dialog"
+          title={`O que é e como usar: ${ajuda.titulo}`}
+          className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#003366] bg-[#F0F7F0] hover:bg-[#006400] hover:text-white transition-colors">
+          <HelpCircle size={16} />
+        </button>
+      )}
+
       <button type="button" onClick={onThemeToggle} aria-pressed={fotofobia}
         aria-label={fotofobia ? 'Desativar modo escuro' : 'Ativar modo escuro'}
         title={fotofobia ? 'Desativar modo escuro' : 'Ativar modo escuro'}
@@ -120,6 +143,15 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
         {portalStats?.ultimaAtualizacao ? <>Atualização mais recente em <strong>{portalStats.ultimaAtualizacao.slice(0, 10).split('-').reverse().join('/')}</strong></> : 'Atualização mais recente indisponível'}
         {portalStats?.ultimoBoletim && <><span>·</span>{portalStats.ultimoBoletim.link ? <a className="font-semibold underline" href={portalStats.ultimoBoletim.link} target="_blank" rel="noreferrer">BS nº {portalStats.ultimoBoletim.numero}/{portalStats.ultimoBoletim.ano} (PDF)</a> : <strong>BS nº {portalStats.ultimoBoletim.numero}/{portalStats.ultimoBoletim.ano}</strong>}</>}
       </div>
+
+      {ajuda && (
+        <AjudaModal
+          aberto={ajudaAberta}
+          aba={ajuda}
+          onFechar={() => setAjudaAberta(false)}
+          onIrParaGuia={() => { setAjudaAberta(false); onNavigate('ajuda'); }}
+        />
+      )}
     </header>
   );
 };

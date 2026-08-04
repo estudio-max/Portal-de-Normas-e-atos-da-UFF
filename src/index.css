@@ -154,3 +154,18 @@ html.fotofobia input::placeholder {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
+
+/* Modal da ajuda contextual.
+   O <dialog> aberto por showModal() centraliza sozinho com `margin:auto` da
+   folha do navegador — declarado aqui porque o reset do Tailwind mexe na caixa
+   do dialog e não dá para depender do padrão. O ::backdrop não herda nada da
+   página, então o modo fotofobia precisa da regra dele. */
+.ajuda-dialog {
+  margin: auto;
+}
+.ajuda-dialog::backdrop {
+  background: rgba(15, 23, 42, .55);
+}
+html.fotofobia .ajuda-dialog::backdrop {
+  background: rgba(0, 0, 0, .7);
+}

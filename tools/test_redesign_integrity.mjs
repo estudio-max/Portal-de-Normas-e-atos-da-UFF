@@ -99,6 +99,73 @@ assert.doesNotMatch(dataSource, /a\.ano <= 2026/,
 assert.match(dataSource, /a\.ano <= new Date\(\)\.getFullYear\(\)/,
   'Static stats must cap the annual series at the current year.');
 
+// ---------------------------------------------------------------------------
+// AJUDA CONTEXTUAL — o mapa tem que ser TOTAL sobre as abas.
+//
+// A aba nasce numa linha de ABAS_VALIDAS e o painel vai para o ar. Sem esta
+// trava, ela iria sem explicação nenhuma e ninguém notaria: o "?" some sozinho
+// quando a aba não está no mapa, então a falha é silenciosa por desenho — o que
+// é certo em produção e péssimo sem alguém conferindo aqui.
+// ---------------------------------------------------------------------------
+const appTsx = await read('src/App.tsx');
+const ajudaTsx = await read('src/components/help/ajudaConteudo.tsx');
+
+const blocoAbas = appTsx.match(/const ABAS_VALIDAS = \[([\s\S]*?)\];/);
+assert.ok(blocoAbas, 'ABAS_VALIDAS must remain a literal array so the help map can be checked against it.');
+const abas = [...blocoAbas[1].matchAll(/'([^']*)'/g)].map(m => m[1]);
+assert.ok(abas.length >= 15, `Expected the full tab list, found ${abas.length}.`);
+
+// Chaves do mapa: `'': {`, `atos: {`, `'pessoal/siape': {` — as três formas.
+const blocoAjuda = ajudaTsx.match(/export const AJUDA: Record<string, AjudaAba> = \{([\s\S]*?)\n\};/);
+assert.ok(blocoAjuda, 'The help content must stay a literal object so its keys can be checked.');
+const chaves = [...blocoAjuda[1].matchAll(/^ {2}(?:'([^']*)'|([\w]+)):\s*\{\s*$/gm)]
+  .map(m => (m[1] !== undefined ? m[1] : m[2]));
+
+// Ajuda, Privacidade e Sobre não levam o "?": elas já SÃO a explicação. A
+// isenção é declarada numa lista, e não deduzida aqui, para que a cobertura
+// continue TOTAL — aba nova entra num dos dois lados por decisão de quem a
+// criou, em vez de ficar sem ajuda porque ninguém lembrou.
+const blocoIsentas = ajudaTsx.match(/export const ABAS_SEM_AJUDA = \[([^\]]*)\]/);
+assert.ok(blocoIsentas, 'The exempt-tab list must stay a literal array.');
+const isentas = [...blocoIsentas[1].matchAll(/'([^']*)'/g)].map(m => m[1]);
+
+const cobertas = [...chaves, ...isentas];
+const semAjuda = abas.filter(a => !cobertas.includes(a));
+assert.deepEqual(semAjuda, [],
+  `Every tab must either ship contextual help or be listed as exempt. Missing: ${semAjuda.map(a => `"${a}"`).join(', ')}`);
+const orfas = cobertas.filter(k => !abas.includes(k));
+assert.deepEqual(orfas, [],
+  `Help written for a tab that does not exist (typo in the key?): ${orfas.map(a => `"${a}"`).join(', ')}`);
+const duplicadas = chaves.filter(k => isentas.includes(k));
+assert.deepEqual(duplicadas, [],
+  `A tab cannot be both exempt and have help: ${duplicadas.map(a => `"${a}"`).join(', ')}`);
+
+// Toda entrada precisa das duas partes que respondem a pergunta de quem abriu o
+// modal: o que é isto, e o que eu faço aqui.
+for (const chave of chaves) {
+  const corpo = blocoAjuda[1].split(new RegExp(`^ {2}(?:'${chave.replace(/\//g, '\\/')}'|${chave}):\\s*\\{`, 'm'))[1] ?? '';
+  const entrada = corpo.split(/\n {2}\}/)[0];
+  assert.match(entrada, /resumo:/, `Help entry "${chave}" must say what the tab is.`);
+  assert.match(entrada, /passos:/, `Help entry "${chave}" must say how to use it.`);
+}
+
+// A aba mais usada é o Meu SIAPE, e o conselho que muda o resultado ali é
+// preencher os DOIS campos: só parte dos atos do Boletim registra matrícula, e
+// quem busca só pelo SIAPE não alcança o resto. Sem isso a pessoa conclui que
+// não tem ato nenhum publicado.
+assert.match(blocoAjuda[1], /Preencha os <B>dois<\/B> campos/,
+  'The Meu SIAPE help must tell the user to fill in both SIAPE and name.');
+
+const ajudaModal = await read('src/components/help/AjudaModal.tsx');
+// showModal() é o que dá armadilha de foco, Esc e camada superior. Abrir pelo
+// atributo `open` renderiza a mesma caixa SEM nada disso — e parece funcionar.
+assert.match(ajudaModal, /\.showModal\(\)/,
+  'The help dialog must open with showModal(), or it traps neither focus nor Esc.');
+assert.doesNotMatch(ajudaModal, /<dialog[^>]*\sopen\b/,
+  'The help dialog must not be opened by the `open` attribute — that skips modal mode.');
+assert.match(topBar, /useEffect\(\(\) => \{ setAjudaAberta\(false\); \}, \[activePath\]\)/,
+  'Switching tabs must close the help modal, or it would describe the previous tab.');
+
 const php = await read('backend/api/index_v2.php');
 assert.doesNotMatch(php, /ano BETWEEN 2001 AND 2026/,
   'The API annual series must not stop at a hard-coded year.');

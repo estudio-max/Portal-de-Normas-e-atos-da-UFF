@@ -311,6 +311,30 @@ brigaria com o `base: './'` que mantém o bundle portável. A raiz sem hash cai 
 aba padrão sem sujar a URL com `#planilha`. Aba nova = uma linha em
 `ABAS_VALIDAS`.
 
+## Ajuda contextual: o mapa é total sobre as abas
+
+O `?` do cabeçalho abre a explicação da **aba aberta**: o que é, como usar, o que
+não concluir. Conteúdo em `src/components/help/ajudaConteudo.tsx`, modal em
+`AjudaModal.tsx`. É complementar à aba **Ajuda** (`HelpGuide.tsx`), que segue
+sendo o guia para ler de ponta a ponta.
+
+**Toda aba de `ABAS_VALIDAS` está numa de duas listas** — o mapa `AJUDA` ou a
+lista `ABAS_SEM_AJUDA` (Ajuda, Privacidade e Sobre, que já SÃO a explicação) — e
+`tools/test_redesign_integrity.mjs` exige essa cobertura total, sem interseção.
+Aba nova entra num dos lados por decisão de quem a criou; sem a trava ela iria ao
+ar sem explicação e ninguém notaria, porque o botão **some sozinho** quando a aba
+não está no mapa (certo em produção, péssimo sem alguém conferindo).
+
+Só descreva controle que EXISTE na tela. Ajuda que manda clicar num botão
+inexistente é pior que ajuda nenhuma: ensina a desconfiar de todo o resto. Ao
+mexer num painel, passe no `ajudaConteudo.tsx`.
+
+O modal é um `<dialog>` aberto por `showModal()` — daí vêm armadilha de foco, Esc
+e camada própria (sem disputa de z-index com o cabeçalho sticky). Abrir pelo
+atributo `open` renderiza a mesma caixa **sem nada disso**, e parece funcionar; a
+trava reprova. O `::backdrop` não herda da página, então o modo fotofobia tem
+regra própria no `index.css`.
+
 ## Gráficos: a cor sai de token, nunca de classe
 
 Os gráficos do Dashboard vivem em `src/components/dashboard/Graficos.tsx`

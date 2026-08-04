@@ -3,7 +3,7 @@ import {
   Search, GitBranch, Sparkles, Link as LinkIcon, Database, ShieldCheck,
   ShieldAlert, GitBranch as Branch, FileText, Filter, User, Info, CheckCircle2,
   ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle, Scale,
-  Target, BookMarked
+  Target, BookMarked, HelpCircle
 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
@@ -48,6 +48,14 @@ export default function HelpGuide() {
           <li>Use os <strong>filtros</strong> (tipo, órgão, ano, status) para estreitar.</li>
           <li>Clique no <strong>olho 👁</strong> de uma linha para abrir a <strong>Ficha do Ato</strong> com todos os detalhes.</li>
         </ol>
+        <p className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-900 flex gap-1.5">
+          <HelpCircle className="w-4 h-4 shrink-0" />
+          <span>
+            Não precisa vir até aqui a cada dúvida: o botão <strong>?</strong> no alto de
+            qualquer aba abre, ali mesmo, a explicação curta daquela aba — o que ela é, como
+            usar e o que não concluir a partir dela.
+          </span>
+        </p>
       </Secao>
 
       {/* Filtro por servidor */}
