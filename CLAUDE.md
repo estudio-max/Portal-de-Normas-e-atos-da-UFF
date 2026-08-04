@@ -600,9 +600,15 @@ resumo operacional.
   jornada de 2016/2018, território que a aba Jornada já cobre.
   Fora do seed, em `../dados/curadoria_politicas.csv`: 48 sem cluster, 10 de
   duplicata de acervo, 4 de efeito individual.
+  **As sete estão `status_curadoria='publicada'` desde 04/08/2026** — o selo
+  "catálogo em revisão" saiu dos cartões. O que NÃO saiu, e não deve sair, é o
+  selo por vínculo: `⚠ confiança media` continua marcando o ato que entrou pelo
+  ÓRGÃO EMISSOR sem a frase na ementa (os 24 da PROAES). Publicar o catálogo
+  afirma que a lista de políticas foi conferida; não afirma que cada vínculo
+  individual foi.
   Metodologia completa em [`docs/METODOLOGIA-POLITICAS.md`](docs/METODOLOGIA-POLITICAS.md),
-  incluindo as limitações conhecidas (o ato fundador de `acessibilidade` é uma
-  cartilha, e duas políticas não têm fundador localizado).
+  incluindo a limitação que sobrou: duas políticas não têm ato fundador
+  localizado no acervo (o de `acessibilidade` era uma cartilha e foi corrigido).
   **O Radar de Obrigações (4.1) foi MEDIDO e o desenho original não se
   sustenta** — `python tools/medir_obrigacoes.py` reproduz. O `deverá` do corpus
   é texto de EDITAL e de REGIMENTO dirigido a uma PESSOA: no top 45 de sujeitos
