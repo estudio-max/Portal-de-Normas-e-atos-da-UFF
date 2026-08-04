@@ -266,6 +266,25 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   relatório do PDI — exigir `plano/programa/política de integridade` tira os
   três) e a EMENTA INUTILIZÁVEL (15 dos 136: sem ementa formal, OCR espaçado,
   fragmento, rodapé — vão para curadoria, não recebem rótulo).
+  **A categoria de cada política é o SUBTEMA do PDI da UFF**, não rótulo do
+  portal (desde 04/08/2026). Os três rótulos anteriores — Direitos, Governança,
+  Estudantes — não tinham âncora e nem respondiam à mesma pergunta (natureza do
+  objeto × destinatário × função), e "Estudantes" era prateleira de um item só.
+  O PDI 2023-2027 declara 5 eixos e, dentro deles, subtemas que nomeiam 5 das 7
+  políticas quase literalmente. A lista agrupa por **eixo** e etiqueta por
+  **subtema** — agrupar por subtema devolveria as prateleiras de um item.
+  `pdi_base` diz de onde veio o encaixe e é o que impede a tela de afirmar
+  demais: `nome` (o PDI o nomeia, sem marca na interface), `conteudo` (o subtema
+  descreve o tema sem usar a palavra — o **assédio**, que o PDI não escreve em
+  175 páginas mas cujo objeto está em "Equidade, Diversidade e Inclusão":
+  protocolo para violência de gênero, denúncia de discriminação, CPEG/AFIDE) e
+  `afinidade` (atribuição nossa — a **segurança da informação**, que o PDI não
+  cobre em subtema nenhum). **Buscar o TERMO e concluir ausência do TEMA foi o
+  erro que produziu o segundo caso** — a armadilha-mãe da METODOLOGIA-ODS
+  aplicada ao documento em vez de ao ato. A âncora é DATADA: `pdi_versao` viaja
+  junto, e trocar de PDI obriga a remedir. Migração:
+  `backend/db/alterar_politica_pdi.sql` (roda UMA vez — o 5.7 não tem
+  `ADD COLUMN IF NOT EXISTS`), depois o seed regerado.
   A interface mostra a etapa sem ato como **"sem evidência localizada no
   Boletim"**, nunca como omissão: o Boletim cobre o que foi publicado nele.
   Critério, limitações e o que ficou de fora em

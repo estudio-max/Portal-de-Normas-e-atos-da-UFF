@@ -12,21 +12,38 @@
 --  `status_curadoria` nasce RASCUNHO de proposito: a politica so aparece
 --  no portal depois que alguem confirmar o catalogo.
 --
+--  CATEGORIA ANCORADA NO PDI 2023-2027 da UFF: `eixo_pdi` e `subtema_pdi`
+--  saem do plano institucional, nao de rotulo nosso. `pdi_base` diz de onde
+--  veio o encaixe -- 'nome' (o PDI o nomeia), 'conteudo' (o subtema descreve
+--  o tema sem usar a palavra) ou 'afinidade' (atribuicao nossa).
+--  Exige o `alterar_politica_pdi.sql` aplicado ANTES deste arquivo.
+--
 --  No phpMyAdmin: aba Importar (e DML, nao tem saida para exibir).
 -- ==========================================================================
 
-INSERT INTO `politica` (`slug`, `nome`, `descricao`, `categoria`, `status_curadoria`)
+INSERT INTO `politica`
+  (`slug`, `nome`, `descricao`, `categoria`,
+   `eixo_pdi`, `subtema_pdi`, `pdi_base`, `pdi_versao`, `status_curadoria`)
 VALUES
-  ('assistencia-estudantil', 'Assistência estudantil', 'Programas de auxílio, moradia, alimentação e permanência destinados a estudantes da UFF.', 'Estudantes', 'rascunho'),
-  ('acessibilidade', 'Acessibilidade e inclusão', 'Condições de acessibilidade e inclusão para pessoas com deficiência na UFF.', 'Direitos', 'rascunho'),
-  ('acoes-afirmativas', 'Ações afirmativas, diversidade e equidade', 'Reserva de vagas, heteroidentificação e políticas para grupos historicamente excluídos.', 'Direitos', 'rascunho'),
-  ('assedio', 'Prevenção e enfrentamento ao assédio', 'Prevenção, enfrentamento e tratamento do assédio moral e sexual no âmbito da UFF.', 'Direitos', 'rascunho'),
-  ('integridade-riscos', 'Integridade, riscos e controles', 'Programa de integridade, gestão de riscos e controles internos da UFF.', 'Governança', 'rascunho'),
-  ('seguranca-informacao', 'Segurança da informação e proteção de dados', 'Política de segurança da informação, privacidade e proteção de dados pessoais.', 'Governança', 'rascunho'),
-  ('sustentabilidade', 'Sustentabilidade', 'Agenda ambiental, logística sustentável e gestão socioambiental da UFF.', 'Governança', 'rascunho')
+  ('assistencia-estudantil', 'Assistência estudantil', 'Programas de auxílio, moradia, alimentação e permanência destinados a estudantes da UFF.', 'Responsabilidade Social',
+   'Responsabilidade Social', 'Assistência Estudantil', 'nome', '2023-2027', 'rascunho'),
+  ('acessibilidade', 'Acessibilidade e inclusão', 'Condições de acessibilidade e inclusão para pessoas com deficiência na UFF.', 'Responsabilidade Social',
+   'Responsabilidade Social', 'Acessibilidade', 'nome', '2023-2027', 'rascunho'),
+  ('acoes-afirmativas', 'Ações afirmativas, diversidade e equidade', 'Reserva de vagas, heteroidentificação e políticas para grupos historicamente excluídos.', 'Responsabilidade Social',
+   'Responsabilidade Social', 'Equidade, Diversidade e Inclusão', 'nome', '2023-2027', 'rascunho'),
+  ('assedio', 'Prevenção e enfrentamento ao assédio', 'Prevenção, enfrentamento e tratamento do assédio moral e sexual no âmbito da UFF.', 'Responsabilidade Social',
+   'Responsabilidade Social', 'Equidade, Diversidade e Inclusão', 'conteudo', '2023-2027', 'rascunho'),
+  ('integridade-riscos', 'Integridade, riscos e controles', 'Programa de integridade, gestão de riscos e controles internos da UFF.', 'Governança e Gestão',
+   'Governança e Gestão', 'Gestão de Riscos e Integridade', 'nome', '2023-2027', 'rascunho'),
+  ('seguranca-informacao', 'Segurança da informação e proteção de dados', 'Política de segurança da informação, privacidade e proteção de dados pessoais.', 'Governança e Gestão',
+   'Governança e Gestão', 'Gestão de Riscos e Integridade', 'afinidade', '2023-2027', 'rascunho'),
+  ('sustentabilidade', 'Sustentabilidade', 'Agenda ambiental, logística sustentável e gestão socioambiental da UFF.', 'Responsabilidade Social',
+   'Responsabilidade Social', 'Meio Ambiente e Sustentabilidade', 'nome', '2023-2027', 'rascunho')
 ON DUPLICATE KEY UPDATE
   `nome` = VALUES(`nome`), `descricao` = VALUES(`descricao`),
-  `categoria` = VALUES(`categoria`);
+  `categoria` = VALUES(`categoria`), `eixo_pdi` = VALUES(`eixo_pdi`),
+  `subtema_pdi` = VALUES(`subtema_pdi`), `pdi_base` = VALUES(`pdi_base`),
+  `pdi_versao` = VALUES(`pdi_versao`);
 
 INSERT IGNORE INTO `politica_alias` (`politica_id`, `termo`, `tipo`)
 VALUES

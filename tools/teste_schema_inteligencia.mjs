@@ -379,6 +379,47 @@ for (const v of vinculos) {
   checa(slugsNoSql.has(v.slug), `${SEEDPOL}: vínculo aponta para política '${v.slug}', que o catálogo não cria`);
 }
 
+// ---------------------------------------------------------------------------
+// A ÂNCORA NO PDI é obrigatória, e `pdi_base` é o que a torna honesta.
+//
+// Categoria sem âncora foi o defeito que isto corrige: 'Direitos'/'Governança'/
+// 'Estudantes' eram rótulos sem origem, e nem respondiam à mesma pergunta.
+// Agora a categoria sai do PDI da UFF — mas o encaixe nem sempre é literal, e
+// `pdi_base` registra isso: 'nome' (o PDI o nomeia), 'conteudo' (o subtema
+// descreve o tema sem usar a palavra) ou 'afinidade' (atribuição nossa).
+// Sem esse campo, "Segurança da informação → Gestão de Riscos e Integridade"
+// apareceria na tela com a mesma autoridade de "Acessibilidade → Acessibilidade",
+// e a segunda o PDI escreve, a primeira não.
+// ---------------------------------------------------------------------------
+const tPolitica = tabelas.find((t) => t.nome === 'politica');
+for (const col of ['eixo_pdi', 'subtema_pdi', 'pdi_base', 'pdi_versao']) {
+  checa(tPolitica?.colunas.has(col),
+    `inteligencia_institucional.sql: politica sem a coluna '${col}' — a âncora do PDI não caberia`);
+}
+const basesEnum = enumDe(tPolitica, 'pdi_base');
+checa(JSON.stringify(basesEnum) === JSON.stringify(['nome', 'conteudo', 'afinidade']),
+  `politica.pdi_base deveria ser ('nome','conteudo','afinidade'), veio (${basesEnum.join(',')})`);
+
+const blocoAncora = (seedPol.match(/INSERT INTO `politica`[\s\S]*?;/) ?? [''])[0];
+const RX_LINHA_POL = /\('([\w-]+)',[\s\S]*?'([^']*)',\s*'([^']*)',\s*'(\w+)',\s*'([\d-]+)',\s*'rascunho'\)/g;
+const ancoras = [...blocoAncora.matchAll(RX_LINHA_POL)].map((m) => ({
+  slug: m[1], eixo: m[2], subtema: m[3], base: m[4], versao: m[5],
+}));
+checa(ancoras.length === catalogo.length,
+  `${SEEDPOL}: li ${ancoras.length} âncoras de PDI para ${catalogo.length} políticas — o formato mudou?`);
+for (const a of ancoras) {
+  checa(a.eixo.length > 0, `${SEEDPOL}: '${a.slug}' sem eixo do PDI`);
+  checa(a.subtema.length > 0, `${SEEDPOL}: '${a.slug}' sem subtema do PDI`);
+  checa(basesEnum.includes(a.base), `${SEEDPOL}: '${a.slug}' com pdi_base '${a.base}' fora do ENUM`);
+  checa(/^\d{4}-\d{4}$/.test(a.versao),
+    `${SEEDPOL}: '${a.slug}' sem a edição do PDI — a âncora é datada e precisa dizer qual`);
+}
+// A verificação que interessa ao leitor: se TUDO virasse 'nome', a distinção
+// teria sido perdida numa regeneração e a tela passaria a afirmar que o PDI
+// nomeia políticas que ele não nomeia.
+checa(ancoras.some((a) => a.base !== 'nome'),
+  `${SEEDPOL}: nenhuma política marcada como 'conteudo' ou 'afinidade' — a distinção sumiu?`);
+
 // Os aliases também. E aqui o silêncio é pior: o bloco é INSERT IGNORE, então
 // um slug com typo faz o subselect devolver NULL, o IGNORE engole a violação
 // de NOT NULL e a linha simplesmente não entra — sem erro, sem aviso.
@@ -438,7 +479,14 @@ const termosPhp = Object.fromEntries(
 // O CATALOGO do gerador: slug na 1ª linha da tupla, termos na lista que segue.
 // `\s*` e nunca `\n\s*` entre os campos: `\s` já cobre CR e LF, e exigir o LF
 // literal foi o que fez este padrão casar zero entradas na primeira tentativa.
-const RX_CAT_ENTRADA = /\('([\w-]+)',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*\[([\s\S]*?)\],\s*\[([^\]]*)\]\)/g;
+//
+// SEIS campos de texto antes das duas listas, desde 04/08/2026:
+//   slug, nome, eixo_pdi, subtema_pdi, pdi_base, descricao
+// Eram quatro (a categoria solta virou a âncora do PDI). Quando a tupla mudou,
+// este padrão parou de casar e a trava acusou "política não existe no gerador"
+// para TODAS elas — barulhento, e é assim que tem que ser: uma trava que
+// silenciasse aqui deixaria matcher e gerador divergirem sem aviso.
+const RX_CAT_ENTRADA = /\('([\w-]+)',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*\[([\s\S]*?)\],\s*\[([^\]]*)\]\)/g;
 const catalogoPy = {};
 const emissoresPy = {};
 for (const m of pyPol.matchAll(RX_CAT_ENTRADA)) {

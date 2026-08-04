@@ -661,26 +661,50 @@ def comissoes_payload(corpo="", janela=""):
 # dev ver a mesma distribuicao desigual que a producao tem -- assistencia
 # estudantil com 38 atos ao lado de integridade com 5.
 # (slug, nome, categoria, estagio, atos, anoMin, anoMax, papeis)
+# A categoria da política é o SUBTEMA do PDI da UFF, não rótulo do portal.
+# `pdi` = (eixo, subtema, base). A `base` é o que mantém a tela honesta:
+#   nome      — o PDI tem subtema com este nome;
+#   conteudo  — o PDI descreve o tema sem usar a palavra (o caso do assédio);
+#   afinidade — atribuição nossa (o caso da segurança da informação).
+# O mock precisa das TRÊS bases, senão o dev nunca vê como cada uma aparece.
+_PDI_VERSAO = "2023-2027"
+_RS = "Responsabilidade Social"
+_GG = "Governança e Gestão"
+
 _POLITICAS = [
-    ("assistencia-estudantil", "Assistência estudantil", "Estudantes", "rascunho", 38, 2021, 2026,
+    ("assistencia-estudantil", "Assistência estudantil", (_RS, "Assistência Estudantil", "nome"),
+     "publicada", 38, 2021, 2026,
      {"alteracao": 21, "execucao": 15, "regulamentacao": 1, "governanca": 1}),
-    ("acessibilidade", "Acessibilidade e inclusão", "Direitos", "rascunho", 8, 2017, 2026,
+    ("acessibilidade", "Acessibilidade e inclusão", (_RS, "Acessibilidade", "nome"),
+     "publicada", 8, 2017, 2026,
      {"governanca": 4, "referencia": 1, "alteracao": 1, "execucao": 1, "fundador": 1}),
-    ("acoes-afirmativas", "Ações afirmativas, diversidade e equidade", "Direitos", "rascunho", 12, 2013, 2026,
+    ("acoes-afirmativas", "Ações afirmativas, diversidade e equidade", (_RS, "Equidade, Diversidade e Inclusão", "nome"),
+     "publicada", 12, 2013, 2026,
      {"governanca": 4, "execucao": 2, "regulamentacao": 2, "alteracao": 2, "referencia": 2}),
-    ("assedio", "Prevenção e enfrentamento ao assédio", "Direitos", "rascunho", 12, 2018, 2026,
+    ("assedio", "Prevenção e enfrentamento ao assédio", (_RS, "Equidade, Diversidade e Inclusão", "conteudo"),
+     "publicada", 12, 2018, 2026,
      {"governanca": 9, "alteracao": 2, "fundador": 1}),
-    ("integridade-riscos", "Integridade, riscos e controles", "Governança", "rascunho", 5, 2021, 2025,
+    ("integridade-riscos", "Integridade, riscos e controles", (_GG, "Gestão de Riscos e Integridade", "nome"),
+     "publicada", 5, 2021, 2025,
      {"regulamentacao": 3, "monitoramento": 1, "fundador": 1}),
-    ("seguranca-informacao", "Segurança da informação e proteção de dados", "Governança", "rascunho", 7, 2020, 2025,
+    ("seguranca-informacao", "Segurança da informação e proteção de dados", (_GG, "Gestão de Riscos e Integridade", "afinidade"),
+     "publicada", 7, 2020, 2025,
      {"governanca": 3, "fundador": 2, "regulamentacao": 2}),
-    ("sustentabilidade", "Sustentabilidade", "Governança", "rascunho", 11, 2006, 2025,
+    ("sustentabilidade", "Sustentabilidade", (_RS, "Meio Ambiente e Sustentabilidade", "nome"),
+     "publicada", 11, 2006, 2025,
      {"governanca": 6, "regulamentacao": 2, "fundador": 2, "referencia": 1}),
 ]
+
+
+def _pdi(t):
+    """(eixo, subtema, base) -> o bloco `pdi` do JSON, como o PHP monta."""
+    return {"eixo": t[0], "subtema": t[1], "base": t[2], "versao": _PDI_VERSAO}
+
 
 _POL_AVISOS = [
     "Ausência de evidência no Boletim não comprova ausência de execução — o acervo cobre o que foi publicado no Boletim de Serviço.",
     "O vínculo entre ato e política é inferido por regra (frase estrita na ementa ou órgão emissor) e revisado por curadoria.",
+    "A categoria de cada política é o subtema do PDI da UFF, não uma classificação do portal. Quando o encaixe não é literal, a política diz em que base ele foi feito.",
 ]
 
 
@@ -770,14 +794,15 @@ def politicas_payload(slug=""):
             historico.append({"em": f"{meta[5]}-01-15 12:00:00", "etapas": antes, "mesesSemAto": 9})
         return {"politica": {"slug": meta[0], "nome": meta[1], "descricao":
                              f"Catálogo piloto — {meta[1].lower()}.",
-                             "categoria": meta[2], "estagio": meta[3]},
+                             "categoria": meta[2][0], "estagio": meta[3],
+                             "pdi": _pdi(meta[2])},
                 "atos": atos, "etapas": etapas, "historico": historico,
                 "avisos": _POL_AVISOS}
     pols = []
-    for (s, n, cat, est, a, mn, mx, papeis) in _POLITICAS:
+    for (s, n, pdi, est, a, mn, mx, papeis) in _POLITICAS:
         pols.append({
             "slug": s, "nome": n, "descricao": f"Catálogo piloto — {n.lower()}.",
-            "categoria": cat, "estagio": est, "atos": a,
+            "categoria": pdi[0], "estagio": est, "pdi": _pdi(pdi), "atos": a,
             "anoMin": mn, "anoMax": mx, "ultimaData": f"{mx}-06-01",
             "papeis": papeis,
             "fundador": ({"id": f"port-reitoria-{68000 + a}-{mn}",

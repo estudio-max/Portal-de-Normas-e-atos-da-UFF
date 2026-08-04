@@ -31,7 +31,50 @@ def norm(s):
 
 
 # ---------------------------------------------------------------------------
-# O CATALOGO -- curadoria. (slug, nome, categoria, descricao, termos, emissores)
+# A CATEGORIA SAI DO PDI DA UFF, NAO DE NOS.
+#
+# Ate 04/08/2026 a categoria era 'Direitos' | 'Governanca' | 'Estudantes' --
+# tres rotulos que eu escrevi e que NUNCA tiveram ancora. Pior: nao respondiam
+# a mesma pergunta ("Direitos" e a natureza do que se protege, "Estudantes" e o
+# destinatario, "Governanca" e a funcao), e "Estudantes" era prateleira de UM
+# item, criada porque a assistencia estudantil nao cabia nas outras duas.
+#
+# O PDI 2023-2027 (aprovado pelo CGIRC em 21/08/2023) declara 5 eixos
+# mobilizadores e, dentro deles, SUBTEMAS que nomeiam cinco destas sete
+# politicas quase literalmente. E a taxonomia da propria universidade. Mesmo
+# principio das ODS (ancoradas em THE/IPEA) e das obrigacoes (na legislacao):
+# quando existe classificacao oficial, nao se inventa uma.
+#
+# `base` diz de ONDE veio o encaixe -- e o que impede a classificacao de
+# afirmar mais do que o PDI diz:
+#   'nome'      o PDI tem subtema com este nome;
+#   'conteudo'  o PDI nao usa a palavra, mas o subtema DESCREVE o tema;
+#   'afinidade' atribuicao nossa, o PDI nao cobre.
+#
+# O caso do ASSEDIO merece registro, porque foi um erro de metodo meu. Procurei
+# a palavra "assedio" nas 175 paginas do PDI, achei zero, e conclui que o tema
+# nao estava la. Estava: "Equidade, Diversidade e Inclusao" (p.58-59) preve
+# "protocolo geral de atendimento e encaminhamento voltado para mulheres em
+# situacao de violencia de genero", o mesmo para pessoas LGBTQIAP+, protocolo
+# para "denuncias de racismo e discriminacoes", e poe a CPEG (Comissao
+# Permanente de Equidade de Genero) e a AFIDE como responsaveis. E o mesmo
+# objeto institucional, com outro vocabulario. Buscar o TERMO e concluir
+# ausencia do TEMA e a armadilha-mae da METODOLOGIA-ODS.
+#
+# SEGURANCA DA INFORMACAO e o unico 'afinidade': o CGIRC emite os atos e o tema
+# e de risco, mas o subtema "Gestao de Riscos e Integridade" fala de processo
+# critico, Plano de Integridade e TCU (area: PROPLAN), e "Governanca Digital"
+# fala de digitalizar servico e publicar no gov.br (area: STI). O PDI nao
+# escreve "seguranca da informacao", "protecao de dados" nem "LGPD" em pagina
+# nenhuma. E o melhor destino disponivel, e continua sendo atribuicao nossa.
+#
+# A ANCORA E DATADA: PDI_VERSAO viaja junto para o banco.
+# ---------------------------------------------------------------------------
+PDI_VERSAO = '2023-2027'
+
+# ---------------------------------------------------------------------------
+# O CATALOGO -- curadoria.
+# (slug, nome, eixo_pdi, subtema_pdi, base, descricao, termos, emissores)
 #
 # `termos` casam por FRASE ESTRITA na ementa. `emissores` e o segundo sinal:
 # a sigla do orgao que assina. Medido: 24 dos 37 atos de assistencia estudantil
@@ -44,38 +87,45 @@ def norm(s):
 # ficam de fora -- apuram caso concreto, tem efeito individual.
 # ---------------------------------------------------------------------------
 CATALOGO = [
-    ('assistencia-estudantil', 'Assistência estudantil', 'Estudantes',
+    ('assistencia-estudantil', 'Assistência estudantil', 'Responsabilidade Social',
+     'Assistência Estudantil', 'nome',
      'Programas de auxílio, moradia, alimentação e permanência destinados a estudantes da UFF.',
      ['assistencia estudantil', 'apoio estudantil', 'auxilio moradia',
       'auxilio alimentacao', 'auxilio acolhimento', 'auxilio creche',
       'auxilio permanencia', 'permanencia estudantil', 'moradia universitaria'],
      ['PROAES']),
-    ('acessibilidade', 'Acessibilidade e inclusão', 'Direitos',
+    ('acessibilidade', 'Acessibilidade e inclusão', 'Responsabilidade Social',
+     'Acessibilidade', 'nome',
      'Condições de acessibilidade e inclusão para pessoas com deficiência na UFF.',
      ['acessibilidade', 'uff acessivel', 'pessoa com deficiencia',
       'pessoas com deficiencia'],
      []),
-    ('acoes-afirmativas', 'Ações afirmativas, diversidade e equidade', 'Direitos',
+    ('acoes-afirmativas', 'Ações afirmativas, diversidade e equidade', 'Responsabilidade Social',
+     'Equidade, Diversidade e Inclusão', 'nome',
      'Reserva de vagas, heteroidentificação e políticas para grupos historicamente excluídos.',
      ['acoes afirmativas', 'politicas afirmativas', 'heteroidentificacao',
       'indigenas e quilombolas', 'reserva de vagas', 'equidade de genero',
       'nome social'],
      []),
-    ('assedio', 'Prevenção e enfrentamento ao assédio', 'Direitos',
+    ('assedio', 'Prevenção e enfrentamento ao assédio', 'Responsabilidade Social',
+     'Equidade, Diversidade e Inclusão', 'conteudo',
      'Prevenção, enfrentamento e tratamento do assédio moral e sexual no âmbito da UFF.',
      ['assedio'],
      []),
-    ('integridade-riscos', 'Integridade, riscos e controles', 'Governança',
+    ('integridade-riscos', 'Integridade, riscos e controles', 'Governança e Gestão',
+     'Gestão de Riscos e Integridade', 'nome',
      'Programa de integridade, gestão de riscos e controles internos da UFF.',
      ['plano de integridade', 'programa de integridade', 'politica de integridade',
       'gestao de riscos', 'gestao de risco', 'mapa de riscos', 'controles internos'],
      []),
-    ('seguranca-informacao', 'Segurança da informação e proteção de dados', 'Governança',
+    ('seguranca-informacao', 'Segurança da informação e proteção de dados', 'Governança e Gestão',
+     'Gestão de Riscos e Integridade', 'afinidade',
      'Política de segurança da informação, privacidade e proteção de dados pessoais.',
      ['seguranca da informacao', 'protecao de dados', 'lgpd', 'privacidade',
       'governanca digital', 'governanca de dados'],
      []),
-    ('sustentabilidade', 'Sustentabilidade', 'Governança',
+    ('sustentabilidade', 'Sustentabilidade', 'Responsabilidade Social',
+     'Meio Ambiente e Sustentabilidade', 'nome',
      'Agenda ambiental, logística sustentável e gestão socioambiental da UFF.',
      ['sustentabilidade', 'sustentavel', 'agenda ambiental', 'a3p',
       'gestao socioambiental', 'logistica sustentavel'],
@@ -164,7 +214,7 @@ def main():
             continue
         alvo = norm(ementa)
         achou = False
-        for slug, _n, _c, _d, termos, emissores in CATALOGO:
+        for slug, _n, _e, _s, _b, _d, termos, emissores in CATALOGO:
             sinal = next((t for t in termos if t in alvo), None)
             if sinal:
                 vinculos.append((slug, a, papel_do(ementa), 'alta', f'frase: {sinal}'))
@@ -191,22 +241,35 @@ def main():
     L.append('--  `status_curadoria` nasce RASCUNHO de proposito: a politica so aparece')
     L.append('--  no portal depois que alguem confirmar o catalogo.')
     L.append('--')
+    L.append(f'--  CATEGORIA ANCORADA NO PDI {PDI_VERSAO} da UFF: `eixo_pdi` e `subtema_pdi`')
+    L.append('--  saem do plano institucional, nao de rotulo nosso. `pdi_base` diz de onde')
+    L.append("--  veio o encaixe -- 'nome' (o PDI o nomeia), 'conteudo' (o subtema descreve")
+    L.append("--  o tema sem usar a palavra) ou 'afinidade' (atribuicao nossa).")
+    L.append('--  Exige o `alterar_politica_pdi.sql` aplicado ANTES deste arquivo.')
+    L.append('--')
     L.append('--  No phpMyAdmin: aba Importar (e DML, nao tem saida para exibir).')
     L.append('-- ' + '=' * 74)
     L.append('')
-    L.append('INSERT INTO `politica` (`slug`, `nome`, `descricao`, `categoria`, `status_curadoria`)')
+    # `categoria` continua sendo escrita, com o EIXO, para nao quebrar consumidor
+    # que ainda a leia; os campos novos e que carregam a ancora completa.
+    L.append('INSERT INTO `politica`')
+    L.append('  (`slug`, `nome`, `descricao`, `categoria`,')
+    L.append('   `eixo_pdi`, `subtema_pdi`, `pdi_base`, `pdi_versao`, `status_curadoria`)')
     L.append('VALUES')
-    for slug, nome, cat, desc, _t, _e in CATALOGO:
-        L.append(f"  ('{slug}', '{esc(nome)}', '{esc(desc)}', '{esc(cat)}', 'rascunho'),")
+    for slug, nome, eixo, subtema, base, desc, _t, _e in CATALOGO:
+        L.append(f"  ('{slug}', '{esc(nome)}', '{esc(desc)}', '{esc(eixo)}',")
+        L.append(f"   '{esc(eixo)}', '{esc(subtema)}', '{base}', '{PDI_VERSAO}', 'rascunho'),")
     L[-1] = L[-1].rstrip(',')
     L.append('ON DUPLICATE KEY UPDATE')
     L.append('  `nome` = VALUES(`nome`), `descricao` = VALUES(`descricao`),')
-    L.append('  `categoria` = VALUES(`categoria`);')
+    L.append('  `categoria` = VALUES(`categoria`), `eixo_pdi` = VALUES(`eixo_pdi`),')
+    L.append('  `subtema_pdi` = VALUES(`subtema_pdi`), `pdi_base` = VALUES(`pdi_base`),')
+    L.append('  `pdi_versao` = VALUES(`pdi_versao`);')
     L.append('')
     L.append('INSERT IGNORE INTO `politica_alias` (`politica_id`, `termo`, `tipo`)')
     L.append('VALUES')
     linhas = []
-    for slug, _n, _c, _d, termos, _e in CATALOGO:
+    for slug, _n, _e, _s, _b, _d, termos, _em in CATALOGO:
         for t in termos:
             linhas.append(f"  ((SELECT id FROM politica WHERE slug='{slug}'), '{esc(t)}', 'frase_estrita'),")
     linhas[-1] = linhas[-1].rstrip(',') + ';'

@@ -1051,8 +1051,31 @@ export type PoliticaPapel =
 export interface PoliticaFundador {
   id: string; label: string; sigla: string; data: string | null; ano: number;
 }
+
+// A ÂNCORA DA CATEGORIA. Até 04/08/2026 a política tinha uma `categoria` solta
+// ('Direitos', 'Governança', 'Estudantes') escrita por quem montou o catálogo —
+// sem origem declarada, e com três critérios diferentes misturados. Agora ela é
+// o subtema do PDI da UFF, a taxonomia da própria universidade.
+//
+// `base` é o campo que impede a tela de afirmar demais:
+//   'nome'      o PDI tem subtema com este nome;
+//   'conteudo'  o PDI descreve o tema sem usar a palavra — é o assédio, que o
+//               PDI não nomeia em 175 páginas mas cujo objeto está em
+//               "Equidade, Diversidade e Inclusão" (protocolo de atendimento a
+//               violência de gênero, denúncia de discriminação, CPEG/AFIDE);
+//   'afinidade' atribuição NOSSA — a segurança da informação, que o PDI não
+//               cobre em subtema nenhum.
+// `null` quando o banco ainda não tem as colunas (deploy em duas mãos) — e aí
+// a tela não mostra categoria alguma, em vez de mostrar rótulo sem origem.
+export interface PoliticaPdi {
+  eixo: string; subtema: string;
+  base: 'nome' | 'conteudo' | 'afinidade';
+  versao: string | null;   // a edição do PDI: a âncora é datada
+}
+
 export interface PoliticaResumo {
   slug: string; nome: string; descricao: string | null; categoria: string | null;
+  pdi?: PoliticaPdi | null;
   // 'rascunho' = catálogo ainda em curadoria; a interface mostra o selo.
   estagio: 'rascunho' | 'publicada' | 'arquivada';
   atos: number; anoMin: number | null; anoMax: number | null;
@@ -1084,7 +1107,7 @@ export interface PoliticaSnapshot {
 }
 
 export interface PoliticaDetalhe {
-  politica: Pick<PoliticaResumo, 'slug' | 'nome' | 'descricao' | 'categoria' | 'estagio'>;
+  politica: Pick<PoliticaResumo, 'slug' | 'nome' | 'descricao' | 'categoria' | 'estagio' | 'pdi'>;
   atos: PoliticaAtoRef[];
   etapas: Partial<Record<PoliticaPapel, PoliticaEtapa>>;
   historico: PoliticaSnapshot[];

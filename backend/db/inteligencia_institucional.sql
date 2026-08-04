@@ -76,6 +76,29 @@ CREATE TABLE IF NOT EXISTS `politica` (
   `nome`                 VARCHAR(180) NOT NULL,
   `descricao`            VARCHAR(600) NULL,
   `categoria`            VARCHAR(60)  NULL,
+  -- Âncora no PDI da UFF. A categoria da política NÃO é invenção nossa: é o
+  -- subtema do Plano de Desenvolvimento Institucional vigente. `pdi_versao`
+  -- existe porque a âncora é DATADA — o PDI 2023-2027 vence, e o próximo pode
+  -- reorganizar os eixos; sem a edição registrada, a classificação viraria uma
+  -- afirmação sem tempo.
+  --
+  -- `pdi_base` diz de ONDE veio o encaixe, e é o que impede a classificação de
+  -- afirmar mais do que o documento diz:
+  --   nome      — o PDI tem subtema com este nome (5 das 7 do piloto);
+  --   conteudo  — o PDI não usa a palavra, mas o subtema DESCREVE o tema. É o
+  --               caso do assédio: "Equidade, Diversidade e Inclusão" prevê
+  --               protocolo de atendimento a violência de gênero e denúncia de
+  --               discriminação, e nunca escreve "assédio". Buscar a palavra
+  --               teria concluído ausência de tema — a mesma armadilha da
+  --               METODOLOGIA-ODS, onde o termo não está onde o tema está;
+  --   afinidade — atribuição NOSSA, o PDI não cobre. Segurança da informação:
+  --               o CGIRC emite os atos e o tema é de risco, mas o subtema de
+  --               Gestão de Riscos e Integridade fala de processo crítico e
+  --               conduta, e Governança Digital fala de digitalizar serviço.
+  `eixo_pdi`             VARCHAR(60)  NULL,
+  `subtema_pdi`          VARCHAR(80)  NULL,
+  `pdi_base`             ENUM('nome','conteudo','afinidade') NULL,
+  `pdi_versao`           VARCHAR(20)  NULL,
   `orgao_responsavel_id` BIGINT UNSIGNED NULL,
   `ato_fundador_id`      BIGINT UNSIGNED NULL,
   `status_curadoria`     ENUM('rascunho','publicada','arquivada') NOT NULL DEFAULT 'rascunho',

@@ -359,6 +359,9 @@ export const AJUDA: Record<string, AjudaAba> = {
         significa que <B>nenhuma evidência foi localizada no Boletim</B> — que é bem diferente
         de dizer que não aconteceu.</>,
       <>Abra a política para ver os atos, cada um com o <B>papel</B> que cumpre.</>,
+      <>Os grupos e as etiquetas de tema são os <B>eixos e subtemas do PDI</B> da UFF, não uma
+        classificação do portal. Quando a etiqueta diz <B>por conteúdo</B> ou <B>por
+        afinidade</B>, o encaixe não é literal — passe o mouse para ver por quê.</>,
     ],
     destaque: <>O que organiza tudo é o <B>papel</B> de cada ato — o que ele <em>faz</em> pela
       política, não o assunto de que trata. Designar uma comissão é <B>governança</B>, não

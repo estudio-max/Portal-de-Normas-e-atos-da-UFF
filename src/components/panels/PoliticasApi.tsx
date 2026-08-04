@@ -79,6 +79,42 @@ function EstagioChip({ estagio }: { estagio: string }) {
       catálogo em revisão</span>);
 }
 
+// A CATEGORIA VEM DO PDI DA UFF, e o selo diz em que base o encaixe foi feito.
+//
+// Como o ConfiancaChip acima, o caso PADRÃO não ganha marca: quando o PDI tem
+// um subtema com aquele nome, não há o que ressalvar. Marca-se só o que exige
+// ressalva — senão o selo vira ruído e ninguém lê o que importa.
+const PDI_BASE: Record<string, { marca: string; explica: string }> = {
+  conteudo: {
+    marca: 'por conteúdo',
+    explica: 'O PDI não usa esta palavra, mas o subtema descreve o tema: prevê protocolo '
+      + 'de atendimento a situações de violência de gênero e encaminhamento de denúncias '
+      + 'de discriminação, sob a CPEG e a AFIDE.',
+  },
+  afinidade: {
+    marca: 'por afinidade',
+    explica: 'Atribuição do portal, não do PDI: o plano não trata deste tema em subtema '
+      + 'nenhum. É o destino mais próximo — o órgão que emite os atos é o comitê de '
+      + 'governança, integridade, riscos e controles.',
+  },
+};
+
+function SubtemaPdi({ pdi, escuro = false }: { pdi: ds.PoliticaPdi; escuro?: boolean }) {
+  const nota = PDI_BASE[pdi.base];
+  const titulo = `PDI ${pdi.versao ?? ''} · eixo ${pdi.eixo}`
+    + (nota ? ` — ${nota.explica}` : ' — o PDI nomeia este subtema.');
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${escuro
+      ? 'bg-blue-800 text-blue-50 border-blue-700'
+      : 'bg-slate-50 text-slate-600 border-slate-200'}`} title={titulo}>
+      {pdi.subtema}
+      {nota && (
+        <span className={escuro ? 'text-amber-200' : 'text-amber-700'}>· {nota.marca}</span>
+      )}
+    </span>
+  );
+}
+
 function StatusChip({ status }: { status: string }) {
   const cor = status === 'Revogado' ? 'bg-rose-50 text-rose-700 border-rose-200'
     : status === 'Alterado' ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -225,9 +261,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
           <div className="bg-[#003366] text-white rounded-lg p-4 mb-3">
             <div className="flex items-center flex-wrap gap-2">
               <h3 className="text-base font-bold">{d.politica.nome}</h3>
-              {d.politica.categoria && (
-                <span className="text-[11px] font-mono bg-blue-800 px-1.5 py-0.5 rounded">{d.politica.categoria}</span>
-              )}
+              {d.politica.pdi && <SubtemaPdi pdi={d.politica.pdi} escuro />}
               <EstagioChip estagio={d.politica.estagio} />
             </div>
             {d.politica.descricao && (
@@ -359,20 +393,32 @@ export default function PoliticasApi() {
     ds.getPoliticas().then(setR).finally(() => setCarregando(false));
   }, [apiMode]);
 
+  // Agrupa pelo EIXO do PDI, não pelo subtema: agrupar por subtema daria
+  // prateleiras de um item só (é o defeito que a categoria antiga tinha). A
+  // busca também alcança o subtema — quem procura "equidade" espera achar as
+  // políticas que o PDI põe ali.
   const grupos = useMemo(() => {
     if (!r?.politicas) return [];
     const q = busca.trim().toLowerCase();
-    const porCat = new Map<string, ds.PoliticaResumo[]>();
+    const porEixo = new Map<string, ds.PoliticaResumo[]>();
     for (const p of r.politicas) {
-      if (q && !p.nome.toLowerCase().includes(q) && !(p.descricao ?? '').toLowerCase().includes(q)) continue;
-      const cat = p.categoria || 'Outras';
-      const arr = porCat.get(cat) ?? [];
+      const alvo = `${p.nome} ${p.descricao ?? ''} ${p.pdi?.subtema ?? ''} ${p.pdi?.eixo ?? ''}`.toLowerCase();
+      if (q && !alvo.includes(q)) continue;
+      const eixo = p.pdi?.eixo || p.categoria || 'Sem eixo do PDI';
+      const arr = porEixo.get(eixo) ?? [];
       arr.push(p);
-      porCat.set(cat, arr);
+      porEixo.set(eixo, arr);
     }
-    for (const arr of porCat.values()) arr.sort((a, b) => b.atos - a.atos);
-    return [...porCat.entries()].sort((a, b) => b[1].length - a[1].length);
+    for (const arr of porEixo.values()) arr.sort((a, b) => b.atos - a.atos);
+    return [...porEixo.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [r, busca]);
+
+  // A edição do PDI sai do próprio dado. Banco não migrado devolve `pdi` nulo,
+  // e aí a nota explicativa não aparece — em vez de anunciar uma âncora que a
+  // tela não está mostrando.
+  const versaoPdi = useMemo(
+    () => r?.politicas?.find(p => p.pdi?.versao)?.pdi?.versao ?? null,
+    [r]);
 
   if (!apiMode) {
     return (
@@ -428,6 +474,23 @@ export default function PoliticasApi() {
         </span>
       </div>
 
+      {/* Sem esta nota, "· por afinidade" seria um enigma no cartão. E a nota
+          precisa ser lida como ressalva, não como erro: o encaixe não literal
+          continua sendo o melhor disponível — só não é o PDI quem o afirma. */}
+      {versaoPdi && (
+        <div className="flex items-start gap-2 text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+          <Landmark className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+          <span>
+            Os grupos e as etiquetas de tema são os <strong>eixos e subtemas do PDI {versaoPdi}</strong> da
+            UFF — o plano institucional da universidade, não uma classificação do portal.
+            Quando o encaixe não é literal, a etiqueta diz por quê:{' '}
+            <strong>por conteúdo</strong> (o PDI descreve o tema sem usar a palavra) ou{' '}
+            <strong>por afinidade</strong> (o PDI não cobre o tema; a aproximação é nossa).
+            Passe o mouse na etiqueta para ver a justificativa.
+          </span>
+        </div>
+      )}
+
       <div className="relative max-w-xs">
         <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
         <input value={busca} onChange={e => setBusca(e.target.value)}
@@ -436,10 +499,10 @@ export default function PoliticasApi() {
         {busca && <button onClick={() => setBusca('')} className="absolute right-2 top-1.5 p-0.5 hover:bg-slate-200 rounded-full text-slate-400"><X className="w-3 h-3" /></button>}
       </div>
 
-      {grupos.map(([cat, pols]) => (
-        <div key={cat}>
+      {grupos.map(([eixo, pols]) => (
+        <div key={eixo}>
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
-            {cat} ({pols.length})
+            {eixo} ({pols.length})
           </h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {pols.map(p => (
@@ -451,6 +514,7 @@ export default function PoliticasApi() {
                       <span className="font-bold text-[13px] text-[#003366]">{p.nome}</span>
                       <EstagioChip estagio={p.estagio} />
                     </div>
+                    {p.pdi && <div className="mt-1"><SubtemaPdi pdi={p.pdi} /></div>}
                     <div className="text-[11px] text-slate-500 mt-0.5">
                       {p.atos > 0
                         ? <>{p.atos} ato(s){p.anoMin ? ` · ${p.anoMin}–${p.anoMax}` : ''}</>

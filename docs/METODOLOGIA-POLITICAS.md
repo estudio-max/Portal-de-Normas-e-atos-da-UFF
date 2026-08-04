@@ -17,6 +17,72 @@ Uma entrada **curada** do catálogo (`politica`), com nome, descrição, categor
 e um conjunto de termos que a identificam no texto. O catálogo **não é
 descoberto automaticamente**: quem decide o que é política é o mantenedor.
 
+## 1.1 A categoria vem do PDI da UFF (desde 04/08/2026)
+
+Até 04/08/2026 a categoria era `Direitos` | `Governança` | `Estudantes` — três
+rótulos **sem âncora**, escritos junto com o catálogo. O defeito não era só a
+falta de origem: os três **não respondiam à mesma pergunta**. "Direitos"
+classifica pela natureza do que se protege, "Estudantes" pelo destinatário,
+"Governança" pela função institucional. Sob qualquer critério consistente o
+conjunto se desfazia — assistência estudantil *é* um direito, e acessibilidade
+atende estudantes —, e "Estudantes" era prateleira de **um item só**, criada
+porque a assistência estudantil não cabia nas outras duas.
+
+Hoje a categoria é o **subtema do PDI 2023-2027** (aprovado pelo CGIRC em
+21/08/2023), que declara 5 eixos mobilizadores e, dentro deles, subtemas. É a
+taxonomia da própria universidade — mesmo princípio das ODS (ancoradas em
+THE/IPEA) e das obrigações (ancoradas na legislação): **quando existe
+classificação oficial, não se inventa uma.**
+
+A lista agrupa pelo **eixo** e etiqueta cada política com o **subtema**.
+Agrupar por subtema devolveria o defeito antigo — prateleiras de um item.
+
+| Política | Eixo | Subtema | Base |
+|---|---|---|---|
+| Assistência estudantil | Responsabilidade Social | Assistência Estudantil | nome |
+| Acessibilidade e inclusão | Responsabilidade Social | Acessibilidade | nome |
+| Sustentabilidade | Responsabilidade Social | Meio Ambiente e Sustentabilidade | nome |
+| Ações afirmativas | Responsabilidade Social | Equidade, Diversidade e Inclusão | nome |
+| Integridade, riscos e controles | Governança e Gestão | Gestão de Riscos e Integridade | nome |
+| Prevenção ao assédio | Responsabilidade Social | Equidade, Diversidade e Inclusão | **conteúdo** |
+| Segurança da informação | Governança e Gestão | Gestão de Riscos e Integridade | **afinidade** |
+
+### Por que existe o campo `pdi_base`
+
+Porque o encaixe nem sempre é literal, e a tela não pode dar a duas coisas
+diferentes a mesma autoridade.
+
+- **`nome`** — o PDI tem subtema com aquele nome. Nada a ressalvar, e por isso
+  não ganha marca na interface (mesma regra do `confianca: alta`).
+- **`conteudo`** — o PDI **não usa a palavra**, mas o subtema **descreve o
+  tema**. É o caso do **assédio**, e ele merece registro porque nasceu de um
+  erro de método: buscamos a palavra "assédio" nas 175 páginas do PDI, achamos
+  **zero**, e concluímos que o tema estava ausente. Não estava. "Equidade,
+  Diversidade e Inclusão" (p.58-59) prevê *"protocolo geral de atendimento e
+  encaminhamento voltado para mulheres em situação de violência de gênero"*, o
+  mesmo para pessoas LGBTQIAP+, protocolo para *"denúncias de racismo e
+  discriminações"*, e põe a **CPEG** e a **AFIDE** como responsáveis. É o mesmo
+  objeto institucional, com outro vocabulário. **Buscar o TERMO e concluir
+  ausência do TEMA é a armadilha-mãe da [METODOLOGIA-ODS](METODOLOGIA-ODS.md)**,
+  aplicada agora ao documento em vez de ao ato.
+- **`afinidade`** — atribuição nossa; o PDI não cobre. É o caso da **segurança
+  da informação**: o CGIRC emite os atos e o tema é de risco, mas o subtema
+  "Gestão de Riscos e Integridade" (p.71) fala de **processo crítico, Plano de
+  Integridade e TCU** (área: PROPLAN), e "Governança Digital" (p.72) fala de
+  **digitalizar serviço e publicar no gov.br** (área: STI). O PDI não escreve
+  "segurança da informação", "proteção de dados" nem "LGPD" em página nenhuma.
+  É o melhor destino disponível — e continua sendo aproximação nossa.
+
+### A âncora é datada
+
+`pdi_versao` guarda a edição do plano. O PDI 2023-2027 vence em 2027 e o
+próximo pode reorganizar os eixos; sem a edição registrada, a classificação
+viraria afirmação sem tempo. Ao trocar de PDI, **remeça** — em especial as duas
+linhas que hoje não são `nome`.
+
+Fonte: [PDI UFF 2023-2027](https://www.uff.br/wp-content/uploads/2024/05/2023_08_21_pdi_ppi_2023_2027.pdf).
+Aplicação: `backend/db/alterar_politica_pdi.sql` (uma vez) + seed regerado.
+
 O catálogo vive em `tools/gerar_seed_politicas.py`, na constante `CATALOGO`, e
 é a fonte única — o `.sql` é gerado, e o CI reprova se ele for editado à mão.
 
