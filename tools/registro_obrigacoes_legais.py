@@ -56,109 +56,117 @@ import io, os, sys
 #                tem que dizer isso em vez de exibir lacuna.
 #   'misto'    — parte no Boletim, parte fora.
 REGISTRO = [
-    # ---------------------------------------------------------------- POR LEI
+    # ======================= OBRIGAÇÃO DE ENTREGA (relatório, plano) =======
+    # Conferidas uma a uma em 04/08/2026. `fonte` traz o dispositivo; onde eu
+    # não consegui o dispositivo, a fonte é o ARTEFATO que a UFF publica — e a
+    # linha diz qual dos dois é.
+
     ('cpa', 'relatorio',
      'Relatório de autoavaliação institucional, coordenado pela CPA e enviado ao INEP/MEC.',
      12, 'Comissão Própria de Avaliação',
-     'Lei 10.861/2004, art. 11 (SINAES)',
+     'Lei 10.861/2004, art. 11 (SINAES); relatórios publicados em cpa.uff.br',
      'externo', 'verificada'),
 
     ('ceua', 'relatorio',
-     'Relatório anual de atividades da CEUA ao CONCEA.',
+     'Relatório anual de atividades ao CONCEA.',
      12, 'Comissão de Ética no Uso de Animais',
      'Lei 11.794/2008 (Lei Arouca) e Resoluções Normativas do CONCEA',
      'externo', 'verificada'),
 
-    # REPROVADA na conferência: o Decreto 6.029/2007 estrutura o Sistema de
-    # Gestão da Ética e as competências das comissões setoriais (orientar,
-    # apurar, aconselhar), mas NÃO fixa periodicidade de relatório para elas.
-    # Eu tinha suposto uma prestação de contas anual à CEP/PR. Não existe no
-    # texto. A linha sai do registro em vez de virar afirmação sem base.
-    #
-    # ('etica', 'relatorio', ..., 12, ...)  <- removida em 04/08/2026
+    # A mais bem amarrada de todas: prazo FIXO no calendário e consequência
+    # declarada na própria norma.
+    ('biosseg', 'relatorio',
+     'Relatório anual à CTNBio, até 31 de março, sob pena de suspensão ou '
+     'cancelamento do Certificado de Qualidade em Biossegurança (CQB).',
+     12, 'Comissão Interna de Biossegurança (CIBio)',
+     'Resolução Normativa CTNBio nº 37/2022, art. 11',
+     'externo', 'verificada'),
 
-    # CONFIRMADA na própria página institucional da UFF, que a lista entre as
-    # atribuições da comissão: "Elaboração de relatório anual de acessibilidade
-    # e inclusão (Raai)".
+    # Confirmada pela própria página institucional, que a lista entre as
+    # atribuições da comissão.
     ('acessib', 'relatorio',
      'Relatório Anual de Acessibilidade e Inclusão (RAAI).',
      12, 'Comissão Permanente de Acessibilidade e Inclusão (UFF Acessível)',
-     'uff.br/sobre/comites-e-comissoes/ — atribuição declarada; base legal na Lei 13.146/2015',
+     'uff.br/sobre/comites-e-comissoes/ — atribuição declarada',
      'externo', 'verificada'),
 
-    ('cpa', 'constituicao',
-     'Designação e recomposição dos membros da CPA, com mandato.',
-     None, 'Reitoria',
-     'Lei 10.861/2004, art. 11',
-     'boletim', 'verificada'),
-
-    ('cppd', 'constituicao',
-     'Designação e recomposição da CPPD, que assessora sobre a carreira docente.',
-     None, 'Reitoria',
-     'Lei 12.772/2012',
-     'boletim', 'a_confirmar'),
-
-    # CONFIRMADA: criada em caráter permanente pelo §3º do art. 22 da Lei
-    # 11.091/2005, com mandato de TRÊS ANOS e membros eleitos diretamente pelos
-    # técnico-administrativos. O mandato é o dado que interessa ao Observatório:
-    # é ele que sustenta "recomposição possivelmente necessária".
-    ('cis', 'recomposicao',
-     'Eleição e designação da CIS a cada mandato de três anos.',
-     36, 'Comissão Interna de Supervisão do PCCTAE',
-     'Lei 11.091/2005, art. 22, §3º',
-     'boletim', 'verificada'),
-
-    ('cep', 'constituicao',
-     'Designação e recomposição do Comitê de Ética em Pesquisa, registrado na CONEP.',
-     None, 'Reitoria',
-     'Resolução CNS 466/2012 e normas da CONEP',
-     'misto', 'a_confirmar'),
-
-    ('biosseg', 'constituicao',
-     'Designação e recomposição da Comissão Interna de Biossegurança (CIBio).',
-     None, 'Reitoria',
-     'Lei 11.105/2005 e normas da CTNBio',
-     'misto', 'a_confirmar'),
-
-    ('cipa', 'constituicao',
-     'Constituição da CIPA, com processo eleitoral e mandato.',
-     None, 'Reitoria',
-     'Lei 14.457/2022 e NR-5',
-     'boletim', 'a_confirmar'),
-
-    # ------------------------------------------------- EXIGIDAS POR CONTROLE
-    # A suposição de um relatório ANUAL de riscos pela IN Conjunta MP/CGU
-    # 01/2016 foi substituída pelo que a UFF de fato publica: relatório
-    # SEMESTRAL de integridade (ver a linha verificada mais abaixo). Preferir o
-    # artefato à norma que eu não li é o critério deste registro inteiro.
-
-    ('cgi', 'plano',
-     'Plano de Integridade, com revisão periódica.',
-     24, 'Comitê de Gestão da Integridade',
-     'Decreto 9.203/2017 e Portaria CGU 1.089/2018',
-     'misto', 'a_confirmar'),
-
-    ('gov-dig', 'plano',
-     'Plano Diretor de Tecnologia da Informação e Comunicação (PDTIC).',
-     None, 'Comitê de Governança Digital',
-     'Decreto 10.332/2020 (Estratégia de Governo Digital)',
-     'misto', 'a_confirmar'),
-
-    ('acessib', 'constituicao',
-     'Designação e recomposição da comissão de acessibilidade.',
-     None, 'Reitoria',
-     'Lei 13.146/2015 (Estatuto da Pessoa com Deficiência)',
-     'boletim', 'a_confirmar'),
-
-    # CONFIRMADA pela existência dos próprios relatórios publicados em uff.br:
-    # "Relatório Semestral de Integridade 1/2023" e o do 2º semestre de 2023.
-    # A periodicidade está no título do documento, não numa norma que eu tenha
-    # lido — por isso a fonte é o artefato, e é o que a linha declara.
+    # Confirmada pelos próprios documentos publicados: "Relatório Semestral de
+    # Integridade 1/2023" e o do 2º semestre. A periodicidade veio do artefato,
+    # não de norma que eu tenha lido — e a linha declara isso.
     ('cgirc', 'relatorio',
      'Relatório semestral de integridade.',
      6, 'Comitê de Governança, Integridade, Riscos e Controles',
      'Relatórios semestrais publicados em uff.br (1º e 2º semestres de 2023)',
      'externo', 'verificada'),
+
+    ('gov-dig', 'plano',
+     'Plano Diretor de Tecnologia da Informação e Comunicação (PDTIC): vigência '
+     'mínima de dois anos, com revisão anual. A publicação é requisito para '
+     'contratar TI.',
+     12, 'Comitê de Governança Digital',
+     'Guia de PDTIC do SISP e IN SGD/ME nº 94/2022',
+     'misto', 'verificada'),
+
+    # CORRIGIDA: eu tinha posto 24 meses. O Decreto 9.203/2017 e a Portaria CGU
+    # 1.089/2018 mandam revisar o plano "periodicamente" e NÃO fixam prazo.
+    # Periodicidade nula é a informação correta; inventar 24 meses seria criar
+    # um vencimento que a norma não criou.
+    ('cgi', 'plano',
+     'Plano de Integridade, com revisão periódica — a norma não fixa prazo.',
+     None, 'Comitê de Gestão da Integridade',
+     'Decreto 9.203/2017 e Portaria CGU nº 1.089/2018',
+     'misto', 'verificada'),
+
+    # ======================= MANDATO (o que sustenta "recomposição") ========
+    # Esta metade do registro é a que o Observatório das Comissões consome: com
+    # o mandato conhecido, "recomposição possivelmente necessária" deixa de
+    # depender de o ato escrever a data e passa a ser calculável.
+
+    ('cipa', 'recomposicao',
+     'Mandato de um ano, permitida uma reeleição. A convocação da eleição '
+     'ocorre no mínimo 60 dias antes do fim do mandato, e a eleição, no mínimo '
+     '30 dias antes.',
+     12, 'Comissão Interna de Prevenção de Acidentes e de Assédio',
+     'NR-5 (texto vigente, Ministério do Trabalho e Emprego) e Lei 14.457/2022',
+     'boletim', 'verificada'),
+
+    ('cppd', 'recomposicao',
+     'Mandato de dois anos, com membros eleitos pela comunidade docente.',
+     24, 'Comissão Permanente de Pessoal Docente',
+     'Lei 12.772/2012 e regulamentação interna da UFF (cppd.uff.br)',
+     'boletim', 'verificada'),
+
+    ('cis', 'recomposicao',
+     'Mandato de três anos, com membros eleitos diretamente pelos '
+     'técnico-administrativos.',
+     36, 'Comissão Interna de Supervisão do PCCTAE',
+     'Lei 11.091/2005, art. 22, §3º',
+     'boletim', 'verificada'),
+
+    ('cep', 'recomposicao',
+     'Mandato de três anos; a renovação do registro na CONEP é solicitada a '
+     'cada mandato.',
+     36, 'Comitê de Ética em Pesquisa',
+     'Normas da CONEP / Conselho Nacional de Saúde',
+     'misto', 'verificada'),
+
+    ('cpa', 'constituicao',
+     'Designação e recomposição dos membros da CPA.',
+     None, 'Reitoria',
+     'Lei 10.861/2004, art. 11',
+     'boletim', 'verificada'),
+
+    # REMOVIDAS na conferência de 04/08/2026, por não resistirem à fonte:
+    #
+    # ('etica','relatorio', 12m) — eu supus prestação de contas anual à CEP/PR
+    #   pelo Decreto 6.029/2007. O decreto estrutura o Sistema de Gestão da
+    #   Ética e lista competências, mas NÃO fixa periodicidade nenhuma.
+    #
+    # ('acessib','constituicao') — eu atribuí a criação da comissão à Lei
+    #   13.146/2015. A lei não manda cada universidade constituir comissão; a
+    #   da UFF nasceu de decisão institucional (Resolução 037/2019 e Portaria
+    #   63.254/2019). Chamar isso de obrigação legal seria emprestar à
+    #   instituição uma exigência que a lei não fez.
 ]
 
 
@@ -216,9 +224,10 @@ def emite_sql():
 --  levantadas à mão a partir da legislação, e por isso sobrevivem a qualquer
 --  passada automática.
 --
---  ⚠️ PARTE DELAS AINDA NÃO FOI CONFIRMADA EM FONTE PRIMÁRIA. Confira o campo
---  `conf` no gerador antes de publicar qualquer uma: afirmar que um colegiado
---  deve relatório anual citando a lei errada é pior que não afirmar nada.
+--  Todas as linhas foram conferidas em fonte oficial em 04/08/2026, uma a uma.
+--  Duas suposições minhas caíram na conferência e foram REMOVIDAS em vez de
+--  suavizadas — estão comentadas no gerador, com o motivo. O campo `conf`
+--  continua no registro porque a próxima linha acrescentada nasce a confirmar.
 --
 --  No phpMyAdmin: aba Importar (é DML, não tem saída para exibir).
 -- ============================================================================

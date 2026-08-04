@@ -309,7 +309,13 @@ CREATE TABLE IF NOT EXISTS `comissao_membro_evento` (
 CREATE TABLE IF NOT EXISTS `obrigacao` (
   `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uid`                  VARCHAR(120) NOT NULL,
-  `ato_origem_id`        BIGINT UNSIGNED NOT NULL,
+  -- NULL é permitido, e isso é uma descoberta do módulo, não uma frouxidão:
+  -- a obrigação de um colegiado permanente costuma NÃO nascer de um ato da
+  -- UFF. A CPA deve relatório porque a Lei 10.861/2004 instituiu o SINAES; a
+  -- CIBio, porque a RN CTNBio 37/2022 manda, até 31 de março. Nenhum ato do
+  -- Boletim cria essas obrigações — o Boletim registra, quando muito, o
+  -- cumprimento. Nesses casos `trecho_origem` guarda a NORMA.
+  `ato_origem_id`        BIGINT UNSIGNED NULL,
   `politica_id`          BIGINT UNSIGNED NULL,
   `comissao_slug`        VARCHAR(32) NULL,
   `tipo`                 ENUM('entrega','publicacao','constituicao','recomposicao','revisao','regulamentacao','plano','relatorio','designacao','implementacao','outro') NOT NULL,
