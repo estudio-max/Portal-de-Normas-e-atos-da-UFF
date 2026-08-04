@@ -11,6 +11,7 @@ import {
   Timer,
   Clock,
   Landmark,
+  BookMarked,
   Globe,
   Target,
   HelpCircle,
@@ -49,6 +50,7 @@ const NAV_SECTIONS = [
     title: 'Institucional',
     items: [
       { id: 'institucional/comissoes', label: 'Comissões', icon: <Landmark size={18} /> },
+      { id: 'institucional/politicas', label: 'Políticas', icon: <BookMarked size={18} /> },
       { id: 'institucional/cooperacao', label: 'Cooperação', icon: <Globe size={18} /> },
       { id: 'institucional/ods', label: 'ODS', icon: <Target size={18} /> },
     ],

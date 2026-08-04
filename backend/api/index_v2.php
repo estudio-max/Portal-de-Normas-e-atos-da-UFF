@@ -87,6 +87,7 @@ switch ($recurso) {
     case 'jornada':  jornada($pdo); break;
     case 'cooperacao': cooperacao($pdo); break;
     case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? ''); break;
+    case 'politicas': politicas($pdo, $_GET['slug'] ?? ''); break;
     case 'ods':      ods($pdo, $_GET['n'] ?? ''); break;
     case 'pad_cadeia': pad_cadeia($pdo, $_GET['processo'] ?? ''); break;
     case 'dossie':   dossie($pdo, $cfg, $_GET['siape'] ?? '', $_GET['nome'] ?? ''); break;
@@ -115,7 +116,8 @@ function cache_rotas(): array {
     // Só rotas cujo resultado é IGUAL para todos e muda 1x/dia. `dossie` é
     // pessoal (fica de fora); `atos`/`ato` variam demais e já são rápidas.
     static $r = ['stats', 'filtros', 'jornada', 'cooperacao', 'comissoes',
-                 'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods'];
+                 'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods',
+                 'politicas'];
     return $r;
 }
 function cache_cacheavel(string $recurso): bool {
@@ -399,7 +401,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-03.1'; }
+function api_versao(): string { return '2026-08-03.2'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1986,6 +1988,153 @@ function comissoes(PDO $pdo, string $corpo): void {
         'corpos' => $corpos,
         'total' => array_sum(array_map(fn($c) => $c['atos'], $corpos)),
         'orfaos' => $orfaos,
+    ]);
+}
+
+// ===========================================================================
+//  POLÍTICAS — o dossiê temático: um assunto institucional e os atos que o
+//  construíram ao longo do tempo.
+//
+//  Lê `politica` + `ato_politica` (catálogo curado, semeado offline por
+//  tools/gerar_seed_politicas.py). Mesmo desenho das comissões e das ODS: a
+//  rota NÃO casa texto ao vivo, só lê o índice pronto.
+//
+//  O que distingue esta aba das outras: `papel` — o que o ato FAZ pela
+//  política. Sem ele, "designa comissão" e "fixa diretrizes de execução"
+//  contariam igual, e a política pareceria em execução por ter muitas
+//  designações. É a mesma separação que o `ato_ods.vinculo` faz.
+//
+//  `estagio` é o status de curadoria e vai EXPLÍCITO na resposta. Política em
+//  rascunho aparece marcada como tal — esconder seria pior: o portal já mostra
+//  confiança e método em toda inferência, e catálogo em revisão é a mesma
+//  categoria de informação.
+// ===========================================================================
+function politicas_avisos(): array {
+    return [
+        'Ausência de evidência no Boletim não comprova ausência de execução — o acervo cobre o que foi publicado no Boletim de Serviço.',
+        'O vínculo entre ato e política é inferido por regra (frase estrita na ementa ou órgão emissor) e revisado por curadoria.',
+    ];
+}
+
+function politicas(PDO $pdo, string $slug): void {
+    // Degradação graciosa: a rota pode subir antes de o SQL rodar no
+    // phpMyAdmin (deploy em duas mãos). Responder 200 com `indisponivel`, como
+    // a rota de ODS já faz — o painel mostra o aviso em vez de tela quebrada.
+    try {
+        $pdo->query("SELECT 1 FROM politica LIMIT 1");
+    } catch (Throwable $e) {
+        responder_json(['indisponivel' => true,
+                        'motivo' => 'A tabela politica ainda não foi criada/carregada.']);
+    }
+
+    if ($slug !== '') {
+        $st = $pdo->prepare("
+            SELECT p.slug, p.nome, p.descricao, p.categoria, p.status_curadoria
+              FROM politica p WHERE p.slug = :slug");
+        $st->execute([':slug' => $slug]);
+        $pol = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$pol) responder_json(['erro' => 'política desconhecida'], 404);
+
+        $st = $pdo->prepare("
+            SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa, a.status,
+                   a.processo_sei, o.sigla, t.nome AS tipo, b.url_pdf AS link,
+                   ap.papel, ap.confianca, ap.metodo, ap.justificativa
+              FROM ato_politica ap
+              JOIN politica p     ON p.id = ap.politica_id
+              JOIN ato a          ON a.id = ap.ato_id
+              JOIN orgao o        ON o.id = a.orgao_id
+              JOIN tipo_ato t     ON t.id = a.tipo_id
+              LEFT JOIN boletim b ON b.id = a.boletim_id
+             WHERE p.slug = :slug
+             ORDER BY a.data_ato DESC, a.ano DESC, a.numero_norm DESC");
+        $st->execute([':slug' => $slug]);
+        $atos = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $atos[] = [
+                'id' => $r['id'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+                'data' => $r['data_ato'], 'status' => $r['status'], 'sigla' => $r['sigla'],
+                'tipo' => $r['tipo'], 'link' => $r['link'],
+                'processoSei' => $r['processo_sei'] ?: null,
+                'linkSeiProcesso' => link_sei_processo((string)($r['processo_sei'] ?? '')),
+                'papel' => $r['papel'], 'confianca' => $r['confianca'],
+                'metodo' => $r['metodo'], 'justificativa' => $r['justificativa'] ?: null,
+                'ementa' => mb_substr(preg_replace('/\s+/u', ' ', trim($r['ementa'] ?? '')), 0, 300),
+            ];
+        }
+        responder_json([
+            'politica' => [
+                'slug' => $pol['slug'], 'nome' => $pol['nome'],
+                'descricao' => $pol['descricao'], 'categoria' => $pol['categoria'],
+                'estagio' => $pol['status_curadoria'],
+            ],
+            'atos' => $atos,
+            'avisos' => politicas_avisos(),
+        ]);
+    }
+
+    // ---- lista: catálogo + agregados -------------------------------------
+    // Três consultas simples em vez de uma esperta: o 5.7 não tem função de
+    // janela, e agregar papel/fundador numa query só exigiria subconsulta
+    // correlacionada por linha. São 7 políticas — o custo é irrelevante e o
+    // SQL continua legível.
+    $base = $pdo->query("
+        SELECT p.slug, p.nome, p.descricao, p.categoria, p.status_curadoria,
+               COUNT(ap.id) AS n, MIN(a.ano) AS ano_min, MAX(a.ano) AS ano_max,
+               MAX(a.data_ato) AS ultima
+          FROM politica p
+          LEFT JOIN ato_politica ap ON ap.politica_id = p.id
+          LEFT JOIN ato a           ON a.id = ap.ato_id
+      GROUP BY p.id
+      ORDER BY p.nome")->fetchAll(PDO::FETCH_ASSOC);
+
+    $papeis = [];
+    foreach ($pdo->query("
+        SELECT p.slug, ap.papel, COUNT(*) AS n
+          FROM ato_politica ap JOIN politica p ON p.id = ap.politica_id
+      GROUP BY p.slug, ap.papel")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $papeis[$r['slug']][$r['papel']] = (int)$r['n'];
+    }
+
+    // Ato fundador: o MAIS ANTIGO com papel='fundador'. Política pode não ter
+    // nenhum — e isso é informação, não falha: significa que o acervo registra
+    // a política em atividade sem registrar o ato que a instituiu.
+    $fund = [];
+    foreach ($pdo->query("
+        SELECT p.slug, a.uid, a.data_ato, a.ano, o.sigla,
+               CONCAT(t.nome, ' nº ', a.numero, '/', a.ano) AS label
+          FROM ato_politica ap
+          JOIN politica p  ON p.id = ap.politica_id
+          JOIN ato a       ON a.id = ap.ato_id
+          JOIN orgao o     ON o.id = a.orgao_id
+          JOIN tipo_ato t  ON t.id = a.tipo_id
+         WHERE ap.papel = 'fundador'
+      ORDER BY a.data_ato ASC, a.ano ASC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        if (!isset($fund[$r['slug']])) {
+            $fund[$r['slug']] = ['id' => $r['uid'], 'label' => $r['label'],
+                                 'sigla' => $r['sigla'], 'data' => $r['data_ato'],
+                                 'ano' => (int)$r['ano']];
+        }
+    }
+
+    $politicas = [];
+    foreach ($base as $r) {
+        $politicas[] = [
+            'slug' => $r['slug'], 'nome' => $r['nome'],
+            'descricao' => $r['descricao'], 'categoria' => $r['categoria'],
+            'estagio' => $r['status_curadoria'],
+            'atos' => (int)$r['n'],
+            'anoMin' => $r['ano_min'] !== null ? (int)$r['ano_min'] : null,
+            'anoMax' => $r['ano_max'] !== null ? (int)$r['ano_max'] : null,
+            'ultimaData' => $r['ultima'],
+            'papeis' => $papeis[$r['slug']] ?? [],
+            'fundador' => $fund[$r['slug']] ?? null,
+        ];
+    }
+
+    responder_json([
+        'politicas' => $politicas,
+        'total' => array_sum(array_map(fn($p) => $p['atos'], $politicas)),
+        'avisos' => politicas_avisos(),
     ]);
 }
 
