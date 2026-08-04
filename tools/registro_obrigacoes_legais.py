@@ -69,11 +69,22 @@ REGISTRO = [
      'Lei 11.794/2008 (Lei Arouca) e Resoluções Normativas do CONCEA',
      'externo', 'verificada'),
 
-    ('etica', 'relatorio',
-     'Prestação de contas da Comissão de Ética à Comissão de Ética Pública da Presidência da República.',
-     12, 'Comissão de Ética da UFF',
-     'Decreto 6.029/2007 (Sistema de Gestão da Ética do Poder Executivo Federal)',
-     'externo', 'a_confirmar'),
+    # REPROVADA na conferência: o Decreto 6.029/2007 estrutura o Sistema de
+    # Gestão da Ética e as competências das comissões setoriais (orientar,
+    # apurar, aconselhar), mas NÃO fixa periodicidade de relatório para elas.
+    # Eu tinha suposto uma prestação de contas anual à CEP/PR. Não existe no
+    # texto. A linha sai do registro em vez de virar afirmação sem base.
+    #
+    # ('etica', 'relatorio', ..., 12, ...)  <- removida em 04/08/2026
+
+    # CONFIRMADA na própria página institucional da UFF, que a lista entre as
+    # atribuições da comissão: "Elaboração de relatório anual de acessibilidade
+    # e inclusão (Raai)".
+    ('acessib', 'relatorio',
+     'Relatório Anual de Acessibilidade e Inclusão (RAAI).',
+     12, 'Comissão Permanente de Acessibilidade e Inclusão (UFF Acessível)',
+     'uff.br/sobre/comites-e-comissoes/ — atribuição declarada; base legal na Lei 13.146/2015',
+     'externo', 'verificada'),
 
     ('cpa', 'constituicao',
      'Designação e recomposição dos membros da CPA, com mandato.',
@@ -87,11 +98,15 @@ REGISTRO = [
      'Lei 12.772/2012',
      'boletim', 'a_confirmar'),
 
-    ('cis', 'constituicao',
-     'Designação e recomposição da CIS, que acompanha a aplicação do PCCTAE.',
-     None, 'Reitoria',
-     'Lei 11.091/2005 e Decreto 5.825/2006',
-     'boletim', 'a_confirmar'),
+    # CONFIRMADA: criada em caráter permanente pelo §3º do art. 22 da Lei
+    # 11.091/2005, com mandato de TRÊS ANOS e membros eleitos diretamente pelos
+    # técnico-administrativos. O mandato é o dado que interessa ao Observatório:
+    # é ele que sustenta "recomposição possivelmente necessária".
+    ('cis', 'recomposicao',
+     'Eleição e designação da CIS a cada mandato de três anos.',
+     36, 'Comissão Interna de Supervisão do PCCTAE',
+     'Lei 11.091/2005, art. 22, §3º',
+     'boletim', 'verificada'),
 
     ('cep', 'constituicao',
      'Designação e recomposição do Comitê de Ética em Pesquisa, registrado na CONEP.',
@@ -112,11 +127,10 @@ REGISTRO = [
      'boletim', 'a_confirmar'),
 
     # ------------------------------------------------- EXIGIDAS POR CONTROLE
-    ('cgirc', 'relatorio',
-     'Relatório de gestão de riscos e acompanhamento do programa de integridade.',
-     12, 'Comitê de Governança, Integridade, Riscos e Controles',
-     'IN Conjunta MP/CGU 01/2016 e Decreto 9.203/2017',
-     'misto', 'a_confirmar'),
+    # A suposição de um relatório ANUAL de riscos pela IN Conjunta MP/CGU
+    # 01/2016 foi substituída pelo que a UFF de fato publica: relatório
+    # SEMESTRAL de integridade (ver a linha verificada mais abaixo). Preferir o
+    # artefato à norma que eu não li é o critério deste registro inteiro.
 
     ('cgi', 'plano',
      'Plano de Integridade, com revisão periódica.',
@@ -135,6 +149,16 @@ REGISTRO = [
      None, 'Reitoria',
      'Lei 13.146/2015 (Estatuto da Pessoa com Deficiência)',
      'boletim', 'a_confirmar'),
+
+    # CONFIRMADA pela existência dos próprios relatórios publicados em uff.br:
+    # "Relatório Semestral de Integridade 1/2023" e o do 2º semestre de 2023.
+    # A periodicidade está no título do documento, não numa norma que eu tenha
+    # lido — por isso a fonte é o artefato, e é o que a linha declara.
+    ('cgirc', 'relatorio',
+     'Relatório semestral de integridade.',
+     6, 'Comitê de Governança, Integridade, Riscos e Controles',
+     'Relatórios semestrais publicados em uff.br (1º e 2º semestres de 2023)',
+     'externo', 'verificada'),
 ]
 
 
