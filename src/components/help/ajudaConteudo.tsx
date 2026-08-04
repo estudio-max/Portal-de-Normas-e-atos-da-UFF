@@ -351,26 +351,37 @@ export const AJUDA: Record<string, AjudaAba> = {
         assunto na ordem em que o construíram e mostra <B>em que ponto do ciclo cada um
         entra</B>. Ler a sequência inteira leva um minuto, e é a diferença entre ter uma lista de
         atos e ter a história de uma decisão institucional.</>,
+      <>E há uma segunda leitura, que veio de os grupos saírem do <B>PDI</B> — o plano de
+        desenvolvimento institucional da própria UFF. Como cada política aparece sob o eixo e o
+        subtema do plano, dá para ver <B>o que a universidade executa e o plano prevê</B> e, do
+        outro lado, o que nasceu fora dele: a prevenção ao assédio e a segurança da informação
+        não têm subtema próprio no PDI vigente, porque são recentes e movidas por lei externa. É
+        um descompasso real entre o que se faz e o que está planejado — e ele fica visível
+        justamente porque a classificação não é nossa.</>,
     ],
     passos: [
-      <>Escolha uma política na lista (ou filtre pelo nome).</>,
+      <>Escolha uma política na lista (ou filtre pelo nome, pelo eixo ou pelo subtema).</>,
       <>Olhe a <B>faixa de etapas</B> do cartão: Instituição, Regulamentação, Governança,
         Execução, Monitoramento, Avaliação. Etapa colorida tem ato; etapa apagada em tracejado
         significa que <B>nenhuma evidência foi localizada no Boletim</B> — que é bem diferente
         de dizer que não aconteceu.</>,
+      <>Leia a <B>etiqueta de tema</B> abaixo do nome: é o subtema do PDI, e os títulos que
+        agrupam a lista são os eixos do plano. Etiqueta sem ressalva significa que o PDI tem um
+        subtema com aquele nome.</>,
       <>Abra a política para ver os atos, cada um com o <B>papel</B> que cumpre.</>,
-      <>Os grupos e as etiquetas de tema são os <B>eixos e subtemas do PDI</B> da UFF, não uma
-        classificação do portal. Quando a etiqueta diz <B>por conteúdo</B> ou <B>por
-        afinidade</B>, o encaixe não é literal — passe o mouse para ver por quê.</>,
     ],
     destaque: <>O que organiza tudo é o <B>papel</B> de cada ato — o que ele <em>faz</em> pela
       política, não o assunto de que trata. Designar uma comissão é <B>governança</B>, não
       execução. Sem essa distinção, uma política com dez designações e nenhuma entrega pareceria
       a mais ativa de todas.</>,
     cuidado: <>O catálogo é <B>curado e pequeno</B>: são as políticas já conferidas, não o
-      conjunto das políticas da UFF. O selo <B>⚠ confiança media</B> marca o ato que foi ligado
-      à política pelo <B>órgão que o emitiu</B>, sem a política nomeada na ementa. E ausência de
-      evidência no Boletim não prova ausência de execução — muita coisa acontece fora dele.</>,
+      conjunto das políticas da UFF. O selo <B>⚠ confiança media</B> marca o ato ligado à
+      política pelo <B>órgão que o emitiu</B>, sem a política nomeada na ementa. Na etiqueta de
+      tema, <B>por conteúdo</B> avisa que o PDI descreve o tema sem usar a palavra, e <B>por
+      afinidade</B> avisa que o plano não o cobre e a aproximação é do portal — passe o mouse
+      para ver a justificativa de cada uma. A âncora também é <B>datada</B>: vale enquanto valer
+      o PDI vigente. E ausência de evidência no Boletim não prova ausência de execução — muita
+      coisa acontece fora dele.</>,
   },
 
   'institucional/cooperacao': {
