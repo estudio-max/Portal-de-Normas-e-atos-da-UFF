@@ -108,6 +108,49 @@ recusa('emissor desconhecido não inventa vínculo',
     'Designa servidor para exercer função gratificada.', null, 'PROGEPE');
 
 // ---------------------------------------------------------------------------
+// 2.1 O EMISSOR NÃO VALE PARA DESIGNAÇÃO NEM PARA MENÇÃO.
+//
+// Todos os casos abaixo são REAIS: entraram em produção em 04/08/2026, quando o
+// backfill rodou o classificador sobre o acervo inteiro. A assistência
+// estudantil foi de 38 para 295 atos, e 256 desses entraram pelo emissor —
+// entre eles 102 designações de fiscal de contrato. O sinal do emissor diz quem
+// assinou, não do que trata; sem limite de papel, ele adota toda a rotina
+// administrativa da pró-reitoria.
+// ---------------------------------------------------------------------------
+recusa('fiscal de contrato da PROAES não é política estudantil',
+    'Designa os membros da Gestão e Fiscalização do Contrato n° 34/2026 celebrado entre a UFF '
+  . 'e a empresa VIPE COMERCIO E SERVICOS LTDA.', 'assistencia-estudantil', 'PROAES');
+
+recusa('substituição de agente patrimonial não é política estudantil',
+    'Substituição de Agente Patrimonial.', 'assistencia-estudantil', 'PROAES');
+
+recusa('bloco de assinatura recortado não vira vínculo',
+    'Atenciosamente, ALESSANDRA SIQUEIRA BARRETO Pró-Reitora de Assuntos Estudantis',
+    'assistencia-estudantil', 'PROAES');
+
+// Mas ALTERAR um programa é atividade da política, e entra pelo emissor. Medido:
+// excluir `alteracao` do sinal matava 13 vínculos legítimos como este.
+aceita('IN da PROAES que altera programa entra pelo emissor',
+    'Modifica e fixa as diretrizes para execução do Programa de Apoio a Estudantes Gestantes '
+  . 'e no Puerpério no âmbito da UFF.',
+    'assistencia-estudantil', 'alteracao', 'media', 'PROAES');
+
+// ---------------------------------------------------------------------------
+// 2.2 O TERMO NO NOME DO DEPARTAMENTO. Caso real e volumoso: 92 atos entraram
+//     na política de sustentabilidade por causa de UMA unidade cujo nome cita
+//     o tema. O ato é uma banca; o tema é só o endereço de quem a designou.
+// ---------------------------------------------------------------------------
+recusa('nome do departamento não liga o ato ao tema',
+    'Designação de Bancas do Departamento de Zootecnia e Desenvolvimento Agrossócioambiental '
+  . 'Sustentável (MZO) para Programa de Pós-Graduação.', 'sustentabilidade');
+
+// A guarda é estreita de propósito: criar um núcleo sobre o tema É ato da
+// política. Incluir `núcleo de` na limpeza matava este e mais um em produção.
+aceita('criar núcleo sobre o tema continua entrando',
+    'Cria o Núcleo de Referência em Desenvolvimento Sustentável e Responsabilidade Social '
+  . '(NURDESURES) e aprova seu Regulamento.', 'sustentabilidade');
+
+// ---------------------------------------------------------------------------
 // 3. O PAPEL. Trocar o papel muda a faixa de etapas do cartão e, adiante, o
 //    indicador de maturidade.
 // ---------------------------------------------------------------------------

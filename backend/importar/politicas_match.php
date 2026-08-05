@@ -150,6 +150,52 @@ if (!function_exists('politica_papel')) {
     }
 }
 
+if (!function_exists('politicas_sem_nome_de_unidade')) {
+    /** Remove o nome do DEPARTAMENTO antes de casar a frase.
+     *
+     * "Designação de Bancas do Departamento de Zootecnia e Desenvolvimento
+     * Agrossócioambiental Sustentável (MZO)" trazia 92 atos para a política de
+     * sustentabilidade — o termo está no NOME DA UNIDADE, e o ato é uma banca.
+     * É a armadilha-mãe da METODOLOGIA-ODS outra vez, agora no nome do
+     * departamento em vez do nome do parceiro.
+     *
+     * SÓ `departamento de`, e isso foi medido: incluir núcleo/instituto/
+     * faculdade matava ato fundador legítimo — "Cria o Núcleo de Referência em
+     * Desenvolvimento Sustentável", "Aprovar o Regulamento do Núcleo de Estudos
+     * de Sustentabilidade". Criar um núcleo sobre o tema É ato da política; ser
+     * lotado num departamento cujo nome cita o tema, não.
+     */
+    function politicas_sem_nome_de_unidade(string $ementa): string {
+        return preg_replace('/\bdepartamento\s+de\s+[^,.;:()]{0,90}/iu', ' ', $ementa) ?? $ementa;
+    }
+}
+
+if (!function_exists('politicas_emissor_vale')) {
+    /** O sinal do EMISSOR vale para este papel?
+     *
+     * O emissor é o sinal FRACO: diz quem assinou, não do que trata. Sem
+     * limite, ele transforma TODO ato da PROAES em assistência estudantil.
+     * Medido em produção (04/08/2026), depois de um backfill no acervo inteiro:
+     * 256 dos 295 atos da política entraram por emissor, e entre eles 102 eram
+     * "Designa os membros da Gestão e Fiscalização do Contrato nº XX" —
+     * fiscalização de contrato de dedetização, substituição de agente
+     * patrimonial, remoção de ofício, e até bloco de assinatura recortado.
+     *
+     * `governanca` sai porque designar gente é a rotina de qualquer
+     * pró-reitoria; `referencia` sai porque nada na ementa se liga ao tema.
+     * Os demais papéis ficam — e isso também foi medido: excluir `alteracao`
+     * matava 13 vínculos legítimos, as INs da PROAES que "Modificam e fixam as
+     * diretrizes para execução do Programa X". Alterar um programa É atividade
+     * da política.
+     *
+     * Com a frase presente (confiança alta) nada disto se aplica: a ementa
+     * nomeou a política, e aí o papel não precisa provar nada.
+     */
+    function politicas_emissor_vale(string $papel): bool {
+        return !in_array($papel, ['governanca', 'referencia'], true);
+    }
+}
+
 if (!function_exists('politicas_do_ato')) {
     /** Vínculos ato<->política deste ato.
      *
@@ -165,7 +211,11 @@ if (!function_exists('politicas_do_ato')) {
             return [];
         }
 
-        $alvo = politicas_fold(politicas_sem_clausula_emissor($ementa));
+        // Duas limpezas antes de casar frase: a cláusula de quem assina e o
+        // nome do departamento. Nas duas o termo está no NOME de alguém, não no
+        // dispositivo — a armadilha-mãe da METODOLOGIA-ODS.
+        $alvo = politicas_fold(
+            politicas_sem_nome_de_unidade(politicas_sem_clausula_emissor($ementa)));
         $papel = politica_papel($ementa);
         $out = [];
         $vistos = [];
@@ -183,7 +233,8 @@ if (!function_exists('politicas_do_ato')) {
 
         $sig = mb_strtoupper(trim($siglaOrgao), 'UTF-8');
         $porEmissor = politicas_emissores();
-        if ($sig !== '' && isset($porEmissor[$sig]) && !isset($vistos[$porEmissor[$sig]])) {
+        if ($sig !== '' && isset($porEmissor[$sig]) && !isset($vistos[$porEmissor[$sig]])
+            && politicas_emissor_vale($papel)) {
             $out[] = ['politica' => $porEmissor[$sig], 'papel' => $papel, 'confianca' => 'media',
                       'justificativa' => 'emissor: ' . $sig];
         }

@@ -177,6 +177,41 @@ PAPEL = [
 # "Sindicância" no texto cru, e as tres sindicancias de assedio passavam.
 EXCLUI = re.compile(r'\bsindicanc|\bapurar denuncia|\bprocesso administrativo disciplinar')
 
+# ---------------------------------------------------------------------------
+# ESPELHOS DAS GUARDAS DO politicas_match.php.
+#
+# Os dois arquivos classificam os MESMOS atos e nao podem divergir: o que entra
+# pelo import ganha um rotulo, e o mesmo ato recarregado pelo seed ganharia
+# outro. Ate 04/08/2026 divergiam mesmo -- o PHP tinha a limpeza da clausula do
+# emissor e a guarda de ementa inutilizavel, e este arquivo nao tinha nenhuma
+# das duas. Passavam despercebidas porque o seed nasce de propostas.json, um
+# recorte ja curado pela camada ODS, onde essas iscas quase nao aparecem.
+# ---------------------------------------------------------------------------
+_CLAUSULA_EMISSOR = re.compile(
+    r'\bo (comit[êe]|conselho|colegiado|comiss[ãa]o) d[eoa][^.]{0,120}', re.I)
+_NOME_UNIDADE = re.compile(r'\bdepartamento\s+de\s+[^,.;:()]{0,90}', re.I)
+_FRAGMENTO_INI = re.compile(r'^[a-zà-ú\)\]•§]')
+_RODAPE = re.compile(r'^bs\s*-', re.I)
+
+# O sinal do EMISSOR nao vale para designacao nem para mencao -- ver o racional
+# medido em politicas_emissor_vale(), no politicas_match.php.
+EMISSOR_FORA = ('governanca', 'referencia')
+
+
+def ementa_inutilizavel(ementa):
+    """Motivo, ou '' se a ementa serve para casar frase."""
+    t = (ementa or '').strip()
+    if not t or 'sem ementa formal' in norm(t):
+        return 'sem ementa'
+    if _FRAGMENTO_INI.match(t):
+        return 'fragmento'
+    if _RODAPE.match(t):
+        return 'rodape'
+    toks = [x for x in re.split(r'\s+', t) if x]
+    if len(toks) >= 12 and sum(1 for x in toks if len(x) == 1) / len(toks) > 0.4:
+        return 'ocr espacado'
+    return ''
+
 
 def papel_do(ementa):
     e = norm(ementa)
@@ -218,15 +253,22 @@ def main():
         if EXCLUI.search(norm(ementa)):
             residuo.append((a, 'efeito individual (sindicância)'))
             continue
-        alvo = norm(ementa)
+        motivo = ementa_inutilizavel(ementa)
+        if motivo:
+            residuo.append((a, f'ementa inutilizável ({motivo})'))
+            continue
+        # Duas limpezas antes de casar: a cláusula de quem assina e o nome do
+        # departamento. Nas duas o termo está no NOME de alguém.
+        alvo = norm(_NOME_UNIDADE.sub(' ', _CLAUSULA_EMISSOR.sub(' ', ementa)))
+        papel = papel_do(ementa)
         achou = False
         for slug, _n, _e, _s, _b, _d, termos, emissores in CATALOGO:
             sinal = next((t for t in termos if t in alvo), None)
             if sinal:
-                vinculos.append((slug, a, papel_do(ementa), 'alta', f'frase: {sinal}'))
+                vinculos.append((slug, a, papel, 'alta', f'frase: {sinal}'))
                 achou = True
-            elif (a.get('sigla') or '').upper() in emissores:
-                vinculos.append((slug, a, papel_do(ementa), 'media', f"emissor: {a['sigla']}"))
+            elif (a.get('sigla') or '').upper() in emissores and papel not in EMISSOR_FORA:
+                vinculos.append((slug, a, papel, 'media', f"emissor: {a['sigla']}"))
                 achou = True
         if not achou:
             residuo.append((a, 'sem cluster'))

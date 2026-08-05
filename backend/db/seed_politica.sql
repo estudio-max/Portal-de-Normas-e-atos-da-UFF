@@ -2,8 +2,8 @@
 --  seed_politica.sql — GERADO por tools/gerar_seed_politicas.py.
 --  Nao edite aqui. Regenerar: python tools/gerar_seed_politicas.py
 --
---  7 politicas do piloto, 93 vinculos ato<->politica.
---  62 atos ficaram de fora e estao em dados/curadoria_politicas.csv.
+--  7 politicas do piloto, 87 vinculos ato<->politica.
+--  68 atos ficaram de fora e estao em dados/curadoria_politicas.csv.
 --
 --  Os vinculos entram como `metodo=regra`. A curadoria e soberana: uma
 --  repassagem automatica so pode apagar metodo NOT IN ('curadoria',
@@ -117,7 +117,6 @@ VALUES
   ((SELECT id FROM ato WHERE uid='in-proaes-3-2021'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'media', 'regra', 'emissor: PROAES'),
   ((SELECT id FROM ato WHERE uid='in-proaes-2-2021'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'media', 'regra', 'emissor: PROAES'),
   ((SELECT id FROM ato WHERE uid='in-proaes-1-2021'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'media', 'regra', 'emissor: PROAES'),
-  ((SELECT id FROM ato WHERE uid='port-normativa-4-2018-2'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'referencia', 'alta', 'regra', 'frase: pessoas com deficiencia'),
   ((SELECT id FROM ato WHERE uid='in-proaes-41-2026'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'alta', 'regra', 'frase: auxilio alimentacao'),
   ((SELECT id FROM ato WHERE uid='in-proaes-31-2025'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'alta', 'regra', 'frase: auxilio alimentacao'),
   ((SELECT id FROM ato WHERE uid='in-proaes-30-2025'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'alta', 'regra', 'frase: auxilio alimentacao'),
@@ -128,7 +127,6 @@ VALUES
   ((SELECT id FROM ato WHERE uid='in-proaes-16-2023'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'alteracao', 'media', 'regra', 'emissor: PROAES'),
   ((SELECT id FROM ato WHERE uid='port-reitoria-61899-2018'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'alteracao', 'alta', 'regra', 'frase: acessibilidade'),
   ((SELECT id FROM ato WHERE uid='port-reitoria-59085-2017'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'governanca', 'alta', 'regra', 'frase: acessibilidade'),
-  ((SELECT id FROM ato WHERE uid='port-reitoria-68900-2026'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'governanca', 'alta', 'regra', 'frase: assistencia estudantil'),
   ((SELECT id FROM ato WHERE uid='in-proaes-38-2026'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'alta', 'regra', 'frase: assistencia estudantil'),
   ((SELECT id FROM ato WHERE uid='in-proaes-38-2026'), (SELECT id FROM politica WHERE slug='acessibilidade'), 'execucao', 'alta', 'regra', 'frase: pessoas com deficiencia'),
   ((SELECT id FROM ato WHERE uid='in-proaes-38-2026'), (SELECT id FROM politica WHERE slug='acoes-afirmativas'), 'execucao', 'alta', 'regra', 'frase: politicas afirmativas'),
@@ -139,8 +137,6 @@ VALUES
   ((SELECT id FROM ato WHERE uid='in-proaes-32-2025'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'alteracao', 'media', 'regra', 'emissor: PROAES'),
   ((SELECT id FROM ato WHERE uid='in-proaes-26-2025'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'media', 'regra', 'emissor: PROAES'),
   ((SELECT id FROM ato WHERE uid='in-proaes-26-2025'), (SELECT id FROM politica WHERE slug='acoes-afirmativas'), 'execucao', 'alta', 'regra', 'frase: politicas afirmativas'),
-  ((SELECT id FROM ato WHERE uid='port-reitoria-68772-2025'), (SELECT id FROM politica WHERE slug='acoes-afirmativas'), 'governanca', 'alta', 'regra', 'frase: acoes afirmativas'),
-  ((SELECT id FROM ato WHERE uid='port-reitoria-68768-2025'), (SELECT id FROM politica WHERE slug='acoes-afirmativas'), 'governanca', 'alta', 'regra', 'frase: acoes afirmativas'),
   ((SELECT id FROM ato WHERE uid='in-prograd-58-2025'), (SELECT id FROM politica WHERE slug='acoes-afirmativas'), 'referencia', 'alta', 'regra', 'frase: heteroidentificacao'),
   ((SELECT id FROM ato WHERE uid='in-proaes-23-2024'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'alteracao', 'media', 'regra', 'emissor: PROAES'),
   ((SELECT id FROM ato WHERE uid='in-proaes-22-2024'), (SELECT id FROM politica WHERE slug='assistencia-estudantil'), 'execucao', 'alta', 'regra', 'frase: auxilio permanencia'),
@@ -181,10 +177,8 @@ VALUES
   ((SELECT id FROM ato WHERE uid='res-cuv-310-2024'), (SELECT id FROM politica WHERE slug='integridade-riscos'), 'regulamentacao', 'alta', 'regra', 'frase: plano de integridade'),
   ((SELECT id FROM ato WHERE uid='res-cuv-308-2024'), (SELECT id FROM politica WHERE slug='seguranca-informacao'), 'regulamentacao', 'alta', 'regra', 'frase: seguranca da informacao'),
   ((SELECT id FROM ato WHERE uid='res-cuv-191-2023'), (SELECT id FROM politica WHERE slug='integridade-riscos'), 'regulamentacao', 'alta', 'regra', 'frase: plano de integridade'),
-  ((SELECT id FROM ato WHERE uid='port-reitoria-68476-2023'), (SELECT id FROM politica WHERE slug='seguranca-informacao'), 'governanca', 'alta', 'regra', 'frase: privacidade'),
   ((SELECT id FROM ato WHERE uid='port-reitoria-68259-2021'), (SELECT id FROM politica WHERE slug='integridade-riscos'), 'regulamentacao', 'alta', 'regra', 'frase: programa de integridade'),
   ((SELECT id FROM ato WHERE uid='port-reitoria-68126-2021'), (SELECT id FROM politica WHERE slug='seguranca-informacao'), 'governanca', 'alta', 'regra', 'frase: lgpd'),
-  ((SELECT id FROM ato WHERE uid='port-reitoria-67197-2020'), (SELECT id FROM politica WHERE slug='seguranca-informacao'), 'governanca', 'alta', 'regra', 'frase: governanca digital'),
   ((SELECT id FROM ato WHERE uid='dts-cmm-13-2026'), (SELECT id FROM politica WHERE slug='assedio'), 'governanca', 'alta', 'regra', 'frase: assedio'),
   ((SELECT id FROM ato WHERE uid='dts-ric-10-2026'), (SELECT id FROM politica WHERE slug='assedio'), 'governanca', 'alta', 'regra', 'frase: assedio'),
   ((SELECT id FROM ato WHERE uid='dts-ppgcaps-14-2025'), (SELECT id FROM politica WHERE slug='assedio'), 'governanca', 'alta', 'regra', 'frase: assedio'),
