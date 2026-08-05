@@ -233,6 +233,32 @@ recusa('fragmento que abre em minúscula não recebe rótulo',
 
 recusa('ementa vazia não recebe rótulo', '');
 
+// Pedaço de ato não é ato. O extrator parte as INs longas da PROAES e cada
+// pedaço vira "ato": 30 dos 360 vínculos do backfill de 04/08/2026 eram isto.
+recusa('artigo final de IN não é ato',
+    'Art. 23. Esta Instrução Normativa entrará em vigor na data de sua publicação. '
+  . 'ALESSANDRA SIQUEIRA BARRETO Pró-Reitora de Assuntos Estudantis',
+    'assistencia-estudantil', 'PROAES');
+
+recusa('capítulo solto não é ato',
+    'CAPÍTULO I DA CARACTERIZAÇÃO DO PROGRAMA Art. 3º O Programa de Apoio à Saúde de Estudante '
+  . 'consiste em auxílio no âmbito da assistência estudantil.',
+    'assistencia-estudantil', 'PROAES');
+
+recusa('anexo-formulário não é ato',
+    'PARA ESTUDANTES QUE INGRESSARAM NA UNIVERSIDADE POR AÇÕES AFIRMATIVAS 1. DA IDENTIFICAÇÃO '
+  . '- Unidade: Faculdade de Nutrição', 'acoes-afirmativas');
+
+recusa('preâmbulo de autoridade não é ato',
+    'A SUBSTITUTA EVENTUAL DA PRÓ-REITORA DE ASSUNTOS ESTUDANTIS DA UFF, nomeada pela Portaria '
+  . 'nº 1.858, altera as diretrizes da assistência estudantil.',
+    'assistencia-estudantil', 'PROAES');
+
+// A ementa de verdade abre com verbo dispositivo e continua entrando.
+aceita('ementa que abre com verbo continua entrando',
+    'Declara expressamente a revogação da INSTRUÇÃO NORMATIVA PROAES/UFF Nº 3, que tratava do '
+  . 'Programa Auxílio Alimentação.', 'assistencia-estudantil', 'revogacao');
+
 // ---------------------------------------------------------------------------
 // 6. UM ATO PODE PERTENCER A DUAS POLÍTICAS — é caso previsto no projeto.
 // ---------------------------------------------------------------------------

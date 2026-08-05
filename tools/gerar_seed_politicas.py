@@ -216,6 +216,16 @@ def ementa_inutilizavel(ementa):
         return 'fragmento'
     if _RODAPE.match(t):
         return 'rodape'
+    # Pedaco de ato, nao ato -- o extrator parte as INs longas da PROAES.
+    # Medido: 30 dos 360 vinculos do backfill de 04/08/2026.
+    if re.match(r'^art\.?\s*\d', t, re.I):
+        return 'fragmento (artigo)'
+    if re.match(r'^(cap[íi]tulo|se[çc][ãa]o|anexo|t[íi]tulo)\b', t, re.I):
+        return 'fragmento (divisão)'
+    if re.match(r'^PARA\s+[A-ZÀ-Ú]', t):
+        return 'fragmento (anexo)'
+    if re.match(r'^[AO]\s+[A-ZÀ-Ú][A-ZÀ-Ú\s,\.]{14,}', t):
+        return 'preâmbulo de autoridade'
     toks = [x for x in re.split(r'\s+', t) if x]
     if len(toks) >= 12 and sum(1 for x in toks if len(x) == 1) / len(toks) > 0.4:
         return 'ocr espacado'

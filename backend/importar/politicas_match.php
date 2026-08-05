@@ -77,6 +77,21 @@ if (!function_exists('politica_ementa_inutilizavel')) {
         if ($t === '' || mb_strpos(politicas_fold($t), 'sem ementa formal') !== false) return 'sem ementa';
         if (preg_match('/^[a-zà-ú\)\]•§]/u', $t)) return 'fragmento';
         if (preg_match('/^bs\s*-/i', $t)) return 'rodape';
+        // Pedaço de ato, não ato. O extrator parte as Instruções Normativas
+        // longas da PROAES e cada pedaço vira "ato" com a chave da IN: o artigo
+        // final ("Art. 23. Esta Instrução Normativa entrará em vigor"), um
+        // capítulo solto, o anexo-formulário ("PARA ESTUDANTES QUE INGRESSARAM
+        // … 1. DA IDENTIFICAÇÃO — Unidade: …") e o preâmbulo de autoridade
+        // ("A SUBSTITUTA EVENTUAL DA PRÓ-REITORA DE ASSUNTOS ESTUDANTIS…").
+        //
+        // Medido em 04/08/2026 sobre os 360 vínculos do backfill: 30 atos, 8%.
+        // Ementa de verdade nunca abre assim — todas abrem com verbo
+        // dispositivo. É defeito de EXTRAÇÃO, e a guarda aqui só impede que ele
+        // contamine o dossiê; o conserto de raiz é no extrator.
+        if (preg_match('/^art\.?\s*\d/iu', $t)) return 'fragmento (artigo)';
+        if (preg_match('/^(cap[íi]tulo|se[çc][ãa]o|anexo|t[íi]tulo)\b/iu', $t)) return 'fragmento (divisão)';
+        if (preg_match('/^PARA\s+[A-ZÀ-Ú]/u', $t)) return 'fragmento (anexo)';
+        if (preg_match('/^[AO]\s+[A-ZÀ-Ú][A-ZÀ-Ú\s,\.]{14,}/u', $t)) return 'preâmbulo de autoridade';
         $toks = preg_split('/\s+/u', $t, -1, PREG_SPLIT_NO_EMPTY);
         if (count($toks) >= 12) {
             $um = 0;
