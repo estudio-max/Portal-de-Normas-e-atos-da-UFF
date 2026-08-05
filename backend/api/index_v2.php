@@ -35,6 +35,19 @@ header('Access-Control-Allow-Methods: GET, OPTIONS');
 // ficar gravada no access log do servidor nem no histórico do navegador. Em
 // produção o front é da mesma origem e nem há preflight; isto é p/ o mock local.
 header('Access-Control-Allow-Headers: X-Dossie-Token');
+
+// Cabeçalhos de segurança. A API só devolve JSON, e os três abaixo custam nada:
+//   nosniff        — impede o navegador de "adivinhar" que um JSON é HTML e
+//                    executá-lo. É o que transforma um valor mal escapado vindo
+//                    do OCR em XSS quando a resposta é aberta direto na URL.
+//   Referrer-Policy— a URL da API carrega ?siape= e ?nome= na aba Meu SIAPE;
+//                    sem isto, esses valores vazam no Referer para qualquer
+//                    link externo que o usuário clique depois (o SEI, o PDF do
+//                    Boletim). É dado pessoal indo junto sem necessidade.
+//   frame-ancestors— resposta de API não tem por que ser embutida em iframe.
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') { exit; }
 
 // ---- roteamento -----------------------------------------------------------
@@ -99,8 +112,14 @@ switch ($recurso) {
         responder_json(['ok' => true]);
         break;
     case 'ato':      ficha($pdo, $id); break;
+    // `''` continua caindo na listagem: é a chamada sem `?r=`, que o bundle
+    // antigo faz. Só o recurso DESCONHECIDO passa a responder 404 — antes
+    // qualquer erro de digitação devolvia a lista inteira com 200, o que mente
+    // sobre a rota existir e ainda faz o banco trabalhar à toa.
     case 'atos':
-    default:        listar($pdo); break;
+    case '':         listar($pdo); break;
+    default:
+        responder_json(['erro' => 'recurso desconhecido', 'recurso' => $recurso], 404);
 }
 
 // ===========================================================================
@@ -402,7 +421,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-04.5'; }
+function api_versao(): string { return '2026-08-04.6'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os

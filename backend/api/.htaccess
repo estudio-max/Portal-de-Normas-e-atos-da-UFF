@@ -8,7 +8,36 @@
   RewriteRule ^(.*)$ index.php/$1 [L,QSA]
 </IfModule>
 
-# Protege o arquivo de credenciais
+# ---------------------------------------------------------------------------
+#  NEGA POR PADRÃO, libera só o index.php.
+#
+#  Até 04/08/2026 esta pasta protegia apenas o `config.php` nominalmente, e
+#  qualquer outro .php aqui respondia por HTTP. O `db.php` devolvia 200 (corpo
+#  vazio, porque só define funções) — inofensivo hoje, e exatamente o padrão que
+#  custou caro na pasta `importar/`: o `dump_pad_sinve.php` nasceu como
+#  diagnóstico, ficou sem checagem e entregou 4,5 MB de processos disciplinares
+#  por meses. A lição foi aplicada lá e não aqui.
+#
+#  Com a lista branca, biblioteca nova nesta pasta não responde na web até ser
+#  nomeada aqui de propósito. Um `require` do PHP continua funcionando: isto
+#  bloqueia HTTP, não leitura de disco.
+#
+#  A reescrita acima manda /api/qualquer-coisa para o index.php, então é o
+#  index.php que o Apache serve — liberar só ele não quebra rota nenhuma.
+# ---------------------------------------------------------------------------
+<FilesMatch "\.php$">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "^index\.php$">
+  Require all granted
+</FilesMatch>
+
+# Redundante com a regra acima, e fica de propósito: se alguém um dia afrouxar
+# a lista branca, o arquivo de credenciais continua negado por nome.
 <Files "config.php">
   Require all denied
 </Files>
+
+# Sem índice automático da pasta.
+Options -Indexes

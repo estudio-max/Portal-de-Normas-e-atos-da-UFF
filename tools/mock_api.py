@@ -1476,8 +1476,13 @@ class H(BaseHTTPRequestHandler):
         elif recurso == "ato":
             f = ficha_payload(aid)
             self._send(f if f else {"erro": "não encontrado"}, 200 if f else 404)
-        else:
+        elif recurso in ("atos", ""):
             self._send(lista_payload(q))
+        else:
+            # Espelha a API real desde 2026-08-04.6: recurso DESCONHECIDO e 404,
+            # nao a lista inteira. Sem isto, dev e producao divergem justamente
+            # no caso de erro -- e o dev nunca ve o 404 que o usuario veria.
+            self._send({"erro": "recurso desconhecido", "recurso": recurso}, 404)
 
 
 if __name__ == "__main__":
