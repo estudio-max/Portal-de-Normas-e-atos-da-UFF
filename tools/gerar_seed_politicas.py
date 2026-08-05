@@ -232,6 +232,47 @@ def ementa_inutilizavel(ementa):
     return ''
 
 
+# ---------------------------------------------------------------------------
+# TRIAGEM -- a coluna `decisao` vem PREENCHIDA com uma proposta, para o humano
+# revisar so o que e duvidoso em vez de ler 155 linhas em branco.
+#
+# As regras saem do que foi MEDIDO em 04/08/2026, nao de intuicao:
+#
+# `aceitar`  frase estrita na ementa + papel de ACAO + orgao central. Foi o
+#            perfil que sobreviveu a todas as guardas sem produzir ruido.
+#
+# `revisar`  tres situacoes, e a ordem importa porque a primeira e a mais forte:
+#            1. ATO DA REITORIA -- orientacao do mantenedor: os atos dela tem
+#               mais impacto e cobrem toda a comunidade. E corta para os dois
+#               lados: a Reitoria tambem e quem mais emite ato individual de
+#               pessoal, e foi de onde veio 12 dos 37 falsos positivos quando
+#               se tentou ler o corpo do ato. Nunca decidir sozinho aqui.
+#            2. confianca `media` -- entrou pelo orgao emissor, sem a frase.
+#            3. papel `governanca` ou `referencia` -- designacao e mencao foram
+#               a fonte de quase todo o ruido do backfill (102 fiscais de
+#               contrato entraram assim).
+#
+# Nada e proposto como `rejeitar`: o que as guardas rejeitam nao chega aqui, e
+# rejeitar por regra o que passou seria desfazer a medicao com palpite.
+# ---------------------------------------------------------------------------
+PAPEL_DE_ACAO = ('fundador', 'regulamentacao', 'execucao', 'monitoramento',
+                 'alteracao', 'revogacao', 'avaliacao')
+
+
+def triagem(ato, papel, confianca):
+    """(proposta, motivo) para a coluna `decisao`."""
+    orgao = (ato.get('sigla') or '').strip().upper()
+    if orgao == 'REITORIA':
+        return 'revisar', 'ato da Reitoria: alcance institucional, conferir sempre'
+    if confianca == 'media':
+        return 'revisar', 'entrou pelo órgão emissor, sem a frase na ementa'
+    if papel in ('governanca', 'referencia'):
+        return 'revisar', f'papel `{papel}`: designação/menção foi a maior fonte de ruído'
+    if papel in PAPEL_DE_ACAO:
+        return 'aceitar', 'frase na ementa + ato age sobre a política'
+    return 'revisar', 'perfil fora das regras conhecidas'
+
+
 def papel_do(ementa):
     e = norm(ementa)
     for nome, padroes in PAPEL:
@@ -377,18 +418,22 @@ def main():
     with io.open(destino, 'w', encoding='utf-8', newline='\n') as fh:
         fh.write('\n'.join(L) + '\n')
 
-    # ---- CSV de curadoria ---------------------------------------------------
+    # ---- CSV de curadoria, com TRIAGEM automática ---------------------------
     csv_path = os.path.join(DADOS, 'curadoria_politicas.csv')
     with io.open(csv_path, 'w', encoding='utf-8-sig', newline='') as fh:
         w = csv.writer(fh, delimiter=';')
-        w.writerow(['decisao', 'politica', 'papel', 'confianca', 'sinal',
-                    'uid', 'ano', 'orgao', 'numero', 'status', 'ementa'])
+        w.writerow(['decisao', 'proposta', 'motivo', 'politica', 'papel', 'confianca',
+                    'sinal', 'uid', 'ano', 'orgao', 'numero', 'status', 'ementa'])
         for slug, a, papel, conf, just in sorted(vinculos, key=lambda x: (x[0], -x[1]['ano'])):
-            w.writerow(['', slug, papel, conf, just, a['id'], a['ano'],
+            proposta, motivo = triagem(a, papel, conf)
+            w.writerow(['', proposta, motivo, slug, papel, conf, just, a['id'], a['ano'],
                         a.get('sigla', ''), a.get('numero', ''), a.get('status', ''),
                         (a.get('ementa') or '')[:300]])
         for a, motivo in sorted(residuo, key=lambda x: -x[0]['ano']):
-            w.writerow(['', '(fora)', '', '', motivo, a['id'], a['ano'],
+            # O resíduo já foi decidido por uma guarda medida. Só o "sem
+            # cluster" merece olho: pode ser política que o catálogo não tem.
+            prop = 'revisar' if motivo == 'sem cluster' else 'fora'
+            w.writerow(['', prop, motivo, '(fora)', '', '', motivo, a['id'], a['ano'],
                         a.get('sigla', ''), a.get('numero', ''), a.get('status', ''),
                         (a.get('ementa') or '')[:300]])
 

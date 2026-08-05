@@ -71,21 +71,73 @@ if (!$cli) {
 function log_($m) { echo $m . "\n"; @flush(); }
 
 $manter = (($_GET['manter'] ?? '') === '1') || in_array('--manter', $argv ?? [], true);
+
+/**
+ * `&csv=1` — não grava nada; devolve a TRIAGEM em CSV, para curadoria.
+ *
+ * O `dados/curadoria_politicas.csv` que o gerador offline produz cobre só o
+ * recorte de `propostas.json` (155 linhas). Quem precisa de revisão é o acervo
+ * de verdade — os vínculos que este backfill cria. Daí este modo: mesma
+ * classificação, mesma triagem, mas saída para planilha em vez de INSERT.
+ *
+ * A coluna `decisao` sai VAZIA para a pessoa preencher; `proposta` e `motivo`
+ * dizem o que a regra acha e por quê.
+ */
+$soCsv = (($_GET['csv'] ?? '') === '1') || in_array('--csv', $argv ?? [], true);
+
+/**
+ * A proposta de decisão. Regras medidas em 04/08/2026 — ver o mesmo racional em
+ * `triagem()` no tools/gerar_seed_politicas.py, que precisa concordar com esta.
+ *
+ * ATO DA REITORIA vai SEMPRE para revisão, e a razão tem dois lados: os atos
+ * dela alcançam a universidade inteira, e ela é também quem mais emite ato
+ * individual de pessoal — 12 dos 37 falsos positivos da tentativa de ler o
+ * corpo do ato eram da Reitoria, com o termo no nome da vaga ou da UORG.
+ * Atenção redobrada aqui significa desconfiar mais, não incluir mais.
+ */
+function politica_triagem(string $orgao, string $papel, string $conf): array {
+    if (mb_strtoupper(trim($orgao), 'UTF-8') === 'REITORIA') {
+        return ['revisar', 'ato da Reitoria: alcance institucional, conferir sempre'];
+    }
+    if ($conf === 'media') {
+        return ['revisar', 'entrou pelo órgão emissor, sem a frase na ementa'];
+    }
+    if ($papel === 'governanca' || $papel === 'referencia') {
+        return ['revisar', "papel `$papel`: designação/menção foi a maior fonte de ruído"];
+    }
+    if (in_array($papel, ['fundador','regulamentacao','execucao','monitoramento',
+                          'alteracao','revogacao','avaliacao'], true)) {
+        return ['aceitar', 'frase na ementa + ato age sobre a política'];
+    }
+    return ['revisar', 'perfil fora das regras conhecidas'];
+}
+
 $pdo = conectar($cfg);
 
-log_('Backfill de ato_politica — classificador do import diário.');
-log_($manter
-    ? 'Modo ACRESCENTAR: nada é apagado; só entra o que faltar.'
-    : 'Modo REFAZER: a passada automática é recriada (a curadoria sobrevive).');
-log_('');
+if ($soCsv && !$cli) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="curadoria_politicas_acervo.csv"');
+    echo "\xEF\xBB\xBF";   // BOM: sem ele o Excel abre os acentos errados
+}
+log_($soCsv ? '' : 'Backfill de ato_politica — classificador do import diário.');
+if (!$soCsv) {
+    log_($manter
+        ? 'Modo ACRESCENTAR: nada é apagado; só entra o que faltar.'
+        : 'Modo REFAZER: a passada automática é recriada (a curadoria sobrevive).');
+    log_('');
+}
 
-$antes = (int)$pdo->query("SELECT COUNT(*) FROM ato_politica")->fetchColumn();
-$curados = (int)$pdo->query(
-    "SELECT COUNT(*) FROM ato_politica
-      WHERE metodo IN ('curadoria','regra+curadoria','ia+curadoria')")->fetchColumn();
-log_("Antes: $antes vínculos ($curados de curadoria, " . ($antes - $curados) . ' automáticos).');
+if (!$soCsv) {
+    $antes = (int)$pdo->query("SELECT COUNT(*) FROM ato_politica")->fetchColumn();
+    $curados = (int)$pdo->query(
+        "SELECT COUNT(*) FROM ato_politica
+          WHERE metodo IN ('curadoria','regra+curadoria','ia+curadoria')")->fetchColumn();
+    log_("Antes: $antes vínculos ($curados de curadoria, " . ($antes - $curados) . ' automáticos).');
+} else {
+    $antes = 0;
+}
 
-if (!$manter) {
+if (!$manter && !$soCsv) {
     $st = $pdo->exec(
         "DELETE FROM ato_politica
           WHERE metodo NOT IN ('curadoria','regra+curadoria','ia+curadoria')");
@@ -111,14 +163,35 @@ foreach ($sigs as $k => $s) {
     $par[":s$k"] = $s;
 }
 
-$sql = "SELECT a.id, a.ementa, o.sigla
+$sql = "SELECT a.id, a.uid, a.numero, a.ano, a.status, a.ementa, o.sigla
           FROM ato a
           JOIN orgao o ON o.id = a.orgao_id
-         WHERE " . implode(' OR ', $ors);
+         WHERE " . implode(' OR ', $ors) . "
+      ORDER BY a.ano DESC, a.numero_norm DESC";
 $st = $pdo->prepare($sql);
 $st->execute($par);
 $candidatos = $st->fetchAll(PDO::FETCH_ASSOC);
-log_('Candidatos trazidos do banco: ' . count($candidatos) . ' ato(s).');
+if (!$soCsv) log_('Candidatos trazidos do banco: ' . count($candidatos) . ' ato(s).');
+
+// ---- modo CSV: triagem para curadoria, sem gravar nada ---------------------
+if ($soCsv) {
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['decisao', 'proposta', 'motivo', 'politica', 'papel', 'confianca',
+                   'sinal', 'uid', 'ano', 'orgao', 'numero', 'status', 'ementa'], ';');
+    $n = 0;
+    foreach ($candidatos as $a) {
+        foreach (politicas_do_ato((string)$a['ementa'], (string)$a['sigla']) as $v) {
+            [$prop, $motivo] = politica_triagem((string)$a['sigla'], $v['papel'], $v['confianca']);
+            fputcsv($out, ['', $prop, $motivo, $v['politica'], $v['papel'], $v['confianca'],
+                           $v['justificativa'], $a['uid'], $a['ano'], $a['sigla'],
+                           $a['numero'], $a['status'],
+                           mb_substr(preg_replace('/\s+/u', ' ', (string)$a['ementa']), 0, 300)], ';');
+            $n++;
+        }
+    }
+    fclose($out);
+    exit;
+}
 
 // ---- classificação no PHP --------------------------------------------------
 $politicaId = [];

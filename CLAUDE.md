@@ -300,6 +300,32 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   junto, e trocar de PDI obriga a remedir. Migração:
   `backend/db/alterar_politica_pdi.sql` (roda UMA vez — o 5.7 não tem
   `ADD COLUMN IF NOT EXISTS`), depois o seed regerado.
+  **LER O CORPO DO ATO FOI MEDIDO E REPROVADO (04/08/2026).** A tentação é
+  óbvia — a ementa é curta, o corpo é rico — e o resultado é o oposto do
+  esperado: casar frase no DISPOSITIVO (depois de `RESOLVE:`/`Art. 1º`) do
+  corpo rende **37 vínculos novos com ~3% de precisão**. O termo está no nome
+  da vaga, na UORG do anexo, na descrição da função. Casos reais: *"Nomeia
+  Erika … Professor do Magistério Superior"* casou `políticas afirmativas`;
+  *"Altera o percentual de Incentivo à Qualificação"* casou **sustentabilidade
+  E segurança da informação** ao mesmo tempo, porque o corpo lista áreas de
+  capacitação. É a armadilha-mãe da METODOLOGIA-ODS no grau máximo. Reproduz-se
+  com `textoBusca` do `public/portal-data.json` — que é **todo minúsculo** (é o
+  campo do FULLTEXT), detalhe que já invalidou uma medição minha: o marcador de
+  dispositivo não casava e a guarda de fragmento derrubava tudo, dando um falso
+  "zero ganho".
+  **ATO DA REITORIA EXIGE ATENÇÃO REDOBRADA — e isso significa DESCONFIAR
+  MAIS.** Os atos dela alcançam a universidade inteira, então perder um custa
+  caro; mas ela é também quem mais emite ato individual de pessoal, e **12 dos
+  37 falsos positivos** da medição acima eram da Reitoria. Em regra automática,
+  Reitoria nunca é sinal de inclusão: vai para **revisão humana**, sempre.
+  **A CURADORIA VEM TRIADA.** O `dados/curadoria_politicas.csv` (gerador
+  offline) e o `backfill_ato_politica.php?csv=1` (acervo real) emitem as colunas
+  `proposta` e `motivo` já preenchidas, para a pessoa revisar só o duvidoso.
+  As regras são as medidas acima e as duas fontes precisam concordar —
+  `triagem()` no Python e `politica_triagem()` no PHP. Distribuição no recorte
+  de 155: 36 aceitar, 92 revisar, 27 fora. Nada é proposto como `rejeitar`: o
+  que as guardas rejeitam não chega ao CSV, e rejeitar por regra o que passou
+  seria desfazer a medição com palpite.
   A interface mostra a etapa sem ato como **"sem evidência localizada no
   Boletim"**, nunca como omissão: o Boletim cobre o que foi publicado nele.
   Critério, limitações e o que ficou de fora em

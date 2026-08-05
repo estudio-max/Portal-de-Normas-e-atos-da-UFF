@@ -136,6 +136,67 @@ política do piloto apareceria com pouco mais de um terço do tamanho.
 É a mesma lição que o `comissoes_do_orgao` já tinha ensinado: o ato que um corpo
 assina sem se nomear na ementa só se identifica pelo emissor.
 
+### 3.3 Por que NÃO se lê o corpo do ato
+
+A pergunta aparece sozinha: a ementa é curta, o corpo é rico — por que não ler o
+corpo para achar mais? **Foi medido em 04/08/2026, e reprovado.**
+
+Casando frase estrita no **dispositivo** do corpo (o trecho depois de
+`RESOLVE:` / `Art. 1º`, já descartando o preâmbulo), sobre os 3.767 atos do
+índice: **37 vínculos novos, dos quais 1 legítimo.** Precisão de ~3%.
+
+| ementa do ato | o que o corpo casou |
+|---|---|
+| *"Nomeia Erika … Professor do Magistério Superior"* | `políticas afirmativas` |
+| *"Designa Ana Paula da Silva, Professor"* | `ações afirmativas` |
+| *"Distribuição de 1 Função Gratificada (FG-1)"* | `ações afirmativas` |
+| *"Altera o percentual de Incentivo à Qualificação"* | `sustentabilidade` **e** `segurança da informação` |
+
+O termo está no **nome da vaga**, na **UORG do anexo**, na **descrição da
+função**, na **lista de áreas de capacitação** — nunca no que o ato decide. É a
+armadilha-mãe da [METODOLOGIA-ODS](METODOLOGIA-ODS.md) no grau máximo, e o
+paralelo é exato: foi assim que 292 atos de pessoal entraram na primeira carga
+ODS.
+
+> ⚠️ **Armadilha na própria medição.** O `textoBusca` do `portal-data.json` é
+> **todo minúsculo** — é o campo do índice FULLTEXT, não o texto de exibição. A
+> primeira medição procurou `RESOLVE:` em caixa alta, não casou nada, e a guarda
+> de fragmento (que recusa texto abrindo em minúscula) derrubou o resto: deu um
+> falso **"zero ganho"** que quase virou conclusão. Quem repetir isto, comece
+> conferindo a caixa do campo.
+
+### 3.4 Ato da Reitoria: atenção redobrada significa desconfiar mais
+
+Ato emitido pela **Reitoria** alcança a universidade inteira, então perder um
+custa mais que perder um ato de unidade. Mas a Reitoria é também **quem mais
+emite ato individual de pessoal** — nomeação, designação, distribuição de função
+gratificada —, e **12 dos 37 falsos positivos** da medição acima eram dela.
+
+Daí a regra: em classificação automática, **Reitoria nunca é sinal de
+inclusão**. Na triagem da curadoria ela vai para revisão humana, sempre — é onde
+o olho de uma pessoa rende mais.
+
+## 3.5 A curadoria vem triada
+
+O CSV de curadoria não sai mais com a coluna `decisao` em branco: ele traz
+`proposta` e `motivo` preenchidos, para a revisão humana se concentrar no que é
+duvidoso.
+
+| proposta | quando | 155 linhas |
+|---|---|---:|
+| `aceitar` | frase estrita na ementa + papel de ação + órgão não-Reitoria | 36 |
+| `revisar` | Reitoria · confiança média · papel `governanca`/`referencia` · sem cluster | 92 |
+| `fora` | já rejeitado por guarda medida | 27 |
+
+**Nada é proposto como `rejeitar`.** O que as guardas rejeitam não chega ao CSV,
+e rejeitar por regra o que passou seria desfazer a medição com palpite.
+
+Duas fontes produzem a triagem e **precisam concordar**: `triagem()` em
+`tools/gerar_seed_politicas.py` (recorte de `propostas.json`) e
+`politica_triagem()` em `backend/importar/backfill_ato_politica.php` (acervo
+real, via `?csv=1`). É o acervo real que importa curar — o recorte offline cobre
+155 linhas, o acervo tem 330.
+
 ## 4. As duas guardas
 
 ### 4.1 O termo está no NOME DO EMISSOR
