@@ -112,8 +112,14 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
               <ul className="space-y-1 text-[12px] text-slate-600">
                 {d.mandatos.slice(0, 6).map((m, i) => (
                   <li key={`${m.atoId}-${i}`} className="flex flex-wrap items-baseline gap-1.5">
+                    {/* Período declarado exibe o PERÍODO; só a data explícita do
+                        ato exibe data. O `fim` do período é 31/12 arredondado
+                        por nós — mostrá-lo como "até 31/12/2025" seria atribuir
+                        ao ato uma precisão que ele não tem. */}
                     <strong className={new Date(m.fim) < new Date() ? 'text-amber-700' : 'text-slate-700'}>
-                      até {fmtData(m.fim)}
+                      {m.origem === 'periodo' && m.periodo
+                        ? <>período {m.periodo}</>
+                        : <>até {fmtData(m.fim)}</>}
                     </strong>
                     <span className="text-slate-400">·</span>
                     <span className="text-slate-500">{m.atoId}</span>
@@ -377,7 +383,9 @@ export default function ComissoesApi() {
                   </div>
                   {c.mandato && (
                     <div className="text-[10px] text-slate-400 mt-0.5">
-                      mandato com fim previsto em {fmtData(c.mandato.fim)}
+                      {c.mandato.origem === 'periodo' && c.mandato.periodo
+                        ? <>mandato declarado para o período {c.mandato.periodo}</>
+                        : <>mandato com fim previsto em {fmtData(c.mandato.fim)}</>}
                     </div>
                   )}
                 </div>

@@ -647,9 +647,21 @@ def comissoes_payload(corpo="", janela=""):
                            "m24": (2 if mx >= _HOJE.year - 1 else 0),
                            "m36": (3 if mx >= _HOJE.year - 2 else 0)},
                "porTipo": {"Portaria": max(1, a // 2), "Decisão": a - max(1, a // 2)},
+               # Duas ORIGENS de mandato, e o mock precisa das duas: a data
+               # explicita do ato (`prazo`) e o periodo declarado no texto
+               # (`periodo`, ex. "trienio 2023-2025"). A segunda existe desde
+               # 2026-08-04.5 e e a que alcanca colegiado de composicao
+               # periodica -- a CIS/PCCTAE foi o caso que a motivou. Sem as duas
+               # aqui, o dev nunca ve a tela trocar "ate DD/MM" por "periodo".
                "mandato": ({"atoId": f"port-reitoria-{68000 + a}-{mx}",
                             "fim": f"{mx + 2}-12-31", "conf": "média",
-                            "trecho": "…com vigência até 31/12…"} if a > 3 else None),
+                            "trecho": "…com vigência até 31/12…",
+                            "origem": "prazo"} if a > 6
+                           else ({"atoId": f"port-reitoria-{68000 + a}-{mx}",
+                                  "fim": f"{mx + 2}-12-31", "conf": "média",
+                                  "trecho": f"…para compor a comissão, triênio {mx}-{mx + 2}.",
+                                  "origem": "periodo",
+                                  "periodo": f"{mx}-{mx + 2}"} if a > 1 else None)),
                "estado": _com_estado(a, mx, janela)}
               for (s, sg, n, t, ob, a, mn, mx) in _COMISSOES]
     return {"corpos": corpos, "total": sum(c["atos"] for c in corpos), "orfaos": [],

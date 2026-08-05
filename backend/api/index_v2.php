@@ -402,7 +402,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-04.4'; }
+function api_versao(): string { return '2026-08-04.5'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -1948,6 +1948,48 @@ function comissoes_janela(string $j): int {
  *   recente        — ato dentro da janela
  *   sem_recente    — nenhum ato na janela (NÃO é "inativa")
  */
+/**
+ * O mandato declarado como PERÍODO no próprio texto: "triênio 2023-2025".
+ *
+ * O `mandato` que a rota já lia vem da tabela `prazo`, e exige DATA explícita
+ * ("validade até 01/06/2026"). Colegiado de composição periódica não escreve
+ * assim — escreve o período. Resultado medido em 04/08/2026: `mandato` estava
+ * preenchido para **1 dos 26** corpos, e o estado `recomposicao` deste arquivo,
+ * que existe desde sempre, era inalcançável na prática.
+ *
+ * O caso que motivou: a CIS/PCCTAE foi designada em 25/07/2023 para o "triênio
+ * 2023-2025". O mandato venceu, não há ato posterior, e a aba mostrava só
+ * "sem evidência recente" — que é bem mais fraco do que "o mandato terminou".
+ *
+ * DUAS GUARDAS, e as duas são medidas. Há 403 atos no acervo com período
+ * explícito na ementa, e a esmagadora maioria é **comissão eleitoral local**
+ * ("CONSULTA ELEITORAL... 2025-2027", "Comissão Eleitoral Local... 2026-2028"):
+ *   1. só se lê período de ato que CONSTITUI o corpo (designa/institui/
+ *      constitui + compor), não de ato que apenas o menciona;
+ *   2. só se aplica a ato já ligado a um dos 26 corpos curados — comissão
+ *      eleitoral não está no catálogo, então nem chega aqui.
+ *
+ * `fim` é 31/12 do ano final: o texto dá o ano, não o dia, e arredondar para o
+ * fim do período é o que não antecipa vencimento que ainda não ocorreu.
+ */
+function comissao_mandato_do_texto(string $ementa): ?array {
+    $e = mb_strtolower($ementa, 'UTF-8');
+    // Só ato de composição. "Recondução de mandato ... triênio 2018-2020" cita
+    // o período mas não o institui — e pegar dali daria um mandato por ato.
+    if (!preg_match('/\b(designa|designar|institui|constitui|comp[õo]e|recomp[õo]e)/u', $e)
+        && !preg_match('/\bpara compor\b/u', $e)) {
+        return null;
+    }
+    if (!preg_match('/\b(tri[êe]nio|bi[êe]nio|quadri[êe]nio)\s*:?\s*(\d{4})\s*[-–\/]\s*(\d{4})/u',
+                    $e, $m)) {
+        return null;
+    }
+    [$ini, $fim] = [(int)$m[2], (int)$m[3]];
+    // Sanidade: período invertido ou absurdo é OCR, não mandato.
+    if ($fim <= $ini || $fim - $ini > 6) return null;
+    return ['inicio' => "$ini-01-01", 'fim' => "$fim-12-31", 'periodo' => "$ini-$fim"];
+}
+
 function comissao_estado(int $total, ?string $ultima, ?string $mandatoFim, int $janela): string {
     if ($total <= 1) return 'insuficiente';
     if ($mandatoFim !== null && strtotime($mandatoFim) < time()
@@ -2002,8 +2044,21 @@ function comissoes(PDO $pdo, string $corpo, string $janelaRaw = ''): void {
         $st->execute([':slug' => $corpo]);
         $mandatos = array_map(fn($r) => [
             'atoId' => $r['uid'], 'fim' => $r['data_limite'],
-            'conf' => $r['conf'], 'trecho' => $r['trecho'],
+            'conf' => $r['conf'], 'trecho' => $r['trecho'], 'origem' => 'prazo',
         ], $st->fetchAll(PDO::FETCH_ASSOC));
+
+        // 2ª fonte: o período declarado no texto do ato que constitui o corpo.
+        // Só entra se a 1ª não achou nada — data explícita vence período.
+        if (!$mandatos) {
+            foreach ($atos as $a) {
+                $m = comissao_mandato_do_texto((string)($a['ementa'] ?? ''));
+                if ($m === null) continue;
+                $mandatos[] = ['atoId' => $a['id'], 'fim' => $m['fim'], 'conf' => 'média',
+                               'trecho' => $a['ementa'], 'origem' => 'periodo',
+                               'periodo' => $m['periodo']];
+                break;   // o mais recente basta: os atos já vêm ordenados
+            }
+        }
 
         // Os atos já vêm do mais novo para o mais antigo.
         $ultima = $atos[0]['data'] ?? null;
@@ -2086,8 +2141,28 @@ function comissoes(PDO $pdo, string $corpo, string $janelaRaw = ''): void {
       ORDER BY p.data_limite DESC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
         if (!isset($mandato[$r['slug']])) {
             $mandato[$r['slug']] = ['atoId' => $r['uid'], 'fim' => $r['data_limite'],
-                                    'conf' => $r['conf'], 'trecho' => $r['trecho']];
+                                    'conf' => $r['conf'], 'trecho' => $r['trecho'],
+                                    'origem' => 'prazo'];
         }
+    }
+
+    // 2ª fonte: o PERÍODO declarado no texto ("triênio 2023-2025"). Só entra
+    // onde a 1ª não achou — a data explícita é mais forte que o período, que
+    // arredonda para 31/12. Ver comissao_mandato_do_texto() para as guardas.
+    foreach ($pdo->query("
+        SELECT ac.comissao AS slug, a.uid, a.data_ato, a.ementa
+          FROM ato_comissao ac
+          JOIN ato a ON a.id = ac.ato_id
+         WHERE a.ementa IS NOT NULL AND a.ementa <> ''
+      ORDER BY a.data_ato DESC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        if (isset($mandato[$r['slug']])) continue;
+        $m = comissao_mandato_do_texto((string)$r['ementa']);
+        if ($m === null) continue;
+        $mandato[$r['slug']] = [
+            'atoId' => $r['uid'], 'fim' => $m['fim'], 'conf' => 'média',
+            'trecho' => mb_substr(preg_replace('/\s+/u', ' ', (string)$r['ementa']), 0, 200),
+            'origem' => 'periodo', 'periodo' => $m['periodo'],
+        ];
     }
 
     $corpos = [];

@@ -981,6 +981,14 @@ export interface ComissaoUltimoAto {
 }
 export interface ComissaoMandato {
   atoId: string; fim: string; conf: string | null; trecho: string | null;
+  // De onde saiu o fim do mandato, e a distinção importa na tela:
+  //   'prazo'   — data explícita no ato ("validade até 01/06/2026"). Exibe a data.
+  //   'periodo' — período declarado ("triênio 2023-2025"). O `fim` é 31/12 do
+  //               ano final, arredondamento NOSSO — exibir aquela data como se
+  //               estivesse no ato seria precisão falsa. Exibe o período.
+  // Opcionais porque a API anterior a 2026-08-04.5 não os manda.
+  origem?: 'prazo' | 'periodo';
+  periodo?: string;
 }
 export interface ComissaoCorpo {
   slug: string; sigla: string; nome: string; tipo: string;
