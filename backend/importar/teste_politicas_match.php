@@ -151,6 +151,38 @@ aceita('criar núcleo sobre o tema continua entrando',
   . '(NURDESURES) e aprova seu Regulamento.', 'sustentabilidade');
 
 // ---------------------------------------------------------------------------
+// 2.3 O NOME DO PARCEIRO DO CONVÊNIO. Terceira face da mesma armadilha: o termo
+//     está em quem assina do outro lado. Um único parceiro trouxe 8 atos.
+// ---------------------------------------------------------------------------
+recusa('nome do parceiro do convênio não liga o ato ao tema',
+    'Ratificação do Convênio celebrado entre a UFF - UFF e a Concedente INSTITUTO DE '
+  . 'DESENVOLVIMENTO SUSTENTÁVEL MAMIRAUA.', 'sustentabilidade');
+
+recusa('razão social da empresa contratada também não',
+    'Designa os membros da Fiscalização do Contrato n° 20/2024, celebrado entre a UFF e a '
+  . 'empresa Nasa Sustentabilidade Comércio e Serviços Ltda.', 'sustentabilidade');
+
+// ---------------------------------------------------------------------------
+// 2.4 COLEGIADO EFÊMERO fica de fora — mesmo escopo da aba Comissões, que já
+//     exclui banca, sindicância e comissão eleitoral por serem de um processo
+//     só. Mas colegiado LOCAL de unidade CONTINUA entrando: uma política
+//     adotada por dez unidades é evidência da política.
+// ---------------------------------------------------------------------------
+recusa('banca de heteroidentificação é efêmera',
+    'Designa Banca de Heteroidentificação do Sorteio Público de Vagas para ingresso no ano '
+  . 'letivo de 2026.', 'acoes-afirmativas');
+
+recusa('comissão eleitoral não entra, mesmo citando o tema',
+    'Constitui mesa receptora na consulta de Chefe e Sub-Chefe dos Departamentos de Patologia '
+  . 'e Clínica Veterinária, Tecnologia de Alimentos e Desenvolvimento Sustentável.',
+    'sustentabilidade');
+
+// O local PERMANENTE continua: é assim que o catálogo de assédio foi montado.
+aceita('comissão local permanente de unidade continua entrando',
+    'Constitui a Comissão Permanente de Prevenção e Enfrentamento ao Assédio do Instituto de '
+  . 'Ciências da Sociedade de Macaé.', 'assedio');
+
+// ---------------------------------------------------------------------------
 // 3. O PAPEL. Trocar o papel muda a faixa de etapas do cartão e, adiante, o
 //    indicador de maturidade.
 // ---------------------------------------------------------------------------

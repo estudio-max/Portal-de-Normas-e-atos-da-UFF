@@ -170,6 +170,45 @@ if (!function_exists('politicas_sem_nome_de_unidade')) {
     }
 }
 
+if (!function_exists('politicas_sem_nome_de_parceiro')) {
+    /** Remove o nome do PARCEIRO do convênio antes de casar a frase.
+     *
+     * "Ratificação do Convênio celebrado entre a UFF e a Concedente INSTITUTO
+     * DE DESENVOLVIMENTO SUSTENTÁVEL MAMIRAUÁ" trazia 8 atos para a política de
+     * sustentabilidade; "empresa Nasa Sustentabilidade Comércio e Serviços",
+     * mais um. O termo está no nome de quem assina do outro lado — a mesma
+     * armadilha que a METODOLOGIA-ODS já nomeia como "parceiro do convênio".
+     *
+     * Medido: -19 vínculos, ZERO conferidos perdidos.
+     */
+    function politicas_sem_nome_de_parceiro(string $ementa): string {
+        return preg_replace('/\bcelebrad[oa]s?\s+entre\s+a\s+UFF[^.]{0,160}/iu', ' ', $ementa)
+               ?? $ementa;
+    }
+}
+
+if (!function_exists('politicas_colegiado_efemero')) {
+    /** O ato constitui colegiado EFÊMERO?
+     *
+     * Banca, comissão examinadora de concurso, sorteio público, comissão
+     * eleitoral e mesa receptora existem para UM processo e se desfazem. A aba
+     * Comissões já os exclui por regra ("a UFF constituiu 14 mil comissões em
+     * 25 anos, a maioria efêmera"); o dossiê de política segue o mesmo escopo.
+     *
+     * Medido: -25 vínculos, ZERO conferidos perdidos.
+     *
+     * NÃO confundir com colegiado LOCAL de unidade, que CONTINUA entrando: o
+     * catálogo de assédio é 1 ato central mais 10 comissões locais, e essa foi
+     * decisão de curadoria — uma política adotada por dez unidades é evidência
+     * da política, não ruído. Excluir local derrubaria assédio de 12 para 4.
+     */
+    function politicas_colegiado_efemero(string $ementa): bool {
+        return (bool)preg_match(
+            '/\bbanca|comiss[ãa]o\s+examinadora|concurso\s+p[úu]blico|sorteio\s+p[úu]blico|'
+          . 'comiss[ãa]o\s+eleitoral|mesa\s+receptora|consulta\s+(eleitoral|para)/iu', $ementa);
+    }
+}
+
 if (!function_exists('politicas_emissor_vale')) {
     /** O sinal do EMISSOR vale para este papel?
      *
@@ -211,11 +250,16 @@ if (!function_exists('politicas_do_ato')) {
             return [];
         }
 
-        // Duas limpezas antes de casar frase: a cláusula de quem assina e o
-        // nome do departamento. Nas duas o termo está no NOME de alguém, não no
-        // dispositivo — a armadilha-mãe da METODOLOGIA-ODS.
-        $alvo = politicas_fold(
-            politicas_sem_nome_de_unidade(politicas_sem_clausula_emissor($ementa)));
+        // Colegiado efêmero (banca, concurso, eleitoral) não entra no dossiê —
+        // mesmo escopo da aba Comissões.
+        if (politicas_colegiado_efemero($ementa)) return [];
+
+        // Três limpezas antes de casar frase: a cláusula de quem assina, o nome
+        // do departamento e o nome do parceiro do convênio. Nas três o termo
+        // está no NOME de alguém, não no dispositivo — a armadilha-mãe da
+        // METODOLOGIA-ODS, que aqui reaparece em três formas diferentes.
+        $alvo = politicas_fold(politicas_sem_nome_de_parceiro(
+            politicas_sem_nome_de_unidade(politicas_sem_clausula_emissor($ementa))));
         $papel = politica_papel($ementa);
         $out = [];
         $vistos = [];

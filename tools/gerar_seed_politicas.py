@@ -190,6 +190,15 @@ EXCLUI = re.compile(r'\bsindicanc|\bapurar denuncia|\bprocesso administrativo di
 _CLAUSULA_EMISSOR = re.compile(
     r'\bo (comit[êe]|conselho|colegiado|comiss[ãa]o) d[eoa][^.]{0,120}', re.I)
 _NOME_UNIDADE = re.compile(r'\bdepartamento\s+de\s+[^,.;:()]{0,90}', re.I)
+_NOME_PARCEIRO = re.compile(r'\bcelebrad[oa]s?\s+entre\s+a\s+UFF[^.]{0,160}', re.I)
+
+# Colegiado EFEMERO (banca, concurso, sorteio, eleitoral, mesa receptora) fica
+# de fora -- mesmo escopo da aba Comissoes. Nao confundir com colegiado LOCAL
+# de unidade, que CONTINUA entrando: o catalogo de assedio e 1 ato central mais
+# 10 comissoes locais, e isso foi decisao de curadoria.
+_EFEMERA = re.compile(
+    r'\bbanca|comiss[ãa]o\s+examinadora|concurso\s+p[úu]blico|sorteio\s+p[úu]blico|'
+    r'comiss[ãa]o\s+eleitoral|mesa\s+receptora|consulta\s+(eleitoral|para)', re.I)
 _FRAGMENTO_INI = re.compile(r'^[a-zà-ú\)\]•§]')
 _RODAPE = re.compile(r'^bs\s*-', re.I)
 
@@ -257,9 +266,14 @@ def main():
         if motivo:
             residuo.append((a, f'ementa inutilizável ({motivo})'))
             continue
-        # Duas limpezas antes de casar: a cláusula de quem assina e o nome do
-        # departamento. Nas duas o termo está no NOME de alguém.
-        alvo = norm(_NOME_UNIDADE.sub(' ', _CLAUSULA_EMISSOR.sub(' ', ementa)))
+        if _EFEMERA.search(ementa):
+            residuo.append((a, 'colegiado efêmero (banca/concurso/eleitoral)'))
+            continue
+        # Três limpezas antes de casar: a cláusula de quem assina, o nome do
+        # departamento e o nome do parceiro. Nas três o termo está no NOME de
+        # alguém, não no dispositivo.
+        alvo = norm(_NOME_PARCEIRO.sub(' ', _NOME_UNIDADE.sub(
+            ' ', _CLAUSULA_EMISSOR.sub(' ', ementa))))
         papel = papel_do(ementa)
         achou = False
         for slug, _n, _e, _s, _b, _d, termos, emissores in CATALOGO:
