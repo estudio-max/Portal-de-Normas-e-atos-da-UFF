@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays, Link2, Users, AlertTriangle, Hourglass, ExternalLink, ArrowRightLeft, MapPin } from 'lucide-react';
+import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays, Link2, Users, AlertTriangle, Hourglass, ExternalLink, ArrowRightLeft, MapPin, Landmark } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { EstruturaGovernanca } from '../insights/EstruturaGovernanca';
 
 // Aba "Insights": painéis analíticos sobre o acervo indexado do Boletim de
 // Serviço. Tudo é agregação do que já está no banco (nada inventado): ritmo de
@@ -183,6 +184,16 @@ export default function InsightsApi() {
             <span className="flex-1 h-px bg-slate-200" />
             <span className="text-[10px] text-slate-400">todo o período · ignora o filtro de ano</span>
           </div>
+
+          {/* Estrutura de governança: a única pergunta desta aba que sai de um
+              documento OFICIAL da UFF (o RGI) cruzado com o acervo. Ocupa a
+              largura inteira porque é lista com rótulo longo — em meia coluna o
+              nome do colegiado quebra em três linhas. */}
+          <Card titulo="Estrutura de governança declarada, e quando cada instância agiu"
+            icone={<Landmark className="w-4 h-4 text-yellow-500" />}
+            sub="Cruza a estrutura que o Relatório de Gestão Integrado declara com a última evidência documental de cada instância no Boletim.">
+            <EstruturaGovernanca />
+          </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             <Card titulo="Cadeiras que mais giram" icone={<Users className="w-4 h-4 text-yellow-500" />}
