@@ -189,9 +189,9 @@ export default function InsightsApi() {
               documento OFICIAL da UFF (o RGI) cruzado com o acervo. Ocupa a
               largura inteira porque é lista com rótulo longo — em meia coluna o
               nome do colegiado quebra em três linhas. */}
-          <Card titulo="Estrutura de governança declarada, e quando cada instância agiu"
+          <Card titulo="Estrutura de governança: há quanto tempo cada instância não sai no Boletim"
             icone={<Landmark className="w-4 h-4 text-yellow-500" />}
-            sub="Cruza a estrutura que o Relatório de Gestão Integrado declara com a última evidência documental de cada instância no Boletim.">
+            sub="A estrutura que o Relatório de Gestão Integrado declara, ao lado da data da última publicação de cada instância. Mede renovação de composição, não atividade deliberativa.">
             <EstruturaGovernanca />
           </Card>
 
