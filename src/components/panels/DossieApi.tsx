@@ -113,8 +113,10 @@ export default function DossieApi() {
       (linhasN
         ? `<h2>Outros atos que citam “${esc(r.porNome?.termo ?? '')}” no texto (${r.porNome?.total ?? 0})</h2>` +
           `<div class="aviso">Estes atos foram localizados pelo <strong>nome</strong>, não pela matrícula — é assim que se ` +
-          `alcança o ato que não registra SIAPE. Em troca, a busca por nome <strong>pode trazer pessoas de nome parecido</strong>: ` +
-          `confira ato por ato antes de usar. Os atos já listados acima não se repetem aqui.</div>` +
+          `alcança o ato que não registra SIAPE (46% do acervo). <strong>Duas ressalvas:</strong> se a pessoa ocupou ` +
+          `cargo de direção, os atos que ela <strong>assinou</strong> aparecem nesta lista, e assinar não é participar; ` +
+          `e a busca por nome pode trazer <strong>pessoas de nome parecido</strong>. Confira ato por ato antes de usar. ` +
+          `Os atos já listados acima não se repetem aqui.</div>` +
           `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
           `<tbody>${linhasN}</tbody></table>`
         : '') +
@@ -436,10 +438,18 @@ export default function DossieApi() {
                 <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
                   Outros atos que citam “{r.porNome.termo}” no texto ({r.porNome.total})
                 </span>
+                {/* A ressalva nomeia o caso COMUM, não só o raro. Medido em
+                    05/08/2026 num dossiê real: de 100 atos achados pelo nome, a
+                    maioria era de atos que a pessoa ASSINOU como Pró-Reitora —
+                    o nome estava no bloco de assinatura, e o `signatario` do
+                    ato veio vazio, então não há como filtrar. Avisar só do
+                    homônimo seria avisar do improvável e calar sobre o provável. */}
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Busca no <strong>corpo do ato</strong>, para alcançar o que a matrícula não acha — boa parte dos atos não
-                  registra SIAPE. <strong>Pode trazer gente de nome parecido</strong>: confira se é você antes de usar. Os atos
-                  já listados acima não se repetem aqui.
+                  Busca no <strong>corpo do ato</strong>, para alcançar o que a matrícula não acha — <strong>46% dos
+                  atos não registram SIAPE</strong>. Duas ressalvas antes de usar: se você ocupou <strong>cargo de
+                  direção</strong>, os atos que você <strong>assinou</strong> aparecem aqui — e assinar não é
+                  participar; e a busca <strong>pode trazer pessoas de nome parecido</strong>. Confira ato por ato.
+                  Os atos já listados acima não se repetem aqui.
                 </p>
               </div>
               {r.porNome.atos.length

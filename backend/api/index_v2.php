@@ -266,10 +266,24 @@ function listar(PDO $pdo): void {
             $p[':nlike'] = '%' . mb_strtolower($nome) . '%';
         }
     }
-    $siape = preg_replace('/\D/', '', $_GET['siape'] ?? '');
+    // MATRÍCULA: comparação EXATA sobre a chave normalizada, nunca LIKE.
+    //
+    // Até 05/08/2026 isto era `ps.siape LIKE '%digitos%'` — substring —, e a
+    // consequência foi medida: dos 70 pares em que uma matrícula contém outra,
+    // 18 são PESSOAS DIFERENTES. Digitar `265891` trazia também `1265891`
+    // (Zuleika recebia atos de Ricardo); `307724` trazia `2307724`. Numa aba
+    // usada para instruir processo, ver ato de outra pessoa é o pior defeito
+    // possível — e ele era silencioso.
+    //
+    // `TRIM(LEADING '0'...)` dos dois lados mantém o que já funcionava: no
+    // acervo a mesma matrícula aparece com e sem zero à esquerda (1.462
+    // servidores partidos assim, conforme o CLAUDE.md).
+    $siape = ltrim(preg_replace('/\D/', '', $_GET['siape'] ?? ''), '0');
     if ($siape !== '') {
-        $where[] = "EXISTS (SELECT 1 FROM ato_pessoa ap JOIN pessoa ps ON ps.id=ap.pessoa_id WHERE ap.ato_id=a.id AND ps.siape LIKE :siape)";
-        $p[':siape'] = '%' . $siape . '%';
+        $where[] = "EXISTS (SELECT 1 FROM ato_pessoa ap JOIN pessoa ps ON ps.id=ap.pessoa_id
+                             WHERE ap.ato_id=a.id
+                               AND TRIM(LEADING '0' FROM ps.siape) = :siape)";
+        $p[':siape'] = $siape;
     }
     // Busca por PROCESSO: acha todo ato que CITA o número, não só aquele em que
     // ele calhou de ser o primeiro do texto. Casa por dígitos, então funciona
@@ -421,7 +435,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-04.6'; }
+function api_versao(): string { return '2026-08-05.1'; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -2916,6 +2930,58 @@ function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
         ORDER BY nome IS NULL, nome");
     $st->execute([':chave' => $chave]);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    // 1b) DÍGITO VERIFICADOR — a mesma pessoa com e sem o último dígito.
+    //
+    // A matrícula SIAPE tem DV: a servidora informa "139693-2", e o Boletim
+    // registra ora `139693`, ora `1396932`. Como `pessoa.siape` é UNIQUE, viram
+    // linhas separadas — o mesmo estrago do zero à esquerda, por outra causa.
+    // Medido no caso que revelou isto: `1396932` devolvia 1 ato e 0 funções;
+    // `139693` devolvia 25 atos e 6 funções. Quem digita a matrícula completa,
+    // que é o número correto, recebia o PIOR resultado — e as funções são
+    // justamente a evidência que o RSC pontua.
+    //
+    // A UNIÃO É PELO NOME, e não pela matrícula, porque unir por matrícula é
+    // COMPROVADAMENTE INSEGURO: 109 bases de 6 dígitos têm mais de uma extensão
+    // de 7, e nas 109 são pessoas diferentes (`170833` → Patrick, Letícia e
+    // Fábio). Matrícula é sequencial, então quem se registrou na mesma época
+    // divide o prefixo. Os 6 primeiros dígitos não identificam ninguém.
+    //
+    // O nome serve de árbitro porque toda matrícula do acervo vem com ele:
+    // medido, 7.821 pares nome+SIAPE contra 4 sem nome (0,05%) — o extrator só
+    // cria a pessoa quando acha a matrícula, então o par nunca chega quebrado.
+    //
+    // Sem nome em comum, NÃO une. Nos 35 casos do acervo, 24 unem com
+    // segurança; os demais são pessoas distintas e continuam separadas.
+    $variantes = [];
+    if (strlen($chave) === 7) {
+        $variantes[] = substr($chave, 0, 6);          // tira o DV
+    } elseif (strlen($chave) === 6) {
+        for ($d = 0; $d <= 9; $d++) $variantes[] = $chave . $d;   // tenta cada DV
+    }
+    if ($variantes && $rows) {
+        $chaveNome = fn(string $n) => preg_replace('/\s+/', ' ',
+            trim(mb_strtolower(nome_ascii($n), 'UTF-8')));
+        $nomesConhecidos = [];
+        foreach ($rows as $r) {
+            if (trim((string)$r['nome']) !== '') $nomesConhecidos[$chaveNome($r['nome'])] = true;
+        }
+        if ($nomesConhecidos) {
+            $ph = implode(',', array_fill(0, count($variantes), '?'));
+            $sv = $pdo->prepare("
+                SELECT id, siape, nome FROM pessoa
+                 WHERE siape IS NOT NULL AND siape <> ''
+                   AND TRIM(LEADING '0' FROM siape) IN ($ph)");
+            $sv->execute($variantes);
+            $jaTem = array_flip(array_map(fn($r) => (int)$r['id'], $rows));
+            foreach ($sv->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                if (isset($jaTem[(int)$r['id']])) continue;
+                $n = trim((string)$r['nome']);
+                if ($n === '' || !isset($nomesConhecidos[$chaveNome($n)])) continue;
+                $rows[] = $r;
+            }
+        }
+    }
 
     $pessoas = array_map(fn($r) => ['siape' => $r['siape'], 'nome' => $r['nome'] ?? ''], $rows);
     $ids = array_map(fn($r) => (int)$r['id'], $rows);

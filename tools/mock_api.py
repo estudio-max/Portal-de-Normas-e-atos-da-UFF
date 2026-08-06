@@ -17,7 +17,7 @@ Endpoints (iguais aos do PHP):
 O que o mock NÃO reproduz, por desenho: o cache em disco da API PHP e o
 `X-Cache`. Tudo aqui é calculado a cada requisição sobre o JSON em memória.
 """
-import json, os, re, math, sys, datetime
+import json, os, re, math, sys, datetime, unicodedata
 from collections import defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
@@ -381,11 +381,37 @@ def dossie_payload(siape, nome):
     def norm(s):
         return (s or "").strip().lstrip("0")
 
+    def sem_ac(s):
+        d = unicodedata.normalize("NFD", (s or "").strip().lower())
+        return re.sub(r"\s+", " ", "".join(c for c in d if unicodedata.category(c) != "Mn"))
+
+    # DIGITO VERIFICADOR: a mesma pessoa aparece com e sem o ultimo digito
+    # ("139693" e "1396932"). Espelha o dossie() do index_v2.php desde
+    # 2026-08-05.1 -- a uniao e pelo NOME, nunca pela matricula, porque 109
+    # bases de 6 digitos tem mais de uma extensao de 7 e nas 109 sao pessoas
+    # diferentes (matricula e sequencial: quem se registrou junto divide o
+    # prefixo). Sem nome em comum, nao une.
+    variantes = set()
+    if len(chave) == 7:
+        variantes.add(chave[:6])
+    elif len(chave) == 6:
+        variantes.update(chave + str(d) for d in range(10))
+
+    nomes_da_chave = {sem_ac(p.get("nome")) for a in ATOS for p in (a.get("pessoas") or [])
+                      if norm(p.get("siape")) == chave and p.get("nome")}
+    chaves = {chave}
+    if variantes and nomes_da_chave:
+        for a in ATOS:
+            for p in (a.get("pessoas") or []):
+                n = norm(p.get("siape"))
+                if n in variantes and sem_ac(p.get("nome")) in nomes_da_chave:
+                    chaves.add(n)
+
     pessoas, atos, funcoes = {}, [], []
     for a in ATOS:
         casou = False
         for p in (a.get("pessoas") or []):
-            if norm(p.get("siape")) == chave:
+            if norm(p.get("siape")) in chaves:
                 # Reproduz pessoa_id() do importar_v2.php: a dimensão pessoa é
                 # chaveada por "s:<siape exato>", e pessoa.siape é UNIQUE. Logo
                 # cada GRAFIA do siape ('0307221' vs '307221') é UMA linha, com
@@ -395,7 +421,7 @@ def dossie_payload(siape, nome):
                 pessoas.setdefault(s, p.get("nome") or "")
                 casou = True
         for f in (a.get("funcoes") or []):
-            if norm(f.get("siape")) == chave:
+            if norm(f.get("siape")) in chaves:
                 funcoes.append({
                     "acao": f.get("acao"), "cargo": f.get("cargo") or "",
                     "unidade": f.get("unidade") or "", "prazoMeses": f.get("prazo_meses"),
@@ -415,8 +441,12 @@ def dossie_payload(siape, nome):
     # em dossie() do index_v2.php (nome_ascii). "João Marcel" e "Joao Marcel"
     # são a mesma pessoa; contá-los como dois faria o aviso de nome divergente
     # disparar pra quase todo mundo e virar ruído. Fica a variante com acento.
-    import unicodedata
-
+    #
+    # O `import unicodedata` ficava AQUI DENTRO, e isso quebrou a união por DV
+    # ao ser acrescentada: um import dentro da função torna o nome local em TODO
+    # o escopo dela, então a `sem_ac()` definida mais acima passou a resolver
+    # para essa variável local ainda não atribuída — NameError. O import subiu
+    # para o topo do arquivo; não o traga de volta para cá.
     def _ascii(s):
         return "".join(c for c in unicodedata.normalize("NFD", s or "")
                        if unicodedata.category(c) != "Mn")
