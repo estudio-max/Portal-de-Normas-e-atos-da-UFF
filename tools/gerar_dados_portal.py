@@ -222,8 +222,30 @@ def converter(dados, urls=None):
             "linkSeiDocumento": a.get("link_sei_documento") or None,
             "relacoes": relacoes,
             "tags": tags_de(a),
-            "siapes": a.get("siapes", []),
-            "pessoas": a.get("pessoas", []),  # [{nome, siape}] p/ a Ficha
+            # `siapes` e `pessoas` NAO entram mais neste arquivo (04/08/2026).
+            #
+            # O portal-data.json e servido publicamente em dois lugares -- na raiz
+            # do site e no repositorio do GitHub --, e trazia 3.836 pares
+            # DISTINTOS de nome+matricula. Isso e um cadastro, e um cadastro
+            # pronto: nos PDFs do Boletim o mesmo pareamento existe, mas disperso
+            # em milhares de arquivos. Agregar e tratamento proprio, nao
+            # republicacao.
+            #
+            # O que sustentavam era pouco: `pessoas` so resolvia matricula->nome
+            # para ampliar a busca, e `siapes` so fazia o filtro por matricula
+            # funcionar no MODO ESTATICO -- a contingencia que roda quando o
+            # banco esta fora. A aba Meu SIAPE nunca usou nenhum dos dois: ela
+            # exige o banco e mostra "disponivel apenas no modo banco de dados".
+            #
+            # Cifrar nao era alternativa. O arquivo existe para o navegador ler
+            # SEM servidor, entao a chave teria de viajar junto -- seria
+            # ofuscacao com aparencia de protecao. E hash tambem nao: SIAPE tem
+            # 7 digitos, forca bruta resolve em minutos.
+            #
+            # AINDA HA dado pessoal em `funcoes` (210 pares nome+SIAPE), e ele
+            # fica de proposito: alimenta as abas Chefias e Mandatos no modo
+            # estatico, cujo objeto E dizer quem ocupa cada cargo. Tirar ali
+            # esvazia a funcao, o que nao era o caso destes dois campos.
             # [{acao,cargo,unidade,unidade_chave,nome,siape,prazo_meses,
             #   data_inicio,inicio_origem}] p/ Chefias e p/ o cálculo de mandato
             "funcoes": a.get("funcoes", []),
