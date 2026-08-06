@@ -626,12 +626,22 @@ resumo operacional.
   interpretar bloqueio como "ato não existe".
 - Órgão tem ~1.162 grafias de sigla no corpus. Consolidar é **curadoria** (via
   `orgao_alias`), não regex.
-- **O mesmo servidor é DUAS pessoas quando o SIAPE varia no zero à esquerda.**
-  `pessoa.siape` é UNIQUE, então `0307221` e `307221` são duas linhas com atos
-  separados (medido: 1.462 servidores partidos assim). Quem consulta por
-  matrícula tem que normalizar com `TRIM(LEADING '0' FROM ...)` — **nunca
-  `LPAD`**, que trunca no MySQL (`LPAD('12345678',7,'0')` = `'1234567'`) e
-  fundiria matrículas diferentes.
+- **O mesmo servidor é DUAS pessoas quando o SIAPE varia no zero à esquerda —
+  e o dígito verificador faz o mesmo por outra porta.** `pessoa.siape` é
+  UNIQUE, então `0307221`/`307221` (medido: 1.462 servidores partidos assim) e
+  `139693`/`1396932` são grafias que viram linhas separadas. Consulta por
+  matrícula normaliza com `TRIM(LEADING '0' FROM ...)` — **nunca `LPAD`**, que
+  trunca no MySQL (`LPAD('12345678',7,'0')` = `'1234567'`); a união entre
+  grafias é pelo NOME, nunca pela matrícula (109 bases de 6 dígitos têm mais
+  de uma extensão de 7 no acervo, e nas 109 são pessoas diferentes). Na aba
+  **Meu SIAPE**, o nome digitado no campo opcional também precisa ser
+  **confrontado** com o nome resolvido pela matrícula — até 06/08/2026 não
+  era: SIAPE de uma pessoa + nome de outra não dava erro, a tela e o PDF
+  simplesmente juntavam as duas sob um cabeçalho só (medido: 11 atos alheios
+  vazados, um deles um PAD). `DossieApi.tsx` agora compara por tokens
+  (tolerante a nome abreviado/de casada) e isola o bloco divergente com aviso
+  vermelho, na tela e no PDF. Capítulo dedicado, com todos os números:
+  [`docs/PROBLEMA-MATRICULA-SIAPE.md`](docs/PROBLEMA-MATRICULA-SIAPE.md).
 - **Um SIAPE pode carregar duas pessoas, e o v2 não sabe disso.** O importador
   chaveia pessoa por `"s:$siape"`, então nomes divergentes colapsam numa linha
   com o primeiro nome visto (`'3369546'` = Bárbara Sena **e** Simone Lemos). Como

@@ -42,6 +42,47 @@ const rotuloAto = (a: ds.DossieAto) =>
 const esc = (s: string) =>
   (s || '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
 
+// Matrícula e nome viajam por caminhos independentes na API: o SIAPE decide os
+// blocos 1 e 2, o nome decide o 3º, e nada confrontava os dois. Digitar a
+// matrícula de um e o nome de outro não dava erro — a tela juntava as duas
+// pessoas sob um cabeçalho só, e desde 05/08/2026 o PDF imprime as duas juntas.
+// Medido em produção: SIAPE 1396932 (Denise) + o nome de outra servidora trouxe
+// 11 atos alheios, um deles instauração de PAD. Num documento anexado a
+// processo de RSC, atribuir a alguém ato que não é dele é o pior erro possível
+// — a mesma razão do aviso de `nomesDistintos`, por outra porta.
+//
+// A comparação é TOLERANTE de propósito. "Denise Rosas" e "Denise Aparecida de
+// Miranda Rosas" são a mesma pessoa; nome de casada acrescenta sobrenome; e
+// aviso que pisca à toa é aviso que ninguém lê. Só acusa quando NENHUM nome do
+// registro contém o digitado nem está contido nele.
+const PARTICULAS = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);
+const tokensNome = (s: string): string[] =>
+  (s || '')
+    // NFD separa a letra do acento, e `\p{M}` APAGA o acento. Deixar que ele
+    // caia no filtro de pontuação abaixo não serve: a marca fica no MEIO da
+    // palavra ("Antônio" = anto+U+0302+nio) e viraria separador, partindo o
+    // token em dois. Medido: quebrava Antônio, Conceição, Inês — o aviso
+    // dispararia em consulta legítima, que é o pior defeito que ele pode ter.
+    // `\p{M}` em vez da classe literal: o fonte fica ASCII e sobrevive a
+    // reencode do arquivo.
+    .normalize('NFD').replace(/\p{M}/gu, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter(t => t.length >= 3 && !PARTICULAS.has(t));  // <3 = inicial abreviada
+
+// true = confere, ou não há o que confrontar (matrícula fora da base, campo
+// vazio). Na dúvida NÃO acusa: o custo de um falso alarme aqui é a pessoa
+// desconfiar do dossiê inteiro.
+const nomeConfere = (digitado: string, registrados: string[]): boolean => {
+  const d = tokensNome(digitado);
+  if (!d.length || !registrados.length) return true;
+  return registrados.some(n => {
+    const g = tokensNome(n);
+    if (!g.length) return true;
+    return d.every(t => g.includes(t)) || g.every(t => d.includes(t));
+  });
+};
+
 export default function DossieApi() {
   const [siape, setSiape] = useState('');
   const [nome, setNome] = useState('');
@@ -51,6 +92,10 @@ export default function DossieApi() {
   const [buscou, setBuscou] = useState(false);
 
   const apiMode = ds.modo() === 'api';
+
+  // Nome digitado × dono da matrícula. Vive aqui, e não dentro do imprimir(),
+  // para que tela e PDF não possam divergir sobre a mesma consulta.
+  const divergente = !!r?.porNome && !nomeConfere(r.porNome.termo, r.nomes);
 
   const buscar = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -85,16 +130,25 @@ export default function DossieApi() {
     // com 1. Como este PDF é anexado a processo de RSC, a pessoa instruía o
     // pedido com um documento incompleto sem ter como perceber.
     const linhasN = (r.porNome?.atos ?? []).map(linhaAto).join('');
+    // `divergente` vem do escopo do componente: quem lê o papel não viu a tela
+    // nem sabe o que foi digitado, então o PDF tem que dizer isso na cara.
     const html =
       `<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Meu SIAPE — atos do BS — SIAPE ${esc(r.siape)}</title>` +
       `<style>body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#111;margin:22px}` +
       `h1{font-size:17px;margin:0 0 2px}h2{font-size:13px;margin:18px 0 6px;color:#003366}` +
       `.sub{color:#555;font-size:11px;margin:0 0 4px}.aviso{border:1px solid #c4c9d2;background:#f7f8fa;padding:8px;font-size:10px;color:#444;margin:10px 0 4px}` +
+      `.alerta{border:2px solid #b91c1c;background:#fef2f2;padding:9px;font-size:11px;color:#7f1d1d;margin:10px 0 4px}` +
       `table{border-collapse:collapse;width:100%}th,td{border:1px solid #c4c9d2;padding:4px 6px;text-align:left;vertical-align:top}` +
       `th{background:#003366;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}` +
       `tr:nth-child(even) td{background:#f3f5f8}@media print{@page{margin:12mm}}</style></head><body>` +
       `<h1>Meu SIAPE — atos do Boletim de Serviço da UFF</h1>` +
       `<p class="sub">${ident || 'SIAPE ' + esc(r.siape)} &middot; gerado em ${fmtData(new Date().toISOString().slice(0, 10))}</p>` +
+      (divergente
+        ? `<div class="alerta"><strong>ATENÇÃO: este documento reúne DUAS pessoas.</strong> A matrícula consultada ` +
+          `(SIAPE ${esc(r.siape)}) é de <strong>${esc(r.nomes.join(' · ') || 'titular não identificado')}</strong>, mas o nome ` +
+          `informado na busca foi <strong>“${esc(r.porNome?.termo ?? '')}”</strong>. A última seção foi localizada por esse nome e ` +
+          `<strong>não pertence ao titular da matrícula</strong>. Não anexe este documento a processo sem separar as duas listas.</div>`
+        : '') +
       `<div class="aviso"><strong>Material de instrução, não decisão.</strong> Esta lista reúne atos publicados que citam esta ` +
       `matrícula` + (linhasN ? ` ou o nome informado` : '') + `. ` +
       `Ela não comprova participação por si só (o ato pode citar a pessoa por outro motivo) e não é exaustiva: parte dos atos do Boletim ` +
@@ -110,7 +164,16 @@ export default function DossieApi() {
       // Bloco do nome: sai com a MESMA ressalva que a tela mostra. Busca por
       // nome alcança o que a matrícula não acha, e em troca pode trazer
       // homônimo — quem anexa ao processo precisa ler isso no papel também.
-      (linhasN
+      (linhasN && divergente
+        ? `<h2>Atos que citam “${esc(r.porNome?.termo ?? '')}” — OUTRA PESSOA (${r.porNome?.total ?? 0})</h2>` +
+          `<div class="alerta">Esta seção <strong>não é do titular do SIAPE ${esc(r.siape)}</strong>. Ela lista atos que citam ` +
+          `o nome <strong>“${esc(r.porNome?.termo ?? '')}”</strong>, que não corresponde a ` +
+          `<strong>${esc(r.nomes.join(' · ') || 'quem consta na matrícula')}</strong>. Se a intenção era buscar o titular, refaça ` +
+          `a consulta com o nome dele; se era buscar outra pessoa, use uma consulta separada.</div>` +
+          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
+          `<tbody>${linhasN}</tbody></table>`
+        : '') +
+      (linhasN && !divergente
         ? `<h2>Outros atos que citam “${esc(r.porNome?.termo ?? '')}” no texto (${r.porNome?.total ?? 0})</h2>` +
           `<div class="aviso">Estes atos foram localizados pelo <strong>nome</strong>, não pela matrícula — é assim que se ` +
           `alcança o ato que não registra SIAPE (46% do acervo). <strong>Duas ressalvas:</strong> se a pessoa ocupou ` +
@@ -325,6 +388,22 @@ export default function DossieApi() {
                 </p>
               </div>
             )}
+
+            {/* Nome digitado que não é o dono da matrícula. Vermelho, e não
+                âmbar como o aviso acima: aquele diz que a base pode estar
+                suja, este diz que a consulta está juntando duas pessoas — o
+                erro é maior e tem conserto imediato pelo próprio usuário. */}
+            {divergente && (
+              <div className="mt-2 flex items-start gap-2 p-2 rounded border border-red-300 bg-red-50">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-red-800 leading-relaxed">
+                  <strong>O nome informado não é o desta matrícula.</strong> Segundo o acervo, o SIAPE {r.siape} é de{' '}
+                  <strong>{r.nomes.join(' · ') || 'titular não identificado'}</strong>, e você buscou por{' '}
+                  <strong>“{r.porNome?.termo}”</strong>. Os dois blocos abaixo são de <strong>pessoas diferentes</strong> — e o
+                  PDF sai assim também. Corrija o nome, ou faça uma consulta separada para a outra pessoa.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Bloco 1: dado estruturado (cargo/unidade lidos do dispositivo). */}
@@ -433,10 +512,15 @@ export default function DossieApi() {
 
           {/* Bloco 3: recall por nome — separado, porque a confiança é outra. */}
           {r.porNome && (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-              <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
-                <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
-                  Outros atos que citam “{r.porNome.termo}” no texto ({r.porNome.total})
+            <div className={`bg-white rounded-lg shadow-xs overflow-hidden border ${
+              divergente ? 'border-red-300' : 'border-slate-200'}`}>
+              <div className={`px-3 py-2 border-b ${
+                divergente ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}>
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                  divergente ? 'text-red-700' : 'text-slate-600'}`}>
+                  {divergente
+                    ? <>Atos de “{r.porNome.termo}” — outra pessoa ({r.porNome.total})</>
+                    : <>Outros atos que citam “{r.porNome.termo}” no texto ({r.porNome.total})</>}
                 </span>
                 {/* A ressalva nomeia o caso COMUM, não só o raro. Medido em
                     05/08/2026 num dossiê real: de 100 atos achados pelo nome, a
@@ -444,13 +528,21 @@ export default function DossieApi() {
                     o nome estava no bloco de assinatura, e o `signatario` do
                     ato veio vazio, então não há como filtrar. Avisar só do
                     homônimo seria avisar do improvável e calar sobre o provável. */}
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Busca no <strong>corpo do ato</strong>, para alcançar o que a matrícula não acha — <strong>46% dos
-                  atos não registram SIAPE</strong>. Duas ressalvas antes de usar: se você ocupou <strong>cargo de
-                  direção</strong>, os atos que você <strong>assinou</strong> aparecem aqui — e assinar não é
-                  participar; e a busca <strong>pode trazer pessoas de nome parecido</strong>. Confira ato por ato.
-                  Os atos já listados acima não se repetem aqui.
-                </p>
+                {divergente ? (
+                  <p className="text-[11px] text-red-700 mt-0.5 leading-relaxed">
+                    Esta lista <strong>não é do titular do SIAPE {r.siape}</strong>: ela veio do nome que você digitou, e esse
+                    nome é de outra pessoa. Ela continua visível porque a busca por nome é legítima — mas não a some com o
+                    bloco acima, e não anexe as duas a um mesmo processo.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Busca no <strong>corpo do ato</strong>, para alcançar o que a matrícula não acha — <strong>46% dos
+                    atos não registram SIAPE</strong>. Duas ressalvas antes de usar: se você ocupou <strong>cargo de
+                    direção</strong>, os atos que você <strong>assinou</strong> aparecem aqui — e assinar não é
+                    participar; e a busca <strong>pode trazer pessoas de nome parecido</strong>. Confira ato por ato.
+                    Os atos já listados acima não se repetem aqui.
+                  </p>
+                )}
               </div>
               {r.porNome.atos.length
                 ? <TabelaAtos atos={r.porNome.atos} />
