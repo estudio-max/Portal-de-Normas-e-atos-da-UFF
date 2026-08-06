@@ -74,9 +74,17 @@ export default function DossieApi() {
     const linhasF = r.funcoes.map(f =>
       `<tr><td>${esc(f.acao === 'designar' ? 'Designação' : 'Dispensa')}</td><td>${esc(f.cargo)}</td>` +
       `<td>${esc(f.unidade)}</td><td>${fmtData(f.dataAto)}</td><td>${esc(f.atoLabel)}</td></tr>`).join('');
-    const linhasA = r.atos.map(a =>
+    const linhaAto = (a: ds.DossieAto) =>
       `<tr><td>${esc(rotuloAto(a))}</td><td>${fmtData(a.dataAto)}</td><td>${esc(a.ementa || '—')}</td>` +
-      `<td>${esc(refBS(a))}</td></tr>`).join('');
+      `<td>${esc(refBS(a))}</td></tr>`;
+    const linhasA = r.atos.map(linhaAto).join('');
+    // O 3º bloco — atos achados pelo NOME — ficava de fora do PDF até
+    // 05/08/2026, e o efeito era o pior possível para o que esta aba faz.
+    // A tela mostra os três blocos; o PDF trazia dois. Buscando só pela
+    // matrícula vinham 1 ato, com o nome vinham dezenas — e o PDF continuava
+    // com 1. Como este PDF é anexado a processo de RSC, a pessoa instruía o
+    // pedido com um documento incompleto sem ter como perceber.
+    const linhasN = (r.porNome?.atos ?? []).map(linhaAto).join('');
     const html =
       `<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Meu SIAPE — atos do BS — SIAPE ${esc(r.siape)}</title>` +
       `<style>body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#111;margin:22px}` +
@@ -87,7 +95,8 @@ export default function DossieApi() {
       `tr:nth-child(even) td{background:#f3f5f8}@media print{@page{margin:12mm}}</style></head><body>` +
       `<h1>Meu SIAPE — atos do Boletim de Serviço da UFF</h1>` +
       `<p class="sub">${ident || 'SIAPE ' + esc(r.siape)} &middot; gerado em ${fmtData(new Date().toISOString().slice(0, 10))}</p>` +
-      `<div class="aviso"><strong>Material de instrução, não decisão.</strong> Esta lista reúne atos publicados que citam esta matrícula. ` +
+      `<div class="aviso"><strong>Material de instrução, não decisão.</strong> Esta lista reúne atos publicados que citam esta ` +
+      `matrícula` + (linhasN ? ` ou o nome informado` : '') + `. ` +
       `Ela não comprova participação por si só (o ato pode citar a pessoa por outro motivo) e não é exaustiva: parte dos atos do Boletim ` +
       `não registra SIAPE e, portanto, não é alcançada por esta busca. A fonte oficial é o Boletim de Serviço da UFF; confira sempre o ato.</div>` +
       (linhasF
@@ -98,6 +107,17 @@ export default function DossieApi() {
       `<h2>Atos que citam o SIAPE ${esc(r.siape)} (${r.atos.length})</h2>` +
       `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
       `<tbody>${linhasA}</tbody></table>` +
+      // Bloco do nome: sai com a MESMA ressalva que a tela mostra. Busca por
+      // nome alcança o que a matrícula não acha, e em troca pode trazer
+      // homônimo — quem anexa ao processo precisa ler isso no papel também.
+      (linhasN
+        ? `<h2>Outros atos que citam “${esc(r.porNome?.termo ?? '')}” no texto (${r.porNome?.total ?? 0})</h2>` +
+          `<div class="aviso">Estes atos foram localizados pelo <strong>nome</strong>, não pela matrícula — é assim que se ` +
+          `alcança o ato que não registra SIAPE. Em troca, a busca por nome <strong>pode trazer pessoas de nome parecido</strong>: ` +
+          `confira ato por ato antes de usar. Os atos já listados acima não se repetem aqui.</div>` +
+          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
+          `<tbody>${linhasN}</tbody></table>`
+        : '') +
       `<script>window.onload=function(){window.print()}</script></body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
@@ -199,7 +219,10 @@ export default function DossieApi() {
           <div className="flex items-center gap-2">
             <button
               onClick={imprimir}
-              disabled={!r || (!r.atos.length && !r.funcoes.length)}
+              // O bloco por NOME conta para habilitar: há matrícula que não
+              // acha nada e cujo nome acha dezenas. Sem isto, quem mais precisa
+              // do PDF é justamente quem não consegue gerá-lo.
+              disabled={!r || (!r.atos.length && !r.funcoes.length && !r.porNome?.atos.length)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Printer className="w-4 h-4" /> Exportar / Imprimir PDF

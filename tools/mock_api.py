@@ -442,7 +442,15 @@ def dossie_payload(siape, nome):
         vistos = [_dossie_ato(a) for a in ATOS
                   if a.get("id") not in ja and casa_nome(a, nome)]
         vistos.sort(key=lambda x: (x["dataAto"] or ""), reverse=True)
-        por_nome = {"termo": nome, "total": len(vistos), "atos": vistos[:300]}
+        # `total` tem que ser o tamanho da lista ENTREGUE, nao do conjunto
+        # inteiro. A API real deriva os dois do mesmo array
+        # (`count($rowsNome)` e `array_map(... $rowsNome)`), entao la eles sao
+        # iguais por construcao e nunca ha truncamento. O mock cortava em 300 e
+        # mantinha o total cheio: a tela dizia "633" e listava 300, sugerindo um
+        # truncamento que producao nao tem. Divergencia de mock manda o dev
+        # cacar bug inexistente -- e foi o que quase aconteceu em 05/08/2026.
+        vistos = vistos[:300]
+        por_nome = {"termo": nome, "total": len(vistos), "atos": vistos}
 
     return {"siape": re.sub(r"\D", "", siape), "chave": chave, "pessoas": lst,
             "nomes": nomes, "nomesDistintos": len(nomes),
