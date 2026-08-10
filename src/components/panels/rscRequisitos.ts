@@ -208,19 +208,38 @@ const RE_REQ_IV =
 // medidos do Requisito V.
 const RE_DESIGNA =
   /\b(designa|designar|designacao|constitui|constituir|institui|instituir|instaura|instaurar|nomeia|nomear|cria|criar|recondu)/;
-const RE_ALTERA_COMPOSICAO = /\baltera[r]?\s+(a\s+)?composi[çc][ãa]o/;
+
+// Ato que mexe na COMPOSIÇÃO de um colegiado designa gente, mesmo abrindo por
+// verbo de correção. "Retificação dos membros integrantes … da Comissão
+// Permanente de Flexibilização de Jornada" põe ou troca alguém lá dentro — vale
+// tanto quanto "Altera a composição do Comitê", que já valia.
+//
+// Não confundir com `RE_CITA`: "Retifica a Portaria X, QUE DESIGNOU os membros…"
+// apenas se refere a outro ato, e continua barrado — a checagem de citação roda
+// antes desta.
+const RE_MEXE_COMPOSICAO =
+  /\b(retifica|retificacao|altera|alterar|alteracao|modifica|modificar)\b[\s\S]{0,90}\b(membros?|integrantes?|composi[çc][ãa]o)\b/;
 
 /** Requisitos que a EMENTA do ato sinaliza. Nunca devolve 'V' — ver o módulo. */
 export function requisitosDoAto(a: ds.DossieAto): Requisito[] {
   const bruta = a.ementa || '';
-  if (inutilizavel(bruta) || RE_META.test(bruta.trim()) || RE_CITA.test(semAc(bruta))) return [];
+  if (inutilizavel(bruta)) return [];
+  // A citação a outro ato barra sempre — inclusive "Retifica a Portaria X, QUE
+  // DESIGNOU os membros…", que fala SOBRE uma designação alheia.
+  if (RE_CITA.test(semAc(bruta))) return [];
+  // Já o verbo de correção só barra quando NÃO mexe na composição de colegiado:
+  // "Retificação dos membros integrantes da Comissão Permanente de
+  // Flexibilização de Jornada" troca gente lá dentro e é vínculo tanto quanto
+  // "Altera a composição do Comitê".
+  const mexeComposicao = RE_MEXE_COMPOSICAO.test(semAc(bruta));
+  if (RE_META.test(bruta.trim()) && !mexeComposicao) return [];
   const disp = soODispositivo(bruta);
   if (inutilizavel(disp)) return [];
   const e = semAc(disp);
   if (RE_POSSE.test(e)) return [];
 
   const reqs = new Set<Requisito>();
-  const designa = RE_DESIGNA.test(e) || RE_ALTERA_COMPOSICAO.test(e);
+  const designa = RE_DESIGNA.test(e) || RE_MEXE_COMPOSICAO.test(e);
   const revisaoDisc = RE_REVISAO_DISCIPLINA.test(e);
   const atoDoColegiado = RE_ATO_DO_COLEGIADO.test(disp);
   if (designa && !revisaoDisc && !atoDoColegiado

@@ -510,10 +510,30 @@ Gest or") **não** é tratado — o detector que se tentou marcou 631 ementas se
 quase todas texto normal ("de 03 de" casa o mesmo padrão); esses atos ficam sem
 selo e caem na conferência humana.
 
-Medição final em 4.000 atos de 2025-2026: **I = 1.169 (29,2%), IV = 61 (1,5%),
-nenhum = 2.770, dois requisitos ao mesmo tempo = 0.** Precisão do Requisito I
-auditada em duas amostras (60 e 45): ~91% estrita, ~98% contando marginais.
-Regressão no CI: `npx tsx tools/teste_rsc_requisitos.ts` (40 casos).
+**Verbo de CORREÇÃO que mexe na composição marca.** "Retificação dos membros
+integrantes da Comissão X" troca gente lá dentro — vale como "Altera a
+composição". Mas "Retifica a Portaria X, QUE DESIGNOU os membros" continua
+barrado (fala sobre designação alheia), assim como retificação comum e "torna
+sem efeito". Alcance medido: 8 atos em 6.400 (0,13%) — pequeno, e o contraste
+importa: a correção do regex morto valeu 7,4× mais. Medir é o que diz qual
+conserto pesa.
+
+**O SELO NÃO ALCANÇA O QUE NÃO ESTÁ NA BASE.** Caso-prova: a Portaria Reitoria
+108/2022 nomeia alguém "para exercer o cargo de direção de Assessor do Gabinete
+do Reitor - Código CD-4" e **não recebe selo** — `funcoes: []`, ementa
+`ementaInferida` cortada antes do cargo, `conteudoResumido` igual a ela. O cargo
+e o CD-4 não existem em campo nenhum. É defeito do EXTRATOR, não do selo, e
+exige reprocessar o acervo. Pista para quem investigar: "Nomeia Jean Pierre de
+Menezes Martinez, Assistente em Administração." — mesma forma truncada — TEM
+`cargo=Coordenador`, então o extrator lê o corpo e às vezes acerta. Medido na
+fatia local (3.802 atos): das 58 nomeações, 48 são posse em concurso
+(corretamente sem função), 8 têm função, 2 perderam — uma por OCR degradado
+("coordenagdo"). Detalhes em [`docs/METODOLOGIA-RSC.md`](docs/METODOLOGIA-RSC.md) §5.2.
+
+Medição final em 4.000 atos de 2025-2026: **I = 1.188 (29,7%), IV = 61 (1,5%),
+dois requisitos ao mesmo tempo = 0.** Precisão do Requisito I auditada em duas
+amostras (60 e 45): ~91% estrita, ~98% contando marginais.
+Regressão no CI: `npx tsx tools/teste_rsc_requisitos.ts` (45 casos).
 
 **A cor do selo precisa estar no mapa do fotofobia.** `text-indigo-800` e
 `text-indigo-900` NÃO estão (só o `700`), e o efeito é escuro sobre escuro sem

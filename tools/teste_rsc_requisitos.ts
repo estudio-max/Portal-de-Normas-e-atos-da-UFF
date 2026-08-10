@@ -71,6 +71,23 @@ const CASOS: Caso[] = [
     esperado: ['I'], porque: 'RECONDUZ — mantém alguém no colegiado, é vínculo' },
   { ementa: 'Altera a composição do Comitê Gestor de Tecnologia da Informação.',
     esperado: ['I'], porque: 'ALTERA A COMPOSIÇÃO — alguém entra no colegiado' },
+
+  // ── Verbo de CORREÇÃO que mexe na composição (achado em produção, 06/08/2026)
+  // Três linhas seguidas de um dossiê real ficavam sem selo porque a guarda de
+  // meta-ato barrava tudo que abrisse com "retifica". Mas retificar os MEMBROS
+  // de uma comissão troca gente lá dentro — é vínculo, igual a "altera a
+  // composição", que já valia.
+  { ementa: 'Retificação dos membros integrantes, nos termos da Portaria 68.471 de 30 de dezembro de 2022 da Comissão Permanente de Flexibilização de Jornada',
+    esperado: ['I'], porque: 'retificação de MEMBROS de comissão designa gente' },
+  { ementa: 'Retifica os membros da Comissão Eleitoral para escolha da Coordenação do Programa de Pós-graduação.',
+    esperado: ['I'], porque: 'idem, forma verbal curta' },
+  { ementa: 'Modifica a composição do Comitê de Governança Digital instituído, e altera suas atribuições.',
+    esperado: ['I'], porque: 'modifica composição' },
+  // e o que a guarda de meta-ato tem que continuar barrando
+  { ementa: 'Retifica a Portaria nº 500/2025 para corrigir o nome do servidor.',
+    esperado: [], porque: 'GUARDA: retificação comum, não toca composição' },
+  { ementa: 'Torna sem efeito a Portaria que constituiu a Comissão de Sindicância.',
+    esperado: [], porque: 'GUARDA: torna sem efeito desfaz, não designa' },
   { ementa: 'Constitui o Grupo Gestor de Apoio à Governança da UFF.',
     esperado: ['I'], porque: 'GRUPO GESTOR, não só "grupo de trabalho"' },
   { ementa: 'ConsƟtuir Comissão Interna para acompanhamento da obra e do projeto execuƟvo.',

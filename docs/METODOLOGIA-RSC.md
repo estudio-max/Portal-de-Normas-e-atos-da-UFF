@@ -173,6 +173,60 @@ sobre a mesma amostra de 4.000 atos, devolve **exatamente** os mesmos 158 / 61 /
 3.781 / 0 do protótipo em Python. Tradução entre linguagens é onde divergência
 silenciosa nasce.
 
+## 5.1 Verbo de correção que mexe na composição
+
+Achado em produção em 06/08/2026, num dossiê real: três linhas seguidas
+*"Retificação dos membros integrantes … da Comissão Permanente de Flexibilização
+de Jornada"* ficavam sem selo, porque a guarda de meta-ato barrava tudo que
+abrisse com `retifica`. Mas **retificar os MEMBROS de uma comissão troca gente lá
+dentro** — é vínculo tanto quanto "Altera a composição do Comitê", que já valia.
+
+A regra passou a distinguir duas coisas que a palavra "retifica" mistura:
+
+| forma | marca? | por quê |
+|---|---|---|
+| "Retificação dos **membros integrantes** da Comissão X" | **sim** | mexe em quem está no colegiado |
+| "Retifica a Portaria X, **que designou** os membros" | não | fala SOBRE designação alheia (`RE_CITA`) |
+| "Retifica a Portaria X para corrigir o nome do servidor" | não | correção comum |
+| "Torna sem efeito a Portaria que constituiu a Comissão" | não | desfaz, não designa |
+
+**Alcance medido: 8 atos em 6.400 (0,13%)**, sobre duas amostras — 4.000 de
+2025-2026 e 2.400 de 2016/2019/2022/2024. É pequeno porque essa redação é menos
+comum, e vale registrar o contraste: a correção do §4 (o regex morto no
+singular) valeu 7,4× mais. Nem todo conserto tem o mesmo peso, e medir é o que
+diz qual é qual.
+
+## 5.2 O que o selo NÃO alcança: quando o dado não existe
+
+Caso-prova, conferido em produção: a **Portaria Reitoria nº 108/2022** nomeia um
+servidor "para exercer o cargo de direção de **Assessor** do Gabinete do Reitor -
+Código **CD-4**" — Requisito V exemplar. Ela **não recebe selo**, e não há
+conserto possível nesta camada:
+
+```
+ementa no portal : "Nomeia João Marcel Fanara Correa, Operador de Radio Telecomunicações."
+ementaInferida   : true          ← a ementa foi inferida, e cortou antes do cargo
+funcoes          : []            ← o extrator não registrou a função
+conteudoResumido : (igual à ementa truncada)
+```
+
+O cargo e o "CD-4" **não estão em campo nenhum** da base. O selo do Requisito V
+sai de `ato_funcao`, e `ato_funcao` está vazio; a ementa também não os traz.
+Qualquer marcação aqui seria adivinhação.
+
+Isso é defeito do **extrator** (`tools/extrair_boletim.py`), não do selo, e o
+conserto exige reprocessar o acervo. Contraste útil para quem for investigar:
+*"Nomeia Jean Pierre de Menezes Martinez, Assistente em Administração."* — mesma
+forma de ementa truncada — **tem** `funcoes` com `cargo=Coordenador`. Ou seja, o
+extrator lê o corpo e às vezes acerta; descobrir o que difere é o trabalho.
+
+Medido em `public/portal-data.json` (3.802 atos): 58 ementas começam em
+"Nomeia/Nomear"; **48 são posse de aprovado em concurso** (corretamente sem
+função — é ingresso na carreira, não CD), 8 têm função registrada e **2
+perderam**, uma delas com o corpo degradado por OCR ("coordenagdo",
+"pré-reitor"). A fatia é pequena, mas cobre 3.802 de 133.453 atos: o tamanho real
+no acervo inteiro ainda não foi medido.
+
 ## 6. Limitações que ficam
 
 - **O portal não sabe a carreira da pessoa.** O RSC-PCCTAE é dos
