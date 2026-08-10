@@ -392,16 +392,36 @@ núcleo analítico não existirem, em vez de dar 500.
 
 ## URL por aba (roteamento por hash)
 
-Cada aba tem uma URL própria via **fragmento** (`#comissoes`, `#dossie`,
-`#jornada`…), em `src/App.tsx`: `ABAS_VALIDAS` (o conjunto de chaves válidas) +
-`abaDoHash()`, e dois efeitos que sincronizam nos dois sentidos (colar/
-compartilhar o hash abre a aba; trocar de aba grava o hash, então o "voltar" do
-navegador anda entre abas). **É hash de propósito, não caminho limpo:** o
-fragmento não chega ao servidor, então funciona em qualquer subcaminho e
-sobrevive à migração para o domínio da UFF sem reescrita de rota — caminho limpo
-brigaria com o `base: './'` que mantém o bundle portável. A raiz sem hash cai na
-aba padrão sem sujar a URL com `#planilha`. Aba nova = uma linha em
-`ABAS_VALIDAS`.
+Cada aba tem uma URL própria via **fragmento** — a forma canônica é
+`#/<chave>`, com a chave exatamente como está em `ABAS_VALIDAS`:
+`#/institucional/comissoes`, `#/pessoal/siape`, `#/pessoal/jornada`… Em
+`src/App.tsx`: `ABAS_VALIDAS` (o conjunto de chaves válidas) + `abaDoHash()`, e
+dois efeitos que sincronizam nos dois sentidos (colar/compartilhar o hash abre a
+aba; trocar de aba grava o hash, então o "voltar" do navegador anda entre abas).
+**É hash de propósito, não caminho limpo:** o fragmento não chega ao servidor,
+então funciona em qualquer subcaminho e sobrevive à migração para o domínio da
+UFF sem reescrita de rota — caminho limpo brigaria com o `base: './'` que mantém
+o bundle portável. A raiz sem hash cai na aba padrão sem sujar a URL com
+`#/atos`. Aba nova = uma linha em `ABAS_VALIDAS`.
+
+⚠️ **A CHAVE INCLUI A SEÇÃO, e a documentação já ficou para trás disso.** Depois
+que as abas foram agrupadas em `pessoal/` e `institucional/`, o hash de ODS
+passou a ser `#/institucional/ods` — mas `#ods` continuou escrito em 17 lugares <!-- hash-exemplo -->
+dos documentos de metodologia, e `#dossie`/`#planilha` sobreviveram aqui mesmo
+com as abas já renomeadas para `pessoal/siape` e `atos`. Nenhum deles abre nada.
+**Ao renomear ou mover uma aba, varra os `.md` atrás do hash antigo** — a trava
+`node tools/test_redesign_integrity.mjs` reprova hash documentado que não exista
+em `ABAS_VALIDAS`, mas ela só alcança o que estiver escrito na forma `#/…` ou
+que coincida com o último segmento de uma aba real.
+
+Na LEITURA a barra é opcional (`#atos` = `#/atos`) e a barra final é tolerada; <!-- hash-exemplo -->
+o defeito que exigia `#/` foi corrigido em 06/08/2026 — antes disso quem
+digitasse `#atos` recebia "Aba inválida" com o `#` colado no nome. <!-- hash-exemplo -->
+
+A trava dos hashes documentados vive em `tools/test_redesign_integrity.mjs`.
+Para escrever sobre um hash ERRADO de propósito — como os três exemplos acima —
+marque a linha com `<!-- hash-exemplo -->`; sem isso a própria trava impediria
+de documentar o defeito que ela previne.
 
 ## Meu SIAPE: o selo de Requisito do RSC não diz "elegível", e isso é a norma
 

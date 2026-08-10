@@ -75,7 +75,7 @@ que é a base para qualquer expansão de cobertura:
 | IN PROAES 2/2021 | Auxílio Emergencial Covid-19 | [PDF](http://www.noticias.uff.br/bs/2021/07/136-21.pdf) |
 | IN PROAES 17/2023 | Programa de Moradia Universitária | [PDF](https://boletimdeservico.uff.br/wp-content/uploads/sites/620/2023/09/181-23.pdf) |
 
-*(+ 9 outros atos de auxílio/acolhimento/inclusão digital — ver `#ods` → ODS 1 no portal)*
+*(+ 9 outros atos de auxílio/acolhimento/inclusão digital — ver `#/institucional/ods` → ODS 1 no portal)*
 
 ---
 
@@ -131,7 +131,7 @@ um ato do acervo:
 | Portaria 63.254/2019 | **Cria a Comissão UFF Acessível** e aprova normas iniciais | [PDF](http://www.noticias.uff.br/bs/2019/03/043-19.pdf) |
 | Portaria 67.183/2020 | Constitui a AFIDE (Ações Afirmativas, Diversidade e Equidade) | [PDF](http://www.noticias.uff.br/bs/2020/07/132-20.pdf) |
 | **Portaria 68.317/2022** | **Constitui a CPEG** — Comissão Permanente para Equidade de Gênero | [PDF](http://www.noticias.uff.br/bs/2022/03/44-22.pdf) |
-| Res. UFF 580/2017 | Estabelece as atribuições da AFiDE | *(ver `#ods` no portal)* |
+| Res. UFF 580/2017 | Estabelece as atribuições da AFiDE | *(ver `#/institucional/ods` no portal)* |
 
 > **Gap fechado (27/07/2026).** A primeira versão deste documento registrava
 > "não localizei ato fundador da CPEG". O ato **existe** — Portaria 68.317, de
@@ -159,7 +159,7 @@ um ato do acervo:
 
 | Ato | Ementa | Fonte |
 |---|---|---|
-| **Decisão CGIRC 1/2025** | **Aprovação do Plano de Enfrentamento ao Assédio e Discriminação** | *(ver `#ods` → ODS 5)* |
+| **Decisão CGIRC 1/2025** | **Aprovação do Plano de Enfrentamento ao Assédio e Discriminação** | *(ver `#/institucional/ods` → ODS 5)* |
 
 É a peça mais direta de todo o cruzamento: a recomendação pede uma política
 documentada de proteção contra discriminação, e o CGIRC aprovou exatamente
@@ -204,7 +204,7 @@ menciona como possível veículo foi aprovado depois:
 
 | Ato | Ementa | Fonte |
 |---|---|---|
-| **Res. CUV 528/2025** | **Plano Diretor de Logística Sustentável (PLS) 2025–2028** | *(ver `#ods` → ODS 12/13)* |
+| **Res. CUV 528/2025** | **Plano Diretor de Logística Sustentável (PLS) 2025–2028** | *(ver `#/institucional/ods` → ODS 12/13)* |
 
 **Não verificado neste cruzamento:** se o texto do PLS efetivamente cobre
 eficiência energética de edificações. Se cobrir, é resposta direta a 3 das
@@ -230,7 +230,7 @@ mesmo tempo, por isso está classificada nos dois. As outras 2 recomendações
 
 | Ato | Ementa | Fonte |
 |---|---|---|
-| Portaria 60.274/2017 | Delega competências ao Diretor da Agência de Inovação (AGIR) | *(ver `#ods` → ODS 9)* |
+| Portaria 60.274/2017 | Delega competências ao Diretor da Agência de Inovação (AGIR) | *(ver `#/institucional/ods` → ODS 9)* |
 
 ---
 
@@ -244,10 +244,10 @@ completa de políticas de admissão do dossiê:
 
 | Ato | Ementa | Fonte |
 |---|---|---|
-| IN PROGRAD 58/2025 | Procedimentos das comissões de heteroidentificação, verificação de quilombola e de deficiência | *(ver `#ods`)* |
-| IN PROAES 38/2026 | Políticas afirmativas: auxílio para pessoas trans, indígenas, quilombolas, refugiadas | *(ver `#ods`)* |
+| IN PROGRAD 58/2025 | Procedimentos das comissões de heteroidentificação, verificação de quilombola e de deficiência | *(ver `#/institucional/ods`)* |
+| IN PROAES 38/2026 | Políticas afirmativas: auxílio para pessoas trans, indígenas, quilombolas, refugiadas | *(ver `#/institucional/ods`)* |
 | Portaria 63.254/2019 | Cria a Comissão UFF Acessível | [PDF](http://www.noticias.uff.br/bs/2019/03/043-19.pdf) |
-| IN SDC 16/2025 | Cartilha de acessibilidade atitudinal | *(ver `#ods`)* |
+| IN SDC 16/2025 | Cartilha de acessibilidade atitudinal | *(ver `#/institucional/ods`)* |
 
 ---
 
@@ -259,12 +259,12 @@ reformulada **depois** do corte de dados do relatório:
 
 | Ato | Ementa | Data | Fonte |
 |---|---|---|---|
-| **Res. CUV 528/2025** | **Plano Diretor de Logística Sustentável 2025–2028** | jul/2025 | *(ver `#ods`)* |
-| Decisão CGIRC 16/2025 | Plano de Gestão Socioambiental — Agenda Ambiental (PGS/A3P) | dez/2025 | *(ver `#ods`)* |
-| Portaria 68.787/2025 | Constitui a Comissão da Agenda Ambiental (A3P/UFF) | 2025 | *(ver `#ods`)* |
-| Portaria 68.583/2023 | Reestrutura a Comissão Permanente de Sustentabilidade | 2023 | *(ver `#ods`)* |
-| Portaria 60.767/2018 | Cria a Comissão Permanente de Sustentabilidade (origem) | 2018 | *(ver `#ods`)* |
-| Portaria 39.847/2009 | Comissão do Programa de Coleta Seletiva Solidária | 2009 | *(ver `#ods`)* |
+| **Res. CUV 528/2025** | **Plano Diretor de Logística Sustentável 2025–2028** | jul/2025 | *(ver `#/institucional/ods`)* |
+| Decisão CGIRC 16/2025 | Plano de Gestão Socioambiental — Agenda Ambiental (PGS/A3P) | dez/2025 | *(ver `#/institucional/ods`)* |
+| Portaria 68.787/2025 | Constitui a Comissão da Agenda Ambiental (A3P/UFF) | 2025 | *(ver `#/institucional/ods`)* |
+| Portaria 68.583/2023 | Reestrutura a Comissão Permanente de Sustentabilidade | 2023 | *(ver `#/institucional/ods`)* |
+| Portaria 60.767/2018 | Cria a Comissão Permanente de Sustentabilidade (origem) | 2018 | *(ver `#/institucional/ods`)* |
+| Portaria 39.847/2009 | Comissão do Programa de Coleta Seletiva Solidária | 2009 | *(ver `#/institucional/ods`)* |
 
 O relatório de 2024 já registrava melhora neste ODS (36,9 → 48,7 pontos) sem
 conhecer o PLS 2025 nem o PGS/A3P — **a próxima submissão tem material novo
@@ -348,7 +348,7 @@ intersetorial"**, a métrica central deste ODS.
    fecha 3 recomendações do ODS 7 de uma vez.
 3. **Confirmar a existência (ou não) de ato fundador da CPEG** — gap real
    identificado, não coberto por nenhum ato no acervo atual.
-4. **Considerar um permalink por ato no próprio portal** (`#planilha?id=uid`
+4. **Considerar um permalink por ato no próprio portal** (`#/atos?id=uid`
    ou rota equivalente). Hoje a evidência mais estável que se pode oferecer
    é o PDF do Boletim; um link do próprio portal, com o contexto completo
    do ato (ementa, relações, processo SEI), seria uma peça de evidência

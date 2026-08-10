@@ -353,4 +353,60 @@ for (const classe of ['text-slate-600', 'text-\\[\\#003366\\]']) {
     `The low-light skin must cover ${classe.replace(/\\/g, '')}, used throughout the panels.`);
 }
 
+// ── Hash documentado tem que existir ────────────────────────────────────────
+// Quando as abas foram agrupadas em `pessoal/` e `institucional/`, a chave de
+// ODS virou `institucional/ods` — mas `#ods` continuou escrito em 17 lugares
+// dos documentos de metodologia, e `#dossie`/`#planilha` sobreviveram no
+// CLAUDE.md com as abas já renomeadas para `pessoal/siape` e `atos`. Nenhum
+// abria nada, e ninguém percebeu porque documento não é compilado.
+//
+// A trava vale para o hash escrito na forma canônica (`#/algo`) e para o
+// atalho que coincide com o último segmento de uma aba real (`#ods`), que é
+// exatamente a forma que envelhece quando uma aba muda de seção.
+{
+  const app = await read('src/App.tsx');
+  const bloco = app.match(/const ABAS_VALIDAS = \[(.*?)\]/s);
+  assert.ok(bloco, 'ABAS_VALIDAS must be readable to validate documented hashes.');
+  const validas = new Set([...bloco[1].matchAll(/'([^']*)'/g)].map(m => m[1]).filter(Boolean));
+  const ultimoSegmento = new Map();
+  for (const v of validas) ultimoSegmento.set(v.split('/').pop(), v);
+
+  const { readdir } = await import('node:fs/promises');
+  const docs = ['CLAUDE.md',
+    ...(await readdir(new URL('../docs/', import.meta.url)))
+      .filter(f => f.endsWith('.md')).map(f => `docs/${f}`)];
+
+  // Escape explícito: a linha que documenta um hash ERRADO de propósito (para
+  // dizer que ele não funciona) marca-se com `<!-- hash-exemplo -->`. Sem isso
+  // a trava impediria de escrever sobre o próprio defeito que ela previne.
+  const problemas = [];
+  for (const arq of docs) {
+    const txt = await read(arq);
+    const linhas = txt.split('\n');
+    for (const m of txt.matchAll(/`#(\/?[a-z][a-z0-9/-]*)`/g)) {
+      // acha a linha desta ocorrência para checar o marcador de exemplo
+      let acc = 0, linha = '';
+      for (const l of linhas) {
+        if (m.index >= acc && m.index <= acc + l.length) { linha = l; break; }
+        acc += l.length + 1;
+      }
+      if (linha.includes('hash-exemplo')) continue;
+      const bruto = m[1];
+      const alvo = bruto.replace(/^\//, '').replace(/\/$/, '');
+      if (validas.has(alvo)) {
+        if (!bruto.startsWith('/')) problemas.push(`${arq}: \`#${bruto}\` deve ser \`#/${alvo}\``);
+        continue;
+      }
+      if (bruto.startsWith('/')) {
+        problemas.push(`${arq}: \`#${bruto}\` não existe em ABAS_VALIDAS`);
+      } else if (ultimoSegmento.has(alvo)) {
+        problemas.push(`${arq}: \`#${bruto}\` é chave antiga — hoje é \`#/${ultimoSegmento.get(alvo)}\``);
+      }
+      // hash sem barra que não casa aba nenhuma (#fff, #root) não é rota: ignora
+    }
+  }
+  assert.deepEqual(problemas, [],
+    `Documented tab hashes must exist in ABAS_VALIDAS:\n  ${problemas.join('\n  ')}`);
+}
+
 console.log('Redesign structure is safe for TypeScript compilation.');

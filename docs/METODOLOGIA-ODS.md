@@ -3,7 +3,7 @@
 > **Rascunho para revisão** (jul/2026). Define o critério para classificar os atos
 > normativos da UFF nas 17 ODS de forma **auditável e defensável diante de órgão de
 > controle**. Não é posição institucional da UFF. É a metodologia por trás da aba
-> **`#ods`** do portal e da tabela `ato_ods`; a carga vive em `../../backfill-ods/`.
+> **`#/institucional/ods`** do portal e da tabela `ato_ods`; a carga vive em `../../backfill-ods/`.
 
 ## 1. Enquadramento: dossiê de evidência, não 17 baldes
 
@@ -140,7 +140,7 @@ para cada candidato: ler o CORPO (texto_original), do marcador
       (a justificativa cita a meta THE/IPEA e o trecho)
   │  (D) CURADORIA humana no borderline e no ODS 4
   ▼
-  (E) grava em tabela-fato `ato_ods`  →  API lê o índice  →  aba #ods
+  (E) grava em tabela-fato `ato_ods`  →  API lê o índice  →  aba #/institucional/ods
 ```
 
 ### Por que ler o corpo, e não a ementa
@@ -470,7 +470,7 @@ geral; CEUA protegida da colisão com "Comissão de Ética". Resultado:
   nunca é sobrescrita). Runbook: `../../backfill-ods/LEIA-ME.md`.
 
 Falta para a aba: rota `/api/ods` (cacheada, padrão dos painéis diário-estáticos) +
-frontend `#ods` + curadoria dos 32+759.
+frontend `#/institucional/ods` + curadoria dos 32+759.
 
 Dossiê visual: https://claude.ai/code/artifact/59b5cb32-f337-412d-821e-5c21bc78c38a
 

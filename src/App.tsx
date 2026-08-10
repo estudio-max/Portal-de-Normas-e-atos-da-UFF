@@ -37,11 +37,17 @@ const PanelFallback = () => (
   </div>
 );
 
+// A forma canônica é `#/aba` — é o que `window.location.hash = ...` grava, e o
+// que sai quando alguém copia a URL da barra. Mas a BARRA É OPCIONAL na leitura:
+// quem digita `#atos` à mão está pedindo a mesma aba, e até 06/08/2026 recebia
+// uma tela de "Aba inválida" com o `#` colado no nome ("#atos"), porque o
+// `replace` exigia `#/`. Numa aba cujo propósito declarado é "colar o hash abre
+// a aba", recusar a forma mais natural de digitar é o defeito mais caro possível.
+// A barra final também é tolerada (`#/atos/`).
 function abaDoHash(): string {
   const raw = window.location.hash;
   if (!raw || raw === '#') return '';
-  const path = raw.replace(/^#\//, '').replace(/\/$/, '');
-  return path;
+  return raw.replace(/^#\/?/, '').replace(/\/$/, '');
 }
 
 const ABAS_VALIDAS = [
