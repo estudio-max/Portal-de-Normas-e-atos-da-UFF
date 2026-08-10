@@ -8,8 +8,48 @@
 
 const params = new URLSearchParams(location.search);
 
+// ⚠️ `?api=` SÓ VALE EM DESENVOLVIMENTO, e a restrição é de segurança, não de
+// arrumação. Enquanto ele aceitava qualquer valor, bastava um link
+//
+//     https://<portal>/?api=https://atacante.example
+//
+// para que o portal inteiro passasse a ler daquela origem — exibindo atos
+// forjados com a identidade visual da UFF. Pior: a aba Meu SIAPE ENVIA a
+// matrícula e o nome digitados para `API_BASE`, então o mesmo link vazaria o
+// dado pessoal de quem clicasse. Não é hipótese remota: é a aba de maior uso, e
+// o público dela é o servidor procurando o próprio registro.
+//
+// A regra: o override só é aceito quando a PÁGINA está em localhost E o ALVO é
+// localhost. Isso preserva `?api=http://127.0.0.1:8900` (mock do dev) e mata o
+// vetor em produção, onde a API é sempre a do próprio domínio.
+const LOCAIS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+function apiDaUrl(): string | null {
+  const bruto = params.get('api');
+  if (!bruto) return null;
+  if (!LOCAIS.has(location.hostname)) {
+    console.warn('[config] ?api= ignorado: o override de origem só vale em localhost.');
+    return null;
+  }
+  let u: URL;
+  try {
+    u = new URL(bruto, location.origin);
+  } catch {
+    console.warn('[config] ?api= ignorado: valor não é uma URL válida.');
+    return null;
+  }
+  if (!LOCAIS.has(u.hostname)) {
+    console.warn('[config] ?api= ignorado: só é permitido apontar para localhost.');
+    return null;
+  }
+  // devolve sem barra final para não gerar `//` ao concatenar as rotas
+  return (u.origin + u.pathname).replace(/\/$/, '');
+}
+
 export const API_BASE: string =
-  params.get('api') ||
+  apiDaUrl() ||
+  // Configuração legítima de implantação: vem do HTML servido, não da URL, então
+  // não é forjável por link.
   (window as any).__API_BASE__ ||
   '/api';
 

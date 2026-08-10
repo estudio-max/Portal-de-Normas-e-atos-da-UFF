@@ -409,4 +409,18 @@ for (const classe of ['text-slate-600', 'text-\\[\\#003366\\]']) {
     `Documented tab hashes must exist in ABAS_VALIDAS:\n  ${problemas.join('\n  ')}`);
 }
 
+// ── O override de origem da API não pode ser forjável por link ──────────────
+// `?api=` valia para qualquer valor, e a aba Meu SIAPE ENVIA matrícula e nome
+// para `API_BASE`: um link `?api=https://atacante.example` exibiria atos
+// forjados com a cara do portal E vazaria o dado pessoal de quem clicasse.
+{
+  const config = await read('src/config.ts');
+  assert.doesNotMatch(config, /API_BASE[^=]*=\s*\n?\s*params\.get\('api'\)/,
+    'API_BASE must not take ?api= unchecked — it is forgeable by link.');
+  assert.match(config, /LOCAIS/,
+    'The ?api= override must be restricted to localhost origins.');
+  assert.match(config, /location\.hostname/,
+    'The ?api= override must check the page origin, not only the target.');
+}
+
 console.log('Redesign structure is safe for TypeScript compilation.');
