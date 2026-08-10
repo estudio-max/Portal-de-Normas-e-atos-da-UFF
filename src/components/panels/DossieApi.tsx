@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch, ArrowLeft } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 import { requisitosDoAto, requisitosDaFuncao, REQUISITOS, type Requisito } from './rscRequisitos';
@@ -47,6 +47,43 @@ const rotuloAto = (a: ds.DossieAto) =>
 
 const esc = (s: string) =>
   (s || '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
+
+// Estilo do documento exportável. Escopado em `.doc-rsc` porque o mesmo CSS é
+// usado em DOIS lugares: na visualização dentro da própria página (onde regras
+// soltas como `body{}` ou `table{}` vazariam para o portal inteiro) e na janela
+// de impressão. Fonte única — o papel e a tela não podem divergir.
+const CSS_DOC = `
+.doc-rsc{font:12px/1.45 Arial,Helvetica,sans-serif;color:#111;background:#fff;padding:22px}
+.doc-rsc h1{font-size:17px;margin:0 0 2px;color:#111}
+.doc-rsc h2{font-size:13px;margin:18px 0 6px;color:#003366}
+.doc-rsc .sub{color:#555;font-size:11px;margin:0 0 4px}
+.doc-rsc .aviso{border:1px solid #c4c9d2;background:#f7f8fa;padding:8px;font-size:10px;color:#444;margin:10px 0 4px}
+.doc-rsc .alerta{border:2px solid #b91c1c;background:#fef2f2;padding:9px;font-size:11px;color:#7f1d1d;margin:10px 0 4px}
+.doc-rsc .rsc{white-space:nowrap;font-weight:bold;color:#3730a3;font-size:10px;text-align:center}
+.doc-rsc .rsclegenda{border:1px solid #a5b4fc;background:#eef2ff;padding:8px;font-size:10px;color:#312e81;margin:10px 0 4px}
+.doc-rsc table{border-collapse:collapse;width:100%}
+.doc-rsc th,.doc-rsc td{border:1px solid #c4c9d2;padding:4px 6px;text-align:left;vertical-align:top}
+.doc-rsc th{background:#003366;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.doc-rsc tr:nth-child(even) td{background:#f3f5f8}
+/* Rolagem lateral das tabelas SÓ na tela. Medido num iPhone (375px): as
+   tabelas pedem ~403px e ficariam cortadas na coluna RSC, justo a que este
+   trabalho acrescentou. Na impressão o wrapper não pode ter overflow — a
+   folha é larga e o navegador quebra as linhas sozinho; overflow ali cortaria
+   conteúdo do papel em vez de rolar. */
+@media screen{.doc-rsc .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}}
+@media print{@page{margin:12mm}.doc-rsc{padding:0}.doc-rsc .tw{overflow:visible}}
+`;
+
+// iOS não oferece "salvar em PDF" no diálogo de impressão: o AirPrint lista
+// impressoras, e o PDF só sai por um gesto de pinch na miniatura que ninguém
+// descobre sozinho. O caminho que funciona é Compartilhar → Opções → PDF, e ele
+// age sobre a PÁGINA ATUAL — daí o documento ser renderizado aqui dentro, e não
+// num pop-up (que o iOS ainda bloqueia por padrão).
+const ehIOS = () =>
+  typeof navigator !== 'undefined' &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    // iPadOS 13+ se apresenta como Mac; o discriminador é o toque.
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 
 // Selo de Requisito do RSC. Índigo de propósito: o âmbar já é "ato não vigente"
 // e o vermelho é "nome divergente" — três avisos na mesma cor viram um só.
@@ -115,6 +152,16 @@ export default function DossieApi() {
   const [falha, setFalha] = useState<'senha' | 'falha' | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [buscou, setBuscou] = useState(false);
+  const [doc, setDoc] = useState<string | null>(null);   // documento em exibição
+
+  // Marca o body enquanto o documento está aberto. É essa classe que o
+  // `@media print` usa para tirar o resto do portal do papel — feito por JS, e
+  // não com `:has(.doc-tela)`, para não fazer o que sai impresso depender de um
+  // seletor que o Safari só entende a partir da 15.4.
+  useEffect(() => {
+    document.body.classList.toggle('com-documento', doc !== null);
+    return () => document.body.classList.remove('com-documento');
+  }, [doc]);
 
   const apiMode = ds.modo() === 'api';
 
@@ -151,8 +198,11 @@ export default function DossieApi() {
     }
   };
 
-  const imprimir = () => {
-    if (!r) return;
+  // Monta o CORPO do documento (sem <html>/<style>): quem o exibe decide onde —
+  // na própria página, para o iPhone conseguir "Compartilhar → Opções → PDF", ou
+  // numa janela de impressão no desktop.
+  const corpoDocumento = (): string => {
+    if (!r) return '';
     const ident = `${esc(r.nomes.join(' · ') || 'nome não identificado')} (SIAPE ${esc(r.siape)})`;
     // O requisito vai numa COLUNA própria, não colado no rótulo do ato: quem
     // instrui o processo organiza a documentação "na ordem dos requisitos"
@@ -177,16 +227,6 @@ export default function DossieApi() {
     // `divergente` vem do escopo do componente: quem lê o papel não viu a tela
     // nem sabe o que foi digitado, então o PDF tem que dizer isso na cara.
     const html =
-      `<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Meu SIAPE — atos do BS — SIAPE ${esc(r.siape)}</title>` +
-      `<style>body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#111;margin:22px}` +
-      `h1{font-size:17px;margin:0 0 2px}h2{font-size:13px;margin:18px 0 6px;color:#003366}` +
-      `.sub{color:#555;font-size:11px;margin:0 0 4px}.aviso{border:1px solid #c4c9d2;background:#f7f8fa;padding:8px;font-size:10px;color:#444;margin:10px 0 4px}` +
-      `.alerta{border:2px solid #b91c1c;background:#fef2f2;padding:9px;font-size:11px;color:#7f1d1d;margin:10px 0 4px}` +
-      `.rsc{white-space:nowrap;font-weight:bold;color:#3730a3;font-size:10px;text-align:center}` +
-      `.rsclegenda{border:1px solid #a5b4fc;background:#eef2ff;padding:8px;font-size:10px;color:#312e81;margin:10px 0 4px}` +
-      `table{border-collapse:collapse;width:100%}th,td{border:1px solid #c4c9d2;padding:4px 6px;text-align:left;vertical-align:top}` +
-      `th{background:#003366;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}` +
-      `tr:nth-child(even) td{background:#f3f5f8}@media print{@page{margin:12mm}}</style></head><body>` +
       `<h1>Meu SIAPE — atos do Boletim de Serviço da UFF</h1>` +
       `<p class="sub">${ident || 'SIAPE ' + esc(r.siape)} &middot; gerado em ${fmtData(new Date().toISOString().slice(0, 10))}</p>` +
       (divergente
@@ -216,12 +256,12 @@ export default function DossieApi() {
       `comprovam-se por certificado, publicação ou declaração. Coluna vazia não significa ausência de direito.</div>` +
       (linhasF
         ? `<h2>Designações e dispensas de função (${r.funcoes.length})</h2>` +
-          `<table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th><th>RSC</th></tr></thead>` +
-          `<tbody>${linhasF}</tbody></table>`
+          `<div class="tw"><table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th><th>RSC</th></tr></thead>` +
+          `<tbody>${linhasF}</tbody></table></div>`
         : '') +
       `<h2>Atos que citam o SIAPE ${esc(r.siape)} (${r.atos.length})</h2>` +
-      `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
-      `<tbody>${linhasA}</tbody></table>` +
+      `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
+      `<tbody>${linhasA}</tbody></table></div>` +
       // Bloco do nome: sai com a MESMA ressalva que a tela mostra. Busca por
       // nome alcança o que a matrícula não acha, e em troca pode trazer
       // homônimo — quem anexa ao processo precisa ler isso no papel também.
@@ -231,8 +271,8 @@ export default function DossieApi() {
           `o nome <strong>“${esc(r.porNome?.termo ?? '')}”</strong>, que não corresponde a ` +
           `<strong>${esc(r.nomes.join(' · ') || 'quem consta na matrícula')}</strong>. Se a intenção era buscar o titular, refaça ` +
           `a consulta com o nome dele; se era buscar outra pessoa, use uma consulta separada.</div>` +
-          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
-          `<tbody>${linhasN}</tbody></table>`
+          `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
+          `<tbody>${linhasN}</tbody></table></div>`
         : '') +
       (linhasN && !divergente
         ? `<h2>Outros atos que citam “${esc(r.porNome?.termo ?? '')}” no texto (${r.porNome?.total ?? 0})</h2>` +
@@ -241,14 +281,30 @@ export default function DossieApi() {
           `cargo de direção, os atos que ela <strong>assinou</strong> aparecem nesta lista, e assinar não é participar; ` +
           `e a busca por nome pode trazer <strong>pessoas de nome parecido</strong>. Confira ato por ato antes de usar. ` +
           `Os atos já listados acima não se repetem aqui.</div>` +
-          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
-          `<tbody>${linhasN}</tbody></table>`
+          `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
+          `<tbody>${linhasN}</tbody></table></div>`
         : '') +
-      `<script>window.onload=function(){window.print()}</script></body></html>`;
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); }
-    else alert('Permita pop-ups para gerar o PDF, ou use Ctrl+P nesta página.');
+      '';
+    return html;
   };
+
+  // O documento passa a ser exibido NA PRÓPRIA PÁGINA. Antes ele abria num
+  // `window.open('', '_blank')` + `document.write`, e no iPhone isso não
+  // entregava PDF nenhum: o pop-up costuma ser bloqueado e, mesmo aberto, o
+  // `window.print()` do iOS abre o AirPrint — que só lista impressoras. O
+  // caminho que de fato produz PDF no iOS é o menu Compartilhar → Opções → PDF,
+  // e ele age sobre a página atual, não sobre uma aba `about:blank`.
+  const abrirDocumento = () => {
+    if (!r) return;
+    setDoc(corpoDocumento());
+    // sobe ao topo para o documento começar visível
+    requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+  };
+
+  // Impressão do navegador. No desktop resolve tudo ("Salvar como PDF" está no
+  // próprio diálogo); no iPhone fica como caminho secundário, com a instrução do
+  // Compartilhar em destaque na barra.
+  const imprimirDocumento = () => window.print();
 
   const TabelaAtos = ({ atos }: { atos: ds.DossieAto[] }) => (
     <>
@@ -334,6 +390,49 @@ export default function DossieApi() {
     );
   }
 
+  // Documento aberto: ocupa a página inteira. Não é modal com `showModal()`
+  // como o de ajuda — aqui o conteúdo PRECISA ser a página para o iOS oferecer
+  // "Compartilhar → Opções → PDF", e o `<dialog>` no top layer atrapalharia a
+  // impressão. A classe `.doc-tela` é o que o `@media print` usa para esconder
+  // o resto do portal.
+  if (doc !== null) {
+    return (
+      <div className="doc-tela fixed inset-0 z-50 overflow-y-auto bg-white">
+        <div className="doc-barra sticky top-0 z-10 flex items-center gap-2 flex-wrap border-b border-slate-200 bg-slate-50 px-3 py-2">
+          <button
+            onClick={() => setDoc(null)}
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+          >
+            <ArrowLeft className="w-4 h-4" /> Voltar
+          </button>
+          <button
+            onClick={imprimirDocumento}
+            className="flex items-center gap-1.5 rounded-md bg-[#003366] px-3 py-2 text-xs font-bold text-white hover:bg-[#00264d]"
+          >
+            <Printer className="w-4 h-4" /> Imprimir / Salvar PDF
+          </button>
+          {ehIOS() ? (
+            // No iPhone o botão acima abre o AirPrint, que só lista impressoras.
+            // A instrução do Compartilhar é o caminho que realmente gera o PDF,
+            // então ela fica visível — não escondida numa ajuda.
+            <p className="basis-full text-[11px] leading-relaxed text-slate-700 sm:basis-auto sm:flex-1">
+              <strong>No iPhone/iPad:</strong> toque em <strong>Compartilhar</strong>{' '}
+              <span aria-hidden="true">(⬆️)</span> na barra do Safari → <strong>Opções</strong>, no
+              topo → escolha <strong>PDF</strong> → <strong>Salvar em Arquivos</strong>.
+            </p>
+          ) : (
+            <p className="basis-full text-[11px] leading-relaxed text-slate-600 sm:basis-auto sm:flex-1">
+              No diálogo de impressão, escolha <strong>“Salvar como PDF”</strong> em destino.
+            </p>
+          )}
+        </div>
+        <style>{CSS_DOC}</style>
+        {/* Todo campo vindo da API passa por `esc()` na montagem do documento. */}
+        <div className="doc-rsc" dangerouslySetInnerHTML={{ __html: doc }} />
+      </div>
+    );
+  }
+
   return (
     <div id="painel-dossie" className="space-y-3">
       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
@@ -351,7 +450,7 @@ export default function DossieApi() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={imprimir}
+              onClick={abrirDocumento}
               // O bloco por NOME conta para habilitar: há matrícula que não
               // acha nada e cujo nome acha dezenas. Sem isto, quem mais precisa
               // do PDF é justamente quem não consegue gerá-lo.

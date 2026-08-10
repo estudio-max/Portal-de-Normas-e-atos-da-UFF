@@ -36,6 +36,16 @@
   --chart-grid: #E2E8F0;
   --chart-axis: #64748B;
   --chart-hover: rgba(27, 107, 58, .08);
+
+  /* Item de navegação em destaque (Meu SIAPE). Token, e não classe do Tailwind,
+     pela mesma razão dos gráficos: o modo fotofobia converte por lista de
+     classes conhecidas, e o verde institucional `#006400` não está nessa lista
+     — usá-lo direto daria verde-escuro sobre fundo escuro. Com token, cada tema
+     declara o seu valor e não há conversão para dar errado. */
+  --destaque-fundo: #EAF4EA;
+  --destaque-borda: #B9D8BC;
+  --destaque-texto: #14501C;
+  --destaque-fundo-hover: #DFEEDF;
 }
 html.fotofobia {
   --chart-mark: #4FA46E;
@@ -45,6 +55,50 @@ html.fotofobia {
   --chart-grid: #2C3A31;
   --chart-axis: #9BB0A2;
   --chart-hover: rgba(79, 164, 110, .12);
+
+  --destaque-fundo: #1B2E20;
+  --destaque-borda: #3E6B48;
+  --destaque-texto: #8FD3A0;
+  --destaque-fundo-hover: #22392a;
+}
+
+/* O destaque é pintado por REGRA PRÓPRIA, fora do alcance do conversor do
+   fotofobia: `[class*="border-"]` sobrescreveria a borda com a cor neutra e
+   apagaria justamente o que distingue o item. */
+.nav-destaque {
+  background-color: var(--destaque-fundo);
+  /* sombra interna, não `border`: borda real consumiria 1px do box e deixaria
+     este item 2px mais baixo que os vizinhos da lista. */
+  box-shadow: inset 0 0 0 1px var(--destaque-borda);
+  color: var(--destaque-texto);
+}
+.nav-destaque:hover { background-color: var(--destaque-fundo-hover); }
+
+/* Impressão do documento do Meu SIAPE.
+   O documento é renderizado DENTRO da página (e não num pop-up) para que o
+   iPhone consiga "Compartilhar → Opções → PDF", que age sobre a página atual.
+   A consequência é que, ao imprimir, o resto do portal precisa sair do papel.
+   Usa-se `visibility` em vez de `display:none` de propósito: esconder por
+   display no ancestral removeria o próprio documento junto, já que ele é
+   descendente do mesmo `#root`. */
+@media print {
+  body.com-documento * { visibility: hidden; }
+  body.com-documento .doc-tela,
+  body.com-documento .doc-tela * { visibility: visible; }
+  body.com-documento .doc-barra { display: none !important; }
+  body.com-documento .doc-tela {
+    position: absolute !important;
+    inset: 0 auto auto 0;
+    width: 100%;
+    overflow: visible !important;
+  }
+  /* O documento é preto sobre branco mesmo com o portal em modo fotofobia:
+     quem imprime quer o papel legível, não a skin de baixo brilho. */
+  html.fotofobia .doc-rsc, html.fotofobia .doc-rsc * {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  html.fotofobia .doc-rsc th { background: #003366 !important; color: #fff !important; }
 }
 
 /* Modo escuro de baixo brilho: a classe fica na raiz para alcançar os painéis

@@ -41,7 +41,11 @@ const NAV_SECTIONS = [
   {
     title: 'Pessoal',
     items: [
-      { id: 'pessoal/siape', label: 'Meu SIAPE', icon: <IdCard size={18} /> },
+      // `destaque` só existe aqui, e de propósito: Meu SIAPE é a aba de maior
+      // uso previsto (é ela que o servidor abre para instruir RSC), e é a única
+      // em que a pessoa procura um dado SEU. Destacar duas já dissolveria o
+      // destaque. Ver o bloco `itemClasse` para o tratamento visual.
+      { id: 'pessoal/siape', label: 'Meu SIAPE', icon: <IdCard size={18} />, destaque: true },
       { id: 'pessoal/chefias', label: 'Chefias', icon: <Users size={18} /> },
       { id: 'pessoal/mandatos', label: 'Mandatos', icon: <CalendarClock size={18} /> },
       { id: 'pessoal/prazos', label: 'Prazos', icon: <Timer size={18} /> },
@@ -79,6 +83,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
     return activePath.startsWith(id) && id !== '';
   };
 
+  // Classe do item de navegação. O item em `destaque` continua sendo um item da
+  // lista — não vira botão de ação: ele ganha peso (fundo, borda e ícone na cor
+  // institucional) sem sair da hierarquia da seção, senão a coluna passa a ter
+  // dois níveis de "ativo" e o estado real de navegação fica ambíguo.
+  //
+  // As cores saem de `--destaque-*`, definidas nos DOIS temas no index.css. Não
+  // use `text-[#006400]` aqui: esse hex não está na lista de conversão do modo
+  // fotofobia, então ficaria verde-escuro sobre fundo escuro.
+  const itemClasse = (item: { id: string; destaque?: boolean }) => {
+    const ativo = isActive(item.id);
+    if (ativo) return 'bg-[#F0F7F0] text-[#1A3A1A] font-medium';
+    if (item.destaque) return 'nav-destaque font-semibold';
+    return 'text-[#4A5568] hover:bg-gray-50';
+  };
+
   if (collapsed) {
     return (
       <aside className="w-16 h-screen bg-white border-r border-[#E2E8F0] flex flex-col items-center py-4 fixed left-0 top-0 z-40">
@@ -93,8 +112,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
               className={cn(
                 'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
                 isActive(item.id)
-                  ? 'bg-[#F0F7F0] text-[#006400]'
-                  : 'text-[#A0AEC0] hover:bg-gray-50 hover:text-[#4A5568]'
+                  ? 'bg-[#F0F7F0] text-[#1A3A1A]'
+                  : (item as { destaque?: boolean }).destaque
+                    ? 'nav-destaque'
+                    : 'text-[#A0AEC0] hover:bg-gray-50 hover:text-[#4A5568]'
               )}
               title={item.label}
             >
@@ -133,9 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
                   onClick={() => onNavigate(item.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors text-left',
-                    isActive(item.id)
-                      ? 'bg-[#F0F7F0] text-[#006400] font-medium'
-                      : 'text-[#4A5568] hover:bg-gray-50'
+                    itemClasse(item)
                   )}
                 >
                   {item.icon}

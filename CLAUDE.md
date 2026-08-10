@@ -474,6 +474,53 @@ erro nenhum no console — medido no navegador, davam `oklch(0.398)` sobre fundo
 7,2–14,0 nos dois temas. Ao criar selo novo, confira a lista em `src/index.css`
 antes de escolher a classe.
 
+## O documento do Meu SIAPE é renderizado NA PÁGINA, não num pop-up
+
+Foi `window.open('', '_blank')` + `document.write` + `window.print()` até
+06/08/2026, e **no iPhone isso não entregava PDF nenhum**: o pop-up costuma ser
+bloqueado e, mesmo aberto, o `window.print()` do iOS abre o AirPrint, que **só
+lista impressoras** — o PDF só sai por um pinch na miniatura de preview, gesto
+que ninguém descobre. O caminho que de fato funciona no iOS é
+**Compartilhar → Opções → PDF**, e ele age sobre a PÁGINA ATUAL, nunca sobre uma
+aba `about:blank`.
+
+Hoje o botão abre o documento em `.doc-tela` (overlay na própria aba) com barra
+de ações; no iOS a instrução do Compartilhar aparece escrita na barra, porque o
+botão "Imprimir" ali leva ao AirPrint e não ao PDF. Consequências de projeto:
+
+- **O CSS do documento é escopado em `.doc-rsc`** (`CSS_DOC` no `DossieApi.tsx`).
+  Regra solta como `body{}` ou `table{}` vazaria para o portal inteiro, porque
+  agora o documento divide a página com ele.
+- **`@media print` tira o resto do portal do papel** via `body.com-documento`,
+  classe posta por `useEffect`. Usa `visibility`, não `display:none`: o
+  documento é descendente do mesmo `#root`, então esconder por display no
+  ancestral levaria o documento junto. A classe é posta por JS de propósito —
+  `:has(.doc-tela)` faria o que sai impresso depender de um seletor que o Safari
+  só entende a partir da 15.4.
+- **As tabelas têm wrapper `.tw` com `overflow-x:auto` SÓ na tela.** Medido num
+  iPhone (375px): pedem ~403px e a coluna RSC ficava cortada. Na impressão o
+  wrapper volta a `overflow:visible` — a folha é larga e o navegador quebra as
+  linhas sozinho; overflow ali cortaria conteúdo do papel em vez de rolar.
+- O documento imprime **preto no branco mesmo com o portal em fotofobia**: quem
+  imprime quer o papel legível, não a skin de baixo brilho.
+
+## O item em destaque da navegação sai de token, não de classe
+
+`Meu SIAPE` é o único item com `destaque: true` no `Sidebar.tsx` — é a aba de
+maior uso previsto e a única em que a pessoa procura um dado SEU; destacar duas
+dissolveria o destaque. O tratamento visual vem da classe `.nav-destaque`, cujas
+cores são custom properties (`--destaque-*`) declaradas nos DOIS temas.
+
+**Não use `text-[#006400]` para isso.** O verde institucional **não está** na
+lista de conversão do modo fotofobia (o `index.css` mapeia `text-slate-*`,
+`text-[#4A5568]`, `text-indigo-700`… mas não ele), então ficaria verde-escuro
+sobre fundo escuro, sem erro nenhum no console. Pela mesma razão o destaque é
+pintado por regra própria e não com `border-*`: o conversor tem
+`[class*="border-"]` genérico e apagaria justamente a borda que distingue o
+item. Medido depois da troca: contraste 8,49 no claro e 8,22 no escuro, contra
+7,53/10,17 dos vizinhos — destacado e legível nos dois. A sombra é `box-shadow
+inset`, não `border`, para o item não ficar 2px mais alto que os da mesma lista.
+
 ## Ajuda contextual: o mapa é total sobre as abas
 
 O `?` do cabeçalho abre a explicação da **aba aberta**: o que é, como usar, o que
