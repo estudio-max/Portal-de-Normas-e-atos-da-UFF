@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { requisitosDoAto, requisitosDaFuncao, REQUISITOS, type Requisito } from './rscRequisitos';
 
 // Aba "Meu SIAPE": digite a matrícula, receba os atos do Boletim que a citam,
 // com a referência do BS — para instruir processo.
@@ -11,11 +12,16 @@ import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 // procurando os seus registros. Os atos são os mesmos já públicos no BS; a
 // consulta é gerada na hora e nada é gravado.
 //
-// Por que esta aba existe: o Decreto 13.048/2026 (RSC do PCCTAE) pontua, no
-// Anexo I, participação em comissões, comitês, grupos de trabalho e núcleos; no
-// IV, designação para responsabilidade técnico-administrativa; no V, exercício
-// de CD/FG. Para pleitear, o servidor precisa achar os atos e dizer em que
-// boletim saíram. Achar isso lendo 25 anos de PDF é inviável.
+// Por que esta aba existe: o RSC-PCCTAE — Decreto 13.048/2026, regulamentado na
+// UFF pela IN GAR/RET/UFF nº 129, de 24/07/2026 — pontua, no Requisito I,
+// participação em comissões, comitês, grupos de trabalho e núcleos; no IV,
+// designação para responsabilidade técnico-administrativa; no V, exercício de
+// CD/FG. Para pleitear, o servidor precisa achar os atos e dizer em que boletim
+// saíram. Achar isso lendo 25 anos de PDF é inviável. E o art. 19, parágrafo
+// único, I da IN é explícito ao aceitar "portarias, resoluções ou atos de
+// designação ou nomeação" como prova — que é o que esta aba entrega.
+// Os selos por requisito vivem em `rscRequisitos.ts`; leia o cabeçalho de lá
+// antes de mexer, em especial sobre por que NÃO se diz "elegível".
 //
 // O que a aba afirma e o que NÃO afirma: ela afirma que EXISTE um ato publicado
 // que cita esta matrícula, e diz onde ele está. Só isso. Ela NÃO afirma que a
@@ -41,6 +47,25 @@ const rotuloAto = (a: ds.DossieAto) =>
 
 const esc = (s: string) =>
   (s || '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
+
+// Selo de Requisito do RSC. Índigo de propósito: o âmbar já é "ato não vigente"
+// e o vermelho é "nome divergente" — três avisos na mesma cor viram um só.
+// O `title` carrega o texto do requisito porque o selo é curto por necessidade
+// (cabe na tabela) e sozinho não explica nada.
+const SeloRSC = ({ reqs }: { reqs: Requisito[] }) =>
+  reqs.length ? (
+    <>
+      {reqs.map(r => (
+        <span
+          key={r}
+          title={`RSC-PCCTAE · Requisito ${r} (${REQUISITOS[r].anexo} da IN 129/2026): ${REQUISITOS[r].titulo}. Confira o ato: quem avalia é a CRSC-UFF.`}
+          className="ml-1.5 inline-block rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 align-middle"
+        >
+          RSC · Req. {r}
+        </span>
+      ))}
+    </>
+  ) : null;
 
 // Matrícula e nome viajam por caminhos independentes na API: o SIAPE decide os
 // blocos 1 e 2, o nome decide o 3º, e nada confrontava os dois. Digitar a
@@ -97,6 +122,19 @@ export default function DossieApi() {
   // para que tela e PDF não possam divergir sobre a mesma consulta.
   const divergente = !!r?.porNome && !nomeConfere(r.porNome.termo, r.nomes);
 
+  // Requisitos do RSC presentes neste dossiê. Só conta o que a pessoa vai ver
+  // com selo: os atos achados pela MATRÍCULA e as funções. O bloco por nome
+  // fica de fora do resumo de propósito — ele pode ser de outra pessoa (ver
+  // `divergente`), e resumir os dois juntos daria um número que mistura gente.
+  const resumoRSC = React.useMemo(() => {
+    const m = new Map<Requisito, number>();
+    if (r) {
+      for (const f of r.funcoes) for (const q of requisitosDaFuncao(f)) m.set(q, (m.get(q) ?? 0) + 1);
+      for (const a of r.atos) for (const q of requisitosDoAto(a)) m.set(q, (m.get(q) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((x, y) => x[0].localeCompare(y[0]));
+  }, [r]);
+
   const buscar = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const s = siape.replace(/\D/g, '');
@@ -116,12 +154,18 @@ export default function DossieApi() {
   const imprimir = () => {
     if (!r) return;
     const ident = `${esc(r.nomes.join(' · ') || 'nome não identificado')} (SIAPE ${esc(r.siape)})`;
+    // O requisito vai numa COLUNA própria, não colado no rótulo do ato: quem
+    // instrui o processo organiza a documentação "na ordem dos requisitos"
+    // (art. 18, §3º), e uma coluna se ordena e se confere; um sufixo, não.
+    const selo = (reqs: Requisito[]) =>
+      reqs.length ? reqs.map(q => `Req. ${q}`).join('<br>') : '—';
     const linhasF = r.funcoes.map(f =>
       `<tr><td>${esc(f.acao === 'designar' ? 'Designação' : 'Dispensa')}</td><td>${esc(f.cargo)}</td>` +
-      `<td>${esc(f.unidade)}</td><td>${fmtData(f.dataAto)}</td><td>${esc(f.atoLabel)}</td></tr>`).join('');
+      `<td>${esc(f.unidade)}</td><td>${fmtData(f.dataAto)}</td><td>${esc(f.atoLabel)}</td>` +
+      `<td class="rsc">${selo(requisitosDaFuncao(f))}</td></tr>`).join('');
     const linhaAto = (a: ds.DossieAto) =>
       `<tr><td>${esc(rotuloAto(a))}</td><td>${fmtData(a.dataAto)}</td><td>${esc(a.ementa || '—')}</td>` +
-      `<td>${esc(refBS(a))}</td></tr>`;
+      `<td>${esc(refBS(a))}</td><td class="rsc">${selo(requisitosDoAto(a))}</td></tr>`;
     const linhasA = r.atos.map(linhaAto).join('');
     // O 3º bloco — atos achados pelo NOME — ficava de fora do PDF até
     // 05/08/2026, e o efeito era o pior possível para o que esta aba faz.
@@ -138,6 +182,8 @@ export default function DossieApi() {
       `h1{font-size:17px;margin:0 0 2px}h2{font-size:13px;margin:18px 0 6px;color:#003366}` +
       `.sub{color:#555;font-size:11px;margin:0 0 4px}.aviso{border:1px solid #c4c9d2;background:#f7f8fa;padding:8px;font-size:10px;color:#444;margin:10px 0 4px}` +
       `.alerta{border:2px solid #b91c1c;background:#fef2f2;padding:9px;font-size:11px;color:#7f1d1d;margin:10px 0 4px}` +
+      `.rsc{white-space:nowrap;font-weight:bold;color:#3730a3;font-size:10px;text-align:center}` +
+      `.rsclegenda{border:1px solid #a5b4fc;background:#eef2ff;padding:8px;font-size:10px;color:#312e81;margin:10px 0 4px}` +
       `table{border-collapse:collapse;width:100%}th,td{border:1px solid #c4c9d2;padding:4px 6px;text-align:left;vertical-align:top}` +
       `th{background:#003366;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}` +
       `tr:nth-child(even) td{background:#f3f5f8}@media print{@page{margin:12mm}}</style></head><body>` +
@@ -153,13 +199,28 @@ export default function DossieApi() {
       `matrícula` + (linhasN ? ` ou o nome informado` : '') + `. ` +
       `Ela não comprova participação por si só (o ato pode citar a pessoa por outro motivo) e não é exaustiva: parte dos atos do Boletim ` +
       `não registra SIAPE e, portanto, não é alcançada por esta busca. A fonte oficial é o Boletim de Serviço da UFF; confira sempre o ato.</div>` +
+      // Legenda do RSC. Vai no PDF com o MESMO peso que tem na tela: quem lê o
+      // papel (a CRSC, a chefia) não viu a tela, e uma coluna "RSC · Req. I" sem
+      // explicação pareceria uma pontuação que o portal não apurou.
+      `<div class="rsclegenda"><strong>Sobre a coluna RSC.</strong> Ela indica que o ato é <strong>do tipo</strong> que o ` +
+      `requisito descreve no art. 2º da Instrução Normativa GAR/RET/UFF nº 129, de 24/07/2026 — <strong>não</strong> que ele ` +
+      `será pontuado. A própria IN determina que atender aos requisitos objetivos “não assegura, por si só, a concessão” ` +
+      `(art. 15, §8º e art. 20, §3º), e não se pontua o que for “exclusivamente o desempenho ordinário das atribuições legais ` +
+      `do cargo” (art. 20, §2º). A mesma atividade só pode ser contada uma vez (art. 15, §6º). Quem avalia o memorial e ` +
+      `decide é a <strong>CRSC-UFF</strong>.<br>` +
+      `<strong>Req. I</strong> — grupos de trabalho, comissões, comitês, núcleos, representações ou similares (Anexo I). ` +
+      `<strong>Req. IV</strong> — responsabilidades técnico-administrativas ou especializadas (Anexo IV). ` +
+      `<strong>Req. V</strong> — exercício de função ou cargo de direção ou assessoramento (Anexo V).<br>` +
+      `Os requisitos <strong>II</strong> (projetos institucionais), <strong>III</strong> (premiação) e <strong>VI</strong> ` +
+      `(produção científica) <strong>não são detectáveis</strong> a partir do Boletim e por isso nunca aparecem nesta coluna — ` +
+      `comprovam-se por certificado, publicação ou declaração. Coluna vazia não significa ausência de direito.</div>` +
       (linhasF
         ? `<h2>Designações e dispensas de função (${r.funcoes.length})</h2>` +
-          `<table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th></tr></thead>` +
+          `<table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th><th>RSC</th></tr></thead>` +
           `<tbody>${linhasF}</tbody></table>`
         : '') +
       `<h2>Atos que citam o SIAPE ${esc(r.siape)} (${r.atos.length})</h2>` +
-      `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
+      `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
       `<tbody>${linhasA}</tbody></table>` +
       // Bloco do nome: sai com a MESMA ressalva que a tela mostra. Busca por
       // nome alcança o que a matrícula não acha, e em troca pode trazer
@@ -170,7 +231,7 @@ export default function DossieApi() {
           `o nome <strong>“${esc(r.porNome?.termo ?? '')}”</strong>, que não corresponde a ` +
           `<strong>${esc(r.nomes.join(' · ') || 'quem consta na matrícula')}</strong>. Se a intenção era buscar o titular, refaça ` +
           `a consulta com o nome dele; se era buscar outra pessoa, use uma consulta separada.</div>` +
-          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
+          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
           `<tbody>${linhasN}</tbody></table>`
         : '') +
       (linhasN && !divergente
@@ -180,7 +241,7 @@ export default function DossieApi() {
           `cargo de direção, os atos que ela <strong>assinou</strong> aparecem nesta lista, e assinar não é participar; ` +
           `e a busca por nome pode trazer <strong>pessoas de nome parecido</strong>. Confira ato por ato antes de usar. ` +
           `Os atos já listados acima não se repetem aqui.</div>` +
-          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th></tr></thead>` +
+          `<table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
           `<tbody>${linhasN}</tbody></table>`
         : '') +
       `<script>window.onload=function(){window.print()}</script></body></html>`;
@@ -196,11 +257,16 @@ export default function DossieApi() {
         <RecordCard
           key={a.id + i}
           titulo={rotuloAto(a)}
-          selo={a.status !== 'Ativo' && (
-            <span className="inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-              {a.status}
-            </span>
-          )}
+          selo={
+            <>
+              {a.status !== 'Ativo' && (
+                <span className="inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                  {a.status}
+                </span>
+              )}
+              <SeloRSC reqs={requisitosDoAto(a)} />
+            </>
+          }
           campos={[
             { rotulo: 'Data', valor: fmtData(a.dataAto) },
             { rotulo: 'Referência no BS', valor: <span className="font-mono">{refBS(a)}</span> },
@@ -240,6 +306,7 @@ export default function DossieApi() {
                     {a.status}
                   </span>
                 )}
+                <SeloRSC reqs={requisitosDoAto(a)} />
               </td>
               <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{fmtData(a.dataAto)}</td>
               <td className="px-3 py-2 text-slate-700 text-xs leading-snug">
@@ -278,7 +345,8 @@ export default function DossieApi() {
             <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
               Digite a sua matrícula SIAPE e veja os atos publicados que a citam, com a <strong>referência do boletim</strong> para
               copiar no processo. Útil para instruir pedidos que exigem comprovar participação em
-              <strong> comissões, comitês, grupos de trabalho e núcleos</strong> — como o RSC (Decreto 13.048/2026).
+              <strong> comissões, comitês, grupos de trabalho e núcleos</strong> — como o RSC
+              (IN GAR/RET/UFF nº 129/2026).
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -406,6 +474,76 @@ export default function DossieApi() {
             )}
           </div>
 
+          {/* Legenda do RSC. Aparece sempre que houve consulta, inclusive quando
+              NADA foi marcado — a ausência de selo é informação, e sem a
+              ressalva ela seria lida como "você não tem direito a nada". */}
+          {(!!r.atos.length || !!r.funcoes.length) && (
+            <div className="bg-white rounded-lg border border-indigo-200 shadow-xs overflow-hidden">
+              <div className="px-3 py-2 border-b border-indigo-100 bg-indigo-50/60">
+                {/* `text-indigo-700` e `text-slate-600`, não 800/900: o modo
+                    fotofobia converte por lista de classes conhecidas, e
+                    indigo-800/900 não estão nela. Medido no navegador com
+                    `html.fotofobia`: ficavam em oklch(0.398) e oklab(0.359) —
+                    escuro sobre o fundo escuro, ilegível e sem erro no console.
+                    É a armadilha de cor documentada no CLAUDE.md. */}
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                  Requisitos do RSC-PCCTAE identificados
+                </span>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  IN GAR/RET/UFF nº 129, de 24/07/2026 (art. 2º) — carreira <strong>técnico-administrativa</strong>.
+                </p>
+              </div>
+              <div className="p-3 space-y-2">
+                {resumoRSC.length ? (
+                  <ul className="space-y-1.5">
+                    {resumoRSC.map(([q, n]) => (
+                      <li key={q} className="flex items-start gap-2">
+                        <span className="shrink-0 mt-0.5 inline-block rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                          Req. {q}
+                        </span>
+                        <span className="text-[11px] text-slate-700 leading-relaxed">
+                          {REQUISITOS[q].titulo} <span className="text-slate-400">({REQUISITOS[q].anexo})</span>
+                          {' — '}<strong>{n}</strong> {n === 1 ? 'registro marcado' : 'registros marcados'}.
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Nenhum requisito foi reconhecido automaticamente nestes registros. <strong>Isso não significa que você
+                    não tenha o que apresentar</strong> — veja abaixo o que esta marcação não alcança.
+                  </p>
+                )}
+
+                {/* A parte que impede a tela de afirmar demais. Não é rodapé
+                    decorativo: são três limites que a própria IN impõe. */}
+                <div className="rounded border border-slate-200 bg-slate-50 p-2.5 space-y-1.5">
+                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                    <strong>O selo diz que o ato é do tipo que o requisito descreve — não que ele será pontuado.</strong>{' '}
+                    A IN é expressa: atender aos requisitos objetivos <strong>“não assegura, por si só, a concessão”</strong>{' '}
+                    (art. 15, §8º e art. 20, §3º). Quem avalia o memorial e decide é a <strong>CRSC-UFF</strong>.
+                  </p>
+                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                    Não se pontua o que for <strong>“exclusivamente o desempenho ordinário das atribuições legais do
+                    cargo”</strong> (art. 20, §2º) — isso depende do seu memorial, não do ato. E a mesma atividade{' '}
+                    <strong>só conta uma vez</strong>, ainda que sirva a dois requisitos (art. 15, §6º).
+                  </p>
+                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                    <strong>Só 3 dos 6 requisitos são detectáveis aqui</strong> (I, IV e V). Os requisitos{' '}
+                    <strong>II</strong> (projetos institucionais), <strong>III</strong> (premiação) e <strong>VI</strong>{' '}
+                    (produção científica) não saem como ato de designação no Boletim — comprovam-se por certificado,
+                    publicação ou declaração, que esta aba não tem. Ausência de selo nunca é ausência de direito.
+                  </p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    A boa notícia: o ato publicado <em>é</em> documento hábil. O art. 19, parágrafo único, I lista entre as
+                    provas válidas as <strong>“portarias, resoluções ou atos de designação ou nomeação”</strong> — que é
+                    exatamente o que esta aba localiza, com a referência do BS para citar no processo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Bloco 1: dado estruturado (cargo/unidade lidos do dispositivo). */}
           {!!r.funcoes.length && (
             <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
@@ -424,13 +562,16 @@ export default function DossieApi() {
                     titulo={f.cargo || '—'}
                     subtitulo={f.unidade || undefined}
                     selo={
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-bold ${
-                        f.acao === 'designar'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}>
-                        {f.acao === 'designar' ? 'Designação' : 'Dispensa'}
-                      </span>
+                      <>
+                        <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                          f.acao === 'designar'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {f.acao === 'designar' ? 'Designação' : 'Dispensa'}
+                        </span>
+                        <SeloRSC reqs={requisitosDaFuncao(f)} />
+                      </>
                     }
                     campos={[
                       { rotulo: 'Data', valor: fmtData(f.dataAto) },
@@ -467,6 +608,7 @@ export default function DossieApi() {
                           }`}>
                             {f.acao === 'designar' ? 'Designação' : 'Dispensa'}
                           </span>
+                          <SeloRSC reqs={requisitosDaFuncao(f)} />
                         </td>
                         <td className="px-3 py-2 text-slate-800 font-medium">{f.cargo || '—'}</td>
                         <td className="px-3 py-2 text-slate-700 text-xs">{f.unidade || '—'}</td>

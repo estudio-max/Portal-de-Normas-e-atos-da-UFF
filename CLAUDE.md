@@ -403,6 +403,56 @@ brigaria com o `base: './'` que mantém o bundle portável. A raiz sem hash cai 
 aba padrão sem sujar a URL com `#planilha`. Aba nova = uma linha em
 `ABAS_VALIDAS`.
 
+## Meu SIAPE: o selo de Requisito do RSC não diz "elegível", e isso é a norma
+
+A aba marca com `RSC · Req. N` os registros que correspondem a um requisito do
+art. 2º da **IN GAR/RET/UFF nº 129, de 24/07/2026** (regulamenta o Decreto
+13.048/2026 na UFF). Classificador em
+`src/components/panels/rscRequisitos.ts`; critério e medições em
+[`docs/METODOLOGIA-RSC.md`](docs/METODOLOGIA-RSC.md).
+
+**"Elegível" é palavra que o portal não pode usar**, e a razão é textual, não
+retórica: a IN diz que atender aos requisitos objetivos "não assegura, por si
+só, a concessão" (art. 15 §8º e art. 20 §3º); que não se pontua o que for
+"exclusivamente o desempenho ordinário das atribuições legais do cargo" (art. 20
+§2º — depende do MEMORIAL, que o Boletim não publica); e que a mesma atividade
+só conta uma vez (art. 15 §6º). O selo afirma o passo anterior — **o ato é do
+TIPO que o requisito descreve** —, que se sustenta porque o art. 19, parágrafo
+único, I aceita como prova "portarias, resoluções ou atos de designação ou
+nomeação". Isca de conferência, não veredito; quem decide é a CRSC-UFF.
+
+**Só 3 dos 6 requisitos são detectáveis (I, IV, V), e os outros três ficam de
+fora por decisão.** II (projetos), III (premiação) e VI (produção científica) não
+viram ato de designação no BS — provam-se por certificado ou publicação. A tela
+diz isso: **ausência de selo nunca é ausência de direito.**
+
+**O Requisito V NÃO sai da ementa** — sai de `ato_funcao`. Medido: pela ementa
+deu **11 de 11 falsos positivos** ("Altera o cargo de direção CD-4 para CD-3" é
+ato SOBRE o cargo; "Distribuição de 9 Funções Gratificadas na estrutura" cria
+VAGA, não designa ninguém). `dispensar` não marca: encerra o exercício, e selar
+as duas pontas do mesmo fato convidaria à dupla contagem do art. 15 §6º.
+
+**A guarda que mais rendeu foi o corte do BLOCO DE ASSINATURA** — sozinha
+respondia por 101 dos 112 falsos do Requisito V. "Designação de Solicitantes de
+Viagens no SCDP. **A SUBSTITUTA EVENTUAL DO PRÓ-REITOR**, no uso da delegação…"
+casava pelo cargo de QUEM ASSINA. Armadilha-mãe da METODOLOGIA-ODS de novo: o
+termo mora no nome de alguém, não no dispositivo. Outras três guardas medidas:
+posse de aprovado em concurso não é atuação em banca; fragmento de ementa não é
+ementa; retificação que cita designação anterior não designa.
+
+Medição em 4.000 atos de 2025-2026: **I = 158 (4,0%), IV = 61 (1,5%), nenhum =
+3.781, dois requisitos ao mesmo tempo = 0.** A versão TypeScript foi conferida
+contra o protótipo Python sobre a MESMA amostra e devolve os mesmos números —
+tradução entre linguagens é onde divergência silenciosa nasce. Regressão no CI:
+`npx tsx tools/teste_rsc_requisitos.ts`.
+
+**A cor do selo precisa estar no mapa do fotofobia.** `text-indigo-800` e
+`text-indigo-900` NÃO estão (só o `700`), e o efeito é escuro sobre escuro sem
+erro nenhum no console — medido no navegador, davam `oklch(0.398)` sobre fundo
+`rgb(30,43,61)`. Com `text-indigo-700` + `text-slate-600` os contrastes ficam em
+7,2–14,0 nos dois temas. Ao criar selo novo, confira a lista em `src/index.css`
+antes de escolher a classe.
+
 ## Ajuda contextual: o mapa é total sobre as abas
 
 O `?` do cabeçalho abre a explicação da **aba aberta**: o que é, como usar, o que

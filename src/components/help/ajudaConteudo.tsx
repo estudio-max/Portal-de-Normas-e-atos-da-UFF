@@ -178,12 +178,15 @@ export const AJUDA: Record<string, AjudaAba> = {
     resumo: <>Reúne os atos publicados no Boletim que citam <B>você</B>, com a referência exata
       (boletim, seção e página) para copiar num processo. Foi feita para instruir pedidos que
       exigem comprovar participação em comissões, comitês, grupos de trabalho e núcleos — como
-      o <B>RSC</B> (Decreto 13.048/2026).</>,
+      o <B>RSC</B> (IN GAR/RET/UFF nº 129/2026, que regulamenta o Decreto 13.048/2026 na UFF).</>,
     porQue: [
-      <>O Decreto 13.048/2026 pontua, para o Reconhecimento de Saberes e Competências,
-        participação em comissões, comitês, grupos de trabalho e núcleos, designação para
-        responsabilidade técnico-administrativa e exercício de cargo de direção. A prova de tudo
-        isso é a mesma: <B>o ato publicado no Boletim</B>, com a indicação de onde ele saiu.</>,
+      <>A IN GAR/RET/UFF nº 129, de 24/07/2026, lista no art. 2º os <B>seis requisitos</B> do
+        Reconhecimento de Saberes e Competências da carreira técnico-administrativa: participação
+        em comissões, comitês, grupos de trabalho e núcleos; projetos institucionais; premiação;
+        responsabilidade técnico-administrativa; cargo de direção; e produção de conhecimento. E o
+        art. 19 diz o que serve de prova — entre outras coisas, <B>“portarias, resoluções ou atos
+        de designação ou nomeação”</B>. Ou seja: o ato publicado no Boletim, com a indicação de
+        onde ele saiu, é exatamente o documento que o processo pede.</>,
       <>Só que essa prova está espalhada por 25 anos de PDFs, e ninguém guarda a portaria que o
         designou para uma comissão em 2011. Montar o próprio histórico à mão significaria abrir
         boletim por boletim procurando o próprio nome — na prática, ninguém faz, e a
@@ -196,7 +199,12 @@ export const AJUDA: Record<string, AjudaAba> = {
       <>Preencha também o <B>nome</B>, no campo ao lado.</>,
       <>Clique em <B>Buscar</B>. O resultado vem em até três blocos: designações e dispensas de
         função, atos que citam a matrícula, e atos que citam o nome no texto.</>,
-      <>Use <B>Exportar / Imprimir PDF</B> para gerar a lista pronta para anexar ao processo.</>,
+      <>Repare nos selos <B>RSC · Req. I / IV / V</B>. Eles marcam os registros que correspondem
+        a um dos requisitos do art. 2º da IN 129/2026 — passe o mouse para ler qual. O painel no
+        topo resume quantos foram encontrados de cada tipo.</>,
+      <>Use <B>Exportar / Imprimir PDF</B> para gerar a lista pronta para anexar ao processo. O
+        requisito sai numa coluna própria, o que ajuda a organizar a documentação <B>na ordem dos
+        requisitos</B>, como o art. 18, §3º recomenda.</>,
     ],
     destaque: <>Preencha os <B>dois</B> campos, sempre. Só uma parte dos atos do Boletim registra
       a matrícula de quem eles citam — o resto traz apenas o nome escrito no texto. Buscando só
@@ -205,8 +213,15 @@ export const AJUDA: Record<string, AjudaAba> = {
     cuidado: <>Isto é <B>material de instrução, não decisão</B>. A lista mostra que existe um ato
       publicado que cita você e onde ele saiu — ela não comprova participação por si só (numa
       banca, o avaliado também é citado), não é exaustiva, e não apura pontuação nenhuma: quem
-      avalia é a comissão. A busca por nome pode trazer <B>pessoas de nome parecido</B>. Confira
-      ato por ato antes de usar.</>,
+      avalia é a <B>CRSC-UFF</B>. O selo diz que o ato é <B>do tipo</B> que o requisito descreve,
+      nunca que ele será pontuado: a IN é expressa ao dizer que atender aos requisitos objetivos
+      “não assegura, por si só, a concessão” (art. 15, §8º), e não se pontua o que for
+      “exclusivamente o desempenho ordinário das atribuições legais do cargo” (art. 20, §2º) —
+      isso depende do seu memorial. Além disso, <B>só 3 dos 6 requisitos</B> são detectáveis a
+      partir do Boletim: projetos (II), premiação (III) e produção científica (VI) comprovam-se
+      por certificado ou publicação, e <B>a ausência de selo nunca significa ausência de
+      direito</B>. A busca por nome pode trazer <B>pessoas de nome parecido</B>. Confira ato por
+      ato antes de usar.</>,
   },
 
   'pessoal/chefias': {

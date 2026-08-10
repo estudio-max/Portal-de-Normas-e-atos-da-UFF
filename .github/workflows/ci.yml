@@ -48,6 +48,14 @@ jobs:
       - name: Regressão estrutural do redesign
         run: node tools/test_redesign_integrity.mjs
 
+      # Selos de Requisito do RSC na aba Meu SIAPE. Como o classificador é regex
+      # sobre a ementa, ele tem a mesma fragilidade do ods_match: mexer num
+      # padrão reintroduz falso positivo já pago. Cada caso do teste é uma isca
+      # medida em 06/08/2026 — inclusive o bloco de assinatura, que sozinho
+      # respondia por 101 dos 112 falsos do Requisito V.
+      - name: Regressão dos requisitos do RSC
+        run: npx tsx tools/teste_rsc_requisitos.ts
+
       # A migração do núcleo analítico é aplicada à mão no phpMyAdmin, sem SSH e
       # sem rollback barato. Este teste lê o .sql como texto e reprova o que só
       # se descobriria no meio da janela de deploy: SQL de MySQL 8, tabela sem
