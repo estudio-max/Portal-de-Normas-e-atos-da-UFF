@@ -25,6 +25,64 @@ const CASOS: Caso[] = [
   { ementa: 'Designação de Membros do Núcleo Docente Estruturante do Curso de Bacharelado em Inteligência Artificial e Ciência de Dados.',
     esperado: ['I'], porque: 'NDE é núcleo formalmente instituído' },
 
+  // ── A FORMA DOMINANTE: "Designa a Comissão X", sem "para compor" ───────────
+  // Até 06/08/2026 o classificador exigia estrutura de composição E carregava um
+  // regex quebrado (`comiss[õo]es?`, que nunca casa "comissao" — o texto chega
+  // aqui SEM acento). O efeito somado: o termo central do Requisito I estava
+  // morto no singular. Estes casos existiam no acervo e NÃO eram marcados.
+  { ementa: 'Designa a Comissão para Planejamento da Reforma Curricular do Curso de Bacharelado em Sistemas de Informação.',
+    esperado: ['I'], porque: 'forma direta: colegiado como objeto do verbo' },
+  { ementa: 'Designa servidores técnico-administrativos e docentes para composição da Comissão de Monitoria, no âmbito da Pró-Reitoria de Graduação.',
+    esperado: ['I'], porque: 'ato que nomeia TAE explicitamente — o público desta aba' },
+  { ementa: 'Constitui o novo Grupo de Trabalho da Nova Sede e Infraestrutura para o planejamento do novo espaço físico.',
+    esperado: ['I'], porque: 'GT sem estrutura de composição na ementa' },
+  { ementa: 'Designação de Comissão de Sindicância do Instituto de Estudos Comparados em Administração de Conflitos.',
+    esperado: ['I'], porque: 'sindicância é item 4 do Anexo I' },
+  { ementa: 'Designa os membros titulares e suplentes do Colegiado do Programa de Pós-Graduação Stricto Sensu em Microbiologia.',
+    esperado: ['I'], porque: 'colegiado de programa = órgão colegiado (Anexo I item 1)' },
+  { ementa: 'Institui, em caráter permanente, a Comissão de Reconhecimento de Saberes e Competências do PCCTAE da UFF (CRSC-PCCTAE/UFF).',
+    esperado: ['I'], porque: 'a própria comissão do RSC — não podia escapar' },
+
+  // ── mais falsos positivos barrados ────────────────────────────────────────
+  { ementa: 'A Comissão Eleitoral Local, instituída pela DTS/EGG Nº 04, de 16 de abril de 2026, e em conformidade com o Edital 01/2026, publicado no BS N° 40.',
+    esperado: [], porque: 'GUARDA: o colegiado é quem ASSINA — "pel[ao]s?", não "pel\\b"' },
+  { ementa: 'A Comissão Eleitoral Local (CEL), instituída pela DTS VCX nº 13, vem tornar público o resultado final da Consulta Eleitoral.',
+    esperado: [], porque: 'GUARDA: ato DA comissão, divulgando resultado' },
+  { ementa: 'HOMOLOGAÇÃO DE CHAPA ÚNICA PARA CONSULTA ELEITORAL PARA COORDENAÇÃO DO PPGCB. A Comissão Eleitoral, designada pela DTS nº 2, homologa.',
+    esperado: [], porque: 'GUARDA: homologação eleitoral; a comissão aparece como autora' },
+  { ementa: 'Errata para DTS EGF/UFF Nº 5 que designa membros docentes eleitos para composição do Colegiado da Pós-Graduação em Física.',
+    esperado: [], porque: 'GUARDA: errata é meta-ato' },
+  { ementa: 'Designa dentre os membros do Colegiado, Igor Martins Venancio Padilha de Oliveira, Professor do Magistério Superior.',
+    esperado: [], porque: 'GUARDA: escolha de coordenador — o ato_funcao já marca Req. V; marcar I duplicaria (art. 15 §6º)' },
+
+  // ── VARIAÇÕES DE VERBO trazidas da leitura do Boletim (06/08/2026) ─────────
+  // Nenhuma destas casava: a lista de verbos tinha só designa/constitui/institui/
+  // nomeia. Um selo que só entende uma forma de escrever some justamente nos
+  // atos redigidos de outro jeito, e o servidor perde ponto por isso.
+  { ementa: 'CONSTITUI COMISSÃO PARA APURAR RESPONSABILIDADES.',
+    esperado: ['I'], porque: 'caixa alta' },
+  { ementa: 'Constitui e designa os membros do Comitê de Governança Digital.',
+    esperado: ['I'], porque: 'dois verbos encadeados' },
+  { ementa: 'Instaura Comissão de Sindicância para apurar os fatos.',
+    esperado: ['I'], porque: 'INSTAURA — verbo típico de sindicância/PAD' },
+  { ementa: 'Cria Comissão de Ética Setorial no âmbito da unidade.',
+    esperado: ['I'], porque: 'CRIA' },
+  { ementa: 'Reconduz a Comissão para proceder à complementação da apuração da SINDICÂNCIA.',
+    esperado: ['I'], porque: 'RECONDUZ — mantém alguém no colegiado, é vínculo' },
+  { ementa: 'Altera a composição do Comitê Gestor de Tecnologia da Informação.',
+    esperado: ['I'], porque: 'ALTERA A COMPOSIÇÃO — alguém entra no colegiado' },
+  { ementa: 'Constitui o Grupo Gestor de Apoio à Governança da UFF.',
+    esperado: ['I'], porque: 'GRUPO GESTOR, não só "grupo de trabalho"' },
+  { ementa: 'ConsƟtuir Comissão Interna para acompanhamento da obra e do projeto execuƟvo.',
+    esperado: ['I'], porque: 'ligadura do PDF: Ɵ no lugar de "ti" (23 ementas em 4.000)' },
+
+  // `altera` sozinho NÃO pode voltar a marcar — é o falso positivo do Req. V
+  { ementa: 'Altera o cargo de direção CD-4 para o cargo de direção CD-3 do titular do cargo de Diretora da Faculdade de Nutrição.',
+    esperado: [], porque: 'GUARDA: "altera" só vale com "composição" junto' },
+  // criar UNIDADE não é criar colegiado
+  { ementa: 'Cria o Núcleo de Referência em Desenvolvimento Sustentável da UFF.',
+    esperado: [], porque: 'GUARDA: núcleo aqui é unidade; só NDE conta como colegiado' },
+
   // ── REQUISITO IV: acertos ──────────────────────────────────────────────────
   { ementa: 'Designa os membros da Gestão e Fiscalização Contrato n° 65/2026 celebrado entre a UFF e a empresa VALID CERTIFICADORA DIGITAL LTDA.',
     esperado: ['IV'], porque: 'gestão/fiscalização de contrato = Anexo IV item 3' },

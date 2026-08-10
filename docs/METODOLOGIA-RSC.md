@@ -88,20 +88,52 @@ mesmo fato convidaria justamente à dupla contagem do art. 15, §6º.
 
 | Requisito | marcados | % |
 |---|---:|---:|
-| I (ementa) | 158 | 4,0% |
+| I (ementa) | 1.169 | 29,2% |
 | IV (ementa) | 61 | 1,5% |
-| nenhum | 3.781 | 94,5% |
+| nenhum | 2.770 | 69,3% |
 | **dois ao mesmo tempo** | **0** | 0% |
 
 O Requisito IV teve precisão praticamente perfeita na auditoria: quase todos são
 *"Designa os membros da Gestão e Fiscalização Contrato nº X"* (Anexo IV, item 3)
 e *"equipe de planejamento da contratação"* (item 2).
 
-O Requisito I foi auditado nos 158, um a um: bancas de concurso e de seleção
-simplificada, comissões recursais, mesas receptoras de votos, comissões de
-sindicância, grupos de trabalho, NDE, Câmaras Especializadas do CEPEx, Comitê de
-Ética. Os poucos marginais (banca de prova de proficiência) ainda são colegiado
-formalmente designado.
+O Requisito I foi auditado em duas amostras aleatórias de 60 e 45: precisão de
+~91% estrita e ~98% contando como aceitáveis os marginais (banca de prova de
+proficiência de disciplina, que ainda é colegiado formalmente designado). Os
+falsos que a auditoria achou viraram guarda — errata, preâmbulo da comissão que
+assina, homologação eleitoral.
+
+### A cobertura foi de 158 para 1.169 — e o motivo é uma lição
+
+O primeiro corte marcava **158**. Estava errado por dois defeitos somados, e
+nenhum apareceria sem medir **recall** (a medição inicial só olhou precisão):
+
+**(a) Um regex morto.** O padrão era `comiss[õo]es?`. Como o texto passa por
+remoção de acento antes, "comissão" chega como `comissao`, e `comiss[õo]` nunca
+casa `comissa` — **o termo central do requisito estava morto no singular**. Os
+poucos que passavam entravam pelo caminho do certame, cujo padrão usa `[ãa]`.
+*Lição: padrão que roda sobre texto normalizado tem que ser escrito já
+normalizado.*
+
+**(b) Uma exigência que a redação real não cumpre.** Eu exigia estrutura de
+composição ("para compor", "como membros"), mas a forma dominante no Boletim é
+direta: *"Designa a Comissão X"*, *"Constitui Grupo de Trabalho Y"*.
+
+E a lista de verbos era curta demais — só designa/constitui/institui/nomeia.
+Faltavam **instaura** (sindicância, PAD), **cria**, **reconduz** e **altera a
+composição**, todos vínculo legítimo. `altera` entra só acompanhado de
+"composição": solto, ele reintroduz o falso positivo do "Altera o cargo de
+direção CD-4 para CD-3".
+
+**Ligaduras do PDF.** O extrator decodifica algumas ligaduras como caractere
+solto — `Ɵ` no lugar de "ti" (*"ConsƟtuir Comissão"*, *"Processo SeleƟvo"*), em
+23 ementas de 4.000. Troca determinística antes de classificar, já que `Ɵ` não é
+letra do português.
+
+**O que NÃO foi corrigido:** o OCR que espaça no meio da palavra (*"Const it ui
+o Grupo Gest or"*). O detector que tentei marcou 631 ementas na amostra sendo
+que quase todas eram texto normal — "de 03 de" casa o mesmo padrão. Esses atos
+ficam sem selo e caem na conferência humana, que é o lado seguro do erro.
 
 ## 4. As quatro guardas, todas medidas
 

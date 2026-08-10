@@ -440,11 +440,32 @@ termo mora no nome de alguém, não no dispositivo. Outras três guardas medidas
 posse de aprovado em concurso não é atuação em banca; fragmento de ementa não é
 ementa; retificação que cita designação anterior não designa.
 
-Medição em 4.000 atos de 2025-2026: **I = 158 (4,0%), IV = 61 (1,5%), nenhum =
-3.781, dois requisitos ao mesmo tempo = 0.** A versão TypeScript foi conferida
-contra o protótipo Python sobre a MESMA amostra e devolve os mesmos números —
-tradução entre linguagens é onde divergência silenciosa nasce. Regressão no CI:
-`npx tsx tools/teste_rsc_requisitos.ts`.
+**MEDIR PRECISÃO SEM MEDIR RECALL ESCONDEU UM REGEX MORTO.** O primeiro corte
+marcava 158 atos e tinha ótima precisão — e estava errado: o padrão era
+`comiss[õo]es?`, mas o texto passa por remoção de acento ANTES, então "comissão"
+chega como `comissao` e `comiss[õo]` nunca casa `comissa`. **O termo central do
+requisito estava morto no singular**, e só não sumiu de todo porque o caminho do
+certame usa `[ãa]`. Regra que fica: **padrão que roda sobre texto normalizado
+escreve-se já normalizado**, e toda medição de classificador precisa das duas
+pontas — dos que marco quantos acertei, E dos que deveria marcar quantos escapam.
+Junto com isso, exigir estrutura de composição ("para compor") descartava a forma
+dominante do Boletim, que é direta ("Designa a Comissão X"). Corrigidos os dois,
+a cobertura foi de 158 para **1.169**.
+
+A lista de verbos também era curta: faltavam `instaura` (sindicância/PAD),
+`cria`, `reconduz` e `altera a composição`. **`altera` só entra acompanhado de
+"composição"** — solto, reintroduz o falso positivo "Altera o cargo de direção
+CD-4 para CD-3". E o extrator decodifica ligadura do PDF como caractere solto
+(`Ɵ` = "ti", em "ConsƟtuir Comissão"): 23 ementas em 4.000, troca determinística
+antes de classificar. O OCR que espaça no meio da palavra ("Const it ui o Grupo
+Gest or") **não** é tratado — o detector que se tentou marcou 631 ementas sendo
+quase todas texto normal ("de 03 de" casa o mesmo padrão); esses atos ficam sem
+selo e caem na conferência humana.
+
+Medição final em 4.000 atos de 2025-2026: **I = 1.169 (29,2%), IV = 61 (1,5%),
+nenhum = 2.770, dois requisitos ao mesmo tempo = 0.** Precisão do Requisito I
+auditada em duas amostras (60 e 45): ~91% estrita, ~98% contando marginais.
+Regressão no CI: `npx tsx tools/teste_rsc_requisitos.ts` (40 casos).
 
 **A cor do selo precisa estar no mapa do fotofobia.** `text-indigo-800` e
 `text-indigo-900` NÃO estão (só o `700`), e o efeito é escuro sobre escuro sem

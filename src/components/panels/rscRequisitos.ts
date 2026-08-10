@@ -74,8 +74,26 @@ export const REQUISITOS: Record<Requisito, { titulo: string; anexo: string }> = 
   },
 };
 
-const semAc = (s: string) =>
-  (s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+// O PDF do Boletim usa ligaduras tipográficas que o extrator às vezes decodifica
+// como caractere solto: "ConsƟtuir Comissão Interna", "Processo SeleƟvo",
+// "InsƟtuto". O `Ɵ` está no lugar de "ti". Medido: 23 ementas em 4.000 (0,6%),
+// e sem esta troca elas ficam invisíveis para qualquer padrão — inclusive
+// "ConsƟtuir Comissão", que é Requisito I legítimo. Troca determinística: `Ɵ`
+// não é letra do português, então não há como confundir com texto real.
+//
+// NÃO cobre o outro defeito de OCR, o espaçamento no meio da palavra
+// ("Const it ui o Grupo Gest or"). Ali a correção exigiria recolar fragmentos, e
+// o detector que tentei marcou 631 ementas na amostra sendo que quase todas eram
+// texto normal ("de 03 de" casa o mesmo padrão). Fica como limitação conhecida:
+// esses atos não recebem selo e caem na conferência humana, que é o lado seguro.
+const LIGADURAS: [RegExp, string][] = [
+  [/Ɵ/g, 'ti'], [/ﬁ/g, 'fi'], [/ﬂ/g, 'fl'], [/ﬀ/g, 'ff'],
+];
+const semAc = (s: string) => {
+  let t = s || '';
+  for (const [re, sub] of LIGADURAS) t = t.replace(re, sub);
+  return t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+};
 
 // ── guarda 0: cortar o BLOCO DE ASSINATURA ───────────────────────────────────
 // A ementa capturada arrasta com frequência o preâmbulo de quem ASSINA ("A
@@ -101,7 +119,12 @@ function soODispositivo(ementa: string): string {
 // ── guarda 1: o ato tem que DISPOR, não citar ────────────────────────────────
 // Regra do domínio: "classifique pelo dispositivo, não por menção". Retificação
 // que cita designação anterior ("...portaria X, QUE DESIGNOU...") não designa.
-const RE_META = /^\s*(retifica|torna\s+sem\s+efeito|revoga|anula|republica|convalida)/i;
+// Ato que fala SOBRE outro ato, ou que divulga o desfecho de um processo. O
+// segundo grupo (homologação/proclamação/resultado/consulta eleitoral) é ato
+// EMITIDO pela comissão eleitoral: ela aparece na ementa como autora, e o texto
+// costuma trazer "designada pela DTS nº…", que casaria o verbo de designação.
+const RE_META =
+  /^\s*(retifica|errata|torna\s+sem\s+efeito|revoga|anula|republica|convalida|homologa[çc][ãa]o|proclama[çc][ãa]o|resultado|consulta\s+eleitoral)/i;
 const RE_CITA = /\bque\s+(designou|constituiu|instituiu|nomeou|criou)\b/;
 
 // ── guarda 2: ementa inutilizável / fragmento ────────────────────────────────
@@ -125,11 +148,43 @@ const RE_POSSE =
   /\b(habilitad|classificad|aprovad)[oa]s?\b[\s\S]{0,60}\bconcurso|\bnomeia\b[\s\S]{0,120}\b(habilitad|classificad)[oa]/;
 
 // ── Requisito I ──────────────────────────────────────────────────────────────
+// ATENÇÃO ao escrever estes padrões: eles rodam SOBRE O TEXTO JÁ SEM ACENTO
+// (ver `semAc`). Escrever `comiss[õo]es?` — como esteve até 06/08/2026 — deixa o
+// termo mais importante do requisito MORTO no singular, porque "comissão" chega
+// aqui como "comissao" e `comiss[õo]` nunca casa `comissa`. O defeito era
+// silencioso: os poucos casos que passavam entravam pelo caminho do certame
+// (`RE_PAPEL_CERTAME`, que usa `[ãa]`). Medido: a correção levou a cobertura de
+// 143 para 512 num universo de 1.204 candidatos. Prefira classes que incluam a
+// vogal sem acento, ou escreva o termo já normalizado.
 const RE_COLEGIADO =
-  /(comiss[õo]es?|comit[êe]s?|grupos?\s+de\s+trabalho|c[âa]maras?|conselhos?|bancas?|sindic[âa]ncias?|processos?\s+administrativos?\s+disciplinares?|tomadas?\s+de\s+contas|mesas?\s+receptoras?|n[úu]cleos?\s+docentes?\s+estruturantes?)/;
-// a pessoa tem que INTEGRAR o colegiado, não apenas ser citada perto dele
-const RE_INTEGRA =
-  /(para\s+(compor|integrar|constituir|comporem)|como\s+membros?|membros?\s+d[aeo]s?|comporem|integrantes?\s+d[aeo]s?|componentes?\s+(para|d[aeo]s?)|sob\s+a\s+presid[êe]ncia|secretari[ae]|respons[áa]vel\s+pela\s+instala|representantes?\s+d)/;
+  /(comiss[ãa]o|comiss[õo]es|comit[êe]s?|grupos?\s+(de\s+trabalho|gestor(es)?)|c[âa]maras?|conselhos?|colegiados?|bancas?|sindic[âa]ncias?|processos?\s+administrativos?\s+disciplinares?|tomadas?\s+de\s+contas|mesas?\s+receptoras?|n[úu]cleos?\s+docentes?\s+estruturantes?)/;
+// Exigir estrutura explícita de composição ("para compor", "como membros") foi
+// tentado e REPROVADO: a forma dominante no Boletim é direta — "Designa a
+// Comissão X", "Constitui Grupo de Trabalho Y" —, e a exigência descartava a
+// maioria dos atos de colegiado do acervo. O colegiado como objeto do verbo de
+// designação basta; as guardas abaixo é que separam o que não é participação.
+
+// GUARDA: o ato é DA comissão, não sobre ela. "A Comissão Eleitoral Local,
+// instituída pela DTS nº 13, vem tornar público o resultado…" — aqui o
+// colegiado é quem ASSINA. Mesma família da guarda do bloco de assinatura.
+//
+// Duas formas, porque exigir só o verbo de publicação deixava passar o caso em
+// que ele vem muito depois do preâmbulo ("…em conformidade com o Edital 01/2026,
+// publicado no BS nº 40, de acordo com o Regulamento Geral das Consultas…").
+// Abrir com o artigo + nome do colegiado + "instituída/designada por" já é
+// preâmbulo: um ato que DESIGNA colegiado começa pelo verbo, não pelo artigo.
+const RE_ATO_DO_COLEGIADO =
+  /^\s*(a|o)\s+(comiss[ãa]o|comit[êe]|c[âa]mara|conselho|mesa)\b(?:[\s\S]{0,220}\b(torna\s+p[úu]blic|vem\s+tornar|homologa|proclama|divulga|resultado\s+final|comunica)|[\s\S]{0,80}\b(institu[íi]d|designad|criad)[oa]s?\s+(pel[ao]s?|por)\b)/i;
+
+// GUARDA: "Designa dentre os membros do Colegiado, Fulano" é a escolha de um
+// COORDENADOR a partir do colegiado — o `ato_funcao` já o marca como Requisito
+// V. Marcar também o ato como Requisito I duplicaria o mesmo fato na tela, e o
+// art. 15 §6º veda contar a mesma atividade duas vezes.
+const RE_ESCOLHA_DENTRE = /\bdentre\s+os\s+membros\b/;
+
+// GUARDA: designação para CHEFIAR uma unidade que por acaso se chama núcleo ou
+// comissão é Requisito V (a função capta), não participação em colegiado.
+const RE_CHEFIA_DE = /\b(chefia|dire[çc][ãa]o|coordena[çc][ãa]o)\s+d[aeo]s?\s+(n[úu]cleo|comiss|comit)/;
 const RE_CERTAME =
   /(concursos?|vestibular|exames?\s+de\s+sele[çc][ãa]o|processos?\s+seletivos?)/;
 const RE_PAPEL_CERTAME =
@@ -143,8 +198,17 @@ const RE_REVISAO_DISCIPLINA = /revis[ãa]o\s+(de\s+)?(prova|nota)/;
 const RE_REQ_IV =
   /(fiscal(iza[çc][ãa]o)?\s+(d[oe]s?\s+)?contratos?|gest[ãa]o\s+e\s+fiscaliza|gestor(es)?\s+d[oe]s?\s+contratos?|fiscais?\s+d[oe]s?\s+contratos?|equipes?\s+de\s+planejamento\s+d[ae]\s+contrata[çc][ãa]o|pregoeir[oa]s?|agentes?\s+de\s+contrata[çc][ãa]o)/;
 
+// Verbos que CONSTITUEM o vínculo com o colegiado. A lista cresceu em
+// 06/08/2026 com variações trazidas da leitura do Boletim: `instaura` (comissão
+// de sindicância/PAD), `cria`, `reconduz` (recondução de comissão em curso) e
+// `altera a composição` — todos designam alguém, e nenhum casava antes.
+//
+// `altera` entra SÓ com "composição" junto, nunca solto: "Altera o cargo de
+// direção CD-4 para CD-3" é ato sobre o cargo, e foi um dos falsos positivos
+// medidos do Requisito V.
 const RE_DESIGNA =
-  /\b(designa|designar|designacao|constitui|constituir|institui|instituir|nomeia|nomear)/;
+  /\b(designa|designar|designacao|constitui|constituir|institui|instituir|instaura|instaurar|nomeia|nomear|cria|criar|recondu)/;
+const RE_ALTERA_COMPOSICAO = /\baltera[r]?\s+(a\s+)?composi[çc][ãa]o/;
 
 /** Requisitos que a EMENTA do ato sinaliza. Nunca devolve 'V' — ver o módulo. */
 export function requisitosDoAto(a: ds.DossieAto): Requisito[] {
@@ -156,10 +220,16 @@ export function requisitosDoAto(a: ds.DossieAto): Requisito[] {
   if (RE_POSSE.test(e)) return [];
 
   const reqs = new Set<Requisito>();
-  const designa = RE_DESIGNA.test(e);
+  const designa = RE_DESIGNA.test(e) || RE_ALTERA_COMPOSICAO.test(e);
   const revisaoDisc = RE_REVISAO_DISCIPLINA.test(e);
-  if (designa && !revisaoDisc) {
-    if (RE_COLEGIADO.test(e) && RE_INTEGRA.test(e)) reqs.add('I');
+  const atoDoColegiado = RE_ATO_DO_COLEGIADO.test(disp);
+  if (designa && !revisaoDisc && !atoDoColegiado
+      && !RE_CHEFIA_DE.test(e) && !RE_ESCOLHA_DENTRE.test(e)) {
+    // O colegiado como OBJETO do verbo já basta ("Designa a Comissão X").
+    // `RE_INTEGRA` deixou de ser exigência e virou reforço: ele cobre a forma
+    // em que o colegiado aparece longe do verbo ("Designa os servidores
+    // técnico-administrativos e docentes para composição da Comissão…").
+    if (RE_COLEGIADO.test(e)) reqs.add('I');
     if (RE_CERTAME.test(e) && RE_PAPEL_CERTAME.test(e)) reqs.add('I');
   }
   if (RE_REQ_IV.test(e)) reqs.add('IV');
