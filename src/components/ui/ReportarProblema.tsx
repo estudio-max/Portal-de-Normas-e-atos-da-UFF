@@ -1,9 +1,12 @@
 import React from 'react';
 import { Flag } from 'lucide-react';
 import { AJUDA } from '../help/ajudaConteudo';
+import { linksEmail } from './linksEmail';
 
-// Canal de correção do acervo. É um `mailto:` de propósito, e a decisão tem
-// duas razões:
+// Canal de correção do acervo. É e-mail de propósito — e em DOIS caminhos, o do
+// Gmail no navegador e o do programa da máquina (ver `linksEmail.ts`, que
+// explica por que os dois). A escolha por e-mail, e não por formulário no
+// próprio site, tem duas razões:
 //
 // 1. A API do portal é 100% SÓ LEITURA — não existe uma única rota que grave.
 //    Receber avaliação pelo próprio site significaria abrir a PRIMEIRA
@@ -23,8 +26,6 @@ import { AJUDA } from '../help/ajudaConteudo';
 //
 // NADA de dado pessoal é pré-preenchido — em especial a matrícula consultada na
 // aba Meu SIAPE. O contexto que vai é só o nome da aba.
-
-const DESTINO = 'nidi.gar@id.uff.br';
 
 // Abas sem dado do acervo: aqui o convite não faz sentido (não há ato a
 // corrigir), e a aba Sobre tem a pergunta própria, de outra natureza.
@@ -54,8 +55,7 @@ export function ReportarProblema({ activePath }: { activePath: string }) {
     `enviou nenhuma informação automaticamente.`,
   ].join('\n');
 
-  const href =
-    `mailto:${DESTINO}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  const link = linksEmail(assunto, corpo);
 
   return (
     // `slate-600` e não `slate-500`: em 11px o 500 media 4,6 de contraste no
@@ -64,15 +64,24 @@ export function ReportarProblema({ activePath }: { activePath: string }) {
     <p className="mt-6 mb-1 text-center text-[11px] leading-relaxed text-slate-600">
       <Flag className="mr-1 -mt-0.5 inline h-3 w-3" />
       O acervo vem de 25 anos de PDF, e parte dele de digitalização.{' '}
-      <strong>Achou um ato errado ou faltando?</strong>{' '}
+      <strong>Achou um ato errado ou faltando?</strong> Escreva para a gente{' '}
       {/* `blue-700`, não `blue-600`: o modo fotofobia converte por lista de
           classes conhecidas e o 600 não está nela — medido, o link ficava em
           3,12 de contraste (azul escuro sobre fundo escuro), abaixo do mínimo. */}
       <a
-        href={href}
+        href={link.gmail}
+        target="_blank"
+        rel="noopener noreferrer"
         className="font-semibold text-blue-700 underline decoration-dotted underline-offset-2"
       >
-        Escreva para a gente
+        pelo Gmail
+      </a>{' '}
+      ou{' '}
+      <a
+        href={link.mailto}
+        className="font-semibold text-blue-700 underline decoration-dotted underline-offset-2"
+      >
+        pelo seu programa de e-mail
       </a>{' '}
       — quem consulta é quem enxerga o erro primeiro.
     </p>

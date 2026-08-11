@@ -1,14 +1,16 @@
 import React from 'react';
 import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare } from 'lucide-react';
 import * as ds from '../../dataSource';
+import { linksEmail } from '../ui/linksEmail';
 
 // Relato do que a pessoa NÃO conseguiu fazer. O assunto sai fixo para que essas
 // mensagens se separem sozinhas das dúvidas gerais na caixa de entrada, e o
 // corpo já vem com o roteiro — pergunta aberta sem roteiro devolve "está bom",
-// que não decide nada.
-const LINK_RELATO = 'mailto:nidi.gar@id.uff.br?subject=' +
-  encodeURIComponent('Inteligência UFF — não consegui fazer') +
-  '&body=' + encodeURIComponent([
+// que não decide nada. Dois caminhos de envio pelo motivo explicado em
+// `linksEmail.ts`: o e-mail institucional daqui é lido pelo Gmail.
+const LINK_RELATO = linksEmail(
+  'Inteligência UFF — não consegui fazer',
+  [
     'O QUE EU VIM PROCURAR:',
     '',
     '',
@@ -20,7 +22,8 @@ const LINK_RELATO = 'mailto:nidi.gar@id.uff.br?subject=' +
     '',
     '---',
     'Mensagem escrita e enviada por você. O portal não coletou nada.',
-  ].join('\n'));
+  ].join('\n'),
+);
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -430,17 +433,28 @@ export default function Sobre() {
           que construir em seguida melhor do que qualquer nota de satisfação.
         </p>
         <p className="mt-2.5 text-[13px] leading-relaxed text-slate-700">
+          Conte o que você tentou fazer e não conseguiu — duas linhas bastam:{' '}
           <a
-            href={LINK_RELATO}
+            href={LINK_RELATO.gmail}
+            target="_blank"
+            rel="noopener noreferrer"
             className="font-semibold text-blue-700 underline decoration-dotted underline-offset-2"
           >
-            Conte o que você tentou fazer e não conseguiu
-          </a>
-          {' '}— duas linhas bastam.
+            escrever pelo Gmail
+          </a>{' '}
+          ou{' '}
+          <a
+            href={LINK_RELATO.mailto}
+            className="font-semibold text-blue-700 underline decoration-dotted underline-offset-2"
+          >
+            pelo seu programa de e-mail
+          </a>.
         </p>
         <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-          Abre o seu programa de e-mail com a mensagem começada. Nada é enviado automaticamente, e
-          o portal não registra nem esta visita nem o que você escrever.
+          Qualquer um dos dois abre a mensagem já começada, para você completar. Nada é enviado
+          automaticamente, e o portal não registra nem esta visita nem o que você escrever. Se
+          preferir, o endereço é{' '}
+          <span className="font-mono text-slate-600">{LINK_RELATO.destino}</span>.
         </p>
       </div>
 
