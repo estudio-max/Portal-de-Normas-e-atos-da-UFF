@@ -21,7 +21,7 @@ export default function PrivacidadeLGPD() {
           <ShieldCheck className="w-5 h-5 text-yellow-400" /> Privacidade e proteção de dados (LGPD)
         </h2>
         <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          O Portal de Normas e Atos é uma camada de consulta sobre um acervo público: os Boletins
+          O Inteligência UFF é uma camada de consulta sobre um acervo público: os Boletins
           de Serviço da UFF, publicados oficialmente pela própria universidade. O portal não cria
           dados novos — ele lê os PDFs já publicados pela UFF, organiza o conteúdo numa planilha
           pesquisável e devolve o link para o documento original em cada ato. A fonte primária e

@@ -135,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
           <span className="text-white font-bold text-sm">U</span>
         </div>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-[#1A202C] leading-tight truncate">Portal de Normas</p>
+          <p className="text-[13px] font-semibold text-[#1A202C] leading-tight truncate">Inteligência UFF</p>
           <p className="text-[11px] text-[#A0AEC0] leading-tight truncate">Universidade Federal Fluminense</p>
         </div>
       </div>

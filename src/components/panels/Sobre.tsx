@@ -110,7 +110,7 @@ export default function Sobre() {
           <Info className="w-5 h-5 text-yellow-400" /> Sobre este projeto
         </h2>
         <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          O Portal de Normas e Atos da UFF foi idealizado por João Fanara e é mantido pelo Nidi
+          O Inteligência UFF foi idealizado por João Fanara e é mantido pelo Nidi
           (Núcleo Institucional de Dados Integrados), vinculado ao Gabinete do Reitor da UFF. Esta
           página conta a motivação e como o projeto foi feito.
         </p>
@@ -370,7 +370,7 @@ export default function Sobre() {
 
       <Secao icon={<Sparkles className="w-4 h-4" />} titulo="O que este portal é (e o que não é)">
         <p>
-          O Portal de Normas e Atos da UFF é uma camada de consulta sobre um acervo público: os
+          O Inteligência UFF é uma camada de consulta sobre um acervo público: os
           Boletins de Serviço que a própria universidade já publica oficialmente. Ele não substitui
           o boletim nem cria informação nova. É mantido pelo Nidi, vinculado ao Gabinete do Reitor,
           para facilitar o acesso a algo que já era público, mas difícil de encontrar.
