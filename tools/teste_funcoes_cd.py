@@ -94,6 +94,32 @@ CASOS = [
      "para exercer a funcao gratificada de Chefe da Divisao de Apoio - Codigo FG-5.",
      [("designar", "Chefe", "304614")]),
 
+    # ---- Assistente: mesma regra do secretario (06/08/2026) ----
+    # Medido em 312 boletins de 26 anos: 40 ocorrencias como FUNCAO trazem
+    # codigo FG/CD e ZERO tem cara de concurso; as 178 SEM codigo sao todas
+    # cargo EFETIVO ("ocupante do cargo de Assistente em Administracao"), em
+    # ato de vacancia, remocao, redistribuicao e ate de falecimento.
+    ("assistente com FG-4 (funcao gratificada real)",
+     "Designar CARLA MENDES, Matricula SIAPE no 303030, para exercer a funcao gratificada de "
+     "Assistente da Pro-Reitoria de Graduacao - Codigo FG-4.",
+     [("designar", "Assistente", "303030")]),
+
+    ("dispensa de assistente com FG-1",
+     "Dispensar JOAO PIRES, Matricula SIAPE no 306694, da funcao gratificada de Assistente do "
+     "Gabinete do Reitor - Codigo FG-1, para a qual foi designado atraves da Portaria no 3.000.",
+     [("dispensar", "Assistente", "306694")]),
+
+    ("NEGATIVO: 'cargo de Assistente em Administracao' e CARGO EFETIVO",
+     "Declara vago, nos termos do artigo 33 da Lei no 8.112/90, o cargo de Assistente de "
+     "Administracao, ocupado por VILSON TAVARES, matricula SIAPE no 306228, em virtude de "
+     "posse em outro cargo inacumulavel.",
+     []),
+
+    ("NEGATIVO: assistente sem codigo, em ato de remocao",
+     "Remover ANA MACHADO, ocupante do cargo de Assistente em Administracao, matricula SIAPE no "
+     "307621, lotada na Coordenacao do Curso de Mestrado, para a Faculdade de Direito.",
+     []),
+
     # ---- negativos ----
     ("NEGATIVO: cargo efetivo nao e funcao de direcao",
      "O REITOR resolve: Nomear ANA COSTA, Matricula SIAPE no 4444444, para exercer o cargo de "

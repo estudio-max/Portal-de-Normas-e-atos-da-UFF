@@ -1318,9 +1318,18 @@ _PFX_CARGO = r"(?:Vice%s|Sub%s)?" % (_HIFEN_QUEBRA, _HIFEN_QUEBRA)
 #                      "secretário" é o CARGO EFETIVO de quem recebe a função.
 #                      Sem essa condição seriam 60 designações falsas, que é
 #                      justamente por que ele ficou de fora até aqui.
+#   Assistente (solto)  — ENTRA desde 06/08/2026, sob a MESMA condição do
+#                      secretário: só com código FG/CD explícito. Medido em 312
+#                      boletins de 26 anos: 40 ocorrências como função COM
+#                      código e ZERO com cara de concurso; SEM código são 178,
+#                      e a leitura delas mostra por que ele estava fora —
+#                      "ocupante do cargo de Assistente em Administração" é o
+#                      CARGO EFETIVO, e aparece em ato de vacância, remoção,
+#                      redistribuição e até de falecimento. O gatilho "cargo de"
+#                      casa esses, e sem o código eles entrariam como designação.
 _NUC_CARGO = (r"(?:Chefes?|Coordenador[ae]?(?:es)?|Diretor[ae]?(?:es)?|Superintendentes?|"
               r"Gerentes?|Decan[oa]s?|Assessor[ae]?(?:es)?|Prefeit[oa]s?|Corregedor[ae]?(?:es)?|"
-              r"Secret[áa]ri[oa]%s(?:Geral|Administrativ[oa]s?)|Secret[áa]ri[oa]s?|"
+              r"Secret[áa]ri[oa]%s(?:Geral|Administrativ[oa]s?)|Secret[áa]ri[oa]s?|Assistentes?|"
               r"Pr[óo]%sReitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)"
               % (_HIFEN_QUEBRA, _HIFEN_QUEBRA))
 
@@ -1328,8 +1337,10 @@ _NUC_CARGO = (r"(?:Chefes?|Coordenador[ae]?(?:es)?|Diretor[ae]?(?:es)?|Superinte
 # a alternativa a deixá-los fora por completo. "Secretário-Geral" hifenizado é
 # inequívoco e não passa por aqui; o solto, sim.
 # "Secretário-Geral" fica de fora desta exigência: é inequívoco e já era aceito.
-# "Secretário" e "Secretário Administrativo" precisam do código.
-_CARGO_SO_COM_CODIGO = re.compile(r"^secretari[oa]s?(?:\s+administrativ[oa]s?)?$")
+# "Secretário", "Secretário Administrativo" e "Assistente" precisam do código —
+# os três existem também como CARGO EFETIVO, e é o código que os separa.
+_CARGO_SO_COM_CODIGO = re.compile(
+    r"^(?:secretari[oa]s?(?:\s+administrativ[oa]s?)?|assistentes?)$")
 _CODIGO_FUNCAO = re.compile(r"\b(?:c[óo]digo|s[íi]mbolo)\s*[:\-]?\s*(?:FG|CD)\s*[-–—]?\s*\d"
                             r"|\b(?:FG|CD)\s*[-–—]\s*\d", re.I)
 _CARGO_G = r"(?P<cargo>%s%s)" % (_PFX_CARGO, _NUC_CARGO)
@@ -1559,6 +1570,7 @@ def canon_cargo(c):
         if "geral" in low:            base = "Secretário-Geral"
         elif "administrativ" in low:  base = "Secretário Administrativo"
         else:                         base = "Secretário"
+    elif "assistente" in low:  base = "Assistente"
     else:                      base = c.title()
     return ("Sub" + base.lower()) if pref == "Sub" else (pref + base)
 
