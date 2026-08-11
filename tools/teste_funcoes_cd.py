@@ -14,9 +14,15 @@ Isso importa para o Decreto 13.048/2026 (RSC do PCCTAE), cujo Anexo V pontua
 
 Os negativos sao os que doem:
   - cargo EFETIVO ('cargo de Professor do Magisterio Superior') nao pode virar
-    funcao. E por isso que professor/assistente/tecnico/secretario ficam FORA
-    da whitelist, mesmo casando o gatilho: sao o emprego da pessoa, nao posicao
-    de direcao. 'secretario' solto traria 60 eliminacoes de concurso publico.
+    funcao. E por isso que professor/assistente/tecnico ficam FORA da whitelist,
+    mesmo casando o gatilho: sao o emprego da pessoa, nao posicao de direcao.
+  - 'secretario' era desse grupo e SAIU dele em 06/08/2026, com uma condicao:
+    so conta acompanhado do CODIGO da funcao (FG-n/CD-n). Sozinho ele traria 60
+    eliminacoes de concurso ('para o cargo de secretario executivo, por nao
+    apresentar documentacao'); com o codigo, medido em 336 boletins dos 28 anos
+    do acervo, sao 56 ocorrencias e ZERO eliminacoes. O motivador foi a Portaria
+    53.184/2015, que designa uma FG-4 de Secretaria do Gabinete do Reitor e nao
+    gerava linha nenhuma.
   - 'dispensar ... em virtude de sua nomeacao para diretor do Centro' e uma
     DISPENSA. O substantivo 'nomeacao' explica o motivo; o dispositivo e
     'dispensar'. Casar o substantivo invertia 34 dispensas reais em designacoes
@@ -58,6 +64,35 @@ CASOS = [
      "O Diretor resolve: Designar CARLOS LIMA, Matricula SIAPE no 3333333, para a funcao de Chefe do "
      "Departamento de Enfermagem, com mandato de 02 (dois) anos.",
      [("designar", "Chefe", "3333333")]),
+
+    # ---- Secretario: so vale COM o codigo da funcao (06/08/2026) ----
+    # Ele ficou fora da whitelist por anos, e com razao: "para o cargo de
+    # secretario executivo, por nao apresentar documentacao" e eliminacao em
+    # concurso, cargo EFETIVO, e apareceu 60x contra 8 designacoes reais.
+    # O que mudou nao foi a whitelist e sim o discriminador: medido em 336
+    # boletins dos 28 anos do acervo, 56 ocorrencias de "secretari*" como
+    # funcao trazem codigo FG/CD explicito e ZERO delas sao eliminacao. Sem o
+    # codigo, continua fora.
+    ("secretaria com FG-4 (Portaria 53.184/2015, real)",
+     "Art.1o - Designar DENISE APARECIDA DE MIRANDA ROSAS, Assistente em Administracao, codigo 701.200, "
+     "Matricula SIAPE no 139693, para exercer a funcao gratificada de Secretaria do Gabinete do Reitor "
+     "- Codigo FG-4.",
+     [("designar", "Secretaria", "139693")]),
+
+    ("secretario ADMINISTRATIVO com FG-7 (forma dominante no acervo)",
+     "Designar MARIA SOUZA, Matricula SIAPE no 302725, para exercer a funcao gratificada de "
+     "Secretario Administrativo da Coordenacao do Curso de Graduacao em Medicina - Codigo FG-7.",
+     [("designar", "Secretario Administrativo", "302725")]),
+
+    ("NEGATIVO: secretario SEM codigo continua fora",
+     "Designar JOSE ALVES, Matricula SIAPE no 7777777, para exercer a funcao de secretario do "
+     "Departamento de Fisica.",
+     []),
+
+    ("NEGATIVO: 'Secretario Executivo' e o CARGO EFETIVO de quem recebe a funcao",
+     "Designar MARIZA FERREIRA, Secretario Executivo, codigo 061085, Matricula SIAPE no 304614, "
+     "para exercer a funcao gratificada de Chefe da Divisao de Apoio - Codigo FG-5.",
+     [("designar", "Chefe", "304614")]),
 
     # ---- negativos ----
     ("NEGATIVO: cargo efetivo nao e funcao de direcao",

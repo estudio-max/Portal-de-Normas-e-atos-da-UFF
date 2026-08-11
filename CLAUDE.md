@@ -692,6 +692,26 @@ resumo operacional.
   *exoneração* são o par dos **cargos de direção (CD)**; *designação* e
   *dispensa*, o das funções e chefias. `ato_funcao.acao` só tem
   `designar`/`dispensar`, então a nomeação de CD entra como `designar`.
+- **"Secretário" saiu da lista negra, mas SÓ com o código da função junto.**
+  Ele ficava fora por um motivo medido — "para o cargo de secretário
+  EXECUTIVO, por não apresentar documentação" é eliminação em concurso, cargo
+  efetivo, e aparecia 60x contra 8 designações reais. O que mudou não foi a
+  tolerância e sim o **discriminador**: exigir `Código FG-n`/`CD-n` logo depois
+  da unidade (`_CARGO_SO_COM_CODIGO` + `_CODIGO_FUNCAO`). Medido em 336
+  boletins cobrindo os 28 anos: **56 ocorrências de "secretári*" como função
+  trazem o código e ZERO delas é eliminação**. A forma dominante é "Secretário
+  **Administrativo** do Departamento X - Código FG-7", que exigiu acrescentar o
+  qualificador ao núcleo — só "Secretário" casava e depois o regex esbarrava em
+  "Administrativo" onde esperava `do/da`. Motivador: a Portaria 53.184/2015
+  designa uma **FG-4 de Secretária do Gabinete do Reitor** e não gerava linha
+  nenhuma. A/B em 280 boletins de 28 anos: **+36 funções, 0 perdas**.
+- **`canon_cargo()` colapsa espaço em branco, e isso não é cosmético.** O cargo
+  pode vir quebrado entre linhas do PDF ("Secretário \nAdministrativo") — o
+  `_HIFEN_QUEBRA` tolera isso no casamento de propósito. Sem colapsar, a quebra
+  sobrevivia até o nome final e gerava **chave diferente da grafia inteira**:
+  dois cargos onde há um, com efeito direto na aba Chefias e no pareamento
+  designação↔dispensa. Medido: 3 casos em 280 boletins, todos de secretário,
+  mas o defeito valia para qualquer cargo.
 - **A whitelist de cargos (`_NUC_CARGO`) é branca de propósito.** O gatilho
   aceita "cargo de X" sem o "de direção", então todo nome ali também passa a
   casar **cargo efetivo**. `professor`, `assistente`, `técnico`, `secretário`

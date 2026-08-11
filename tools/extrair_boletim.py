@@ -1304,10 +1304,34 @@ _PFX_CARGO = r"(?:Vice%s|Sub%s)?" % (_HIFEN_QUEBRA, _HIFEN_QUEBRA)
 #                      ganho de 3 não paga o risco.
 # Mesma lógica de professor/assistente/técnico, que também não entram: são o
 # emprego da pessoa, não posição de direção.
+#   Secretário (solto)  — ENTRA desde 06/08/2026, mas SÓ com código FG/CD
+#                      explícito no texto (ver _EXIGE_CODIGO abaixo). Medido em
+#                      336 boletins cobrindo os 28 anos do acervo: 56
+#                      ocorrências de "secretári*" como função COM código, e
+#                      ZERO delas com cara de eliminação em concurso. O código
+#                      é o que separa "função gratificada de Secretário
+#                      Administrativo do Departamento X - Código FG-7" (função
+#                      real) de "para o cargo de secretário executivo, por não
+#                      apresentar documentação" (cargo efetivo, candidato
+#                      eliminado) e de "Fulana, Secretário Executivo, código
+#                      061085, para exercer a função gratificada de …" — onde o
+#                      "secretário" é o CARGO EFETIVO de quem recebe a função.
+#                      Sem essa condição seriam 60 designações falsas, que é
+#                      justamente por que ele ficou de fora até aqui.
 _NUC_CARGO = (r"(?:Chefes?|Coordenador[ae]?(?:es)?|Diretor[ae]?(?:es)?|Superintendentes?|"
               r"Gerentes?|Decan[oa]s?|Assessor[ae]?(?:es)?|Prefeit[oa]s?|Corregedor[ae]?(?:es)?|"
-              r"Secret[áa]ri[oa]%sGeral|Pr[óo]%sReitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)"
+              r"Secret[áa]ri[oa]%s(?:Geral|Administrativ[oa]s?)|Secret[áa]ri[oa]s?|"
+              r"Pr[óo]%sReitor[ae]?(?:es)?|Reitor[ae]?(?:es)?)"
               % (_HIFEN_QUEBRA, _HIFEN_QUEBRA))
+
+# Cargos que só valem acompanhados do código da função/cargo (FG-n, CD-n) —
+# a alternativa a deixá-los fora por completo. "Secretário-Geral" hifenizado é
+# inequívoco e não passa por aqui; o solto, sim.
+# "Secretário-Geral" fica de fora desta exigência: é inequívoco e já era aceito.
+# "Secretário" e "Secretário Administrativo" precisam do código.
+_CARGO_SO_COM_CODIGO = re.compile(r"^secretari[oa]s?(?:\s+administrativ[oa]s?)?$")
+_CODIGO_FUNCAO = re.compile(r"\b(?:c[óo]digo|s[íi]mbolo)\s*[:\-]?\s*(?:FG|CD)\s*[-–—]?\s*\d"
+                            r"|\b(?:FG|CD)\s*[-–—]\s*\d", re.I)
 _CARGO_G = r"(?P<cargo>%s%s)" % (_PFX_CARGO, _NUC_CARGO)
 _CONECT_CU = r"(?:d[oae]s?|d')"
 
@@ -1504,6 +1528,14 @@ def _soma_anos(iso, n):
 
 def canon_cargo(c):
     """Normaliza a grafia do cargo, preservando Vice-/Sub."""
+    # Colapsa espaço em branco ANTES de tudo: o cargo pode vir quebrado entre
+    # linhas do PDF ("Secretário \nAdministrativo"), e `_HIFEN_QUEBRA` tolera
+    # isso de propósito no casamento. Sem colapsar aqui, a quebra sobrevive até
+    # o nome final e gera uma chave diferente da grafia inteira — dois cargos
+    # onde há um, com efeito direto na aba Chefias e no pareamento
+    # designação↔dispensa. Medido: 3 casos de "Secretário \nAdministrativo" em
+    # 280 boletins. Vale para qualquer cargo, não só este.
+    c = re.sub(r"\s+", " ", c or "").strip()
     low = _fold(c)
     pref = ""
     m = re.match(r"(vice|sub)[-\s]?", low)
@@ -1615,6 +1647,14 @@ def extrai_funcoes(trecho, data_ato=""):
         if nome and _fold(nome) in _fold(unid):              # nome-lixo da própria unidade
             nome = ""
         cargo = canon_cargo(m.group("cargo"))
+        # Cargo ambíguo (hoje só "Secretário" solto) exige o código da função
+        # logo adiante: é ele que separa a função gratificada de verdade do
+        # cargo EFETIVO de quem a recebe, e da eliminação em concurso. A janela
+        # é curta de propósito — o código vem logo após a unidade, e olhar o
+        # trecho inteiro aceitaria o código de OUTRA designação do mesmo ato.
+        if _CARGO_SO_COM_CODIGO.match(_fold(cargo)):
+            if not _CODIGO_FUNCAO.search(trecho[m.end("unidade"):m.end("unidade") + 60]):
+                continue
         chave = chave_unidade(unid)
         k = (_acao_func(trecho, m.start(), m.group("prep")), cargo.lower(), chave, siape)
         if k in vistos:
