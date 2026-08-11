@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { ReportarProblema } from '../ui/ReportarProblema';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { Stats } from '../../dataSource';
 
@@ -43,6 +44,12 @@ export const AppShell: React.FC<AppShellProps> = ({
         <TopBar apiMode={apiMode} onSearch={onSearch} onThemeToggle={onThemeToggle} fotofobia={fotofobia} portalStats={portalStats} activePath={activePath} onNavigate={onNavigate} />
         <main className="p-4 sm:p-6 min-h-screen">
           {children}
+          {/* Convite de correção. Fica AQUI, e não dentro de cada painel, por
+              dois motivos: cobre toda aba de dados sem repetir código, e nasce
+              no fim da página — quem chegou até o rodapé já leu o que veio
+              buscar. É o oposto do modal, que interrompe antes de a pessoa ver
+              qualquer coisa. */}
+          <ReportarProblema activePath={activePath} />
         </main>
       </div>
     </div>

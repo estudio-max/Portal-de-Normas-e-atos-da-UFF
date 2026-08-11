@@ -1,6 +1,26 @@
 import React from 'react';
-import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked } from 'lucide-react';
+import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare } from 'lucide-react';
 import * as ds from '../../dataSource';
+
+// Relato do que a pessoa NÃO conseguiu fazer. O assunto sai fixo para que essas
+// mensagens se separem sozinhas das dúvidas gerais na caixa de entrada, e o
+// corpo já vem com o roteiro — pergunta aberta sem roteiro devolve "está bom",
+// que não decide nada.
+const LINK_RELATO = 'mailto:nidi.gar@id.uff.br?subject=' +
+  encodeURIComponent('Inteligência UFF — não consegui fazer') +
+  '&body=' + encodeURIComponent([
+    'O QUE EU VIM PROCURAR:',
+    '',
+    '',
+    'O QUE ACONTECEU (ou o que faltou):',
+    '',
+    '',
+    'Se for sobre um ato específico, qual? (tipo, número e ano)',
+    '',
+    '',
+    '---',
+    'Mensagem escrita e enviada por você. O portal não coletou nada.',
+  ].join('\n'));
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -392,6 +412,37 @@ export default function Sobre() {
           legenda="É a pergunta que o acervo em PDF não responde e o índice responde."
         />
       </Secao>
+
+      {/* Uma pergunta só, e ABERTA. "Nota de 0 a 10" com poucas respostas não
+          decide nada — vira média sem dono. Já "o que você tentou fazer e não
+          conseguiu" devolve o que falta construir, com as palavras de quem
+          precisava. Fica na aba Sobre, e não num modal: quem chegou até aqui
+          está disposto a falar do projeto, e ninguém foi interrompido no meio
+          de uma consulta para responder. */}
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#003366]">
+          <MessageSquare className="h-4 w-4 text-yellow-500" /> Ajude a decidir o que vem depois
+        </h3>
+        <p className="mt-2 text-[13px] leading-relaxed text-slate-700">
+          Se você veio procurar alguma coisa aqui e <strong>não conseguiu</strong> — porque a
+          informação não existe, porque está errada, ou porque você não achou onde fica —{' '}
+          <strong>essa é a informação mais útil que existe para este projeto</strong>. Ela diz o
+          que construir em seguida melhor do que qualquer nota de satisfação.
+        </p>
+        <p className="mt-2.5 text-[13px] leading-relaxed text-slate-700">
+          <a
+            href={LINK_RELATO}
+            className="font-semibold text-blue-700 underline decoration-dotted underline-offset-2"
+          >
+            Conte o que você tentou fazer e não conseguiu
+          </a>
+          {' '}— duas linhas bastam.
+        </p>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+          Abre o seu programa de e-mail com a mensagem começada. Nada é enviado automaticamente, e
+          o portal não registra nem esta visita nem o que você escrever.
+        </p>
+      </div>
 
       <p className="text-[11px] text-slate-400 text-center pt-2">
         Dúvidas ou sugestões sobre o projeto: <a href="mailto:nidi.gar@id.uff.br" className="underline">nidi.gar@id.uff.br</a>.
