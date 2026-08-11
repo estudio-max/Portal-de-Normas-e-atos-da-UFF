@@ -1549,6 +1549,16 @@ def canon_cargo(c):
     elif "dire" in low:        base = "Diretor"
     elif "geren" in low:       base = "Gerente"
     elif "decan" in low:       base = "Decano"
+    # Secretário precisa de branch próprio pelo mesmo motivo dos outros: sem ele
+    # cai no `c.title()` e a grafia do PDF vira a chave. Medido nos 184 boletins
+    # do reprocessamento: 575 funções em 10 grafias — "Secretária"/"Secretário"/
+    # "Secretario" (OCR sem acento) e "Secretário Geral"/"Secretário-Geral" eram
+    # cargos DIFERENTES para a aba Chefias e para o pareamento
+    # designação↔dispensa. Normaliza para o masculino, como Coordenador/Diretor.
+    elif "secretari" in low:
+        if "geral" in low:            base = "Secretário-Geral"
+        elif "administrativ" in low:  base = "Secretário Administrativo"
+        else:                         base = "Secretário"
     else:                      base = c.title()
     return ("Sub" + base.lower()) if pref == "Sub" else (pref + base)
 

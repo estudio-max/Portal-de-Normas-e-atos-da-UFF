@@ -77,12 +77,12 @@ CASOS = [
      "Art.1o - Designar DENISE APARECIDA DE MIRANDA ROSAS, Assistente em Administracao, codigo 701.200, "
      "Matricula SIAPE no 139693, para exercer a funcao gratificada de Secretaria do Gabinete do Reitor "
      "- Codigo FG-4.",
-     [("designar", "Secretaria", "139693")]),
+     [("designar", "Secretário", "139693")]),
 
     ("secretario ADMINISTRATIVO com FG-7 (forma dominante no acervo)",
      "Designar MARIA SOUZA, Matricula SIAPE no 302725, para exercer a funcao gratificada de "
      "Secretario Administrativo da Coordenacao do Curso de Graduacao em Medicina - Codigo FG-7.",
-     [("designar", "Secretario Administrativo", "302725")]),
+     [("designar", "Secretário Administrativo", "302725")]),
 
     ("NEGATIVO: secretario SEM codigo continua fora",
      "Designar JOSE ALVES, Matricula SIAPE no 7777777, para exercer a funcao de secretario do "
