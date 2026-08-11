@@ -120,6 +120,26 @@ CASOS = [
      "307621, lotada na Coordenacao do Curso de Mestrado, para a Faculdade de Direito.",
      []),
 
+    # ---- formas achadas na varredura sistematica (06/08/2026) ----
+    # Levantamento de TODO cargo que aparece com codigo FG/CD em 364 boletins de
+    # 26 anos: 246 das 257 ocorrencias ja eram capturadas (95,7%). As que faltavam
+    # se agrupavam em duas formas corrigiveis — e uma terceira, erro de OCR
+    # ("Director", "Dirctor"), que ficou de fora de proposito: e typo, nao padrao.
+    ("'cargo de direcao DO' (e nao 'de')",
+     "Designar FULANO DE TAL, Matricula SIAPE no 1234567, para exercer o cargo de direcao do "
+     "Pro-Reitor da Pro-Reitoria de Graduacao - Codigo CD-2.",
+     [("designar", "Pró-Reitor", "1234567")]),
+
+    ("qualificador depois do cargo: Assessor Especial",
+     "Designar FULANO DE TAL, Matricula SIAPE no 1234567, para exercer o cargo de direcao de "
+     "Assessor Especial do Reitor - Codigo CD-4.",
+     [("designar", "Assessor Especial", "1234567")]),
+
+    ("qualificador depois do cargo: Assistente Intermediario (com FG)",
+     "Designar FULANO DE TAL, Matricula SIAPE no 1234567, para exercer a funcao gratificada de "
+     "Assistente Intermediario da Pro-Reitoria de Pesquisa - Codigo FG-2.",
+     [("designar", "Assistente", "1234567")]),
+
     # ---- negativos ----
     ("NEGATIVO: cargo efetivo nao e funcao de direcao",
      "O REITOR resolve: Nomear ANA COSTA, Matricula SIAPE no 4444444, para exercer o cargo de "

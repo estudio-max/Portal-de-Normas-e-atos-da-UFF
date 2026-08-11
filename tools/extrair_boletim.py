@@ -1343,7 +1343,14 @@ _CARGO_SO_COM_CODIGO = re.compile(
     r"^(?:secretari[oa]s?(?:\s+administrativ[oa]s?)?|assistentes?)$")
 _CODIGO_FUNCAO = re.compile(r"\b(?:c[óo]digo|s[íi]mbolo)\s*[:\-]?\s*(?:FG|CD)\s*[-–—]?\s*\d"
                             r"|\b(?:FG|CD)\s*[-–—]\s*\d", re.I)
-_CARGO_G = r"(?P<cargo>%s%s)" % (_PFX_CARGO, _NUC_CARGO)
+# Qualificador que vem DEPOIS do núcleo ("Assessor Especial do Reitor",
+# "Assistente Intermediário da Pró-Reitoria"). Sem ele o regex casava o núcleo e
+# esbarrava no adjetivo onde esperava `do/da`, perdendo a designação — mesma
+# mecânica que escondia "Secretário Administrativo". Lista BRANCA e curta, pelo
+# motivo de sempre: qualquer palavra aqui passa a poder colar em qualquer cargo.
+# Medido em 364 boletins de 26 anos: só estes dois aparecem.
+_SUF_CARGO = r"(?:%sEspecial|%sIntermedi[áa]ri[oa]s?)?" % (_HIFEN_QUEBRA, _HIFEN_QUEBRA)
+_CARGO_G = r"(?P<cargo>%s%s%s)" % (_PFX_CARGO, _NUC_CARGO, _SUF_CARGO)
 _CONECT_CU = r"(?:d[oae]s?|d')"
 
 # Gatilho do dispositivo. Cobre "função de", "função gratificada de",
@@ -1358,7 +1365,11 @@ _TRIG_FUNC = (r"(?<![A-Za-zÀ-ÿ])(?P<prep>d[ao]s?|para\s+(?:as?|os?)|pel[ao]|a|
               r"(?:exerc[íi]cio\s+d[ao]\s+)?"
               r"(?:fun[çc](?:[ãa]o|[õo]es)|cargo)\s+"
               r"(?:(?:gratificad|comissionad)[ao]s?\s+|de\s+confian[çc]a\s+|em\s+comiss[ãa]o\s+)?"
-              r"de\s+(?:dire[çc][ãa]o\s+de\s+)?")
+              # "cargo de direção DO Pró-Reitor" existe no corpus tanto quanto
+              # "de": exigir só `de` fazia o gatilho terminar antes do cargo, e
+              # a designação inteira se perdia. Medido em 364 boletins de 26
+              # anos: 2 ocorrências, todas legítimas e com código CD.
+              r"de\s+(?:dire[çc][ãa]o\s+d[eoa]s?\s+)?")
 # A vírgula só encerra a unidade quando NÃO for parte do próprio nome: em
 # "Pró-Reitor de Pesquisa, Pós-Graduação e Inovação" a vírgula é interna
 # (seguida de Palavra Capitalizada) e truncava a unidade em só "Pesquisa" —
