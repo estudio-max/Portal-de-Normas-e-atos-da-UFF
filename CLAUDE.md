@@ -830,8 +830,29 @@ resumo operacional.
   mod_security da HostGator); `curl` passa. Mande
   `{'User-Agent': 'curl/8.0'}` em qualquer coleta por Python, ou você vai
   interpretar bloqueio como "ato não existe".
-- Órgão tem ~1.162 grafias de sigla no corpus. Consolidar é **curadoria** (via
-  `orgao_alias`), não regex.
+- **Órgão tem ~1.162 grafias de sigla no corpus. Consolidar é curadoria (via
+  `orgao_alias`), não regex** — mas curadoria com score de confiança em
+  faixas, não leitura cega: `tools/casar_siglas_uorg.py` casa cada sigla do
+  corpus contra a lista oficial de UORGs (`tools/dados_referencia/uorg-siglas-uff.csv`,
+  2.716 linhas) por três níveis — exato (1.00, não precisa de alias), token
+  inteiro em comum (0.90, ex. "TEQ/TCE" casa "TEQ" pelo token, nunca por
+  substring — "CE" dentro de "TCE" já deu falso positivo medido) e
+  similaridade de string (só ≥0.82, e mesmo assim NÃO entra no SQL de
+  produção: um teste real juntou três Programas de Pós-Graduação diferentes
+  no mesmo "PPG" genérico). Só as duas primeiras faixas viram
+  `tools/gerar_sql_orgao_alias.py` → SQL de produção; abaixo disso fica
+  registrado em CSV para curadoria manual, nunca aplicado.
+  **Uma rodada de 17/07/2026 (535 mapeamentos) foi medida, o SQL foi gerado, e
+  NUNCA CHEGOU A SUBIR** — ficou como arquivo solto em `curadoria-orgaos/`
+  (fora do repo) por quase um mês. Descoberto e corrigido em 11/08/2026:
+  remedido do zero (o corpus mudou — 1.161→1.022 siglas distintas em uso, o
+  casamento por token caiu de 530 para 348 por causa de outras correções do
+  mês, como a de CEPEx/AD-referendum), resultando em **349 mapeamentos**
+  prontos para aplicar. Dois casos de risco (`CPD` — podia ser "Centro de
+  Processamento de Dados" em vez de "Coordenação de Pessoal Docente"; `DRI`)
+  foram conferidos contra o TEXTO REAL dos atos antes de confiar no score, e
+  bateram. **Lição que fica: gerar o SQL não é o mesmo que aplicá-lo** — depois
+  de todo pacote de dados, confirme em produção, não só no arquivo.
 - **O mesmo servidor é DUAS pessoas quando o SIAPE varia no zero à esquerda —
   e o dígito verificador faz o mesmo por outra porta.** `pessoa.siape` é
   UNIQUE, então `0307221`/`307221` (medido: 1.462 servidores partidos assim) e
