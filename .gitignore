@@ -30,3 +30,8 @@ tools/atos.xlsx
 tools/dados.js
 tools/portal-data-extrato-reprocessado.json
 backend/api/cache/
+
+# Trecho injetado no <head> só na build local (Google Analytics). Fica FORA do
+# repositório a pedido do mantenedor; o vite.config.ts o insere no dist quando
+# o arquivo existe, e ignora quando não existe.
+head.local.html
