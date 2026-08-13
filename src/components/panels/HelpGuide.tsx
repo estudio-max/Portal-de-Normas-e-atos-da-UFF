@@ -3,7 +3,7 @@ import {
   Search, GitBranch, Sparkles, Link as LinkIcon, Database, ShieldCheck,
   ShieldAlert, GitBranch as Branch, FileText, Filter, User, Info, CheckCircle2,
   ArrowRight, MousePointerClick, RefreshCw, Users, BarChart3, CalendarClock, AlertTriangle, Scale,
-  Target, BookMarked, HelpCircle
+  Target, BookMarked, HelpCircle, Accessibility
 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
@@ -40,13 +40,57 @@ export default function HelpGuide() {
         </p>
       </div>
 
+      {/* Acessibilidade. Fica logo depois da capa porque é para onde aponta o
+          link do cabeçalho, e porque quem precisa dela precisa ANTES de
+          aprender o resto. Só descreve recurso que EXISTE — a mesma regra do
+          ajudaConteudo.tsx: prometer um recurso ausente é pior que não ter. */}
+      <Secao icon={<Accessibility className="w-4 h-4" />} titulo="Acessibilidade">
+        <p>
+          O portal foi construído para funcionar com <strong>teclado</strong>,{' '}
+          <strong>leitor de tela</strong> e <strong>zoom</strong>. O que está disponível hoje:
+        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Modo de baixo brilho.</strong> O botão de lua/sol no alto da tela troca a
+            interface para uma paleta escura declarada — não é inversão de cores, então os selos
+            de vigência continuam com o mesmo significado. A escolha fica guardada no navegador.
+          </li>
+          <li>
+            <strong>Navegação por teclado.</strong> Todos os controles são alcançáveis por{' '}
+            <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[11px]">Tab</kbd>,
+            com contorno de foco visível. <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[11px]">Esc</kbd>{' '}
+            fecha os painéis e as janelas, e{' '}
+            <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[11px]">Ctrl/⌘ + K</kbd>{' '}
+            leva direto à busca global.
+          </li>
+          <li>
+            <strong>Estado nunca sai só na cor.</strong> Vigente, revogado, alterado e em
+            andamento vêm sempre escritos por extenso ao lado da cor.
+          </li>
+          <li>
+            <strong>Tabelas viram lista no celular.</strong> Abaixo de 768 px cada linha vira um
+            cartão, sem rolagem lateral.
+          </li>
+          <li>
+            <strong>Campos com rótulo visível</strong> e texto de apoio associado, para que o
+            leitor de tela anuncie o campo mesmo depois de preenchido.
+          </li>
+        </ul>
+        <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+          Encontrou uma barreira? Use o <strong>“Reportar um problema”</strong> no fim de qualquer
+          página. Barreira de acesso é defeito, e é tratada como tal.
+        </p>
+      </Secao>
+
       {/* Início rápido */}
       <Secao icon={<Search className="w-4 h-4" />} titulo="Começando em 30 segundos">
         <ol className="list-decimal ml-5 space-y-1">
           <li>Na aba <strong>📊 Atos e Normas</strong>, digite na caixa de busca o que procura
             (número da portaria, assunto, processo SEI…).</li>
-          <li>Use os <strong>filtros</strong> (tipo, órgão, ano, status) para estreitar.</li>
-          <li>Clique no <strong>olho 👁</strong> de uma linha para abrir a <strong>Ficha do Ato</strong> com todos os detalhes.</li>
+          <li>Estreite com <strong>Tipo</strong>, <strong>Ano</strong> e <strong>Status</strong>;
+            órgão emissor, nome, matrícula e processo estão em <strong>Mais filtros</strong>.</li>
+          <li>Clique em <strong>Ver ato</strong>, no fim da linha, para abrir a
+            <strong> Ficha do Ato</strong> com todos os detalhes.</li>
         </ol>
         <p className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-900 flex gap-1.5">
           <HelpCircle className="w-4 h-4 shrink-0" />

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays, Link2, Users, AlertTriangle, Hourglass, ExternalLink, ArrowRightLeft, MapPin, Landmark } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 import { EstruturaGovernanca } from '../insights/EstruturaGovernanca';
 
@@ -87,14 +88,16 @@ export default function InsightsApi() {
 
   return (
     <div id="painel-insights" className="space-y-3">
-      {/* Cabeçalho + seletor de ano */}
+      <PageHeader
+        titulo="Insights"
+        descricao="Entenda padrões e tendências no acervo normativo da UFF."
+      />
+
+      {/* Seletor de ano */}
       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
-              <BarChart3 className="w-4 h-4 text-yellow-500" /> Insights — o acervo normativo em números
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+            <p className="text-[13px] text-slate-700 leading-relaxed">
               Panorama analítico do que está indexado: <strong>ritmo de publicação</strong>, <strong>órgãos mais ativos</strong>,
               <strong> cobertura SEI</strong>, composição por tipo e situação de vigência. Todos os números vêm direto da base.
             </p>

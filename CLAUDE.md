@@ -572,22 +572,63 @@ botão "Imprimir" ali leva ao AirPrint e não ao PDF. Consequências de projeto:
 - O documento imprime **preto no branco mesmo com o portal em fotofobia**: quem
   imprime quer o papel legível, não a skin de baixo brilho.
 
-## O item em destaque da navegação sai de token, não de classe
+## A navegação são QUATRO rotas e um "Mais"
 
-`Meu SIAPE` é o único item com `destaque: true` no `Sidebar.tsx` — é a aba de
-maior uso previsto e a única em que a pessoa procura um dado SEU; destacar duas
-dissolveria o destaque. O tratamento visual vem da classe `.nav-destaque`, cujas
-cores são custom properties (`--destaque-*`) declaradas nos DOIS temas.
+`Sidebar.tsx` tem `NAV_PRIMARIO` (Dashboard, Atos e Normas, Meu SIAPE, Prazos),
+`NAV_MAIS` (as outras dez, em três grupos) e `FOOTER_ITEMS`. Aba nova entra num
+dos três — e continua precisando da linha em `ABAS_VALIDAS` e da entrada na
+ajuda, que não mudaram.
 
-**Não use `text-[#006400]` para isso.** O verde institucional **não está** na
-lista de conversão do modo fotofobia (o `index.css` mapeia `text-slate-*`,
-`text-[#4A5568]`, `text-indigo-700`… mas não ele), então ficaria verde-escuro
-sobre fundo escuro, sem erro nenhum no console. Pela mesma razão o destaque é
-pintado por regra própria e não com `border-*`: o conversor tem
+Três coisas que a trava exige, cada uma por um motivo medido:
+
+- **A trilha compacta (rail de 64 px) lista TUDO** — `compactItems` soma as três
+  listas. Ali não há rótulo para ler, então um disclosure fechado seria um beco
+  sem saída, e o que mais sumia era o rodapé (Ajuda, Privacidade, Sobre).
+- **"Mais" abre sozinho quando a aba corrente mora dentro dele.** Chegar em
+  Comissões por link colado, pelo cartão de tarefa da home ou pelo "voltar" do
+  navegador e ver a navegação sem NADA selecionado é perder a própria posição.
+  Só abre; nunca fecha por conta própria.
+- **Todo item leva `aria-current="page"`** quando é o atual.
+
+`Meu SIAPE` é o único item com `destaque: true` — é a aba de maior uso previsto
+e a única em que a pessoa procura um dado SEU; destacar duas dissolveria o
+destaque. O tratamento vem da classe `.nav-destaque`, com custom properties
+(`--destaque-*`) declaradas nos DOIS temas. Medido: contraste 8,49 no claro e
+8,22 no escuro, contra 7,53/10,17 dos vizinhos. A sombra é `box-shadow inset`,
+não `border`, para o item não ficar 2px mais alto que os da mesma lista.
+
+## O verde institucional NUNCA é cor de texto direto
+
+`#006400` **não está** na lista de conversão do modo fotofobia (o `index.css`
+mapeia `text-slate-*`, `text-[#4A5568]`, `text-indigo-700`… mas não ele), então
+ele atravessa a troca de tema intacto e fica verde-escuro sobre fundo escuro —
+**sem erro nenhum no console**, que é como esta armadilha sempre se apresenta.
+
+Não é hipótese: em 13/08/2026 o botão **"Pesquisa Pública SEI"** do cabeçalho
+foi medido no navegador em **1,85:1** no modo escuro. Estava assim em produção,
+invisível, e ninguém tinha notado.
+
+Use os tokens `--marca-*` pelas classes prontas — `.botao-marca` (contorno +
+texto verde), `.texto-marca` (texto e ícone), `.chip-filtro`, `.card-tarefa`.
+Depois da troca o mesmo botão mede **9,57 no claro e 9,34 no escuro**.
+`tools/test_redesign_integrity.mjs` reprova `text-[#006400]` fora de comentário
+no TopBar, Sidebar, DossieApi e PrazosApi.
+
+**`bg-[#006400]` continua permitido**: fundo verde cheio com texto branco por
+cima não depende da superfície em volta, e mede 7,4:1 nos dois temas.
+
+Pela mesma razão nada aqui usa `border-*` para a cor da marca: o conversor tem
 `[class*="border-"]` genérico e apagaria justamente a borda que distingue o
-item. Medido depois da troca: contraste 8,49 no claro e 8,22 no escuro, contra
-7,53/10,17 dos vizinhos — destacado e legível nos dois. A sombra é `box-shadow
-inset`, não `border`, para o item não ficar 2px mais alto que os da mesma lista.
+elemento. Contorno de marca sai de `box-shadow: inset`.
+
+## Texto de apoio é `#64748B`, não `#A0AEC0`
+
+O cinza antigo media **2,26:1 sobre branco** — abaixo do mínimo de 4,5:1 e até
+do 3:1 de texto grande — e pintava rótulo de KPI, subtítulo da home, título de
+seção da navegação e os itens do rodapé dela. Trocado em 13/08/2026 nos 7
+arquivos que o usavam. O valor novo mede **4,76:1** e não foi escolhido a
+esmo: é o mesmo do `--chart-axis`, já medido neste projeto. A trava reprova o
+retorno do `#A0AEC0`.
 
 ## Ajuda contextual: o mapa é total sobre as abas
 

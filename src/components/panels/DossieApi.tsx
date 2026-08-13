@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, UserSearch, ArrowLeft } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { PageHeader } from '../ui/PageHeader';
 import { requisitosDoAto, requisitosDaFuncao, REQUISITOS, type Requisito } from './rscRequisitos';
 
 // Aba "Meu SIAPE": digite a matrícula, receba os atos do Boletim que a citam,
@@ -434,64 +435,98 @@ export default function DossieApi() {
   }
 
   return (
-    <div id="painel-dossie" className="space-y-3">
-      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
-              <FolderSearch className="w-4 h-4 text-yellow-500" /> Meu SIAPE — atos no Boletim
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
-              Digite a sua matrícula SIAPE e veja os atos publicados que a citam, com a <strong>referência do boletim</strong> para
-              copiar no processo. Útil para instruir pedidos que exigem comprovar participação em
-              <strong> comissões, comitês, grupos de trabalho e núcleos</strong> — como o RSC
-              (IN GAR/RET/UFF nº 129/2026).
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={abrirDocumento}
-              // O bloco por NOME conta para habilitar: há matrícula que não
-              // acha nada e cujo nome acha dezenas. Sem isto, quem mais precisa
-              // do PDF é justamente quem não consegue gerá-lo.
-              disabled={!r || (!r.atos.length && !r.funcoes.length && !r.porNome?.atos.length)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              <Printer className="w-4 h-4" /> Exportar / Imprimir PDF
-            </button>
-          </div>
-        </div>
+    <div id="painel-dossie" className="space-y-4 max-w-[1400px]">
+      <PageHeader
+        titulo="Meu SIAPE"
+        descricao="Veja os atos do Boletim de Serviço que citam a sua matrícula."
+        acao={
+          <button
+            onClick={abrirDocumento}
+            // O bloco por NOME conta para habilitar: há matrícula que não
+            // acha nada e cujo nome acha dezenas. Sem isto, quem mais precisa
+            // do PDF é justamente quem não consegue gerá-lo.
+            disabled={!r || (!r.atos.length && !r.funcoes.length && !r.porNome?.atos.length)}
+            className="botao-marca inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Printer className="h-4 w-4" /> Exportar / Imprimir PDF
+          </button>
+        }
+      />
 
-        <form onSubmit={buscar} className="flex items-center gap-2 mt-3 flex-wrap">
-          <div className="relative w-[190px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              value={siape}
-              onChange={e => setSiape(e.target.value)}
-              inputMode="numeric"
-              placeholder="SIAPE (só números)"
-              aria-label="Matrícula SIAPE"
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <p className="text-[13px] leading-relaxed text-slate-700">
+          Serve para instruir pedidos que exigem comprovar participação em{' '}
+          <strong>comissões, comitês, grupos de trabalho e núcleos</strong> — como o RSC
+          (IN GAR/RET/UFF nº 129/2026). Cada resultado traz a referência do boletim para
+          copiar no processo.
+        </p>
+
+        {/* Labels VISÍVEIS, não placeholder. O placeholder some quando a pessoa
+            começa a digitar — some justamente na hora de conferir se o que está
+            ali é a matrícula ou o nome —, e leitor de tela em campo já
+            preenchido não tem o que anunciar. */}
+        <form onSubmit={buscar} className="mt-4 space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="dossie-siape" className="block text-[13px] font-medium text-[#1A202C] mb-1">
+                Matrícula SIAPE
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                <input
+                  id="dossie-siape"
+                  value={siape}
+                  onChange={e => setSiape(e.target.value)}
+                  inputMode="numeric"
+                  aria-describedby="dossie-ajuda-siape"
+                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm focus:border-[#006400] focus:outline-none focus:ring-2 focus:ring-[#006400]/20"
+                />
+              </div>
+              <p id="dossie-ajuda-siape" className="mt-1 text-[12px] text-slate-600">
+                Só números. Zeros à esquerda não importam.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="dossie-nome" className="block text-[13px] font-medium text-[#1A202C] mb-1">
+                Nome do servidor <span className="font-normal text-slate-600">(opcional)</span>
+              </label>
+              <div className="relative">
+                <UserSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                <input
+                  id="dossie-nome"
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                  aria-describedby="dossie-ajuda-nome"
+                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm focus:border-[#006400] focus:outline-none focus:ring-2 focus:ring-[#006400]/20"
+                />
+              </div>
+              <p id="dossie-ajuda-nome" className="mt-1 text-[12px] text-slate-600">
+                Alcança os atos que citam o nome mas não trazem a matrícula.
+              </p>
+            </div>
           </div>
-          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px]">
-            <UserSearch className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              value={nome}
-              onChange={e => setNome(e.target.value)}
-              placeholder="Nome (opcional) — busca no texto dos atos que não trazem SIAPE"
-              aria-label="Nome do servidor (opcional)"
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
+
           <button
             type="submit"
             disabled={!siape.replace(/\D/g, '') || carregando}
-            className="px-4 py-2 rounded-md bg-yellow-500 text-[#003366] text-xs font-bold hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#006400] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#004d00] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Buscar
+            <Search className="h-4 w-4" /> Buscar atos
           </button>
         </form>
+      </div>
+
+      {/* Fonte oficial: princípio 5 da proposta visual. O portal é índice de
+          consulta; quem decide é o Boletim, e isso precisa estar escrito ANTES
+          do resultado, não num rodapé que ninguém alcança. */}
+      <div className="flex items-start gap-2.5 rounded-lg border border-[#B9D8BC] bg-[#F0F7F0] px-4 py-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#14501C]" aria-hidden="true" />
+        <p className="text-[13px] leading-relaxed text-[#1A202C]">
+          Este painel é uma ferramenta de consulta ao índice do Boletim.{' '}
+          <strong className="font-semibold">A fonte oficial é o Boletim de Serviço da UFF</strong> —
+          confira sempre o ato publicado antes de usá-lo para instruir um processo.
+        </p>
       </div>
 
       {carregando ? (

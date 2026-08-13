@@ -44,8 +44,8 @@ const B = ({ children }: { children: React.ReactNode }) => <strong>{children}</s
 export const AJUDA: Record<string, AjudaAba> = {
   '': {
     titulo: 'Dashboard',
-    resumo: <>A visão de chegada: o tamanho do acervo, quantas normas estão em vigor e o que
-      saiu no <B>boletim mais recente</B>.</>,
+    resumo: <>A porta de entrada: quatro tarefas para começar, o que saiu no <B>boletim mais
+      recente</B> e o tamanho do acervo.</>,
     porQue: [
       <>O Boletim de Serviço é um PDF de dezenas de páginas, publicado quase todo dia. Para
         saber o que saiu, alguém precisa abrir o arquivo e percorrê-lo. Multiplique isso pelos
@@ -57,10 +57,12 @@ export const AJUDA: Record<string, AjudaAba> = {
         vigor hoje</B> não é uma informação que exista em lugar nenhum além daqui.</>,
     ],
     passos: [
-      <>Os quatro números do topo somam o acervo inteiro: total de atos, vigentes, alterados e revogados.</>,
-      <>A lista central traz <B>todos</B> os atos do último Boletim de Serviço, não uma amostra.</>,
-      <>À direita, os gráficos: a evolução por ano e a composição do último boletim (por tipo de
-        ato, por unidade que publicou, e quantos trazem processo SEI).</>,
+      <>Os <B>quatro cartões do topo</B> são atalhos para as tarefas mais comuns: encontrar um
+        ato, consultar o seu SIAPE, acompanhar prazos e explorar relações.</>,
+      <><B>Atualizações recentes</B> traz os atos do último Boletim de Serviço. A lista abre com
+        os primeiros e o botão abaixo dela diz quantos faltam — nenhum ato fica escondido.</>,
+      <><B>Resumo do acervo</B> soma o acervo inteiro: total, vigentes, revogados e alterados,
+        com a evolução por ano ao lado.</>,
       <>Passe o mouse sobre o gráfico de anos para ver o número de cada ano. Abaixo de cada
         gráfico há um <B>“Ver em tabela”</B> com os valores exatos.</>,
     ],
@@ -85,9 +87,13 @@ export const AJUDA: Record<string, AjudaAba> = {
     passos: [
       <>Digite na busca o que você tem em mãos: o número da portaria, uma palavra da ementa, o
         número do processo SEI ou o nome de alguém.</>,
-      <>Estreite com os filtros de <B>tipo</B>, <B>órgão</B>, <B>ano</B> e <B>situação</B>.</>,
-      <>Clique na linha para abrir a <B>ficha do ato</B>: ementa completa, relações com outros
-        atos, processo SEI e o link para o PDF oficial do boletim.</>,
+      <>Estreite com <B>Tipo</B>, <B>Ano</B> e <B>Status</B>, que ficam logo abaixo da busca.</>,
+      <>Órgão emissor, nome, matrícula, processo e os dois recortes (“só com relações”, “só com
+        processo”) estão em <B>Mais filtros</B>, no painel que abre à direita.</>,
+      <>Cada filtro que você aplica vira uma <B>etiqueta</B> abaixo dos campos. Clique nela para
+        remover só aquele filtro, ou use <B>Limpar filtros</B> para desfazer todos.</>,
+      <>Use <B>Ver ato</B>, no fim da linha, para abrir a ficha: ementa completa, relações com
+        outros atos, processo SEI e o link para o PDF oficial do boletim.</>,
     ],
     destaque: <>Escreva o hífen quando ele existir na palavra: <B>pós-graduação</B> e
       <B> Vice-Reitor</B> são grafias que o portal entende. E se não achar pelo nome completo,
@@ -197,7 +203,7 @@ export const AJUDA: Record<string, AjudaAba> = {
     passos: [
       <>Digite a <B>matrícula SIAPE</B> (só números — zeros à esquerda não fazem diferença).</>,
       <>Preencha também o <B>nome</B>, no campo ao lado.</>,
-      <>Clique em <B>Buscar</B>. O resultado vem em até três blocos: designações e dispensas de
+      <>Clique em <B>Buscar atos</B>. O resultado vem em até três blocos: designações e dispensas de
         função, atos que citam a matrícula, e atos que citam o nome no texto.</>,
       <>Repare nos selos <B>RSC · Req. I / IV / V</B>. Eles marcam os registros que correspondem
         a um dos requisitos do art. 2º da IN 129/2026 — passe o mouse para ler qual. O painel no

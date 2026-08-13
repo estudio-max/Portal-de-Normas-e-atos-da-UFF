@@ -69,7 +69,7 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
               : 'border-[#E2E8F0] bg-[#F7FAFC]'
           )}
         >
-          <Search size={16} className={isFocused ? 'text-[#006400]' : 'text-[#A0AEC0]'} />
+          <Search size={16} className={isFocused ? 'texto-marca' : 'text-[#64748B]'} />
           <input
             ref={inputRef}
             type="text"
@@ -78,14 +78,14 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             placeholder="Buscar por número, ementa, processo SEI, nome ou SIAPE..."
-            className="flex-1 bg-transparent text-sm text-[#1A202C] placeholder:text-[#A0AEC0] outline-none"
+            className="flex-1 bg-transparent text-sm text-[#1A202C] placeholder:text-[#64748B] outline-none"
           />
           {query && (
-            <button onClick={() => { setQuery(''); inputRef.current?.focus(); }} className="text-[#A0AEC0] hover:text-[#1A202C]">
+            <button onClick={() => { setQuery(''); inputRef.current?.focus(); }} className="text-[#64748B] hover:text-[#1A202C]">
               <X size={14} />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-[#A0AEC0] bg-[#E2E8F0] rounded">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-[#64748B] bg-[#E2E8F0] rounded">
             ⌘K
           </kbd>
         </div>
@@ -96,9 +96,30 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
         <a href="https://boletimdeservico.uff.br/boletins/bs-2026/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-[#003366] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004d00]">
           <FileText size={15} /> Boletim de Serviço 2026 <ExternalLink size={13} />
         </a>
-        <a href="https://sei.uff.br/sei/modulos/pesquisa/md_pesq_processo_pesquisar.php?acao_externa=protocolo_pesquisar&acao_origem_externa=protocolo_pesquisar&id_orgao_acesso_externo=0" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-[#006400] px-3 py-2 text-xs font-semibold text-[#006400] hover:bg-[#F0F7F0]">
+        <a href="https://sei.uff.br/sei/modulos/pesquisa/md_pesq_processo_pesquisar.php?acao_externa=protocolo_pesquisar&acao_origem_externa=protocolo_pesquisar&id_orgao_acesso_externo=0" target="_blank" rel="noreferrer" className="botao-marca inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold">
           Pesquisa Pública SEI <ExternalLink size={13} />
         </a>
+      </div>
+
+      {/* Ajuda e Acessibilidade levam à MESMA aba, e de propósito: as duas são
+          seções do guia. Um link "Acessibilidade" que não abre nada seria pior
+          que a ausência dele — é o tipo de promessa que ensina a desconfiar do
+          resto da interface. */}
+      <div className="hidden md:flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onNavigate('ajuda')}
+          className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#4A5568] hover:bg-gray-100 hover:text-[#1A202C]"
+        >
+          Ajuda
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate('ajuda')}
+          className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#4A5568] hover:bg-gray-100 hover:text-[#1A202C]"
+        >
+          Acessibilidade
+        </button>
       </div>
 
       {/* Estado da API. Em tela estreita fica só o ponto + ícone; o rótulo sai

@@ -46,6 +46,22 @@
   --destaque-borda: #B9D8BC;
   --destaque-texto: #14501C;
   --destaque-fundo-hover: #DFEEDF;
+
+  /* Marca aplicada a SUPERFÍCIE e a TEXTO, pela mesma razão dos `--destaque-*`:
+     o verde institucional não está na lista de conversão do fotofobia. São
+     tokens separados dos de destaque porque o papel é outro — destaque marca UM
+     item da navegação, estes pintam cartão de tarefa, selo e ícone em qualquer
+     tela — e um dia um pode mudar sem o outro. */
+  --marca-fundo: #EAF4EA;
+  --marca-fundo-hover: #DFEEDF;
+  --marca-borda: #B9D8BC;
+  --marca-texto: #14501C;
+  --marca-anel: #006400;
+
+  /* Superfície de cartão. Existe como token porque os componentes acima são
+     pintados por regra própria, fora do alcance do `[class*="bg-white"]` que
+     converte o resto da interface. */
+  --sup-cartao: #FFFFFF;
 }
 html.fotofobia {
   --chart-mark: #4FA46E;
@@ -60,6 +76,14 @@ html.fotofobia {
   --destaque-borda: #3E6B48;
   --destaque-texto: #8FD3A0;
   --destaque-fundo-hover: #22392a;
+
+  --marca-fundo: #1B2E20;
+  --marca-fundo-hover: #22392a;
+  --marca-borda: #3E6B48;
+  --marca-texto: #8FD3A0;
+  --marca-anel: #6FBE8B;
+
+  --sup-cartao: #18221b;
 }
 
 /* O destaque é pintado por REGRA PRÓPRIA, fora do alcance do conversor do
@@ -73,6 +97,54 @@ html.fotofobia {
   color: var(--destaque-texto);
 }
 .nav-destaque:hover { background-color: var(--destaque-fundo-hover); }
+
+/* Componentes que usam a MARCA como superfície. Mesma razão do `.nav-destaque`:
+   pintados por regra própria, com token, porque o conversor do fotofobia agiria
+   por `[class*="border-"]` e apagaria a borda, e o verde institucional não está
+   na lista de conversão de texto. */
+
+/* Cartão de tarefa da home. A tarefa em foco ganha ANEL, não fundo cheio: o
+   cartão precisa continuar legível como cartão, e fundo verde sob texto verde
+   é o erro que o `--destaque-*` já documenta. */
+.card-tarefa {
+  background-color: var(--sup-cartao, #fff);
+  box-shadow: inset 0 0 0 1px var(--marca-borda);
+}
+.card-tarefa:hover { background-color: var(--marca-fundo); }
+.card-tarefa[data-foco="1"] { box-shadow: inset 0 0 0 2px var(--marca-anel); }
+.card-tarefa .selo-marca {
+  background-color: var(--marca-fundo);
+  color: var(--marca-texto);
+}
+.card-tarefa:hover .selo-marca { background-color: var(--marca-fundo-hover); }
+
+/* Chip de filtro ativo (aba Atos e Normas). Carrega o rótulo do filtro POR
+   EXTENSO — "Tipo: Portaria", não só "Portaria" —, senão o chip sozinho não
+   diz de qual campo ele saiu. */
+.chip-filtro {
+  background-color: var(--marca-fundo);
+  color: var(--marca-texto);
+  box-shadow: inset 0 0 0 1px var(--marca-borda);
+}
+.chip-filtro:hover { background-color: var(--marca-fundo-hover); }
+
+/* Botão secundário na cor da marca (contorno + texto verde).
+   MEDIDO EM 13/08/2026, e o número explica por que esta classe existe: o
+   "Pesquisa Pública SEI" do cabeçalho usava `text-[#006400]` direto e media
+   **1,85:1** no modo fotofobia — invisível, sem erro nenhum no console. É a
+   armadilha que o CLAUDE.md descreve: o verde institucional NÃO está na lista
+   de conversão, então ele atravessa a troca de tema intacto e fica verde-escuro
+   sobre fundo escuro. O contorno também é `box-shadow`, e não `border`, porque
+   o conversor tem `[class*="border-"]` genérico e apagaria a borda.
+   Todo botão de contorno verde do portal passa a sair daqui. */
+.botao-marca {
+  color: var(--marca-texto);
+  box-shadow: inset 0 0 0 1px var(--marca-borda);
+}
+.botao-marca:hover:not(:disabled) { background-color: var(--marca-fundo); }
+
+/* O mesmo, para texto e ícone soltos que precisam da marca. */
+.texto-marca { color: var(--marca-texto); }
 
 /* Impressão do documento do Meu SIAPE.
    O documento é renderizado DENTRO da página (e não num pop-up) para que o
@@ -137,13 +209,20 @@ html.fotofobia [class*="text-\[\#003366\]"],
 html.fotofobia [class*="text-\[\#1A3A1A\]"] {
   color: #e7f0e8 !important;
 }
-/* Texto de apoio: um degrau abaixo, ainda acima do mínimo de contraste. */
+/* Texto de apoio: um degrau abaixo, ainda acima do mínimo de contraste.
+   `text-[#64748B]` é o cinza de apoio do tema claro. Ele SUBSTITUIU o
+   `#A0AEC0`, que media 2,26:1 sobre branco — abaixo do mínimo de 4,5:1 e até
+   do 3:1 de texto grande — e pintava rótulo de KPI, subtítulo da home, título
+   de seção da navegação e os itens de rodapé dela. O valor novo mede 4,76:1 e
+   não foi escolhido a esmo: é o mesmo do `--chart-axis`, já medido neste
+   projeto. `#A0AEC0` fica na lista para não deixar sobra descoberta. */
 html.fotofobia [class*="text-slate-600"],
 html.fotofobia [class*="text-slate-500"],
 html.fotofobia [class*="text-slate-400"],
 html.fotofobia [class*="text-gray-600"],
 html.fotofobia [class*="text-gray-500"],
 html.fotofobia [class*="text-\[\#4A5568\]"],
+html.fotofobia [class*="text-\[\#64748B\]"],
 html.fotofobia [class*="text-\[\#A0AEC0\]"] {
   color: #c0d0c3 !important;
 }

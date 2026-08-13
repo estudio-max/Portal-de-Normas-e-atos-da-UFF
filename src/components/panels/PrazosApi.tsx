@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users, Scale, GitBranch, ChevronDown, ChevronRight } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 
 // Aba "Prazos": radar de datas-limite extraídas do texto dos atos (inscrições,
@@ -152,22 +153,26 @@ export default function PrazosApi() {
 
   return (
     <div id="painel-prazos" className="space-y-3">
+      <PageHeader
+        titulo="Prazos"
+        descricao="Acompanhe prazos e datas importantes encontrados nos atos."
+        acao={
+          <button onClick={imprimir} disabled={!filtrada.length}
+            className="botao-marca inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40">
+            <Printer className="h-4 w-4" /> Imprimir / PDF
+          </button>
+        }
+      />
+
       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
-              <CalendarClock className="w-4 h-4 text-yellow-500" /> Prazos e datas-limite
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+            <p className="text-[13px] text-slate-700 leading-relaxed">
               Radar de prazos de <strong>comissões disciplinares (PAD e sindicâncias, investigativa e acusatória)</strong> e de
               <strong> inscrições, recursos, entregas, contratos e validades</strong> detectados no texto dos atos —
               cada prazo mostra <strong>para quem serve</strong>, o assunto e o trecho que o gerou. É um <strong>apoio</strong>: <strong>sempre confira o ato de origem</strong>.
             </p>
           </div>
-          <button onClick={imprimir} disabled={!filtrada.length}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#003366] text-white text-xs font-bold hover:bg-[#00264d] disabled:opacity-40 whitespace-nowrap">
-            <Printer className="w-4 h-4" /> Imprimir / PDF
-          </button>
         </div>
 
         {/* KPIs de urgência */}
