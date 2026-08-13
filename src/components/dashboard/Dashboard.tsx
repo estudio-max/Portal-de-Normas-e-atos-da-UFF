@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { StatCard } from './StatCard';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { Skeleton } from '../ui/Skeleton';
-import { ActCard } from '../acts/ActCard';
+import { TaskCard } from './TaskCard';
 import { AreaPorAno, ComposicaoDoBoletim, OrgaosDoBoletim } from './Graficos';
-import { FileText, CheckCircle2, XCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Search, IdCard, CalendarClock, Share2, ArrowRight, ChevronRight } from 'lucide-react';
 import { ANO_INICIO_ACERVO } from '../../config';
 import type { UffAct, UffStatistics } from '../../types';
 
@@ -16,24 +15,52 @@ interface DashboardProps {
   onNavigate: (path: string) => void;
 }
 
+const STATUS_ROTULO: Record<string, { texto: string; classe: string }> = {
+  Ativo: { texto: 'Vigente', classe: 'bg-green-100 text-green-700 border-green-200' },
+  Revogado: { texto: 'Revogado', classe: 'bg-red-100 text-red-700 border-red-200' },
+  Alterado: { texto: 'Alterado', classe: 'bg-amber-100 text-amber-700 border-amber-200' },
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestBulletin, apiMode, onNavigate }) => {
   const [loading, setLoading] = useState(!stats);
+  const [mostrarTudo, setMostrarTudo] = useState(false);
 
   useEffect(() => {
     if (stats) setLoading(false);
   }, [stats]);
 
-  const quickAccess = [
-    { label: 'Buscar por número', desc: 'Digite o número do ato', path: 'atos', icon: <FileText size={16} /> },
-    { label: 'Consultar meu SIAPE', desc: 'Matrícula ou nome do servidor', path: 'pessoal/siape', icon: <FileText size={16} /> },
-    { label: 'Prazos vencendo', desc: 'Acompanhamento de prazos', path: 'pessoal/prazos', icon: <AlertTriangle size={16} /> },
-    { label: 'Comissões permanentes', desc: '26 colegiados cadastrados', path: 'institucional/comissoes', icon: <FileText size={16} /> },
+  // A home começa pelas TAREFAS, não pelos indicadores do acervo: quem chega
+  // aqui quer resolver algo ("achar a portaria", "provar que participei de uma
+  // comissão"), e o total de atos não responde nenhuma dessas perguntas. Os
+  // números continuam na página, um degrau abaixo.
+  const tarefas = [
+    {
+      titulo: 'Encontrar um ato',
+      descricao: 'Busque portarias, editais, resoluções e outros atos.',
+      icon: <Search size={24} />, path: 'atos', foco: true,
+    },
+    {
+      titulo: 'Consultar meu SIAPE',
+      descricao: 'Veja os atos do Boletim que citam a sua matrícula.',
+      icon: <IdCard size={24} />, path: 'pessoal/siape',
+    },
+    {
+      titulo: 'Acompanhar prazos',
+      descricao: 'Datas e vigências encontradas no texto dos atos.',
+      icon: <CalendarClock size={24} />, path: 'pessoal/prazos',
+    },
+    {
+      titulo: 'Explorar relações',
+      descricao: 'Veja o que cada ato revoga, altera ou complementa.',
+      icon: <Share2 size={24} />, path: 'relacoes',
+    },
   ];
 
   const total = stats?.total || 0;
   const vigentes = stats?.ativoCount || 0;
   const revogados = stats?.revogadoCount || 0;
   const alterados = stats?.alteradoCount || 0;
+
   // A faixa vem do DADO, não de uma constante local: a camada de dados (API ou
   // modo estático) já decide o intervalo, e aqui só se preenchem os buracos
   // para que anos sem ato apareçam como barra zerada em vez de sumirem.
@@ -51,122 +78,165 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestB
     });
   const serieAnos = annualEntries.map(([ano, count]) => [ano, count] as [number, number]);
 
+  // A lista abre curta e cresce POR AÇÃO, com o número de atos restantes
+  // escrito no botão. O boletim inteiro continua alcançável — já houve versão
+  // que mostrava 5 atos e escondia o resto sem dizer, e é o que a trava de
+  // integridade proíbe. Esconder em silêncio é o defeito; oferecer uma prévia
+  // e nomear o que falta, não.
+  const PREVIA = 6;
+  const visiveis = mostrarTudo ? recentActs : recentActs.slice(0, PREVIA);
+  const resumo = [
+    { rotulo: 'Total de atos', valor: total },
+    { rotulo: 'Atos vigentes', valor: vigentes },
+    { rotulo: 'Revogados', valor: revogados },
+    { rotulo: 'Alterados', valor: alterados },
+  ];
+
   return (
     <div className="space-y-6 max-w-[1400px]">
       <div>
-        <h1 className="text-[22px] font-semibold text-[#1A202C]">Dashboard</h1>
-        <p className="text-[13px] text-[#A0AEC0] mt-0.5">
-          Visão geral do acervo normativo da UFF
-          {!apiMode && <span className="text-[#D69E2E] ml-2">• Modo offline (dados estáticos)</span>}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[100px]" />
-            <Skeleton className="h-[100px]" />
-            <Skeleton className="h-[100px]" />
-            <Skeleton className="h-[100px]" />
-          </>
-        ) : (
-          <>
-            <StatCard
-              label="Total de atos"
-              value={total.toLocaleString('pt-BR')}
-              icon={<FileText size={18} />}
-              color="green"
-            />
-            <StatCard
-              label="Atos vigentes"
-              value={vigentes.toLocaleString('pt-BR')}
-              nota={`${total ? Math.round((vigentes / total) * 100) : 0}% do acervo`}
-              icon={<CheckCircle2 size={18} />}
-              color="green"
-            />
-            <StatCard
-              label="Revogados"
-              value={revogados.toLocaleString('pt-BR')}
-              nota={`${total ? Math.round((revogados / total) * 100) : 0}% do acervo`}
-              icon={<XCircle size={18} />}
-              color="red"
-            />
-            <StatCard
-              label="Alterados"
-              value={alterados.toLocaleString('pt-BR')}
-              nota={`${total ? Math.round((alterados / total) * 100) : 0}% do acervo`}
-              icon={<AlertTriangle size={18} />}
-              color="yellow"
-            />
-          </>
+        <h1 className="text-[22px] font-semibold text-[#1A202C] leading-tight">O que você quer fazer?</h1>
+        {!apiMode && (
+          <p className="text-[13px] text-[#D69E2E] mt-1">
+            Modo offline — respondendo pelo índice estático de contingência.
+          </p>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 space-y-4">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>
-                {latestBulletin
-                  ? `Boletim de Serviço nº ${latestBulletin.numero}/${latestBulletin.ano} · ${recentActs.length} atos`
-                  : 'Últimos atos publicados'}
-              </CardTitle>
-              <button
-                onClick={() => onNavigate('atos')}
-                className="text-[12px] text-[#3182CE] font-medium hover:underline flex items-center gap-1"
-              >
-                Ver todos <ArrowRight size={12} />
-              </button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {loading ? (
-                <>
-                  <Skeleton className="h-[72px]" />
-                  <Skeleton className="h-[72px]" />
-                  <Skeleton className="h-[72px]" />
-                  <Skeleton className="h-[72px]" />
-                </>
-              ) : recentActs.length === 0 ? (
-                <p className="text-[13px] text-[#A0AEC0] py-4 text-center">Nenhum ato recente disponível</p>
-              ) : (
-                recentActs.map(act => (
-                  <ActCard
-                    key={act.id}
-                    act={act}
-                    onClick={() => onNavigate('atos')}
-                  />
-                ))
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {tarefas.map(t => (
+          <TaskCard
+            key={t.path}
+            titulo={t.titulo}
+            descricao={t.descricao}
+            icon={t.icon}
+            foco={t.foco}
+            onClick={() => onNavigate(t.path)}
+          />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Atualizações recentes */}
+        <Card>
+          <CardHeader className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>Atualizações recentes</CardTitle>
+              {latestBulletin && (
+                <p className="text-[12px] text-[#4A5568] mt-0.5">
+                  Boletim de Serviço nº {latestBulletin.numero}/{latestBulletin.ano} · {recentActs.length} atos
+                </p>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <button
+              onClick={() => onNavigate('atos')}
+              className="shrink-0 text-[12px] text-[#3182CE] font-medium hover:underline flex items-center gap-1"
+            >
+              Ver todas <ArrowRight size={12} />
+            </button>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-[56px]" />
+                <Skeleton className="h-[56px]" />
+                <Skeleton className="h-[56px]" />
+              </div>
+            ) : recentActs.length === 0 ? (
+              <p className="text-[13px] text-[#4A5568] py-6 text-center">
+                Nenhum ato recente disponível.
+              </p>
+            ) : (
+              <>
+                <ul className="divide-y divide-[#E2E8F0]">
+                  {visiveis.map(act => {
+                    const s = STATUS_ROTULO[act.status]
+                      || { texto: act.status, classe: 'bg-slate-100 text-slate-700 border-slate-200' };
+                    return (
+                      <li key={act.id}>
+                        <button
+                          onClick={() => onNavigate('atos')}
+                          className="w-full py-3 text-left flex items-start gap-3 hover:bg-[#F0F7F0]/50 rounded-lg px-2 -mx-2 transition-colors"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[14px] font-semibold text-[#1A202C]">
+                              {act.tipoAto} nº {act.numero}/{act.ano}
+                            </span>
+                            {/* Sem `block` aqui: `line-clamp-2` já define o
+                                display (`-webkit-box`), e as duas classes
+                                brigam — `block` vencia e a ementa de um edital
+                                ocupava doze linhas, empurrando o resto da
+                                lista para fora da tela. */}
+                            <span className="text-[12px] text-[#4A5568] mt-0.5 line-clamp-2 leading-relaxed">
+                              {act.ementa || 'Sem ementa disponível'}
+                            </span>
+                          </span>
+                          <span className="shrink-0 flex flex-col items-end gap-1">
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.classe}`}>
+                              {s.texto}
+                            </span>
+                            <span className="text-[11px] text-[#64748B] tabular-nums">
+                              {(act.dataAssinatura || '').split('-').reverse().join('/')}
+                            </span>
+                            {act.orgaoEmissor && (
+                              <span className="text-[11px] font-medium text-[#4A5568] uppercase">{act.orgaoEmissor}</span>
+                            )}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {recentActs.length > PREVIA && (
+                  <button
+                    onClick={() => setMostrarTudo(v => !v)}
+                    aria-expanded={mostrarTudo}
+                    className="mt-3 w-full rounded-lg border border-[#E2E8F0] py-2 text-[12px] font-medium text-[#3182CE] hover:bg-[#F0F7F0]/50 transition-colors"
+                  >
+                    {mostrarTudo
+                      ? 'Mostrar menos'
+                      : `Ver os outros ${recentActs.length - PREVIA} atos deste boletim`}
+                  </button>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="lg:col-span-2 space-y-4">
+        {/* Resumo do acervo */}
+        <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Acesso rápido</CardTitle>
+              <CardTitle>Resumo do acervo</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {quickAccess.map(item => (
-                <button
-                  key={item.path}
-                  onClick={() => onNavigate(item.path)}
-                  className="flex flex-col items-start gap-1 p-3 rounded-xl border border-[#E2E8F0] hover:border-[#006400]/30 hover:bg-[#F0F7F0]/50 transition-colors text-left"
-                >
-                  <span className="text-[#006400]">{item.icon}</span>
-                  <span className="text-[12px] font-medium text-[#1A202C]">{item.label}</span>
-                  <span className="text-[11px] text-[#A0AEC0]">{item.desc}</span>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
+            <CardContent className="space-y-5">
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {resumo.map(item => (
+                  <div key={item.rotulo}>
+                    <dd className="text-[26px] font-semibold text-[#1A3A1A] tabular-nums leading-tight">
+                      {loading ? '—' : item.valor.toLocaleString('pt-BR')}
+                    </dd>
+                    <dt className="text-[12px] text-[#4A5568] mt-0.5">{item.rotulo}</dt>
+                  </div>
+                ))}
+              </dl>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Atos publicados por ano</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AreaPorAno dados={serieAnos} />
+              <div className="border-t border-[#E2E8F0] pt-4">
+                {/* O rótulo diz ANO porque o dado é anual: `stats.porAno` é o
+                    que a API devolve. O mockup rotulava esta série como uma
+                    janela de doze meses; a série não é isso, e o portal não
+                    pode afirmar um recorte que ninguém calculou. A trava de
+                    integridade reprova o rótulo errado. */}
+                <p className="text-[13px] font-semibold text-[#1A202C] mb-2">Atos publicados por ano</p>
+                {loading ? <Skeleton className="h-[150px]" /> : <AreaPorAno dados={serieAnos} />}
+              </div>
+
+              <button
+                onClick={() => onNavigate('insights')}
+                className="flex items-center gap-1 text-[12px] font-medium text-[#3182CE] hover:underline"
+              >
+                Ver mais dados do acervo <ChevronRight size={13} />
+              </button>
             </CardContent>
           </Card>
 

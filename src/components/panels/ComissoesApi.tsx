@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
@@ -278,15 +279,14 @@ export default function ComissoesApi() {
 
   return (
     <div id="painel-comissoes" className="space-y-3">
-      <div className="bg-[#003366] text-white rounded-lg p-5">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Users className="w-5 h-5 text-yellow-400" /> Comissões e comitês permanentes
-        </h2>
-        <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          Os colegiados permanentes de alcance institucional da UFF, reunidos num só lugar.
-          Clique num corpo para ver todos os atos do Boletim que o mencionam, do mais recente ao mais antigo.
-        </p>
-      </div>
+      <PageHeader
+        titulo="Comissões"
+        descricao="Consulte comissões permanentes, órgãos e atos relacionados."
+      />
+      <p className="text-[13px] leading-relaxed text-slate-700">
+        Os colegiados permanentes de alcance institucional da UFF, reunidos num só lugar.
+        Clique num corpo para ver todos os atos do Boletim que o mencionam, do mais recente ao mais antigo.
+      </p>
 
       <div className="flex items-start gap-2 text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
         <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />

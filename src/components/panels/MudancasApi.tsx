@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Megaphone, Loader2, Info, ExternalLink, X } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 
 // Aba "Mudanças": o que mudou no acervo, e por que aquilo importa.
@@ -126,16 +127,14 @@ export default function MudancasApi() {
 
   return (
     <div id="painel-mudancas" className="space-y-3">
-      <div className="bg-[#003366] text-white rounded-lg p-5">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Megaphone className="w-5 h-5 text-yellow-400" /> O que mudou
-        </h2>
-        <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          Atos recentes com alcance institucional — os que tocam uma política, um
-          colegiado permanente, ou mudam o que estava em vigor. Do mais novo para
-          o mais antigo.
-        </p>
-      </div>
+      <PageHeader
+        titulo="O que mudou"
+        descricao="Acompanhe alterações recentes no acervo e nos atos da UFF."
+      />
+      <p className="text-[13px] leading-relaxed text-slate-700">
+        Traz os atos recentes com alcance institucional — os que tocam uma política, um
+        colegiado permanente, ou mudam o que estava em vigor. Do mais novo para o mais antigo.
+      </p>
 
       {r.avisos?.length > 0 && (
         <div className="flex items-start gap-2 text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">

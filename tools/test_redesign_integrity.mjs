@@ -65,6 +65,21 @@ assert.doesNotMatch(dashboard, /1\.247 este mês/, 'Dashboard metrics must not s
 assert.doesNotMatch(dashboard, /Math\.random\(\)/, 'Dashboard chart placeholders must not change on every render.');
 assert.doesNotMatch(dashboard, /\[35, 48, 42, 58/, 'Annual chart must not use placeholder bars.');
 assert.doesNotMatch(dashboard, /recentActs\.slice\(0, 5\)/, 'The latest bulletin list must not be truncated.');
+// A home abre pelas TAREFAS, não pelos indicadores do acervo: quem chega quer
+// resolver algo, e o total de atos não responde a nenhuma dessas perguntas.
+assert.match(dashboard, /O que você quer fazer\?/,
+  'The dashboard must open with the task question, not with collection metrics.');
+assert.match(dashboard, /<TaskCard/, 'The dashboard must offer the priority tasks as entry points.');
+// Número de interface sai da API. A versão anterior escrevia "26 colegiados
+// cadastrados" à mão num cartão de atalho — e o catálogo pode mudar sem que
+// ninguém lembre de vir aqui.
+assert.doesNotMatch(dashboard, /\d+ colegiados cadastrados/,
+  'Dashboard shortcuts must not hard-code a catalogue count.');
+// `stats.porAno` é ANUAL. Rotular o gráfico como "últimos 12 meses" — como faz
+// o mockup — seria o portal afirmando um recorte que ninguém calculou.
+assert.doesNotMatch(dashboard, /últimos 12 meses/i,
+  'The annual chart must not claim to be a 12-month window.');
+assert.match(dashboard, /Atos publicados por ano/, 'The annual chart must be labelled by year.');
 // Os gráficos moraram dentro do Dashboard até 04/08/2026; hoje são o
 // Graficos.tsx. O Dashboard segue decidindo a FAIXA da série (abaixo) — quem
 // desenha não escolhe até que ano vai.
@@ -226,8 +241,17 @@ assert.doesNotMatch(workflow, /O site no ar refletirá/,
 assert.match(workflow, /NÃO\*\* ATUALIZOU: o site em produção/,
   'The workflow must say plainly that it does not touch production.');
 
-const actCard = await read('src/components/acts/ActCard.tsx');
-assert.doesNotMatch(actCard, /w-1\.5 shrink-0/, 'Act cards must not rely on decorative colored side stripes.');
+// ActCard.tsx e StatCard.tsx foram APAGADOS no redesenho de 13/08/2026: o
+// Dashboard passou a abrir por tarefas, e com isso a lista de atos recentes
+// virou linha compacta e os quatro KPIs viraram um bloco de números dentro do
+// "Resumo do acervo". Nada mais os importava. As duas lições que as travas
+// deles guardavam continuam valendo para quem desenhar o próximo componente:
+//   - cartão de ato não se distingue por tarja colorida na lateral (era
+//     `w-1.5 shrink-0`): a cor sozinha não diz o que ela marca;
+//   - número que é PARTICIPAÇÃO no acervo não leva seta de tendência — "↓ 1%
+//     do acervo" lia-se como queda de 1%, que ninguém mediu.
+// A regra de clique acessível sobreviveu nas asserções do `Card`, que continua
+// em uso.
 
 const actListCard = await read('src/components/acts/ActListCard.tsx');
 assert.match(actListCard, /md:hidden/, 'Act list card must be mobile-only.');
@@ -271,12 +295,20 @@ assert.match(card, /onClick\?: \(\) => void/, 'Card must accept a click handler.
 assert.match(card, /role="button"/, 'A clickable card must announce itself as a control.');
 assert.match(card, /tabIndex=\{0\}/, 'A clickable card must be reachable by keyboard.');
 assert.match(card, /e\.key === 'Enter' \|\| e\.key === ' '/, 'A clickable card must respond to Enter and Space.');
-assert.match(actCard, /onClick=\{onClick\}/, 'The act card must hand its click to the Card.');
 
-// Setas de tendência: o número é participação no acervo, não série temporal.
-const statCard = await read('src/components/dashboard/StatCard.tsx');
-assert.doesNotMatch(statCard, /trendUp \? '↑' : '↓'/,
-  'Stat cards must not draw a trend arrow for a share of the collection.');
+// O cartão de tarefa da home é <button> nativo, e não um <div role="button">:
+// o conteúdo é só rótulo e uma frase, então cabe num botão sem HTML inválido —
+// e foco, Enter, Espaço e nome acessível vêm do navegador em vez de um handler
+// de teclado escrito à mão, que é onde esse tipo de componente costuma quebrar.
+const taskCard = await read('src/components/dashboard/TaskCard.tsx');
+assert.match(taskCard, /<button\s/, 'The task card must be a real button.');
+assert.doesNotMatch(taskCard, /role="button"/,
+  'The task card must not re-implement button semantics on a div.');
+// A tarefa em foco precisa se anunciar por TEXTO, não só pelo anel verde.
+assert.match(taskCard, /Comece aqui/,
+  'The focused task must name itself in words, not only by color.');
+assert.match(taskCard, /selo-marca/,
+  'Task card brand surfaces must come from the theme tokens, not Tailwind greens.');
 
 // O mock tem que falar o mesmo /stats da API PHP, senão testar o modo banco no
 // dev mostra dashboard vazio e parece problema de dados.
@@ -334,13 +366,57 @@ assert.match(app, /portalStats=\{portalStats\}/, 'The shell must receive the sou
 assert.doesNotMatch(dashboard, /onNavigate\(`atos\/\$\{act\.id\}`\)/, 'Dashboard cards must not navigate to an unimplemented act-detail hash route.');
 
 const sidebar = await read('src/components/layout/Sidebar.tsx');
-assert.match(sidebar, /const compactItems = \[\.\.\.NAV_SECTIONS\.flatMap\(section => section\.items\), \.\.\.FOOTER_ITEMS\];/, 'The compact navigation must include the footer destinations.');
+// A navegação foi reduzida às rotas frequentes em 13/08/2026, com o resto sob
+// "Mais". A trilha COMPACTA (rail de 64 px) continua tendo que listar TUDO: ali
+// não há rótulo para ler, então um disclosure fechado seria um beco sem saída —
+// e o destino que mais sumia era o rodapé (Ajuda, Privacidade, Sobre).
+assert.match(sidebar, /const compactItems: NavItem\[\] = \[\.\.\.NAV_PRIMARIO, \.\.\.ITENS_MAIS, \.\.\.FOOTER_ITEMS\];/,
+  'The compact navigation must include the primary, the "Mais" and the footer destinations.');
 assert.match(sidebar, /\{compactItems\.map\(item => \(/, 'The compact navigation must render every compact destination.');
+// Chegar numa aba que mora sob "Mais" — por link colado, pelo cartão de tarefa
+// ou pelo botão "voltar" — e ver a navegação sem NADA selecionado é perder a
+// própria posição. O disclosure abre sozinho nesse caso.
+assert.match(sidebar, /if \(ativaEmMais\) setMaisAberto\(true\);/,
+  'The "Mais" disclosure must open itself when the active tab lives inside it.');
+assert.match(sidebar, /aria-expanded=\{maisAberto\}/,
+  'The "Mais" disclosure must expose its state to assistive technology.');
+assert.match(sidebar, /aria-current=\{isActive\(item\.id\) \? 'page' : undefined\}/,
+  'Navigation items must announce which one is the current page.');
 
 const actTable = await read('src/components/ActTable.tsx');
 assert.match(actTable, /<ActListCard/, 'The main act list must render mobile cards.');
 assert.match(actTable, /buscaGlobal\?: string/, 'The acts table must accept a query from the global search.');
 assert.match(actTable, /setBusca\(buscaGlobal\)/, 'The acts table must apply the global query to its existing search filter.');
+// Contador não pode dizer "0 atos encontrados" enquanto a primeira consulta
+// ainda corre: é afirmar um resultado que ninguém obteve. Carregando, vazio e
+// erro são estados visuais DIFERENTES.
+assert.match(actTable, /const semResultadoAinda = carregando && resp === null;/,
+  'The result count must distinguish "still loading" from "found nothing".');
+assert.match(actTable, /Buscando atos…/, 'The first load must say it is loading.');
+// O chip carrega o NOME DO CAMPO junto do valor: "PROGEPE" solto não diz de
+// qual filtro ele saiu, e sem o chip a única forma de desfazer um filtro
+// avançado era achá-lo de volta dentro do painel.
+for (const campo of ['Tipo: ', 'Ano: ', 'Órgão: ', 'Processo: ']) {
+  assert.ok(actTable.includes(`\`${campo}`),
+    `Active filter chips must name the field they came from (${campo.trim()}).`);
+}
+// Estado vazio explica e oferece saída, em vez de um "nenhum resultado" seco.
+assert.match(actTable, /function EstadoVazio/, 'The acts list must have a real empty state.');
+
+// Os filtros secundários abrem em painel, não em modal: quem filtra quer VER a
+// lista mudar, e um modal cobriria justamente o resultado sendo ajustado.
+const filtrosAvancados = await read('src/components/acts/FiltrosAvancados.tsx');
+assert.match(filtrosAvancados, /e\.key === 'Escape'/, 'The advanced filter panel must close with the keyboard.');
+assert.match(filtrosAvancados, /aria-label="Filtros avançados"/, 'The advanced filter panel must announce its title.');
+for (const id of ['filtro-emissor', 'filtro-nome', 'filtro-siape', 'filtro-processo']) {
+  assert.ok(filtrosAvancados.includes(`htmlFor="${id}"`) && filtrosAvancados.includes(`id="${id}"`),
+    `The advanced filter "${id}" must have a real visible label, not a placeholder.`);
+}
+
+// Cabeçalho de página: toda tela responde "o que é isto?" antes de mostrar
+// dado, e por um <h1> só — é por ele que quem navega por cabeçalhos se situa.
+const pageHeader = await read('src/components/ui/PageHeader.tsx');
+assert.match(pageHeader, /<h1 /, 'The page header must render the single page-level heading.');
 
 const css = await read('src/index.css');
 assert.match(css, /html\.fotofobia \{/, 'The stylesheet must define the low-light skin.');
@@ -348,9 +424,68 @@ assert.doesNotMatch(css, /filter: invert\(1\)/, 'The low-light skin must use del
 // A skin cobria só as classes do shell. Os tons mais usados DENTRO dos painéis
 // ficavam escuros sobre fundo escuro: text-slate-600 (67 usos) e o azul
 // institucional text-[#003366] (36 usos).
-for (const classe of ['text-slate-600', 'text-\\[\\#003366\\]']) {
+for (const classe of ['text-slate-600', 'text-\\[\\#003366\\]', 'text-\\[\\#64748B\\]']) {
   assert.ok(css.includes(`html.fotofobia [class*="${classe}"]`),
     `The low-light skin must cover ${classe.replace(/\\/g, '')}, used throughout the panels.`);
+}
+
+// Contraste do texto de apoio. `#A0AEC0` media 2,26:1 sobre branco — abaixo do
+// mínimo de 4,5:1 e até do 3:1 de texto grande — e pintava rótulo de KPI,
+// subtítulo da home, título de seção da navegação e os itens do rodapé dela.
+// Foi trocado por `#64748B` (4,76:1), que é o mesmo valor do `--chart-axis`, já
+// medido neste projeto. A trava impede que ele volte por cópia de código antigo.
+const fontesTsx = await Promise.all([
+  'src/App.tsx',
+  'src/components/layout/Sidebar.tsx',
+  'src/components/layout/TopBar.tsx',
+  'src/components/dashboard/Dashboard.tsx',
+  'src/components/dashboard/Graficos.tsx',
+].map(read));
+for (const fonte of fontesTsx) {
+  assert.doesNotMatch(fonte, /text-\[#A0AEC0\]/,
+    'Support text must not use #A0AEC0, which fails the contrast minimum on white.');
+}
+
+// O verde institucional como COR DE TEXTO. `#006400` não está na lista de
+// conversão do fotofobia, então atravessa a troca de tema intacto e fica
+// verde-escuro sobre fundo escuro — sem erro nenhum no console, que é como esta
+// armadilha sempre se apresenta. MEDIDO em 13/08/2026 no botão "Pesquisa
+// Pública SEI" do cabeçalho: **1,85:1**, ilegível, e estava assim em produção.
+// Com `.botao-marca`/`.texto-marca` (tokens `--marca-*`, declarados nos dois
+// temas) mede 9,57 no claro e 9,34 no escuro.
+// A classe `bg-[#006400]` continua permitida: fundo verde cheio com texto
+// branco por cima não depende da superfície em volta e mede 7,4:1 nos dois.
+// A varredura ignora COMENTÁRIO: este arquivo e o Sidebar precisam poder
+// escrever o hex para explicar por que ele não se usa — foi exatamente o que
+// derrubou a primeira versão desta trava.
+const semComentario = (fonte) => fonte
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .split('\n')
+  .filter(linha => !/^\s*(\/\/|\*)/.test(linha))
+  .join('\n');
+
+for (const [nome, fonte] of [
+  ['TopBar', topBar],
+  ['Sidebar', sidebar],
+  ['DossieApi', await read('src/components/panels/DossieApi.tsx')],
+  ['PrazosApi', await read('src/components/panels/PrazosApi.tsx')],
+]) {
+  assert.doesNotMatch(semComentario(fonte), /text-\[#006400\]/,
+    `${nome} must paint the institutional green from the theme tokens ` +
+    '(.botao-marca / .texto-marca), not from text-[#006400], which is invisible in the low-light skin.');
+}
+for (const classe of ['.botao-marca', '.texto-marca']) {
+  assert.ok(css.includes(classe), `The stylesheet must define ${classe}.`);
+}
+
+// Os tokens da marca precisam existir nos DOIS temas, senão o cartão de tarefa
+// e o chip de filtro ficam verde-escuro sobre fundo escuro — sem erro nenhum no
+// console, que é como esta armadilha sempre se apresenta neste projeto.
+for (const token of ['--marca-fundo', '--marca-borda', '--marca-texto', '--marca-anel', '--sup-cartao']) {
+  const claro = new RegExp(`:root \\{[\\s\\S]*?${token}:`);
+  const escuro = new RegExp(`html\\.fotofobia \\{[\\s\\S]*?${token}:`);
+  assert.match(css, claro, `${token} must be declared for the light theme.`);
+  assert.match(css, escuro, `${token} must be declared for the low-light theme.`);
 }
 
 // ── Hash documentado tem que existir ────────────────────────────────────────
