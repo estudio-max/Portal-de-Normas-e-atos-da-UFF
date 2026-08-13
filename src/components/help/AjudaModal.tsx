@@ -65,14 +65,14 @@ export const AjudaModal: React.FC<Props> = ({ aberto, aba, onFechar, onIrParaGui
 
             {/* Por que a aba existe. Vem ANTES dos passos de propósito: quem
                 abriu o "?" quer saber se vale a pena, e só depois como opera. */}
-            <h3 className="mt-4 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <h3 className="mt-4 mb-1.5 text-[12px] font-bold uppercase tracking-wider text-slate-500">
               Por que esta aba existe
             </h3>
             <div className="space-y-2 border-l-2 border-slate-200 pl-3">
               {aba.porQue.map((p, i) => <p key={i}>{p}</p>)}
             </div>
 
-            <h3 className="mt-4 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <h3 className="mt-4 mb-1.5 text-[12px] font-bold uppercase tracking-wider text-slate-500">
               Como usar
             </h3>
             <ol className="ml-5 list-decimal space-y-1.5">

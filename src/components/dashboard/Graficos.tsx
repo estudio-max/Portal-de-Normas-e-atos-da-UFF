@@ -33,11 +33,11 @@ function TabelaDados({ titulo, colunas, linhas }: {
 }) {
   return (
     <details className="mt-3">
-      <summary className="text-[11px] text-[#718096] cursor-pointer hover:text-[#1B6B3A] rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B6B3A]">
+      <summary className="text-[12px] text-[#718096] cursor-pointer hover:text-[#1B6B3A] rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B6B3A]">
         Ver {titulo} em tabela
       </summary>
       <div className="mt-2 max-h-52 overflow-auto">
-        <table className="w-full text-[11px]">
+        <table className="w-full text-[12px]">
           <thead className="sticky top-0 bg-white">
             <tr className="text-[#64748B] text-left">
               <th className="font-medium py-1">{colunas[0]}</th>
@@ -89,7 +89,7 @@ export function AreaPorAno({ dados }: { dados: [number, number][] }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 mb-1.5">
-        <p className="text-[11px] text-[#64748B]">
+        <p className="text-[12px] text-[#64748B]">
           {dados[0][0]}–{dados[n - 1][0]} · pico{' '}
           <span className="tabular-nums font-medium text-[#4A5568]">{fmt(max)}</span>
         </p>
@@ -147,7 +147,7 @@ export function AreaPorAno({ dados }: { dados: [number, number][] }) {
         </div>
       </div>
 
-      <div className="grid mt-1 text-[10px] text-[#64748B] tabular-nums"
+      <div className="grid mt-1 text-[11px] text-[#64748B] tabular-nums"
         style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {dados.map(([ano], i) => (
           <span key={ano} className="text-center truncate">
@@ -195,7 +195,7 @@ function BarrasRanking({ dados, total, topo = 5, rotuloCauda = 'Outros' }: {
         <li key={l.k}>
           <div className="flex items-baseline justify-between gap-2 mb-1">
             <span className="text-[12px] text-[#4A5568] truncate" title={l.k}>{l.k}</span>
-            <span className="text-[11px] tabular-nums text-[#64748B] shrink-0">
+            <span className="text-[12px] tabular-nums text-[#64748B] shrink-0">
               <span className="text-[#1A202C] font-medium">{fmt(l.v)}</span>
               {total > 0 && <> · {Math.round((l.v / total) * 100)}%</>}
             </span>
@@ -244,7 +244,7 @@ export function ComposicaoDoBoletim({ atos }: { atos: UffAct[] }) {
       <div className="mt-4 pt-3 border-t border-[#EDF2F7]">
         <div className="flex items-baseline justify-between gap-2 mb-1">
           <span className="text-[12px] text-[#4A5568]">Com processo SEI</span>
-          <span className="text-[11px] tabular-nums text-[#64748B]">
+          <span className="text-[12px] tabular-nums text-[#64748B]">
             <span className="text-[#1A202C] font-medium">{comSei}</span> de {atos.length} · {pctSei}%
           </span>
         </div>
@@ -275,7 +275,7 @@ export function OrgaosDoBoletim({ atos }: { atos: UffAct[] }) {
 
   return (
     <div>
-      <p className="text-[11px] text-[#64748B] mb-2">
+      <p className="text-[12px] text-[#64748B] mb-2">
         <span className="tabular-nums font-medium text-[#4A5568]">{orgaos.length}</span>{' '}
         {orgaos.length === 1 ? 'unidade publicou' : 'unidades publicaram'} neste boletim
       </p>

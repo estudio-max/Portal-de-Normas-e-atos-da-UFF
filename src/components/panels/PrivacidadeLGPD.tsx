@@ -99,7 +99,7 @@ export default function PrivacidadeLGPD() {
         </p>
       </Secao>
 
-      <p className="text-[11px] text-slate-400 text-center pt-2">
+      <p className="text-[12px] text-slate-400 text-center pt-2">
         O acesso ao banco de dados que sustenta este portal é restrito por senha e por um token de
         importação, ambos guardados fora do repositório de código.
       </p>

@@ -19,7 +19,7 @@ function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: stri
 }
 
 function Badge({ cor, children }: { cor: string; children: React.ReactNode }) {
-  return <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${cor}`}>{children}</span>;
+  return <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${cor}`}>{children}</span>;
 }
 
 export default function HelpGuide() {
@@ -57,10 +57,10 @@ export default function HelpGuide() {
           </li>
           <li>
             <strong>Navegação por teclado.</strong> Todos os controles são alcançáveis por{' '}
-            <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[11px]">Tab</kbd>,
-            com contorno de foco visível. <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[11px]">Esc</kbd>{' '}
+            <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[12px]">Tab</kbd>,
+            com contorno de foco visível. <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[12px]">Esc</kbd>{' '}
             fecha os painéis e as janelas, e{' '}
-            <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[11px]">Ctrl/⌘ + K</kbd>{' '}
+            <kbd className="rounded border border-slate-300 bg-slate-100 px-1 text-[12px]">Ctrl/⌘ + K</kbd>{' '}
             leva direto à busca global.
           </li>
           <li>
@@ -388,7 +388,7 @@ export default function HelpGuide() {
         </div>
       </Secao>
 
-      <p className="text-center text-[11px] text-slate-400 pb-2">
+      <p className="text-center text-[12px] text-slate-400 pb-2">
         Dúvidas ou sugestões? Fale com a Superintendência de Documentação.
       </p>
     </div>

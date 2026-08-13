@@ -178,15 +178,15 @@ export default function PrazosApi() {
         {/* KPIs de urgência */}
         <div className="grid grid-cols-3 gap-2.5 mt-3">
           <div className="bg-red-50 border border-red-100 rounded-lg p-2.5">
-            <div className="text-[10px] font-bold text-red-700 uppercase tracking-wide">Vencem esta semana</div>
+            <div className="text-[11px] font-bold text-red-700 uppercase tracking-wide">Vencem esta semana</div>
             <div className="text-2xl font-bold text-red-700 mt-0.5">{kpis.semana}</div>
           </div>
           <div className="bg-amber-50 border border-amber-100 rounded-lg p-2.5">
-            <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Próximos 30 dias</div>
+            <div className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Próximos 30 dias</div>
             <div className="text-2xl font-bold text-amber-700 mt-0.5">{kpis.mes}</div>
           </div>
           <div className="bg-slate-50 border border-slate-100 rounded-lg p-2.5">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Total de futuros</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total de futuros</div>
             <div className="text-2xl font-bold text-slate-800 mt-0.5">{kpis.futuros}</div>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function PrazosApi() {
           <div className="flex flex-wrap rounded-md border border-slate-200 overflow-hidden">
             {JANELAS.map(j => (
               <button key={j.k} onClick={() => setJanela(j.k)}
-                className={`px-2.5 py-1.5 text-[11px] font-bold border-r border-slate-200 last:border-0 ${janela === j.k ? 'bg-[#003366] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                className={`px-2.5 py-1.5 text-[12px] font-bold border-r border-slate-200 last:border-0 ${janela === j.k ? 'bg-[#003366] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
                 {j.rot}
               </button>
             ))}
@@ -205,7 +205,7 @@ export default function PrazosApi() {
             <div className="flex flex-wrap rounded-md border border-slate-200 overflow-hidden" title="Categoria do prazo">
               {([['todos', 'Todos'], ['padsinve', '⚖ PAD/Sindicância'], ['gerais', 'Gerais']] as const).map(([k, rot]) => (
                 <button key={k} onClick={() => setCat(k)}
-                  className={`px-2.5 py-1.5 text-[11px] font-bold border-r border-slate-200 last:border-0 ${cat === k ? (k === 'padsinve' ? 'bg-rose-700 text-white' : 'bg-[#003366] text-white') : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                  className={`px-2.5 py-1.5 text-[12px] font-bold border-r border-slate-200 last:border-0 ${cat === k ? (k === 'padsinve' ? 'bg-rose-700 text-white' : 'bg-[#003366] text-white') : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
                   {rot}
                 </button>
               ))}
@@ -222,7 +222,7 @@ export default function PrazosApi() {
             {tipos.map(t => <option key={t} value={t}>{rotuloTipo(t)}</option>)}
           </select>
           <button onClick={() => setSoAlta(v => !v)}
-            className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold border ${soAlta ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-600 border-slate-200'}`}>
+            className={`px-2.5 py-1.5 rounded-md text-[12px] font-bold border ${soAlta ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-600 border-slate-200'}`}>
             só alta confiança
           </button>
           <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[160px]">
@@ -251,7 +251,7 @@ export default function PrazosApi() {
                   <div className="flex items-center gap-2 mb-1.5 px-1">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: URG[u].ponto }} />
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{URG[u].rotulo}</h4>
-                    <span className="text-[11px] text-slate-400">{itens.length}</span>
+                    <span className="text-[12px] text-slate-400">{itens.length}</span>
                   </div>
                   <div className="space-y-2">
                     {itens.map((p, i) => <div key={p.atoId + p.dataLimite + i}><PrazoCard p={p} /></div>)}
@@ -263,7 +263,7 @@ export default function PrazosApi() {
         </>
       )}
 
-      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+      <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         Detecção <strong>automática</strong> a partir do texto — pode falhar ou classificar errado; use como lembrete, não como fonte oficial.
         Prazos relativos (“a contar da assinatura”) usam a <strong>data do ato</strong> como âncora. O selo{' '}
@@ -288,14 +288,14 @@ function Linha({ filtrada, janela }: { filtrada: ds.Prazo[]; janela: string }) {
   for (let d = 0; d <= span; d += step) ticks.push(d);
   return (
     <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs overflow-x-auto">
-      <div className="text-[11px] text-slate-500 font-semibold mb-1 px-1">Linha do tempo — próximos {span} dias ({futuros.length} prazo{futuros.length === 1 ? '' : 's'})</div>
+      <div className="text-[12px] text-slate-500 font-semibold mb-1 px-1">Linha do tempo — próximos {span} dias ({futuros.length} prazo{futuros.length === 1 ? '' : 's'})</div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
         aria-label={`Linha do tempo com ${futuros.length} prazos nos próximos ${span} dias.`}>
         <line x1={PADL} y1={base} x2={W - PADR} y2={base} stroke={eixo} strokeWidth="1.5" />
         {ticks.map((d, i) => (
           <g key={i}>
             <line x1={x(d)} y1={base - 3} x2={x(d)} y2={base + 3} stroke={eixo} strokeWidth="1" />
-            <text x={x(d)} y={base + 16} fontSize="9" textAnchor="middle" fill={txt}>{d === 0 ? 'hoje' : `+${d}d`}</text>
+            <text x={x(d)} y={base + 16} fontSize="11" textAnchor="middle" fill={txt}>{d === 0 ? 'hoje' : `+${d}d`}</text>
           </g>
         ))}
         {futuros.map((p, i) => {
@@ -336,23 +336,23 @@ function PrazoCard({ p }: { p: ds.Prazo }) {
       <div className="flex items-start gap-3 flex-wrap">
         <div className="text-center shrink-0 w-16">
           <div className="text-lg font-bold text-slate-800 leading-none">{fmtBR(p.dataLimite).slice(0, 5)}</div>
-          <div className="text-[10px] text-slate-400">{p.dataLimite.slice(0, 4)}</div>
-          <div className={`text-[10px] font-bold mt-1 ${URG[u].texto}`}>{contagem(d)}</div>
+          <div className="text-[11px] text-slate-400">{p.dataLimite.slice(0, 4)}</div>
+          <div className={`text-[11px] font-bold mt-1 ${URG[u].texto}`}>{contagem(d)}</div>
         </div>
         <div className="w-full sm:w-auto sm:flex-1 sm:min-w-[180px]">
           <div className="flex items-center gap-2 flex-wrap">
             {ehPadSinve(p) && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-rose-600 text-white border-rose-700" title="Prazo de comissão disciplinar — extração estruturada por lei (alta confiança)">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold border bg-rose-600 text-white border-rose-700" title="Prazo de comissão disciplinar — extração estruturada por lei (alta confiança)">
                 <Scale className="w-3 h-3" /> Prazo legal
               </span>
             )}
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${corPublico(p.publico)}`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-bold border ${corPublico(p.publico)}`}>
               <Users className="w-3 h-3" /> {p.publico}
             </span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${corTipo(p.tipo)}`}>{rotuloTipo(p.tipo)}</span>
-            {(p.conf || '').toLowerCase() === 'média' && <span className="text-[10px] text-slate-400 italic">confiança média</span>}
+            <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold uppercase border ${corTipo(p.tipo)}`}>{rotuloTipo(p.tipo)}</span>
+            {(p.conf || '').toLowerCase() === 'média' && <span className="text-[11px] text-slate-400 italic">confiança média</span>}
             {p.mexidoDepois && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
                 <AlertTriangle className="w-3 h-3" /> revisado depois
               </span>
             )}
@@ -368,14 +368,14 @@ function PrazoCard({ p }: { p: ds.Prazo }) {
           {ementaLimpa(p.ementa) && (
             <div className="mt-0.5 text-[12px] text-slate-600 leading-snug line-clamp-2" title={p.ementa}>{ementaLimpa(p.ementa)}</div>
           )}
-          <div className="mt-1 text-[11px] text-slate-400 leading-snug flex items-start gap-1">
+          <div className="mt-1 text-[12px] text-slate-400 leading-snug flex items-start gap-1">
             <Clock className="w-3 h-3 mt-0.5 shrink-0 text-slate-300" />
             <span className="italic">{p.textoOrigem}</span>
           </div>
 
           {temCadeia && (
             <button onClick={alternar}
-              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline">
+              className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-bold text-rose-700 hover:text-rose-900 hover:underline">
               {aberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               <GitBranch className="w-3.5 h-3.5" /> ver cadeia do processo ({p.cadeiaTotal} atos)
             </button>
@@ -386,13 +386,13 @@ function PrazoCard({ p }: { p: ds.Prazo }) {
       {temCadeia && aberta && (
         <div className="mt-2 ml-1 border-t border-slate-100 pt-2">
           {carregando ? (
-            <div className="flex items-center gap-2 text-[11px] text-slate-400 py-2">
+            <div className="flex items-center gap-2 text-[12px] text-slate-400 py-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> carregando a cadeia…
             </div>
           ) : cadeia && cadeia.atos.length ? (
             <CadeiaPad cadeia={cadeia} atualId={p.atoId} />
           ) : (
-            <div className="text-[11px] text-slate-400 py-1">Não foi possível carregar a cadeia.</div>
+            <div className="text-[12px] text-slate-400 py-1">Não foi possível carregar a cadeia.</div>
           )}
         </div>
       )}
@@ -408,7 +408,7 @@ function CadeiaPad({ cadeia, atualId }: { cadeia: ds.PadCadeia; atualId: string 
     : 'bg-amber-100 text-amber-800 border-amber-200';   // prorrogação/recondução
   return (
     <div>
-      <div className="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
+      <div className="text-[12px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
         <GitBranch className="w-3.5 h-3.5 text-rose-600" />
         Cadeia do processo <span className="font-mono text-slate-500">{cadeia.processo}</span>
         <span className="text-slate-400 font-normal">· {cadeia.total} ato{cadeia.total === 1 ? '' : 's'}</span>
@@ -421,14 +421,14 @@ function CadeiaPad({ cadeia, atualId }: { cadeia: ds.PadCadeia; atualId: string 
             <li key={a.id + i} className="relative pl-4">
               <span className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-white ${a.vigente ? 'bg-rose-600' : 'bg-slate-300'}`} />
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${corPapel(a.papel)}`}>{a.papel}</span>
-                <span className="text-[11px] font-semibold text-slate-700">{fmtBR(a.dataAto || '')}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold uppercase border ${corPapel(a.papel)}`}>{a.papel}</span>
+                <span className="text-[12px] font-semibold text-slate-700">{fmtBR(a.dataAto || '')}</span>
                 {a.vigente && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-rose-600 text-white border-rose-700">
+                  <span className="px-1.5 py-0.5 rounded text-[11px] font-bold border bg-rose-600 text-white border-rose-700">
                     prazo vigente · {contagem(dl)}
                   </span>
                 )}
-                {ehAtual && !a.vigente && <span className="text-[9px] text-slate-400 italic">(este card)</span>}
+                {ehAtual && !a.vigente && <span className="text-[11px] text-slate-400 italic">(este card)</span>}
               </div>
               <div className="text-[12px] mt-0.5">
                 {a.linkBoletim ? (
@@ -437,13 +437,13 @@ function CadeiaPad({ cadeia, atualId }: { cadeia: ds.PadCadeia; atualId: string 
                     {a.atoLabel} <ExternalLink className="w-3 h-3" />
                   </a>
                 ) : <span className="font-semibold text-slate-700">{a.atoLabel}</span>}
-                <span className="text-slate-400 text-[11px]"> · {a.sigla} · vence {fmtBR(a.dataLimite)}</span>
+                <span className="text-slate-400 text-[12px]"> · {a.sigla} · vence {fmtBR(a.dataLimite)}</span>
               </div>
             </li>
           );
         })}
       </ol>
-      <p className="text-[10px] text-slate-400 mt-2 leading-snug">
+      <p className="text-[11px] text-slate-400 mt-2 leading-snug">
         Encadeado pelo <strong>processo SEI</strong>. Vale o prazo do <strong>ato mais recente</strong>. Sempre confira o ato de origem.
       </p>
     </div>

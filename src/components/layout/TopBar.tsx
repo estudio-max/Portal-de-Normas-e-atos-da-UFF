@@ -85,7 +85,7 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
               <X size={14} />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-[#64748B] bg-[#E2E8F0] rounded">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-mono text-[#64748B] bg-[#E2E8F0] rounded">
             ⌘K
           </kbd>
         </div>

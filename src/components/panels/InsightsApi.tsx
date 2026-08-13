@@ -153,7 +153,7 @@ export default function InsightsApi() {
             {/* Ranking de órgãos + cobertura SEI */}
             <Card titulo="Quem mais publica" icone={<Building2 className="w-4 h-4 text-yellow-500" />}
               sub="Atos por órgão emissor. A parte escura da barra tem processo SEI vinculado.">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[11px] text-slate-500 font-medium">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[12px] text-slate-500 font-medium">
                 <Legenda cor={P.barSei} texto="com SEI" />
                 <Legenda cor={P.bar} texto="sem SEI" />
               </div>
@@ -183,9 +183,9 @@ export default function InsightsApi() {
 
           {/* ---- Fase 2: análises que dependem do tempo/histórico ---- */}
           <div className="flex items-center gap-2 pt-2 pb-0.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Análises avançadas</span>
+            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Análises avançadas</span>
             <span className="flex-1 h-px bg-slate-200" />
-            <span className="text-[10px] text-slate-400">todo o período · ignora o filtro de ano</span>
+            <span className="text-[11px] text-slate-400">todo o período · ignora o filtro de ano</span>
           </div>
 
           {/* Estrutura de governança: a única pergunta desta aba que sai de um
@@ -213,7 +213,7 @@ export default function InsightsApi() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
             <Card titulo="Aposentadorias concedidas por ano" icone={<Users className="w-4 h-4 text-yellow-500" />}
               sub="Concessões publicadas no Boletim, classificadas pelo dispositivo do ato (rótulo direto ou, na ausência dele, a base legal do art. 40 da Constituição).">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[11px] text-slate-500 font-medium">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[12px] text-slate-500 font-medium">
                 <Legenda cor={P.bar} texto="voluntária" />
                 <Legenda cor={P.vig.revogado} texto="compulsória" />
                 <Legenda cor={P.apos3} texto="invalidez" />
@@ -224,7 +224,7 @@ export default function InsightsApi() {
               {(() => {
                 const indef = (an?.seriesRh || []).reduce((s, r) => s + r.indef, 0);
                 return indef > 0 ? (
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-[12px] text-slate-400 mt-1">
                     +{fmtN(indef)} concessão(ões) detectada(s) sem tipo identificável no texto — confira o ato.
                   </p>
                 ) : null;
@@ -240,14 +240,14 @@ export default function InsightsApi() {
 
           {/* ---- Movimentação de servidores (remoção × redistribuição) ---- */}
           <div className="flex items-center gap-2 pt-2 pb-0.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Movimentação de servidores</span>
+            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Movimentação de servidores</span>
             <span className="flex-1 h-px bg-slate-200" />
-            <span className="text-[10px] text-slate-400">deslocamentos · Lei 8.112/90</span>
+            <span className="text-[11px] text-slate-400">deslocamentos · Lei 8.112/90</span>
           </div>
 
           <Card titulo="Remoção × Redistribuição por ano" icone={<ArrowRightLeft className="w-4 h-4 text-yellow-500" />}
             sub="Remoção = servidor muda de setor DENTRO da UFF (art. 36). Redistribuição = cargo entra na UFF vindo de outro órgão (art. 37).">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[11px] text-slate-500 font-medium">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[12px] text-slate-500 font-medium">
               <Legenda cor={P.bar} texto="remoções (internas)" />
               <Legenda cor={P.tipo} texto="redistribuições para a UFF (entrada)" />
             </div>
@@ -282,7 +282,7 @@ export default function InsightsApi() {
             </div>
           )}
 
-          <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+          <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
             <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
             A “atividade por dia” usa a <strong>data de assinatura</strong> do ato (não a de publicação no boletim). Os recortes
             refletem apenas o período <strong>já indexado</strong>; a série cresce conforme novos boletins (e o legado) entram na base.
@@ -313,9 +313,9 @@ function Kpi({ rotulo, valor, sub, cor = 'slate' }: { rotulo: string; valor: str
   };
   return (
     <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
-      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight">{rotulo}</div>
+      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide leading-tight">{rotulo}</div>
       <div className={`text-2xl font-bold tracking-tight mt-1 ${corTxt[cor] || corTxt.slate}`}>{valor}</div>
-      {sub && <div className="text-[11px] text-slate-400 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[12px] text-slate-400 mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -324,7 +324,7 @@ function Card({ titulo, sub, icone, children }: { titulo: string; sub?: string; 
   return (
     <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
       <h4 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">{icone} {titulo}</h4>
-      {sub && <p className="text-[11px] text-slate-500 mt-0.5 mb-3 leading-normal font-medium">{sub}</p>}
+      {sub && <p className="text-[12px] text-slate-500 mt-0.5 mb-3 leading-normal font-medium">{sub}</p>}
       {children}
     </div>
   );
@@ -396,10 +396,10 @@ function Heatmap({ porDia, ano, dataMin, dataMax, P }:
         <svg width={W} height={H} role="img"
           aria-label={`Calendário de atividade: cada quadrado é um dia, colorido pela quantidade de atos (máximo ${maxN} num único dia).`}>
           {rotulosMes.map((r, i) => (
-            <text key={i} x={ESQ + r.col * (CELL + GAP)} y={11} fontSize="10" fill={P.axis}>{r.texto}</text>
+            <text key={i} x={ESQ + r.col * (CELL + GAP)} y={11} fontSize="11" fill={P.axis}>{r.texto}</text>
           ))}
           {diasSemana.map(([lb, row], i) => (
-            <text key={i} x={0} y={TOPO + row * (CELL + GAP) + CELL - 2} fontSize="9" fill={P.axis}>{lb}</text>
+            <text key={i} x={0} y={TOPO + row * (CELL + GAP) + CELL - 2} fontSize="11" fill={P.axis}>{lb}</text>
           ))}
           {semanas.map((sem, ci) => sem.map((dia, ri) => (
             <rect key={`${ci}-${ri}`} x={ESQ + ci * (CELL + GAP)} y={TOPO + ri * (CELL + GAP)}
@@ -409,7 +409,7 @@ function Heatmap({ porDia, ano, dataMin, dataMax, P }:
           )))}
         </svg>
       </div>
-      <div className="flex items-center gap-1.5 mt-2 text-[10px] text-slate-400">
+      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
         <span>menos</span>
         <span className="w-3 h-3 rounded-sm inline-block" style={{ background: P.track }} />
         {P.heat.map((c, i) => <span key={i} className="w-3 h-3 rounded-sm inline-block" style={{ background: c }} />)}
@@ -428,7 +428,7 @@ function RankingOrgaos({ dados, P }: { dados: ds.OrgaoStat[]; P: ReturnType<type
         const wSei = (d.comSei / max) * 100;
         const wResto = ((d.n - d.comSei) / max) * 100;
         return (
-          <div key={i} className="flex items-center gap-2 text-[11px]" title={`${d.sigla}: ${d.n} atos · ${d.comSei} com SEI (${pct(d.comSei, d.n)}%)`}>
+          <div key={i} className="flex items-center gap-2 text-[12px]" title={`${d.sigla}: ${d.n} atos · ${d.comSei} com SEI (${pct(d.comSei, d.n)}%)`}>
             <span className="w-20 text-right text-slate-600 font-semibold truncate shrink-0">{d.sigla}</span>
             <div className="flex-1 h-3.5 rounded-sm overflow-hidden flex" style={{ background: P.track }}>
               <div style={{ width: `${wSei}%`, background: P.barSei }} />
@@ -462,7 +462,7 @@ function Colunas({ porMes, P }: { porMes: { ym: string; n: number }[]; P: Return
               <rect x={x + bw * 0.15} y={H - PADB - h} width={bw * 0.7} height={h} rx={2} fill={P.col}>
                 <title>{`${nomeMes(m.ym)}: ${m.n} atos`}</title>
               </rect>
-              <text x={x + bw / 2} y={H - PADB + 12} fontSize="9" textAnchor="middle" fill={P.axis}>{MESES[mn]}</text>
+              <text x={x + bw / 2} y={H - PADB + 12} fontSize="11" textAnchor="middle" fill={P.axis}>{MESES[mn]}</text>
             </g>
           );
         })}
@@ -477,7 +477,7 @@ function BarrasSimples({ dados, cor, total }: { dados: { rotulo: string; n: numb
   return (
     <div className="space-y-1.5">
       {dados.map((d, i) => (
-        <div key={i} className="flex items-center gap-2 text-[11px]" title={`${d.rotulo}: ${d.n} (${pct(d.n, total)}%)`}>
+        <div key={i} className="flex items-center gap-2 text-[12px]" title={`${d.rotulo}: ${d.n} (${pct(d.n, total)}%)`}>
           <span className="w-32 text-right text-slate-600 font-semibold truncate shrink-0">{d.rotulo}</span>
           <div className="flex-1 h-3.5 rounded-sm" style={{ background: 'transparent' }}>
             <div className="h-full rounded-sm" style={{ width: `${(d.n / max) * 100}%`, background: cor }} />
@@ -504,7 +504,7 @@ function Rotatividade({ rot, P }: { rot?: ds.Analitico['rotatividade']; P: Retur
   const max = Math.max(...rot.cadeiras.map(c => c.titulares));
   return (
     <div>
-      <div className="flex flex-wrap gap-x-5 gap-y-1 mb-3 text-[11px]">
+      <div className="flex flex-wrap gap-x-5 gap-y-1 mb-3 text-[12px]">
         {rot.medianaMeses != null && (
           <span className="text-slate-500">Permanência mediana: <strong className="text-slate-800">{rot.medianaMeses} meses</strong></span>
         )}
@@ -512,7 +512,7 @@ function Rotatividade({ rot, P }: { rot?: ds.Analitico['rotatividade']; P: Retur
       </div>
       <div className="space-y-1.5">
         {rot.cadeiras.map((c, i) => (
-          <div key={i} className="flex items-center gap-2 text-[11px]" title={`${c.cargo} — ${c.unidade}: ${c.titulares} titulares, permanência média ${c.permMedia} meses`}>
+          <div key={i} className="flex items-center gap-2 text-[12px]" title={`${c.cargo} — ${c.unidade}: ${c.titulares} titulares, permanência média ${c.permMedia} meses`}>
             <span className="w-24 md:w-40 text-right text-slate-600 truncate shrink-0">
               <span className="font-semibold text-slate-700">{c.cargo}</span> · {c.unidade}
             </span>
@@ -546,13 +546,13 @@ function Zumbis({ lista }: { lista?: ds.Zumbi[] }) {
   const normas = new Set(lista.map(z => z.alvoLabel)).size;
   return (
     <div>
-      <p className="text-[11px] text-slate-500 mb-2">
+      <p className="text-[12px] text-slate-500 mb-2">
         <strong className="text-red-600">{fmtN(lista.length)}</strong> referência(s) a <strong>{fmtN(normas)}</strong> norma(s)
         já revogada(s){lista.length >= 60 ? ' — mostrando as 60 mais recentes' : ''}.
       </p>
       <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
         {lista.map((z, i) => (
-          <div key={i} className="text-[11px] py-1 pl-2 border-l-2 border-red-300">
+          <div key={i} className="text-[12px] py-1 pl-2 border-l-2 border-red-300">
             <div className="flex items-baseline gap-2">
               <span className="flex-1 min-w-0 truncate">
                 {z.citLink ? (
@@ -626,13 +626,13 @@ function SerieAnual({ dados, corA, corB, corC, rotuloA, rotuloB, rotuloC, P }: {
                     <title>{`${d.ano}: ${fmtN(d.c || 0)} ${rotuloC || ''}`}</title>
                   </rect>
                 )}
-                <text x={x0 + gw / 2} y={H - PADB + 12} fontSize="8.5" textAnchor="middle" fill={P.axis}>{rot}</text>
+                <text x={x0 + gw / 2} y={H - PADB + 12} fontSize="11" textAnchor="middle" fill={P.axis}>{rot}</text>
               </g>
             );
           })}
         </svg>
       </div>
-      <p className="text-[11px] text-slate-500 mt-1.5">
+      <p className="text-[12px] text-slate-500 mt-1.5">
         Total no período indexado: <strong className="text-slate-700">{fmtN(total('a'))}</strong> {rotuloA}
         {n >= 2 && <> · <strong className="text-slate-700">{fmtN(total('b'))}</strong> {rotuloB}</>}
         {n >= 3 && <> · <strong className="text-slate-700">{fmtN(total('c'))}</strong> {rotuloC}</>}.
@@ -651,7 +651,7 @@ function DiagnosticoRedistribuicao({ serie }: { serie?: ds.SerieDesl[] }) {
   const sai = serie.reduce((s, r) => s + r.redSaida, 0);
   if (!entra && !sai) return null;
   return (
-    <div className="mt-2 text-[11px] text-slate-600 leading-relaxed bg-emerald-50 border border-emerald-100 rounded-md p-2">
+    <div className="mt-2 text-[12px] text-slate-600 leading-relaxed bg-emerald-50 border border-emerald-100 rounded-md p-2">
       <strong className="text-emerald-700">{fmtN(entra)}</strong> cargos/servidores <strong>entraram</strong> na UFF por
       redistribuição no período indexado{sai > 0 && <> · <strong>{fmtN(sai)}</strong> solicitação(ões) de saída registrada(s)</>}.
       <span className="text-slate-400"> A <strong>saída</strong> se consuma em portaria do MEC no <strong>DOU</strong>, não no
@@ -703,7 +703,7 @@ function SetoresRemocao({ setores, P }: { setores?: ds.SetorAno[]; P: ReturnType
       ) : (
         <p className="text-xs text-slate-500 leading-relaxed">Nenhuma remoção com setor identificado entre {de} e {ate}.</p>
       )}
-      <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+      <p className="text-[12px] text-slate-400 mt-2 leading-relaxed">
         {de === min && ate === max
           ? <>Período completo indexado</>
           : <>De <strong className="text-slate-600">{de}</strong> a <strong className="text-slate-600">{ate}</strong></>}
@@ -731,7 +731,7 @@ function FaixaAnos({ min, max, de, ate, cor, onChange }:
         .faixa-anos input[type=range]::-moz-range-thumb{pointer-events:auto;width:10px;height:10px;border-radius:9999px;background:#fff;border:2px solid ${cor};cursor:ew-resize;}
         .faixa-anos input[type=range]::-moz-range-track{background:none;}
       `}</style>
-      <div className="flex items-center justify-between text-[10px] font-bold text-slate-600">
+      <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
         <span>{de}</span>
         <span className="font-medium text-slate-400 uppercase tracking-wide">arraste para recortar o período</span>
         <span>{ate}</span>
@@ -747,7 +747,7 @@ function FaixaAnos({ min, max, de, ate, cor, onChange }:
           style={{ zIndex: deEmCima ? 2 : 3 }}
           onChange={e => onChange(de, Math.max(Number(e.target.value), de))} />
       </div>
-      <div className="flex justify-between text-[9px] text-slate-400 -mt-1"><span>{min}</span><span>{max}</span></div>
+      <div className="flex justify-between text-[11px] text-slate-400 -mt-1"><span>{min}</span><span>{max}</span></div>
     </div>
   );
 }
@@ -772,10 +772,10 @@ function Vigencia({ vigentes, alterados, revogados, total, P }:
         {seg.map((s, i) => (
           <div key={i} className="text-center">
             <div className="text-lg font-bold text-slate-800">{pctTxt(s.n, total)}</div>
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <div className="flex items-center justify-center gap-1.5 text-[12px] text-slate-500 font-medium">
               <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: s.cor }} /> {s.rot}
             </div>
-            <div className="text-[10px] text-slate-400">{fmtN(s.n)}</div>
+            <div className="text-[11px] text-slate-400">{fmtN(s.n)}</div>
           </div>
         ))}
       </div>

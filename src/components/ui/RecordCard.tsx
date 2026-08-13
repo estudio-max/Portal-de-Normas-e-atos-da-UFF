@@ -36,13 +36,13 @@ export const RecordCard: React.FC<RecordCardProps> = ({
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
         <p className="text-sm font-bold leading-tight text-slate-900 break-words">{titulo}</p>
-        {subtitulo && <p className="text-[11px] leading-tight text-slate-500 break-words">{subtitulo}</p>}
+        {subtitulo && <p className="text-[12px] leading-tight text-slate-500 break-words">{subtitulo}</p>}
       </div>
       {selo && <div className="shrink-0">{selo}</div>}
     </div>
 
     {campos && campos.length > 0 && (
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
         {campos.map((c, i) => (
           <div key={c.rotulo + i} className={c.largo ? 'col-span-2 min-w-0' : 'min-w-0'}>
             <dt className="uppercase tracking-wide text-slate-400">{c.rotulo}</dt>

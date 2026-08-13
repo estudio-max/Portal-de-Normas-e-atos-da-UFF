@@ -105,7 +105,7 @@ export const FiltrosAvancados: React.FC<Props> = ({
               className={campo}
               aria-describedby="ajuda-nome"
             />
-            <p id="ajuda-nome" className="mt-1 text-[11px] leading-relaxed text-[#4A5568]">
+            <p id="ajuda-nome" className="mt-1 text-[12px] leading-relaxed text-[#4A5568]">
               Procura no corpo do ato, inclusive em tabelas. Atende a quem não tem
               matrícula registrada no texto.
             </p>
@@ -121,7 +121,7 @@ export const FiltrosAvancados: React.FC<Props> = ({
               className={`${campo} font-mono`}
               aria-describedby="ajuda-siape"
             />
-            <p id="ajuda-siape" className="mt-1 text-[11px] leading-relaxed text-[#4A5568]">
+            <p id="ajuda-siape" className="mt-1 text-[12px] leading-relaxed text-[#4A5568]">
               Zeros à esquerda não importam.
             </p>
           </div>
@@ -135,7 +135,7 @@ export const FiltrosAvancados: React.FC<Props> = ({
               className={`${campo} font-mono`}
               aria-describedby="ajuda-processo"
             />
-            <p id="ajuda-processo" className="mt-1 text-[11px] leading-relaxed text-[#4A5568]">
+            <p id="ajuda-processo" className="mt-1 text-[12px] leading-relaxed text-[#4A5568]">
               Aceita com ou sem pontuação, e aceita só um pedaço do número.
             </p>
           </div>

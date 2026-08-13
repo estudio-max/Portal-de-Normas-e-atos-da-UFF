@@ -122,7 +122,7 @@ function GraficoCategorias({ serie, cats }: { serie: ds.CoopSerieAno[]; cats: st
                   </rect>
                 );
               })}
-              <text x={x0 + passo / 2} y={H - 9} textAnchor="middle" fontSize={10}
+              <text x={x0 + passo / 2} y={H - 9} textAnchor="middle" fontSize={11}
                 fill="#64748b" fontWeight={600}>{String(l.ano).slice(2)}</text>
             </g>
           );
@@ -200,7 +200,7 @@ export default function CooperacaoApi() {
         <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
           <Handshake className="w-4 h-4 text-yellow-500" /> Cooperação — acordos, protocolos e cotutelas
         </h3>
-        <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+        <p className="text-[12px] text-slate-500 mt-0.5 leading-normal font-medium">
           Acordos que a UFF celebra com outras instituições, extraídos da ementa do ato: a{' '}
           <strong>categoria</strong> do acordo, a <strong>instituição parceira</strong> e, quando
           internacional, o <strong>país</strong>. Os acordos acadêmicos passam por um conselho
@@ -255,7 +255,7 @@ export default function CooperacaoApi() {
             </select>
             {temFiltro && (
               <button onClick={limpar}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold border bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200">
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[12px] font-bold border bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200">
                 <X className="w-3.5 h-3.5" /> limpar
               </button>
             )}
@@ -264,15 +264,15 @@ export default function CooperacaoApi() {
           {/* Mapa */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-              <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <Globe2 className="w-4 h-4 text-amber-500" /> Onde estão as instituições parceiras
               </span>
-              <span className="text-[11px] text-slate-500 font-medium">
+              <span className="text-[12px] text-slate-500 font-medium">
                 {internacionais} acordo(s) com país identificado · clique numa bolha para filtrar
               </span>
             </div>
             <MapaMundi paises={paisesFiltrados} selecionado={pais} aoSelecionar={setPais} />
-            <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
+            <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">
               A silhueta dos continentes é <strong>esquemática</strong> (serve para orientar o olho);
               as bolhas usam o centroide real do país e o tamanho é proporcional ao nº de acordos.
             </p>
@@ -280,12 +280,12 @@ export default function CooperacaoApi() {
 
           {/* Gráfico por ano/categoria */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3">
-            <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+            <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
               Acordos por ano, por categoria
             </span>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 mb-1">
               {cats.map(c => (
-                <span key={c} className="flex items-center gap-1 text-[10px] text-slate-500 font-medium">
+                <span key={c} className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
                   <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: corDe(c, cats) }} />
                   {c}
                 </span>
@@ -297,7 +297,7 @@ export default function CooperacaoApi() {
           {/* Tabela */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
             <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
-              <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+              <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
                 Acordos ({filtrados.length})
               </span>
             </div>
@@ -307,7 +307,7 @@ export default function CooperacaoApi() {
                   key={a.id + i}
                   titulo={a.instituicao || '(instituição não identificada)'}
                   selo={
-                    <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white"
+                    <span className="inline-block rounded px-1.5 py-0.5 text-[11px] font-bold text-white"
                       style={{ background: corDe(a.categoria, cats) }}>{a.categoria}</span>
                   }
                   campos={[
@@ -337,7 +337,7 @@ export default function CooperacaoApi() {
             <DesktopTable>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+                  <tr className="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider">
                     <th className="text-left font-bold px-3 py-1.5">Instituição</th>
                     <th className="text-left font-bold px-3 py-1.5">País</th>
                     <th className="text-left font-bold px-3 py-1.5">Categoria</th>
@@ -350,7 +350,7 @@ export default function CooperacaoApi() {
                     <tr key={a.id + i} className="border-t border-slate-100 hover:bg-slate-50 align-top">
                       <td className="px-3 py-1.5 text-xs font-semibold text-slate-700 max-w-[300px]">
                         {a.instituicao || <span className="text-slate-400 font-normal">(não identificada)</span>}
-                        <div className="text-[10px] text-slate-400 font-normal line-clamp-1" title={a.ementa}>{a.ementa}</div>
+                        <div className="text-[11px] text-slate-400 font-normal line-clamp-1" title={a.ementa}>{a.ementa}</div>
                       </td>
                       <td className="px-3 py-1.5 text-xs whitespace-nowrap">
                         {a.pais ? (
@@ -362,7 +362,7 @@ export default function CooperacaoApi() {
                         ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-1.5 text-xs">
-                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[11px] font-bold text-white"
                           style={{ background: corDe(a.categoria, cats) }}>{a.categoria}</span>
                       </td>
                       <td className="px-3 py-1.5 text-xs whitespace-nowrap">
@@ -372,10 +372,10 @@ export default function CooperacaoApi() {
                             {a.numero} <ExternalLink className="w-3 h-3" />
                           </a>
                         ) : <span className="font-semibold">{a.numero}</span>}
-                        <div className="text-[10px] text-slate-400">{a.sigla}</div>
+                        <div className="text-[11px] text-slate-400">{a.sigla}</div>
                       </td>
-                      <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">
-                        {a.ano}<div className="text-[10px] text-slate-400">{fmtData(a.data)}</div>
+                      <td className="px-3 py-1.5 text-slate-500 text-[12px] whitespace-nowrap">
+                        {a.ano}<div className="text-[11px] text-slate-400">{fmtData(a.data)}</div>
                       </td>
                     </tr>
                   ))}
@@ -384,7 +384,7 @@ export default function CooperacaoApi() {
             </DesktopTable>
             {filtrados.length > 40 && (
               <button onClick={() => setTodos(v => !v)}
-                className="w-full py-1.5 text-[11px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
+                className="w-full py-1.5 text-[12px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
                 {todos ? 'Mostrar menos' : `Mostrar todos os ${filtrados.length} acordos`}
               </button>
             )}
@@ -392,7 +392,7 @@ export default function CooperacaoApi() {
         </>
       )}
 
-      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+      <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         <strong>Como este painel conta.</strong> Categoria, instituição e país são extraídos da{' '}
         <strong>ementa</strong> do ato — que nesses acordos é padronizada. Um acordo só entra se a
@@ -412,7 +412,7 @@ function Cartao({ valor, rotulo, cor }: { valor: number; rotulo: string; cor: st
   return (
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-2.5 text-center">
       <div className={`text-2xl font-bold ${cor}`}>{valor}</div>
-      <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{rotulo}</div>
+      <div className="text-[11px] text-slate-500 uppercase tracking-wide font-bold">{rotulo}</div>
     </div>
   );
 }

@@ -133,13 +133,13 @@ export function EstruturaGovernanca() {
               className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
               <div className="min-w-0">
                 <p className="text-[13px] font-medium text-slate-700 leading-snug">{l.nome}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[12px] text-slate-500 mt-0.5">
                   {l.corpo
                     ? <>{l.corpo.atos} ato(s) no acervo{data && <> · último em <strong className="text-slate-600">{data}</strong></>}</>
                     : <span className="italic">não consta do catálogo de colegiados do portal</span>}
                 </p>
               </div>
-              <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+              <span className={`shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded border ${
                 l.corpo ? (COR[l.corpo.estado] ?? COR.insuficiente)
                         : 'bg-slate-50 text-slate-400 border-dashed border-slate-300'}`}>
                 {l.corpo ? selo(l.corpo) : 'não catalogado'}
@@ -170,7 +170,7 @@ export function EstruturaGovernanca() {
             relatório ajuda a fechar.
           </p>
         )}
-        <p className="mt-2 text-[11px] text-slate-400">
+        <p className="mt-2 text-[12px] text-slate-400">
           Fonte da estrutura:{' '}
           <a href={RGI_URL} target="_blank" rel="noreferrer"
             className="underline hover:text-[#003366]">

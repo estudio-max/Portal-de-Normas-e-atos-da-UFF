@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
@@ -477,6 +477,51 @@ for (const [nome, fonte] of [
 for (const classe of ['.botao-marca', '.texto-marca']) {
   assert.ok(css.includes(classe), `The stylesheet must define ${classe}.`);
 }
+
+// ── Piso tipográfico ────────────────────────────────────────────────────────
+// Boa parte do público deste portal não tem prática com sites, e o acervo se
+// consulta muito no celular. A escala tem TRÊS degraus e o piso é 11px:
+//   11px — selo, chip, cabeçalho de coluna (rótulo curto, alto contraste)
+//   12px — apoio e corpo secundário
+//   13px+ — corpo
+// Antes de 13/08/2026 havia 26 usos de `text-[9px]` e 113 de `text-[10px]`
+// espalhados pelos painéis. 9px é ilegível para qualquer pessoa; num público
+// que inclui quem tem baixa visão, é barreira de acesso, não estilo.
+// A varredura cobre `src/` inteiro de propósito: meia reforma de tipografia
+// fica pior que nenhuma, porque o contraste de densidade entre uma aba e outra
+// denuncia que o portal está pela metade.
+const varrerTsx = async (dir) => {
+  const achados = [];
+  for (const entrada of await readdir(new URL(dir, root), { withFileTypes: true })) {
+    const caminho = `${dir}${entrada.name}`;
+    if (entrada.isDirectory()) achados.push(...await varrerTsx(`${caminho}/`));
+    else if (caminho.endsWith('.tsx')) achados.push(caminho);
+  }
+  return achados;
+};
+// Duas formas, e a segunda foi por onde o piso escapou na primeira passada:
+// classe do Tailwind (`text-[11px]`) e rótulo de eixo em SVG (`fontSize={9}`),
+// que nenhuma varredura de classe alcança. Os gráficos de Prazos, Insights,
+// Cooperação e Jornada rotulavam o eixo a 8,5–10px — medido no navegador em
+// 13/08/2026, depois de a varredura de classes já ter passado e dado "pronto".
+const abaixoDoPiso = [];
+for (const arquivo of await varrerTsx('src/')) {
+  const fonte = await read(arquivo);
+  for (const m of fonte.matchAll(/text-\[(\d+)px\]/g)) {
+    if (Number(m[1]) < 11) abaixoDoPiso.push(`${arquivo}: ${m[0]}`);
+  }
+  // As DUAS formas de escrever o mesmo atributo em JSX. Cobrir só a de chaves
+  // deu falso "pronto" em 13/08/2026: os rótulos de mês do Insights estavam
+  // como `fontSize="10"`, a trava passou, e o navegador continuou mostrando
+  // 10px. Trava que só enxerga uma das grafias é pior que trava nenhuma —
+  // ela produz confiança sem cobertura.
+  for (const m of fonte.matchAll(/fontSize=(?:\{([\d.]+)\}|"([\d.]+)")/g)) {
+    const valor = Number(m[1] ?? m[2]);
+    if (valor < 11) abaixoDoPiso.push(`${arquivo}: ${m[0]}`);
+  }
+}
+assert.deepEqual(abaixoDoPiso, [],
+  'Text below 11px is an access barrier for this audience. Use 11px for short labels, 12px for support text, 13px+ for body.');
 
 // Os tokens da marca precisam existir nos DOIS temas, senão o cartão de tarefa
 // e o chip de filtro ficam verde-escuro sobre fundo escuro — sem erro nenhum no

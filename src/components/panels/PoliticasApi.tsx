@@ -50,7 +50,7 @@ const ROTULO_PAPEL: Record<string, string> = {
 
 function PapelChip({ papel }: { papel: string }) {
   return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${COR_PAPEL[papel] ?? COR_PAPEL.referencia}`}>
+    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${COR_PAPEL[papel] ?? COR_PAPEL.referencia}`}>
       {ROTULO_PAPEL[papel] ?? papel}
     </span>
   );
@@ -61,7 +61,7 @@ function PapelChip({ papel }: { papel: string }) {
 function ConfiancaChip({ c, justificativa }: { c: string; justificativa: string | null }) {
   if (c === 'alta') return null;   // o padrão não precisa de selo
   return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
+    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
       title={justificativa ? `Vínculo inferido — ${justificativa}` : 'Vínculo inferido, confiança média'}>
       ⚠ confiança {c}
     </span>
@@ -71,10 +71,10 @@ function ConfiancaChip({ c, justificativa }: { c: string; justificativa: string 
 function EstagioChip({ estagio }: { estagio: string }) {
   if (estagio === 'publicada') return null;
   if (estagio === 'arquivada') return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">
+    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">
       arquivada</span>);
   return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200"
+    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200"
       title="O catálogo desta política ainda está em curadoria: os vínculos foram propostos por regra e não passaram por revisão humana.">
       catálogo em revisão</span>);
 }
@@ -104,7 +104,7 @@ function SubtemaPdi({ pdi, escuro = false }: { pdi: ds.PoliticaPdi; escuro?: boo
   const titulo = `PDI ${pdi.versao ?? ''} · eixo ${pdi.eixo}`
     + (nota ? ` — ${nota.explica}` : ' — o PDI nomeia este subtema.');
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${escuro
+    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded border ${escuro
       ? 'bg-blue-800 text-blue-50 border-blue-700'
       : 'bg-slate-50 text-slate-600 border-slate-200'}`} title={titulo}>
       {pdi.subtema}
@@ -119,7 +119,7 @@ function StatusChip({ status }: { status: string }) {
   const cor = status === 'Revogado' ? 'bg-rose-50 text-rose-700 border-rose-200'
     : status === 'Alterado' ? 'bg-amber-50 text-amber-700 border-amber-200'
       : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  return <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cor}`}>{status}</span>;
+  return <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${cor}`}>{status}</span>;
 }
 
 // Faixa do ciclo: etapa com evidência acende; sem evidência fica apagada e diz
@@ -132,7 +132,7 @@ function Ciclo({ papeis }: { papeis: Partial<Record<ds.PoliticaPapel, number>> }
         return (
           <span key={papel}
             title={n > 0 ? `${n} ato(s) de ${rotulo.toLowerCase()}` : `${rotulo}: sem evidência localizada no Boletim`}
-            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${n > 0
+            className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${n > 0
               ? COR_PAPEL[papel]
               : 'bg-white text-slate-300 border-dashed border-slate-200'}`}>
             {rotulo}{n > 0 ? ` ${n}` : ''}
@@ -173,7 +173,7 @@ function EtapasDaPolitica({ etapas, historico }: {
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-3 mb-3">
-      <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
+      <h4 className="text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">
         Etapas do ciclo — quando cada uma apareceu
       </h4>
       <ul className="space-y-1.5">
@@ -203,7 +203,7 @@ function EtapasDaPolitica({ etapas, historico }: {
 
       {ganhos.length > 0 && (
         <div className="mt-2.5 pt-2.5 border-t border-slate-100">
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[12px] text-slate-500">
             {ganhos.map((g, i) => (
               <span key={`${g.etapa}-${i}`}>
                 {i > 0 && ' · '}
@@ -286,14 +286,14 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
           {papeisPresentes.length > 1 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-3">
               <button onClick={() => setPapelF('')}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${!papelF
+                className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${!papelF
                   ? 'bg-[#003366] text-white border-[#003366]'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
                 Todos ({d.atos.length})
               </button>
               {papeisPresentes.map(p => (
                 <button key={p} onClick={() => setPapelF(p)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${papelF === p
+                  className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${papelF === p
                     ? 'bg-[#003366] text-white border-[#003366]'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
                   {ROTULO_PAPEL[p] ?? p} ({d.atos.filter(a => a.papel === p).length})
@@ -328,7 +328,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
 
           <DesktopTable>
             <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px]">
+              <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
                 <tr>
                   <th className="text-left px-3 py-2">Ato</th>
                   <th className="text-left px-3 py-2">Data</th>
@@ -348,7 +348,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
                           </a>
                         : <>{a.sigla} nº {a.numero}/{a.ano}</>}
                       {a.processoSei && (
-                        <div className="text-[10px] font-normal text-slate-400">
+                        <div className="text-[11px] font-normal text-slate-400">
                           {a.linkSeiProcesso
                             ? <a href={a.linkSeiProcesso} target="_blank" rel="noopener noreferrer" className="hover:underline">SEI {a.processoSei}</a>
                             : <>SEI {a.processoSei}</>}
@@ -501,7 +501,7 @@ export default function PoliticasApi() {
 
       {grupos.map(([eixo, pols]) => (
         <div key={eixo}>
-          <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
+          <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
             {eixo} ({pols.length})
           </h3>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -515,12 +515,12 @@ export default function PoliticasApi() {
                       <EstagioChip estagio={p.estagio} />
                     </div>
                     {p.pdi && <div className="mt-1"><SubtemaPdi pdi={p.pdi} /></div>}
-                    <div className="text-[11px] text-slate-500 mt-0.5">
+                    <div className="text-[12px] text-slate-500 mt-0.5">
                       {p.atos > 0
                         ? <>{p.atos} ato(s){p.anoMin ? ` · ${p.anoMin}–${p.anoMax}` : ''}</>
                         : <span className="text-slate-400 italic">sem atos localizados ainda</span>}
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
+                    <div className="text-[12px] text-slate-500 mt-0.5">
                       {p.fundador
                         ? <>Instituída por <strong className="text-slate-600">{p.fundador.label}</strong></>
                         : <span className="text-slate-400 italic">ato instituidor não localizado no acervo</span>}

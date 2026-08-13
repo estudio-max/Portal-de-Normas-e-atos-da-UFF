@@ -19,10 +19,10 @@ const fmtData = (s: string | null) =>
 // Selo de obrigatoriedade: por lei (âmbar) ou por órgão de controle (índigo).
 function ObrigChip({ obrig }: { obrig: string }) {
   if (obrig === 'lei') return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
+    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
       title="Comissão obrigatória por lei">⚖ Por lei</span>);
   if (obrig === 'controle') return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-200"
+    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-200"
       title="Exigida por órgão de controle (CGU, TCU...)">🛡 Órgão de controle</span>);
   return null;
 }
@@ -52,7 +52,7 @@ const ESTADO: Record<ds.ComissaoEstado, { rot: string; cor: string; ajuda: strin
 function EstadoChip({ estado }: { estado: ds.ComissaoEstado }) {
   const e = ESTADO[estado] ?? ESTADO.insuficiente;
   return (
-    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${e.cor}`} title={e.ajuda}>
+    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${e.cor}`} title={e.ajuda}>
       {e.rot}
     </span>
   );
@@ -62,7 +62,7 @@ function StatusChip({ status }: { status: string }) {
   const cor = status === 'Revogado' ? 'bg-rose-50 text-rose-700 border-rose-200'
     : status === 'Alterado' ? 'bg-amber-50 text-amber-700 border-amber-200'
       : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  return <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cor}`}>{status}</span>;
+  return <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${cor}`}>{status}</span>;
 }
 
 // ---- detalhe de um corpo: seus atos, do mais novo ao mais antigo -----------
@@ -90,7 +90,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
           <div className="bg-[#003366] text-white rounded-lg p-4 mb-3">
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold">{d.corpo.nome}</h3>
-              {d.corpo.sigla && <span className="text-[11px] font-mono bg-blue-800 px-1.5 py-0.5 rounded">{d.corpo.sigla}</span>}
+              {d.corpo.sigla && <span className="text-[12px] font-mono bg-blue-800 px-1.5 py-0.5 rounded">{d.corpo.sigla}</span>}
               <ObrigChip obrig={d.corpo.obrig} />
             </div>
             <p className="text-[12px] text-blue-100 mt-1">
@@ -99,7 +99,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
             </p>
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               <EstadoChip estado={d.estado} />
-              <span className="text-[10px] text-blue-200">
+              <span className="text-[11px] text-blue-200">
                 {d.eventos.m12} ato(s) em 12 meses · {d.eventos.m24} em 24 · {d.eventos.m36} em 36
               </span>
             </div>
@@ -107,7 +107,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
 
           {d.mandatos.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-lg p-3 mb-3">
-              <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              <h4 className="text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
                 Mandatos com fim previsto ({d.mandatos.length})
               </h4>
               <ul className="space-y-1 text-[12px] text-slate-600">
@@ -125,7 +125,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
                     <span className="text-slate-400">·</span>
                     <span className="text-slate-500">{m.atoId}</span>
                     {m.conf && m.conf !== 'alta' && (
-                      <span className="text-[9px] font-bold px-1 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
+                      <span className="text-[11px] font-bold px-1 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
                         title={m.trecho ?? 'Data inferida do texto do ato'}>⚠ conf. {m.conf}</span>
                     )}
                   </li>
@@ -168,7 +168,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
           </RecordCardList>
           <DesktopTable>
             <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px]">
+              <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
                 <tr>
                   <th className="text-left px-3 py-2">Ato</th>
                   <th className="text-left px-3 py-2">Data</th>
@@ -187,7 +187,7 @@ function Detalhe({ slug, onVoltar }: { slug: string; onVoltar: () => void }) {
                           </a>
                         : <>{a.sigla} nº {a.numero}/{a.ano}</>}
                       {a.processoSei && (
-                        <div className="text-[10px] font-normal text-slate-400">
+                        <div className="text-[11px] font-normal text-slate-400">
                           {a.linkSeiProcesso
                             ? <a href={a.linkSeiProcesso} target="_blank" rel="noopener noreferrer" className="hover:underline">SEI {a.processoSei}</a>
                             : <>SEI {a.processoSei}</>}
@@ -316,7 +316,7 @@ export default function ComissoesApi() {
         </div>
         {([['', 'Todas'], ['lei', `⚖ Por lei (${contagem.lei})`], ['controle', `🛡 Órgão de controle (${contagem.controle})`]] as const).map(([k, rot]) => (
           <button key={k} onClick={() => setObrigF(k)}
-            className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${obrigF === k
+            className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${obrigF === k
               ? 'bg-[#003366] text-white border-[#003366]'
               : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>{rot}</button>
         ))}
@@ -327,12 +327,12 @@ export default function ComissoesApi() {
           "com evidência recente" em 36. Deixar a régua na mão de quem lê é mais
           honesto que fixar uma e não dizer qual. */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wide">
           Evidência recente =
         </span>
         {([12, 24, 36] as const).map(m => (
           <button key={m} onClick={() => setJanela(m)}
-            className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${janela === m
+            className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${janela === m
               ? 'bg-[#003366] text-white border-[#003366]'
               : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
             {m} meses
@@ -344,7 +344,7 @@ export default function ComissoesApi() {
           if (k && n === 0) return null;
           return (
             <button key={k || 'todos'} onClick={() => setEstadoF(k)}
-              className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${estadoF === k
+              className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${estadoF === k
                 ? 'bg-[#003366] text-white border-[#003366]'
                 : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
               {k ? ESTADO[k].rot : 'Todos'} ({n})
@@ -355,7 +355,7 @@ export default function ComissoesApi() {
 
       {grupos.map(([tipo, corpos]) => (
         <div key={tipo}>
-          <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
+          <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
             {tipo === 'Comitê' ? 'Comitês' : tipo === 'Comissão' ? 'Comissões' : tipo} ({corpos.length})
           </h3>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -365,10 +365,10 @@ export default function ComissoesApi() {
                 <div>
                   <div className="flex items-center flex-wrap gap-1.5">
                     <span className="font-bold text-[13px] text-[#003366]">{c.nome}</span>
-                    {c.sigla && <span className="text-[10px] font-mono text-slate-400 border border-slate-200 rounded px-1">{c.sigla}</span>}
+                    {c.sigla && <span className="text-[11px] font-mono text-slate-400 border border-slate-200 rounded px-1">{c.sigla}</span>}
                     <ObrigChip obrig={c.obrig} />
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
+                  <div className="text-[12px] text-slate-500 mt-0.5">
                     {c.atos > 0
                       ? <>{c.atos} ato(s){c.anoMin ? ` · ${c.anoMin}–${c.anoMax}` : ''}</>
                       : <span className="text-slate-400 italic">sem atos localizados ainda</span>}
@@ -376,13 +376,13 @@ export default function ComissoesApi() {
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     <EstadoChip estado={c.estado} />
                     {c.ultimaData && (
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[11px] text-slate-400">
                         última em {fmtData(c.ultimaData)}
                       </span>
                     )}
                   </div>
                   {c.mandato && (
-                    <div className="text-[10px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-slate-400 mt-0.5">
                       {c.mandato.origem === 'periodo' && c.mandato.periodo
                         ? <>mandato declarado para o período {c.mandato.periodo}</>
                         : <>mandato com fim previsto em {fmtData(c.mandato.fim)}</>}

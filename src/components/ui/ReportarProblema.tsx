@@ -61,7 +61,7 @@ export function ReportarProblema({ activePath }: { activePath: string }) {
     // `slate-600` e não `slate-500`: em 11px o 500 media 4,6 de contraste no
     // tema claro — passa o mínimo, mas sem folga, e este texto é um convite que
     // precisa ser lido para funcionar. Os dois estão no mapa do fotofobia.
-    <p className="mt-6 mb-1 text-center text-[11px] leading-relaxed text-slate-600">
+    <p className="mt-6 mb-1 text-center text-[12px] leading-relaxed text-slate-600">
       <Flag className="mr-1 -mt-0.5 inline h-3 w-3" />
       O acervo vem de 25 anos de PDF, e parte dele de digitalização.{' '}
       <strong>Achou um ato errado ou faltando?</strong> Escreva para a gente{' '}

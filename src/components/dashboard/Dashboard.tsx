@@ -172,14 +172,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ stats, recentActs, latestB
                             </span>
                           </span>
                           <span className="shrink-0 flex flex-col items-end gap-1">
-                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.classe}`}>
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${s.classe}`}>
                               {s.texto}
                             </span>
-                            <span className="text-[11px] text-[#64748B] tabular-nums">
+                            <span className="text-[12px] text-[#64748B] tabular-nums">
                               {(act.dataAssinatura || '').split('-').reverse().join('/')}
                             </span>
                             {act.orgaoEmissor && (
-                              <span className="text-[11px] font-medium text-[#4A5568] uppercase">{act.orgaoEmissor}</span>
+                              <span className="text-[12px] font-medium text-[#4A5568] uppercase">{act.orgaoEmissor}</span>
                             )}
                           </span>
                         </button>

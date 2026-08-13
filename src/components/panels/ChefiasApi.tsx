@@ -72,7 +72,7 @@ export default function ChefiasApi() {
             <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
               <Users className="w-4 h-4 text-yellow-500" /> Chefias da UFF — quem chefia cada setor
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-normal font-medium">
               Titulares de Chefia, Coordenação e Direção, projetados das <strong>designações publicadas no Boletim de Serviço</strong>.
               Vale sempre a designação <strong>mais recente</strong> de cada setor; cada linha é rastreável ao ato de origem.
             </p>
@@ -121,7 +121,7 @@ export default function ChefiasApi() {
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-          <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+          <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between text-[12px] text-slate-500 font-semibold">
             <span>{filtrada.length} de {lista.length} função(ões)</span>
             <span>Atualizado em {fmtData(atualizadoEm)}</span>
           </div>
@@ -131,7 +131,7 @@ export default function ChefiasApi() {
                 key={c.atoId + c.cargo + c.unidade + i}
                 titulo={c.unidade}
                 subtitulo={c.nome || 'servidor não identificado'}
-                selo={<span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-bold text-blue-700">{c.cargo}</span>}
+                selo={<span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[12px] font-bold text-blue-700">{c.cargo}</span>}
                 campos={[
                   { rotulo: 'SIAPE', valor: c.siape || '—' },
                   { rotulo: 'Desde', valor: fmtData(c.desde) },
@@ -148,7 +148,7 @@ export default function ChefiasApi() {
           <DesktopTable>
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+                <tr className="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider">
                   <th className="text-left font-bold px-3 py-2">Setor / Unidade</th>
                   <th className="text-left font-bold px-3 py-2">Cargo</th>
                   <th className="text-left font-bold px-3 py-2">Nome</th>
@@ -162,7 +162,7 @@ export default function ChefiasApi() {
                   <tr key={c.atoId + c.cargo + c.unidade + i} className="border-t border-slate-100 hover:bg-slate-50 align-top">
                     <td className="px-3 py-2 text-slate-800 font-medium">{c.unidade}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-bold">{c.cargo}</span>
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[12px] font-bold">{c.cargo}</span>
                     </td>
                     <td className="px-3 py-2 text-slate-800">{c.nome || <span className="text-slate-400 italic">não identificado</span>}</td>
                     <td className="px-3 py-2 text-slate-500 font-mono text-xs whitespace-nowrap">{c.siape || '—'}</td>
@@ -183,7 +183,7 @@ export default function ChefiasApi() {
         </div>
       )}
 
-      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+      <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         A lista cobre os setores com designação registrada no período indexado. Posições cuja última movimentação foi uma
         <strong> dispensa</strong> (sem sucessor publicado) não aparecem. Sempre confira a <strong>data</strong> e a <strong>portaria</strong> de origem.
