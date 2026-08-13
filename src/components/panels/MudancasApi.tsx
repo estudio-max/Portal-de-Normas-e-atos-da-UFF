@@ -27,7 +27,7 @@ function StatusChip({ status }: { status: string }) {
   const cor = status === 'Revogado' ? 'bg-rose-50 text-rose-700 border-rose-200'
     : status === 'Alterado' ? 'bg-amber-50 text-amber-700 border-amber-200'
       : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  return <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cor}`}>{status}</span>;
+  return <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${cor}`}>{status}</span>;
 }
 
 // A relevância nunca aparece como número solto. Cada ponto tem um motivo
@@ -37,29 +37,29 @@ function Motivos({ item }: { item: ds.MudancaItem }) {
   return (
     <div className="flex flex-wrap gap-1 mt-1.5">
       {item.politicas.map(p => (
-        <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
+        <span key={p} className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
           política: {p}
         </span>
       ))}
       {item.comissoes.map(c => (
-        <span key={c} className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-violet-50 text-violet-700 border-violet-200">
+        <span key={c} className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-violet-50 text-violet-700 border-violet-200">
           colegiado: {c}
         </span>
       ))}
       {item.mudaVigencia && (
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-200"
+        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-200"
           title="Este ato revoga ou altera outra norma — o que valia antes mudou.">
           muda vigência
         </span>
       )}
       {item.prazo && (
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-200"
+        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-200"
           title="Há data-limite em aberto neste ato.">
           prazo até {fmtData(item.prazo)}
         </span>
       )}
       {item.publico && (
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-slate-50 text-slate-600 border-slate-200">
+        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-slate-50 text-slate-600 border-slate-200">
           {item.publico}
         </span>
       )}
@@ -144,10 +144,10 @@ export default function MudancasApi() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Últimos</span>
+        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wide">Últimos</span>
         {JANELAS.map(d => (
           <button key={d} onClick={() => setDias(d)}
-            className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${dias === d
+            className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${dias === d
               ? 'bg-[#003366] text-white border-[#003366]'
               : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
             {d === 365 ? '1 ano' : `${d} dias`}
@@ -158,26 +158,26 @@ export default function MudancasApi() {
             <span className="text-slate-300">|</span>
             {publico ? (
               <button onClick={() => setPublico('')}
-                className="px-2.5 py-1 rounded text-[11px] font-bold border bg-[#003366] text-white border-[#003366] inline-flex items-center gap-1">
+                className="px-2.5 py-1 rounded text-[12px] font-bold border bg-[#003366] text-white border-[#003366] inline-flex items-center gap-1">
                 {publico} <X className="w-3 h-3" />
               </button>
             ) : (
               <select value={publico} onChange={e => setPublico(e.target.value)}
-                className="bg-white border border-slate-200 rounded px-2 py-1 text-[11px] font-bold text-slate-600">
+                className="bg-white border border-slate-200 rounded px-2 py-1 text-[12px] font-bold text-slate-600">
                 <option value="">Todos os públicos</option>
                 {r.publicos.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             )}
           </>
         )}
-        <span className="text-[11px] text-slate-400">
+        <span className="text-[12px] text-slate-400">
           {itens.length} de {r.total} no período
         </span>
       </div>
 
       {porMes.map(([mes, lista]) => (
         <div key={mes}>
-          <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
+          <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
             {mes === 'sem data' ? 'Sem data' : mes.split('-').reverse().join('/')} ({lista.length})
           </h3>
           <div className="space-y-2">
@@ -188,7 +188,7 @@ export default function MudancasApi() {
                     <span className="font-bold text-[13px] text-[#003366]">
                       {i.tipo} nº {i.numero}/{i.ano}
                     </span>
-                    <span className="text-[11px] text-slate-400 ml-2">
+                    <span className="text-[12px] text-slate-400 ml-2">
                       {i.sigla} · {fmtData(i.data)}
                     </span>
                   </div>

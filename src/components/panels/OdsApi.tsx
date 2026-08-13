@@ -35,7 +35,7 @@ function VinculoChip({ v }: { v: string }) {
       : v === 'ensino' ? 'bg-violet-50 text-violet-700 border-violet-200'
         : 'bg-slate-50 text-slate-500 border-slate-200';
   return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cor}`}
+    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${cor}`}
       title={VINCULO_TIP[v] ?? ''}>{VINCULO_ROTULO[v] ?? v}</span>
   );
 }
@@ -43,7 +43,7 @@ function VinculoChip({ v }: { v: string }) {
 function ConfiancaDot({ c }: { c: string }) {
   const cor = c === 'alta' ? 'bg-emerald-500' : c === 'media' ? 'bg-amber-400' : 'bg-slate-300';
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] text-slate-400"
+    <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"
       title={`Confiança ${c} da classificação`}>
       <span className={`w-2 h-2 rounded-full ${cor}`}></span>{c}
     </span>
@@ -102,7 +102,7 @@ function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
                ['pesquisa', `Pesquisa (${porVinculo.pesquisa})`],
                ['ensino', `Ensino (${porVinculo.ensino})`]] as const).map(([k, rot]) => (
               <button key={k} onClick={() => setVincF(k)}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold border transition ${vincF === k
+                className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${vincF === k
                   ? 'bg-[#003366] text-white border-[#003366]'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>{rot}</button>
             ))}
@@ -119,17 +119,17 @@ function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
                         {a.sigla} nº {a.numero}/{a.ano} <ExternalLink className="w-3 h-3" />
                       </a>
                     : <span className="text-[12px] font-bold text-slate-700">{a.sigla} nº {a.numero}/{a.ano}</span>}
-                  <span className="text-[11px] text-slate-400">{fmtData(a.data)}</span>
+                  <span className="text-[12px] text-slate-400">{fmtData(a.data)}</span>
                   <VinculoChip v={a.vinculo} />
                   <ConfiancaDot c={a.confianca} />
                   {a.metodo === 'curadoria' && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200"
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200"
                       title="Classificação revisada por curadoria humana">revisado</span>
                   )}
                 </div>
                 <p className="text-[12px] text-slate-600 mt-1.5 leading-snug">{a.ementa}</p>
                 {(a.justificativa || a.meta) && (
-                  <p className="text-[11px] text-slate-400 mt-1.5 border-t border-dashed border-slate-100 pt-1.5">
+                  <p className="text-[12px] text-slate-400 mt-1.5 border-t border-dashed border-slate-100 pt-1.5">
                     {a.justificativa}{a.meta && <span className="font-mono"> · {a.meta}</span>}
                   </p>
                 )}
@@ -244,7 +244,7 @@ export default function OdsApi() {
             </div>
             <div className="flex-1 p-2.5 min-w-0">
               <div className="font-bold text-[12px] text-slate-700 leading-tight">{o.nome}</div>
-              <div className="text-[11px] text-slate-500 mt-1">
+              <div className="text-[12px] text-slate-500 mt-1">
                 {o.total > 0 ? (
                   <>
                     <strong className="text-emerald-700">{o.proposta} proposta(s)</strong>
@@ -265,7 +265,7 @@ export default function OdsApi() {
         ))}
       </div>
 
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[12px] text-slate-400">
         Método completo (âncoras, armadilhas medidas, taxonomia dos vínculos):{' '}
         <span className="font-mono">docs/METODOLOGIA-ODS.md</span> no repositório do portal.
         {r.curados > 0 && <> · {r.curados} ligação(ões) já revisada(s) por curadoria.</>}

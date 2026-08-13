@@ -97,7 +97,7 @@ const SeloRSC = ({ reqs }: { reqs: Requisito[] }) =>
         <span
           key={r}
           title={`RSC-PCCTAE · Requisito ${r} (${REQUISITOS[r].anexo} da IN 129/2026): ${REQUISITOS[r].titulo}. Confira o ato: quem avalia é a CRSC-UFF.`}
-          className="ml-1.5 inline-block rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 align-middle"
+          className="ml-1.5 inline-block rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[11px] font-bold text-indigo-700 align-middle"
         >
           RSC · Req. {r}
         </span>
@@ -317,7 +317,7 @@ export default function DossieApi() {
           selo={
             <>
               {a.status !== 'Ativo' && (
-                <span className="inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                <span className="inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
                   {a.status}
                 </span>
               )}
@@ -341,7 +341,7 @@ export default function DossieApi() {
     <DesktopTable>
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+          <tr className="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider">
             <th className="text-left font-bold px-3 py-2">Ato</th>
             <th className="text-left font-bold px-3 py-2 whitespace-nowrap">Data</th>
             <th className="text-left font-bold px-3 py-2">Ementa</th>
@@ -359,7 +359,7 @@ export default function DossieApi() {
                   </a>
                 ) : <span className="text-xs font-semibold text-slate-700">{rotuloAto(a)}</span>}
                 {a.status !== 'Ativo' && (
-                  <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                  <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold">
                     {a.status}
                   </span>
                 )}
@@ -369,7 +369,7 @@ export default function DossieApi() {
               <td className="px-3 py-2 text-slate-700 text-xs leading-snug">
                 {a.ementa || <span className="text-slate-400 italic">sem ementa</span>}
               </td>
-              <td className="px-3 py-2 text-slate-500 text-[11px] font-mono whitespace-nowrap">{refBS(a)}</td>
+              <td className="px-3 py-2 text-slate-500 text-[12px] font-mono whitespace-nowrap">{refBS(a)}</td>
             </tr>
           ))}
         </tbody>
@@ -416,13 +416,13 @@ export default function DossieApi() {
             // No iPhone o botão acima abre o AirPrint, que só lista impressoras.
             // A instrução do Compartilhar é o caminho que realmente gera o PDF,
             // então ela fica visível — não escondida numa ajuda.
-            <p className="basis-full text-[11px] leading-relaxed text-slate-700 sm:basis-auto sm:flex-1">
+            <p className="basis-full text-[12px] leading-relaxed text-slate-700 sm:basis-auto sm:flex-1">
               <strong>No iPhone/iPad:</strong> toque em <strong>Compartilhar</strong>{' '}
               <span aria-hidden="true">(⬆️)</span> na barra do Safari → <strong>Opções</strong>, no
               topo → escolha <strong>PDF</strong> → <strong>Salvar em Arquivos</strong>.
             </p>
           ) : (
-            <p className="basis-full text-[11px] leading-relaxed text-slate-600 sm:basis-auto sm:flex-1">
+            <p className="basis-full text-[12px] leading-relaxed text-slate-600 sm:basis-auto sm:flex-1">
               No diálogo de impressão, escolha <strong>“Salvar como PDF”</strong> em destino.
             </p>
           )}
@@ -556,7 +556,7 @@ export default function DossieApi() {
           {/* Identificação: quem é este SIAPE, segundo a base. */}
           <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">SIAPE {r.siape}</span>
+              <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">SIAPE {r.siape}</span>
               {r.pessoas.length ? (
                 <span className="text-sm font-bold text-[#003366]">
                   {r.nomes.length ? r.nomes.join(' · ') : 'nome não identificado'}
@@ -567,7 +567,7 @@ export default function DossieApi() {
             </div>
 
             {r.linhasPessoa > 1 && (
-              <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+              <p className="text-[12px] text-slate-500 mt-1.5 leading-relaxed">
                 <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
                 Esta matrícula aparece no acervo em {r.linhasPessoa} grafias ({r.pessoas.map(p => p.siape).join(', ')}),
                 por causa do zero à esquerda. Os atos das duas formas estão <strong>reunidos aqui</strong>.
@@ -583,7 +583,7 @@ export default function DossieApi() {
             {r.nomesDistintos > 1 && (
               <div className="mt-2 flex items-start gap-2 p-2 rounded border border-amber-200 bg-amber-50">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-amber-800 leading-relaxed">
+                <p className="text-[12px] text-amber-800 leading-relaxed">
                   <strong>Atenção: esta matrícula está associada a mais de um nome no acervo.</strong> Isso costuma ser erro de
                   leitura do boletim (nome trocado ou grafado de formas diferentes). <strong>Algum ato da lista abaixo pode não ser seu</strong> —
                   confira ato por ato antes de usar.
@@ -598,7 +598,7 @@ export default function DossieApi() {
             {divergente && (
               <div className="mt-2 flex items-start gap-2 p-2 rounded border border-red-300 bg-red-50">
                 <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-red-800 leading-relaxed">
+                <p className="text-[12px] text-red-800 leading-relaxed">
                   <strong>O nome informado não é o desta matrícula.</strong> Segundo o acervo, o SIAPE {r.siape} é de{' '}
                   <strong>{r.nomes.join(' · ') || 'titular não identificado'}</strong>, e você buscou por{' '}
                   <strong>“{r.porNome?.termo}”</strong>. Os dois blocos abaixo são de <strong>pessoas diferentes</strong> — e o
@@ -620,10 +620,10 @@ export default function DossieApi() {
                     `html.fotofobia`: ficavam em oklch(0.398) e oklab(0.359) —
                     escuro sobre o fundo escuro, ilegível e sem erro no console.
                     É a armadilha de cor documentada no CLAUDE.md. */}
-                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                <span className="text-[12px] font-bold uppercase tracking-wider text-indigo-700">
                   Requisitos do RSC-PCCTAE identificados
                 </span>
-                <p className="text-[11px] text-slate-600 mt-0.5">
+                <p className="text-[12px] text-slate-600 mt-0.5">
                   IN GAR/RET/UFF nº 129, de 24/07/2026 (art. 2º) — carreira <strong>técnico-administrativa</strong>.
                 </p>
               </div>
@@ -632,10 +632,10 @@ export default function DossieApi() {
                   <ul className="space-y-1.5">
                     {resumoRSC.map(([q, n]) => (
                       <li key={q} className="flex items-start gap-2">
-                        <span className="shrink-0 mt-0.5 inline-block rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                        <span className="shrink-0 mt-0.5 inline-block rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[11px] font-bold text-indigo-700">
                           Req. {q}
                         </span>
-                        <span className="text-[11px] text-slate-700 leading-relaxed">
+                        <span className="text-[12px] text-slate-700 leading-relaxed">
                           {REQUISITOS[q].titulo} <span className="text-slate-400">({REQUISITOS[q].anexo})</span>
                           {' — '}<strong>{n}</strong> {n === 1 ? 'registro marcado' : 'registros marcados'}.
                         </span>
@@ -643,7 +643,7 @@ export default function DossieApi() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                  <p className="text-[12px] text-slate-600 leading-relaxed">
                     Nenhum requisito foi reconhecido automaticamente nestes registros. <strong>Isso não significa que você
                     não tenha o que apresentar</strong> — veja abaixo o que esta marcação não alcança.
                   </p>
@@ -652,23 +652,23 @@ export default function DossieApi() {
                 {/* A parte que impede a tela de afirmar demais. Não é rodapé
                     decorativo: são três limites que a própria IN impõe. */}
                 <div className="rounded border border-slate-200 bg-slate-50 p-2.5 space-y-1.5">
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                  <p className="text-[12px] text-slate-700 leading-relaxed">
                     <strong>O selo diz que o ato é do tipo que o requisito descreve — não que ele será pontuado.</strong>{' '}
                     A IN é expressa: atender aos requisitos objetivos <strong>“não assegura, por si só, a concessão”</strong>{' '}
                     (art. 15, §8º e art. 20, §3º). Quem avalia o memorial e decide é a <strong>CRSC-UFF</strong>.
                   </p>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                  <p className="text-[12px] text-slate-700 leading-relaxed">
                     Não se pontua o que for <strong>“exclusivamente o desempenho ordinário das atribuições legais do
                     cargo”</strong> (art. 20, §2º) — isso depende do seu memorial, não do ato. E a mesma atividade{' '}
                     <strong>só conta uma vez</strong>, ainda que sirva a dois requisitos (art. 15, §6º).
                   </p>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                  <p className="text-[12px] text-slate-700 leading-relaxed">
                     <strong>Só 3 dos 6 requisitos são detectáveis aqui</strong> (I, IV e V). Os requisitos{' '}
                     <strong>II</strong> (projetos institucionais), <strong>III</strong> (premiação) e <strong>VI</strong>{' '}
                     (produção científica) não saem como ato de designação no Boletim — comprovam-se por certificado,
                     publicação ou declaração, que esta aba não tem. Ausência de selo nunca é ausência de direito.
                   </p>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                  <p className="text-[12px] text-slate-600 leading-relaxed">
                     A boa notícia: o ato publicado <em>é</em> documento hábil. O art. 19, parágrafo único, I lista entre as
                     provas válidas as <strong>“portarias, resoluções ou atos de designação ou nomeação”</strong> — que é
                     exatamente o que esta aba localiza, com a referência do BS para citar no processo.
@@ -682,10 +682,10 @@ export default function DossieApi() {
           {!!r.funcoes.length && (
             <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
               <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
-                <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+                <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
                   Designações e dispensas de função ({r.funcoes.length})
                 </span>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[12px] text-slate-500 mt-0.5">
                   Cargo e unidade lidos do <strong>dispositivo do ato</strong> — é a mesma base das abas Chefias e Mandatos.
                 </p>
               </div>
@@ -697,7 +697,7 @@ export default function DossieApi() {
                     subtitulo={f.unidade || undefined}
                     selo={
                       <>
-                        <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                        <span className={`inline-block rounded px-1.5 py-0.5 text-[12px] font-bold ${
                           f.acao === 'designar'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -723,7 +723,7 @@ export default function DossieApi() {
               <DesktopTable>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+                    <tr className="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider">
                       <th className="text-left font-bold px-3 py-2">Ação</th>
                       <th className="text-left font-bold px-3 py-2">Cargo</th>
                       <th className="text-left font-bold px-3 py-2">Unidade</th>
@@ -735,7 +735,7 @@ export default function DossieApi() {
                     {r.funcoes.map((f, i) => (
                       <tr key={f.atoId + f.cargo + i} className="border-t border-slate-100 hover:bg-slate-50 align-top">
                         <td className="px-3 py-2 whitespace-nowrap">
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[12px] font-bold ${
                             f.acao === 'designar'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -766,10 +766,10 @@ export default function DossieApi() {
           {/* Bloco 2: menções. O rótulo tem que dizer que é menção, não prova. */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
             <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
-              <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+              <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
                 Atos que citam este SIAPE ({r.atos.length})
               </span>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[12px] text-slate-500 mt-0.5">
                 São atos que <strong>mencionam a matrícula</strong> — não necessariamente atos em que você foi membro. Numa banca,
                 por exemplo, o avaliado também é citado. Confira o ato antes de usar.
               </p>
@@ -792,7 +792,7 @@ export default function DossieApi() {
               divergente ? 'border-red-300' : 'border-slate-200'}`}>
               <div className={`px-3 py-2 border-b ${
                 divergente ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}>
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                <span className={`text-[12px] font-bold uppercase tracking-wider ${
                   divergente ? 'text-red-700' : 'text-slate-600'}`}>
                   {divergente
                     ? <>Atos de “{r.porNome.termo}” — outra pessoa ({r.porNome.total})</>
@@ -805,13 +805,13 @@ export default function DossieApi() {
                     ato veio vazio, então não há como filtrar. Avisar só do
                     homônimo seria avisar do improvável e calar sobre o provável. */}
                 {divergente ? (
-                  <p className="text-[11px] text-red-700 mt-0.5 leading-relaxed">
+                  <p className="text-[12px] text-red-700 mt-0.5 leading-relaxed">
                     Esta lista <strong>não é do titular do SIAPE {r.siape}</strong>: ela veio do nome que você digitou, e esse
                     nome é de outra pessoa. Ela continua visível porque a busca por nome é legítima — mas não a some com o
                     bloco acima, e não anexe as duas a um mesmo processo.
                   </p>
                 ) : (
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[12px] text-slate-500 mt-0.5">
                     Busca no <strong>corpo do ato</strong>, para alcançar o que a matrícula não acha — <strong>46% dos
                     atos não registram SIAPE</strong>. Duas ressalvas antes de usar: se você ocupou <strong>cargo de
                     direção</strong>, os atos que você <strong>assinou</strong> aparecem aqui — e assinar não é
@@ -828,7 +828,7 @@ export default function DossieApi() {
         </>
       )}
 
-      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+      <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         <strong>Material de instrução, não decisão.</strong> Este painel localiza atos publicados e mostra onde eles saíram;
         ele não apura pontuação e não substitui a análise da comissão avaliadora. A lista não é exaustiva — parte dos atos do

@@ -172,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
         </div>
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-[#1A202C] leading-tight truncate">Inteligência UFF</p>
-          <p className="text-[11px] text-[#64748B] leading-tight truncate">Universidade Federal Fluminense</p>
+          <p className="text-[12px] text-[#64748B] leading-tight truncate">Universidade Federal Fluminense</p>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
             <div id="nav-mais" className="mt-1 space-y-4">
               {NAV_MAIS.map(grupo => (
                 <div key={grupo.title}>
-                  <p className="px-3 text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-1">
+                  <p className="px-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider mb-1">
                     {grupo.title}
                   </p>
                   <div className="space-y-0.5">

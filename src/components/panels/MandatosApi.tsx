@@ -129,7 +129,7 @@ export default function MandatosApi() {
             <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
               <CalendarX2 className="w-4 h-4 text-yellow-500" /> Mandatos — setores sem chefia formalmente constituída
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-normal font-medium">
               A designação de chefia <strong>traz a própria validade</strong> ("com mandato de 4 anos"), então o Boletim
               não publica ato de encerramento quando o prazo acaba — ele seria redundante. As posições abaixo tiveram o
               mandato vencido <strong>segundo o próprio ato de designação</strong> e não têm sucessor publicado.
@@ -148,7 +148,7 @@ export default function MandatosApi() {
             entre um relatório que aguenta conferência e uma acusação. */}
         <div className="mt-2.5 flex gap-2 items-start bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2">
           <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-amber-900 leading-relaxed">
+          <p className="text-[12px] text-amber-900 leading-relaxed">
             Isto <strong>não</strong> afirma que alguém esteja irregular. A posição está sem designação vigente — mas o
             titular pode ter saído sem ato, o <strong>subchefe pode ter assumido por regimento</strong> (automático, e
             invisível ao Boletim), ou a designação do sucessor pode estar em curso. Use como ponto de partida:{' '}
@@ -159,19 +159,19 @@ export default function MandatosApi() {
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
           <div className="border border-slate-200 rounded-md p-2">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sem chefia</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sem chefia</div>
             <div className="text-2xl font-bold text-slate-800 mt-0.5">{kpis.total}</div>
           </div>
           <div className="border border-slate-200 rounded-md p-2">
-            <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Há mais de 2 anos</div>
+            <div className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Há mais de 2 anos</div>
             <div className="text-2xl font-bold text-red-700 mt-0.5">{kpis.anos}</div>
           </div>
           <div className="border border-slate-200 rounded-md p-2">
-            <div className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Há mais de 1 ano</div>
+            <div className="text-[11px] font-bold text-orange-600 uppercase tracking-wider">Há mais de 1 ano</div>
             <div className="text-2xl font-bold text-orange-700 mt-0.5">{kpis.ano}</div>
           </div>
           <div className="border border-slate-200 rounded-md p-2">
-            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Vencidos há pouco</div>
+            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Vencidos há pouco</div>
             <div className="text-2xl font-bold text-blue-700 mt-0.5">{kpis.recente}</div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function MandatosApi() {
       {(semCobertura > 0 || anosRuins.length > 0) && (
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs px-3 py-2.5 flex gap-2 items-start">
           <HelpCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-slate-600 leading-relaxed">
+          <p className="text-[12px] text-slate-600 leading-relaxed">
             <strong>{semCobertura} posição(ões) fora da conta</strong> — o mandato venceu num período em que a base não
             cobre o Boletim inteiro, e aí um ano mal carregado é indistinguível de um ano sem designação nenhuma. Preferimos
             não afirmar.
@@ -235,12 +235,12 @@ export default function MandatosApi() {
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-bold">
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[12px] font-bold">
                         {s.cargo}
                       </span>
                       <span className="text-sm font-semibold text-slate-800">{s.unidade}</span>
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    <div className="text-[12px] text-slate-500 mt-1 leading-relaxed">
                       Mandato de <strong>{s.prazoMeses / 12} anos</strong> iniciado em <strong>{fmtBR(s.inicio)}</strong>
                       {s.inicioOrigem === 'tampao' && ' (completando mandato do antecessor)'}
                       {' '}· último designado: <strong>{s.nome || 'não identificado'}</strong>
@@ -249,18 +249,18 @@ export default function MandatosApi() {
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                       {s.linkBoletim ? (
                         <a href={s.linkBoletim} target="_blank" referrerPolicy="no-referrer"
-                          className="inline-flex items-center gap-1 text-blue-600 hover:underline text-[11px] font-semibold">
+                          className="inline-flex items-center gap-1 text-blue-600 hover:underline text-[12px] font-semibold">
                           {s.atoLabel} <ExternalLink className="w-3 h-3" />
                         </a>
-                      ) : <span className="text-[11px] text-slate-500 font-semibold">{s.atoLabel}</span>}
+                      ) : <span className="text-[12px] text-slate-500 font-semibold">{s.atoLabel}</span>}
                       {/* Lei x dedução, na linha. Sem isto o gabinete lê uma
                           data e não sabe qual das duas está olhando. */}
                       {s.prazoOrigem === 'presumido_cargo' ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-300 bg-slate-50 text-slate-600 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-300 bg-slate-50 text-slate-600 text-[11px] font-semibold">
                           <AlertTriangle className="w-2.5 h-2.5" /> prazo presumido pela regra do cargo
                         </span>
                       ) : (
-                        <span className="px-1.5 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
+                        <span className="px-1.5 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
                           prazo declarado no ato
                         </span>
                       )}
@@ -268,8 +268,8 @@ export default function MandatosApi() {
                   </div>
                   <div className="text-right shrink-0">
                     <div className={`text-sm font-bold ${g.texto}`}>{haQuanto(s.diasVago)}</div>
-                    <div className="text-[11px] text-slate-500">vago desde {fmtBR(s.fim)}</div>
-                    <div className={`inline-block mt-1 px-1.5 py-0.5 rounded border text-[10px] font-bold ${g.chip}`}>
+                    <div className="text-[12px] text-slate-500">vago desde {fmtBR(s.fim)}</div>
+                    <div className={`inline-block mt-1 px-1.5 py-0.5 rounded border text-[11px] font-bold ${g.chip}`}>
                       {g.rotulo}
                     </div>
                   </div>
@@ -280,7 +280,7 @@ export default function MandatosApi() {
         </div>
       )}
 
-      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+      <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         Regra de mandato confirmada em 5.555 designações do Boletim: <strong>Departamento (Chefe, Subchefe) = 2 anos</strong>;{' '}
         <strong>Curso/Programa e Unidade (Coordenador, Vice-Coordenador, Diretor, Vice-Diretor) = 4 anos</strong>.

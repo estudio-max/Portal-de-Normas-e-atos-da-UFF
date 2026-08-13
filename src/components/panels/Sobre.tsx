@@ -76,7 +76,7 @@ function Figura({ arquivo, alt, legenda, w, h }: {
         height={h}
         className="w-full h-auto rounded-md border border-slate-200 bg-white"
       />
-      <figcaption className="text-[11px] text-slate-500 pt-1.5 leading-relaxed">{legenda}</figcaption>
+      <figcaption className="text-[12px] text-slate-500 pt-1.5 leading-relaxed">{legenda}</figcaption>
     </figure>
   );
 }
@@ -363,19 +363,19 @@ export default function Sobre() {
       <Secao icon={<BarChart3 className="w-4 h-4" />} titulo="Números do projeto">
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 not-italic">
           <div>
-            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Início</dt>
+            <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Início</dt>
             <dd className="font-bold text-[#003366]">25/06/2026</dd>
           </div>
           <div>
-            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Cobertura</dt>
+            <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Cobertura</dt>
             <dd className="font-bold text-[#003366]">2001–2026 (26 anos)</dd>
           </div>
           <div>
-            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Atos indexados</dt>
+            <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Atos indexados</dt>
             <dd className="font-bold text-[#003366]">133.176</dd>
           </div>
           <div>
-            <dt className="text-[11px] text-slate-400 uppercase tracking-wide">Boletins lidos</dt>
+            <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Boletins lidos</dt>
             <dd className="font-bold text-[#003366]">4.922</dd>
           </div>
         </dl>
@@ -450,7 +450,7 @@ export default function Sobre() {
             pelo seu programa de e-mail
           </a>.
         </p>
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+        <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
           Qualquer um dos dois abre a mensagem já começada, para você completar. Nada é enviado
           automaticamente, e o portal não registra nem esta visita nem o que você escrever. Se
           preferir, o endereço é{' '}
@@ -458,7 +458,7 @@ export default function Sobre() {
         </p>
       </div>
 
-      <p className="text-[11px] text-slate-400 text-center pt-2">
+      <p className="text-[12px] text-slate-400 text-center pt-2">
         Dúvidas ou sugestões sobre o projeto: <a href="mailto:nidi.gar@id.uff.br" className="underline">nidi.gar@id.uff.br</a>.
       </p>
     </div>

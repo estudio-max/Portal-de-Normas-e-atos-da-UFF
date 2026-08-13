@@ -64,7 +64,7 @@ function GraficoJornada({ flex, pgd }: { flex: ds.JornadaLinhaFlex[]; pgd: ds.Jo
                   <title>{`${ano} — Programa de Gestão: ${vPgd.get(ano)} setor(es) com ato`}</title>
                 </rect>
               )}
-              <text x={x0 + passo / 2} y={H - 7} textAnchor="middle" fontSize={10}
+              <text x={x0 + passo / 2} y={H - 7} textAnchor="middle" fontSize={11}
                 fill="#64748b" fontWeight={600}>{String(ano).slice(2)}</text>
             </g>
           );
@@ -88,24 +88,24 @@ function CartaoFlex({ dados }: { dados: ds.JornadaModeloFlex }) {
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3 w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
       <div className="flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_FLEX }} />
-        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Flexibilização da jornada</span>
+        <span className="text-[12px] font-bold text-slate-600 uppercase tracking-wider">Flexibilização da jornada</span>
       </div>
       <div className="grid grid-cols-3 gap-2 mt-2 text-center">
         <div>
           <div className="text-lg font-bold text-emerald-600">{ativos}</div>
-          <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1"><Building2 className="w-3 h-3" /> ativos hoje</div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><Building2 className="w-3 h-3" /> ativos hoje</div>
         </div>
         <div>
           <div className="text-lg font-bold text-slate-500">{saidos}</div>
-          <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1"><LogOut className="w-3 h-3" /> já saíram</div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><LogOut className="w-3 h-3" /> já saíram</div>
         </div>
         <div>
           <div className="text-lg font-bold text-[#003366]">{dados.setores.length}</div>
-          <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1"><FileText className="w-3 h-3" /> histórico</div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><FileText className="w-3 h-3" /> histórico</div>
         </div>
       </div>
       {!!anos.length && (
-        <p className="text-[10px] text-slate-400 text-center mt-1.5">{anos[0]}–{anos[anos.length - 1]}</p>
+        <p className="text-[11px] text-slate-400 text-center mt-1.5">{anos[0]}–{anos[anos.length - 1]}</p>
       )}
     </div>
   );
@@ -119,24 +119,24 @@ function CartaoPgd({ dados }: { dados: ds.JornadaModelo }) {
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3 w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
       <div className="flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_PGD }} />
-        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Programa de Gestão (teletrabalho)</span>
+        <span className="text-[12px] font-bold text-slate-600 uppercase tracking-wider">Programa de Gestão (teletrabalho)</span>
       </div>
       <div className="grid grid-cols-3 gap-2 mt-2 text-center">
         <div>
           <div className="text-lg font-bold text-[#003366]">{dados.setores.length}</div>
-          <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1"><Building2 className="w-3 h-3" /> setores</div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><Building2 className="w-3 h-3" /> setores</div>
         </div>
         <div>
           <div className="text-lg font-bold text-[#003366]">{atos}</div>
-          <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1"><FileText className="w-3 h-3" /> atos</div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><FileText className="w-3 h-3" /> atos</div>
         </div>
         <div>
           <div className="text-lg font-bold text-[#003366]">{servidores}</div>
-          <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1"><Users className="w-3 h-3" /> servidores*</div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><Users className="w-3 h-3" /> servidores*</div>
         </div>
       </div>
       {!!anos.length && (
-        <p className="text-[10px] text-slate-400 text-center mt-1.5">{anos[0]}–{anos[anos.length - 1]}</p>
+        <p className="text-[11px] text-slate-400 text-center mt-1.5">{anos[0]}–{anos[anos.length - 1]}</p>
       )}
     </div>
   );
@@ -144,7 +144,7 @@ function CartaoPgd({ dados }: { dados: ds.JornadaModelo }) {
 
 function BadgeStatus({ status }: { status: string }) {
   return (
-    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+    <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold ${
       status === 'Ativo'
         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
         : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -172,9 +172,9 @@ function PassoLinha({ rotulo, cor, p }: { rotulo: string; cor: string; p: ds.Jor
     // mobile a linha não cabe, e sem quebrar ela estourava a largura do cartão.
     <li className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
       <span className={`w-2 h-2 rounded-full shrink-0 ${COR_PONTO[cor]}`} />
-      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 md:w-24 shrink-0">{rotulo}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 md:w-24 shrink-0">{rotulo}</span>
       <PortariaLink p={p} />
-      <span className="text-slate-400 text-[11px]">{fmtData(p.data)}</span>
+      <span className="text-slate-400 text-[12px]">{fmtData(p.data)}</span>
     </li>
   );
 }
@@ -195,7 +195,7 @@ function LinhaSetorFlex({ s }: { s: ds.JornadaSetorFlex }) {
               mesmo setor. Sem ele a linha fica só com um nome que o OCR
               escreveu de um jeito naquele ano. */}
           {s.processoSei && (
-            <div className="font-normal text-[10px] text-slate-400 mt-0.5">
+            <div className="font-normal text-[11px] text-slate-400 mt-0.5">
               {s.linkSeiProcesso ? (
                 <a href={s.linkSeiProcesso} target="_blank" rel="noopener noreferrer"
                    className="hover:text-blue-700 hover:underline">
@@ -207,7 +207,7 @@ function LinhaSetorFlex({ s }: { s: ds.JornadaSetorFlex }) {
         </td>
         <td className="px-3 py-1.5 text-xs whitespace-nowrap">
           <PortariaLink p={s.aprovacao} />
-          <div className="text-[10px] text-slate-400">{fmtData(s.aprovacao?.data ?? null)}</div>
+          <div className="text-[11px] text-slate-400">{fmtData(s.aprovacao?.data ?? null)}</div>
         </td>
         <td className="px-3 py-1.5 text-xs whitespace-nowrap">
           {nAlt ? (
@@ -220,14 +220,14 @@ function LinhaSetorFlex({ s }: { s: ds.JornadaSetorFlex }) {
         </td>
         <td className="px-3 py-1.5 text-xs whitespace-nowrap">
           <PortariaLink p={s.revogacao} />
-          {s.revogacao && <div className="text-[10px] text-slate-400">{fmtData(s.revogacao.data)}</div>}
+          {s.revogacao && <div className="text-[11px] text-slate-400">{fmtData(s.revogacao.data)}</div>}
         </td>
         <td className="px-3 py-1.5 text-xs"><BadgeStatus status={s.status} /></td>
       </tr>
       {aberta && nAlt > 0 && (
         <tr className="border-t border-slate-100 bg-slate-50/60">
           <td colSpan={5} className="px-3 py-2">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               Linha do tempo — {s.setor}
             </div>
             <ol className="space-y-1">
@@ -253,7 +253,7 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden w-full md:w-auto md:flex-1 md:min-w-[300px]">
       <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_FLEX }} />
-        <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+        <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
           Flexibilização — setores ({setores.length})
         </span>
       </div>
@@ -290,7 +290,7 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
       <DesktopTable>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+            <tr className="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider">
               <th className="text-left font-bold px-3 py-1.5">Setor</th>
               <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Aprovação</th>
               <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Alterações</th>
@@ -305,7 +305,7 @@ function TabelaFlex({ setores }: { setores: ds.JornadaSetorFlex[] }) {
       </DesktopTable>
       {setores.length > 15 && (
         <button onClick={() => setTodos(v => !v)}
-          className="w-full py-1.5 text-[11px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
+          className="w-full py-1.5 text-[12px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
           {todos ? 'Mostrar menos' : `Mostrar todos os ${setores.length} setores`}
         </button>
       )}
@@ -320,7 +320,7 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden w-full md:w-auto md:flex-1 md:min-w-[300px]">
       <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: COR_PGD }} />
-        <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+        <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
           Programa de Gestão — setores ({setores.length})
         </span>
       </div>
@@ -329,7 +329,7 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
           <RecordCard
             key={s.sigla}
             titulo={s.sigla}
-            selo={<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{s.atos} ato(s)</span>}
+            selo={<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-600">{s.atos} ato(s)</span>}
             campos={[
               { rotulo: 'Primeiro ato', valor: fmtData(s.primeiro) },
               { rotulo: 'Último ato', valor: fmtData(s.ultimo) },
@@ -340,7 +340,7 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
       <DesktopTable>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
+            <tr className="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider">
               <th className="text-left font-bold px-3 py-1.5">Setor</th>
               <th className="text-right font-bold px-3 py-1.5">Atos</th>
               <th className="text-left font-bold px-3 py-1.5 whitespace-nowrap">Primeiro ato</th>
@@ -352,8 +352,8 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
               <tr key={s.sigla} className="border-t border-slate-100 hover:bg-slate-50">
                 <td className="px-3 py-1.5 font-semibold text-slate-700 text-xs">{s.sigla}</td>
                 <td className="px-3 py-1.5 text-right text-slate-600 text-xs">{s.atos}</td>
-                <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.primeiro)}</td>
-                <td className="px-3 py-1.5 text-slate-500 text-[11px] whitespace-nowrap">{fmtData(s.ultimo)}</td>
+                <td className="px-3 py-1.5 text-slate-500 text-[12px] whitespace-nowrap">{fmtData(s.primeiro)}</td>
+                <td className="px-3 py-1.5 text-slate-500 text-[12px] whitespace-nowrap">{fmtData(s.ultimo)}</td>
               </tr>
             ))}
           </tbody>
@@ -361,7 +361,7 @@ function TabelaPgd({ setores }: { setores: ds.JornadaSetor[] }) {
       </DesktopTable>
       {setores.length > 15 && (
         <button onClick={() => setTodos(v => !v)}
-          className="w-full py-1.5 text-[11px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
+          className="w-full py-1.5 text-[12px] font-bold text-blue-700 hover:bg-slate-50 border-t border-slate-100">
           {todos ? 'Mostrar menos' : `Mostrar todos os ${setores.length} setores`}
         </button>
       )}
@@ -397,7 +397,7 @@ export default function JornadaApi() {
         <h3 className="text-xs font-bold text-[#003366] flex items-center gap-1.5 uppercase tracking-wider">
           <Clock className="w-4 h-4 text-yellow-500" /> Jornada de trabalho — Flexibilização × Programa de Gestão
         </h3>
-        <p className="text-[11px] text-slate-500 mt-0.5 leading-normal font-medium">
+        <p className="text-[12px] text-slate-500 mt-0.5 leading-normal font-medium">
           A UFF adotou dois modelos recentes de organização da jornada, os dois registrados no Boletim: a{' '}
           <a href="https://www.uff.br/progepe/flexibilizacao-da-jornada-de-trabalho/" target="_blank"
             rel="noopener noreferrer" className="text-blue-700 underline font-semibold inline-flex items-center gap-0.5">
@@ -435,10 +435,10 @@ export default function JornadaApi() {
 
           <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+              <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">
                 Adesão e saída, por ano
               </span>
-              <span className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
+              <span className="flex items-center gap-3 text-[12px] text-slate-500 font-medium">
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-0.5 inline-block" style={{ background: COR_FLEX }} /> flexibilização ativa (acumulado)
                 </span>
@@ -459,7 +459,7 @@ export default function JornadaApi() {
         </>
       )}
 
-      <p className="text-[11px] text-slate-400 px-1 leading-relaxed">
+      <p className="text-[12px] text-slate-400 px-1 leading-relaxed">
         <Info className="w-3 h-3 inline mr-1 -mt-0.5" />
         <strong>Como este painel conta.</strong> <strong>Flexibilização</strong>: as portarias de um mesmo setor (aprovação
         do plano, manutenções anuais da CPFJ e retificações de equipe) são agrupadas pelo <strong>processo SEI</strong>, que

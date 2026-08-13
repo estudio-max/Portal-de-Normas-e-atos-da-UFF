@@ -49,7 +49,7 @@ export default function ActRelationsApi() {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* lista */}
       <div className="lg:col-span-4 bg-white p-3 rounded-lg border border-slate-200 shadow-xs flex flex-col h-[650px]">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Selecione o ato para auditoria</h4>
+        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Selecione o ato para auditoria</h4>
         <div className="relative mb-2.5">
           <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
           <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar ato (nº, ementa, órgão)…"
@@ -63,10 +63,10 @@ export default function ActRelationsApi() {
                 className={`w-full text-left p-2 rounded-md border transition-all flex flex-col gap-0.5 ${sel?.id === a.id ? 'bg-blue-50 border-blue-200' : 'bg-slate-50/50 hover:bg-slate-50 border-slate-150'}`}>
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs">{a.tipo} nº {a.numero}/{a.ano}</span>
-                  <span className={`text-[9px] px-1.5 rounded font-bold uppercase border ${corStatus(a.status)}`}>{a.status === 'Ativo' ? 'Vigente' : a.status}</span>
+                  <span className={`text-[11px] px-1.5 rounded font-bold uppercase border ${corStatus(a.status)}`}>{a.status === 'Ativo' ? 'Vigente' : a.status}</span>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase">{a.sigla}</span>
-                <p className="text-[10px] text-slate-400 line-clamp-1 break-all mt-0.5">"{a.ementa}"</p>
+                <span className="text-[11px] font-bold text-slate-500 uppercase">{a.sigla}</span>
+                <p className="text-[11px] text-slate-400 line-clamp-1 break-all mt-0.5">"{a.ementa}"</p>
               </button>
             ))}
         </div>
@@ -84,13 +84,13 @@ export default function ActRelationsApi() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-150 pb-3 mb-3">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded uppercase border border-yellow-200">Órgão: {sel.orgaoEmissor}</span>
-                    {sel.processoSei && <span className="text-[10px] font-mono text-slate-400 break-all">Processo SEI: {sel.processoSei}</span>}
+                    <span className="text-[11px] font-bold text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded uppercase border border-yellow-200">Órgão: {sel.orgaoEmissor}</span>
+                    {sel.processoSei && <span className="text-[11px] font-mono text-slate-400 break-all">Processo SEI: {sel.processoSei}</span>}
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 mt-1">{sel.tipoAto} nº {sel.numero}/{sel.ano}</h3>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">Assinado em: {(sel.dataAssinatura || '').split('-').reverse().join('/')}</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">Assinado em: {(sel.dataAssinatura || '').split('-').reverse().join('/')}</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${corStatus(sel.status)}`}>{sel.status === 'Ativo' ? 'Vigente' : sel.status}</span>
+                <span className={`px-2 py-0.5 rounded text-[11px] font-extrabold uppercase border ${corStatus(sel.status)}`}>{sel.status === 'Ativo' ? 'Vigente' : sel.status}</span>
               </div>
 
               {auditoria && (
@@ -98,9 +98,9 @@ export default function ActRelationsApi() {
                   <div className="mt-0.5 p-1.5 rounded bg-white/80 shadow-xs">{auditoria.icone}</div>
                   <div className="space-y-0.5">
                     <h5 className="font-bold text-xs uppercase">{auditoria.titulo}</h5>
-                    <p className="text-[11px] leading-relaxed text-slate-700 font-medium">{auditoria.desc}</p>
+                    <p className="text-[12px] leading-relaxed text-slate-700 font-medium">{auditoria.desc}</p>
                     {auditoria.causa && (
-                      <button onClick={() => selecionar(auditoria.causa!.porId)} className="text-[11px] font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 mt-0.5">
+                      <button onClick={() => selecionar(auditoria.causa!.porId)} className="text-[12px] font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 mt-0.5">
                         Ir para o ato {auditoria.cor === 'rose' ? 'revogador' : 'modificador'} ({auditoria.causa.porLabel}) <ArrowRight className="w-3 h-3" />
                       </button>
                     )}
@@ -109,7 +109,7 @@ export default function ActRelationsApi() {
               )}
 
               <div className="mt-3 space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">Ementa</span>
+                <span className="text-[11px] text-slate-400 font-bold uppercase block">Ementa</span>
                 <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-md border border-slate-100 leading-relaxed">{sel.ementa}</p>
               </div>
             </div>
@@ -118,33 +118,33 @@ export default function ActRelationsApi() {
               {/* saída */}
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-1.5 text-[#003366] border-b border-slate-150 pb-2 mb-2.5">
-                  <ArrowUpRight className="w-4 h-4 text-indigo-500" /><h4 className="font-bold text-[10px] uppercase">Modificações originadas por este ato</h4>
+                  <ArrowUpRight className="w-4 h-4 text-indigo-500" /><h4 className="font-bold text-[11px] uppercase">Modificações originadas por este ato</h4>
                 </div>
                 {(sel.relacoes || []).length === 0 ? <p className="py-6 text-center text-slate-400 text-xs italic">Não menciona alteração/revogação de outras normas.</p>
                   : (sel.relacoes || []).map((r: any, i: number) => (
                     <div key={i} className="bg-slate-50 p-2.5 rounded border border-slate-150/70 text-xs flex flex-col gap-1 mb-2">
                       <div className="flex items-center justify-between">
-                        <span className={`px-1.5 rounded text-[9px] font-extrabold uppercase ${corRel(r.tipoRelacao)}`}>{r.tipoRelacao}</span>
-                        {r.atoDestinoId ? <button onClick={() => selecionar(r.atoDestinoId)} className="text-[10px] font-bold text-teal-600 hover:underline flex items-center gap-1">Ver vínculo <Eye className="w-3 h-3" /></button>
-                          : <span className="text-[9px] text-slate-400 italic">Ato externo</span>}
+                        <span className={`px-1.5 rounded text-[11px] font-extrabold uppercase ${corRel(r.tipoRelacao)}`}>{r.tipoRelacao}</span>
+                        {r.atoDestinoId ? <button onClick={() => selecionar(r.atoDestinoId)} className="text-[11px] font-bold text-teal-600 hover:underline flex items-center gap-1">Ver vínculo <Eye className="w-3 h-3" /></button>
+                          : <span className="text-[11px] text-slate-400 italic">Ato externo</span>}
                       </div>
-                      <div className="font-bold text-slate-800 text-[11px]">{r.atoDestino}</div>
+                      <div className="font-bold text-slate-800 text-[12px]">{r.atoDestino}</div>
                     </div>
                   ))}
               </div>
               {/* entrada */}
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-1.5 text-[#003366] border-b border-slate-150 pb-2 mb-2.5">
-                  <ArrowDownLeft className="w-4 h-4 text-teal-500" /><h4 className="font-bold text-[10px] uppercase">Atos mais recentes que afetam este ato</h4>
+                  <ArrowDownLeft className="w-4 h-4 text-teal-500" /><h4 className="font-bold text-[11px] uppercase">Atos mais recentes que afetam este ato</h4>
                 </div>
                 {(sel.referenciadoPor || []).length === 0 ? <p className="py-6 text-center text-slate-400 text-xs italic">Íntegro. Nenhuma norma posterior o alterou ou revogou.</p>
                   : (sel.referenciadoPor || []).map((rev: any, i: number) => (
                     <div key={i} className="bg-slate-50 p-2.5 rounded border border-slate-150/70 text-xs flex flex-col gap-1 mb-2">
                       <div className="flex items-center justify-between">
-                        <span className={`px-1.5 rounded text-[9px] font-extrabold uppercase border ${corRel(rev.relacao)}`}>{rotuloInverso(rev.relacao)}</span>
-                        <button onClick={() => selecionar(rev.porId)} className="text-[10px] font-bold text-teal-600 hover:underline flex items-center gap-1">Ir para origem <Eye className="w-3 h-3" /></button>
+                        <span className={`px-1.5 rounded text-[11px] font-extrabold uppercase border ${corRel(rev.relacao)}`}>{rotuloInverso(rev.relacao)}</span>
+                        <button onClick={() => selecionar(rev.porId)} className="text-[11px] font-bold text-teal-600 hover:underline flex items-center gap-1">Ir para origem <Eye className="w-3 h-3" /></button>
                       </div>
-                      <div className="font-bold text-slate-800 text-[11px]">{rev.porLabel}</div>
+                      <div className="font-bold text-slate-800 text-[12px]">{rev.porLabel}</div>
                     </div>
                   ))}
               </div>

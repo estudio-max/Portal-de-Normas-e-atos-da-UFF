@@ -190,7 +190,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
               <SlidersHorizontal size={15} />
               Mais filtros
               {avancadosAtivos > 0 && (
-                <span className="rounded-full bg-[#006400] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                <span className="rounded-full bg-[#006400] px-1.5 py-0.5 text-[11px] font-semibold text-white">
                   {avancadosAtivos}
                 </span>
               )}
@@ -276,7 +276,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
               Atos e normas encontrados, com tipo, ementa, órgão emissor, data e situação de vigência.
             </caption>
             <thead>
-              <tr className="border-b border-[#E2E8F0] bg-[#F7FAFC] text-[11px] font-semibold uppercase tracking-wide text-[#4A5568]">
+              <tr className="border-b border-[#E2E8F0] bg-[#F7FAFC] text-[12px] font-semibold uppercase tracking-wide text-[#4A5568]">
                 <th scope="col" className="px-4 py-3">Tipo e número</th>
                 <th scope="col" className="px-4 py-3">Ementa</th>
                 <th scope="col" className="w-28 px-4 py-3">Órgão</th>
@@ -309,7 +309,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
                   <td className="px-4 py-3.5 align-top">
                     <p className="line-clamp-2 leading-relaxed text-[#4A5568]" title={a.ementa}>{a.ementa}</p>
                     {a.processoSei && (
-                      <p className="mt-1 font-mono text-[11px] text-[#3182CE]">{a.processoSei}</p>
+                      <p className="mt-1 font-mono text-[12px] text-[#3182CE]">{a.processoSei}</p>
                     )}
                   </td>
                   <td className="px-4 py-3.5 align-top text-[12px] font-semibold uppercase text-[#4A5568]">{a.sigla}</td>
@@ -322,10 +322,10 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
                       : (
                         <span className="flex flex-wrap items-center gap-1">
                           {a.relTipos.map((tp, i) => (
-                            <span key={i} className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase ${corRel(tp)}`}>{tp}</span>
+                            <span key={i} className={`rounded border px-1.5 py-0.5 text-[11px] font-semibold uppercase ${corRel(tp)}`}>{tp}</span>
                           ))}
                           {a.refCount > 0 && (
-                            <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                            <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
                               ↩ {a.refCount}
                             </span>
                           )}
@@ -333,7 +333,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
                       )}
                   </td>
                   <td className="px-4 py-3.5 align-top">
-                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${corStatus(a.status)}`}>
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[12px] font-semibold ${corStatus(a.status)}`}>
                       {a.status === 'Ativo' ? 'Vigente' : a.status}
                     </span>
                   </td>
@@ -464,7 +464,7 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between rounded-t-2xl bg-[#0A2540] p-5 text-white">
           <div>
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#7fd39b]">Ficha do ato indexado</span>
+            <span className="text-[12px] font-semibold uppercase tracking-widest text-[#7fd39b]">Ficha do ato indexado</span>
             <h3 className="mt-1 text-lg font-semibold">{ato.tipoAto} nº {ato.numero}/{ato.ano}</h3>
           </div>
           <button onClick={fechar} aria-label="Fechar a ficha" className="rounded-lg bg-slate-800 p-1.5 hover:bg-slate-700"><X className="h-4 w-4" /></button>
@@ -474,22 +474,22 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
             <Box t="Órgão emissor" v={ato.orgaoEmissor} />
             <Box t="Data de assinatura" v={data} mono />
             <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-              <div className="text-[11px] font-semibold uppercase text-slate-600">Processo / documento SEI</div>
+              <div className="text-[12px] font-semibold uppercase text-slate-600">Processo / documento SEI</div>
               <div className="mt-0.5 font-mono font-bold">{ato.processoSei || <span className="font-normal italic text-slate-500">Não vinculado</span>}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {ato.linkSeiProcesso && <a href={ato.linkSeiProcesso} target="_blank" rel="noopener noreferrer" className="rounded bg-[#003366] px-2 py-1 text-[11px] font-semibold text-white no-underline">Abrir processo no SEI</a>}
-                {ato.linkSeiDocumento && <a href={ato.linkSeiDocumento} target="_blank" rel="noopener noreferrer" className="rounded bg-blue-700 px-2 py-1 text-[11px] font-semibold text-white no-underline">Documento {ato.seiDocumento || ''}</a>}
+                {ato.linkSeiProcesso && <a href={ato.linkSeiProcesso} target="_blank" rel="noopener noreferrer" className="rounded bg-[#003366] px-2 py-1 text-[12px] font-semibold text-white no-underline">Abrir processo no SEI</a>}
+                {ato.linkSeiDocumento && <a href={ato.linkSeiDocumento} target="_blank" rel="noopener noreferrer" className="rounded bg-blue-700 px-2 py-1 text-[12px] font-semibold text-white no-underline">Documento {ato.seiDocumento || ''}</a>}
               </div>
             </div>
             <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-              <div className="text-[11px] font-semibold uppercase text-slate-600">Status da vigência</div>
+              <div className="text-[12px] font-semibold uppercase text-slate-600">Status da vigência</div>
               <div className="mt-0.5"><span className={`inline-flex rounded-full border px-2 py-0.5 text-[12px] font-semibold ${corStatus(ato.status)}`}>{ato.status}</span></div>
             </div>
           </div>
 
           {(ato.pessoas?.length || ato.siapes?.length || 0) > 0 && (
             <div className="space-y-1">
-              <span className="block text-[11px] font-semibold uppercase text-slate-600">Pessoas citadas ({ato.pessoas?.length || ato.siapes?.length})</span>
+              <span className="block text-[12px] font-semibold uppercase text-slate-600">Pessoas citadas ({ato.pessoas?.length || ato.siapes?.length})</span>
               <div className="flex flex-wrap gap-1.5">
                 {ato.pessoas?.length
                   ? ato.pessoas.map((p: any, i: number) => (
@@ -509,22 +509,22 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
 
           <div className="space-y-1">
             {ato.ementaInferida ? (
-              <span className="block text-[11px] font-semibold uppercase text-amber-700">
+              <span className="block text-[12px] font-semibold uppercase text-amber-700">
                 Resumo automático
-                <span className="ml-2 text-[11px] font-normal normal-case text-amber-700">gerado do texto do ato — não é a ementa oficial</span>
+                <span className="ml-2 text-[12px] font-normal normal-case text-amber-700">gerado do texto do ato — não é a ementa oficial</span>
               </span>
             ) : (
-              <span className="block text-[11px] font-semibold uppercase text-slate-600">Ementa oficial</span>
+              <span className="block text-[12px] font-semibold uppercase text-slate-600">Ementa oficial</span>
             )}
             <div className={`rounded-xl border p-4 text-[13px] italic leading-relaxed ${ato.ementaInferida ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-100 bg-slate-50'}`}>“{ato.ementa}”</div>
           </div>
 
           <div className="space-y-2">
-            <span className="block text-[11px] font-semibold uppercase text-slate-600">Este ato refere-se a ({(ato.relacoes || []).length})</span>
+            <span className="block text-[12px] font-semibold uppercase text-slate-600">Este ato refere-se a ({(ato.relacoes || []).length})</span>
             {(ato.relacoes || []).length === 0 ? <p className="text-[12px] italic text-slate-600">Nenhuma referência a outros atos.</p> :
               (ato.relacoes).map((r: any, i: number) => (
                 <div key={i} className="flex items-start gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[12px]">
-                  <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${corRel(r.tipoRelacao)}`}>{r.tipoRelacao}</span>
+                  <span className={`rounded border px-1.5 py-0.5 text-[11px] font-bold ${corRel(r.tipoRelacao)}`}>{r.tipoRelacao}</span>
                   {r.atoDestinoId ? <button onClick={() => abrir(r.atoDestinoId)} className="text-left font-semibold text-blue-800 underline decoration-dotted hover:text-blue-950">{r.atoDestino}</button>
                     : <span className="font-semibold text-slate-900">{r.atoDestino} <span className="font-normal italic text-slate-600">(ato externo)</span></span>}
                 </div>
@@ -532,11 +532,11 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
           </div>
 
           <div className="space-y-2">
-            <span className="block text-[11px] font-semibold uppercase text-slate-600">Referenciado por ({(ato.referenciadoPor || []).length})</span>
+            <span className="block text-[12px] font-semibold uppercase text-slate-600">Referenciado por ({(ato.referenciadoPor || []).length})</span>
             {(ato.referenciadoPor || []).length === 0 ? <p className="text-[12px] italic text-slate-600">Nenhum ato posterior altera ou revoga este.</p> :
               (ato.referenciadoPor).map((rev: any, i: number) => (
                 <div key={i} className="flex items-start gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[12px]">
-                  <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${corRel(rev.relacao)}`}>{rev.relacao === 'Revoga' ? 'Revogado por' : rev.relacao === 'Altera' ? 'Alterado por' : 'Referenciado por'}</span>
+                  <span className={`rounded border px-1.5 py-0.5 text-[11px] font-bold ${corRel(rev.relacao)}`}>{rev.relacao === 'Revoga' ? 'Revogado por' : rev.relacao === 'Altera' ? 'Alterado por' : 'Referenciado por'}</span>
                   <button onClick={() => abrir(rev.porId)} className="text-left font-semibold text-blue-800 underline decoration-dotted hover:text-blue-950">{rev.porLabel}</button>
                 </div>
               ))}
@@ -560,7 +560,7 @@ function Ficha({ ato, abrir, fechar, corRel, corStatus, setSiape }: any) {
 function Box({ t, v, mono }: { t: string; v: any; mono?: boolean }) {
   return (
     <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-      <div className="text-[11px] font-semibold uppercase text-slate-600">{t}</div>
+      <div className="text-[12px] font-semibold uppercase text-slate-600">{t}</div>
       <div className={`mt-0.5 font-bold text-slate-900 ${mono ? 'font-mono' : ''}`}>{v || '—'}</div>
     </div>
   );

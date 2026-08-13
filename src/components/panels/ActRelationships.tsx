@@ -137,7 +137,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
       
       {/* Left Column: Search & Selector list (4 cols) */}
       <div className="lg:col-span-4 bg-white p-3 rounded-lg border border-slate-200 shadow-xs flex flex-col h-[650px]">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Selecione o Ato para Auditoria</h4>
+        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Selecione o Ato para Auditoria</h4>
         
         {/* Search Input inside sidebar */}
         <div className="relative mb-2.5">
@@ -172,7 +172,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                     <span className="font-bold text-xs">
                       {act.tipoAto} nº {act.numero}/{act.ano}
                     </span>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                    <span className={`text-[11px] px-1.5 py-0.2 rounded font-bold uppercase ${
                       act.status === 'Ativo' 
                         ? 'bg-green-100 text-green-700 border border-green-200' 
                         : act.status === 'Revogado' 
@@ -182,8 +182,8 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                       {act.status === 'Ativo' ? 'VIGENTE' : act.status === 'Revogado' ? 'REVOGADO' : 'ALTERADO'}
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">{act.orgaoEmissor}</span>
-                  <p className="text-[10px] text-slate-400 line-clamp-1 break-all font-medium mt-0.5">"{act.ementa}"</p>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">{act.orgaoEmissor}</span>
+                  <p className="text-[11px] text-slate-400 line-clamp-1 break-all font-medium mt-0.5">"{act.ementa}"</p>
                 </button>
               );
             })
@@ -200,11 +200,11 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-150 pb-3 mb-3">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded uppercase tracking-wider border border-yellow-200">
+                    <span className="text-[11px] font-bold text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded uppercase tracking-wider border border-yellow-200">
                       Órgão Emissor: {selectedAct.orgaoEmissor}
                     </span>
                     {selectedAct.processoSei && (
-                      <span className="text-[10px] font-mono text-slate-400 break-all">
+                      <span className="text-[11px] font-mono text-slate-400 break-all">
                         Processo SEI: {selectedAct.processoSei}
                       </span>
                     )}
@@ -212,14 +212,14 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                   <h3 className="text-sm font-bold text-slate-900 mt-1">
                     {selectedAct.tipoAto} UFF nº {selectedAct.numero}/{selectedAct.ano}
                   </h3>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                     Assinado em: {selectedAct.dataAssinatura.split('-').reverse().join('/')}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Status no Portal:</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider uppercase border ${
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Status no Portal:</span>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-extrabold tracking-wider uppercase border ${
                     selectedAct.status === 'Ativo' 
                       ? 'bg-green-100 text-green-700 border-green-200' 
                       : selectedAct.status === 'Revogado' 
@@ -249,13 +249,13 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                     <h5 className="font-bold text-xs tracking-tight uppercase">
                       {statusAudit.title === 'Vigência Plena (Ativo)' ? 'Vigência Plena (Vigente)' : statusAudit.title}
                     </h5>
-                    <p className="text-[11px] leading-relaxed text-slate-700 font-medium">
+                    <p className="text-[12px] leading-relaxed text-slate-700 font-medium">
                       {statusAudit.description}
                     </p>
                     {statusAudit.causeAct && (
                       <button
                         onClick={() => setSelectedActId(statusAudit.causeAct.id)}
-                        className="text-[11px] font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 mt-0.5 cursor-pointer"
+                        className="text-[12px] font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 mt-0.5 cursor-pointer"
                       >
                         Ir para o Ato Revogador ({statusAudit.causeAct.tipoAto} nº {statusAudit.causeAct.numero}/{statusAudit.causeAct.ano})
                         <ArrowRight className="w-3 h-3" />
@@ -267,7 +267,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
 
               {/* Brief description of content */}
               <div className="mt-3 space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Impacto Prático do Ato (Ementa Simples)</span>
+                <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Impacto Prático do Ato (Ementa Simples)</span>
                 <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-md border border-slate-100 leading-relaxed font-medium">
                   {selectedAct.conteudoResumido}
                 </p>
@@ -281,7 +281,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs flex flex-col">
                 <div className="flex items-center gap-1.5 text-[#003366] border-b border-slate-150 pb-2 mb-2.5">
                   <ArrowUpRight className="w-4 h-4 text-indigo-500" />
-                  <h4 className="font-bold text-[10px] uppercase tracking-wider">
+                  <h4 className="font-bold text-[11px] uppercase tracking-wider">
                     Modificações originadas por este Ato
                   </h4>
                 </div>
@@ -296,7 +296,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                     {outwardRelations.map((out, idx) => (
                       <div key={idx} className="bg-slate-50 p-2.5 rounded border border-slate-150/70 text-xs flex flex-col gap-1">
                         <div className="flex items-center justify-between">
-                          <span className={`px-1.5 py-0.25 rounded text-[9px] font-extrabold uppercase ${
+                          <span className={`px-1.5 py-0.25 rounded text-[11px] font-extrabold uppercase ${
                             out.type === 'Revoga' 
                               ? 'bg-rose-100 text-rose-800' 
                               : out.type === 'Altera'
@@ -309,21 +309,21 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                           {out.targetActExists && out.targetActObj ? (
                             <button
                               onClick={() => setSelectedActId(out.targetActObj!.id)}
-                              className="text-[10px] font-bold text-teal-600 hover:text-teal-800 flex items-center gap-1 cursor-pointer hover:underline"
+                              className="text-[11px] font-bold text-teal-600 hover:text-teal-800 flex items-center gap-1 cursor-pointer hover:underline"
                               title="Visualizar Auditoria deste ato"
                             >
                               <span>Ver Vínculo</span>
                               <Eye className="w-3 h-3" />
                             </button>
                           ) : (
-                            <span className="text-[9px] text-slate-400 font-medium italic">Ato externo</span>
+                            <span className="text-[11px] text-slate-400 font-medium italic">Ato externo</span>
                           )}
                         </div>
 
                         <div>
-                          <div className="font-bold text-slate-800 text-[11px]">{out.label}</div>
+                          <div className="font-bold text-slate-800 text-[12px]">{out.label}</div>
                           {out.details && (
-                            <p className="text-slate-500 font-medium mt-0.5 leading-normal text-[10px]">
+                            <p className="text-slate-500 font-medium mt-0.5 leading-normal text-[11px]">
                               detalhes: {out.details}
                             </p>
                           )}
@@ -338,7 +338,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs flex flex-col">
                 <div className="flex items-center gap-1.5 text-[#003366] border-b border-slate-150 pb-2 mb-2.5">
                   <ArrowDownLeft className="w-4 h-4 text-teal-500" />
-                  <h4 className="font-bold text-[10px] uppercase tracking-wider">
+                  <h4 className="font-bold text-[11px] uppercase tracking-wider">
                     Atos mais recentes que afetam este Ato
                   </h4>
                 </div>
@@ -353,7 +353,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                     {inwardRelations.map((inw, idx) => (
                       <div key={idx} className="bg-slate-50 p-2.5 rounded border border-slate-150/70 text-xs flex flex-col gap-1">
                         <div className="flex items-center justify-between">
-                          <span className={`px-1.5 py-0.25 rounded text-[9px] font-extrabold uppercase ${
+                          <span className={`px-1.5 py-0.25 rounded text-[11px] font-extrabold uppercase ${
                             inw.relationType === 'Revoga' 
                               ? 'bg-rose-50 text-rose-800 font-bold border border-rose-100' 
                               : inw.relationType === 'Altera'
@@ -365,7 +365,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                           
                           <button
                             onClick={() => setSelectedActId(inw.originAct.id)}
-                            className="text-[10px] font-bold text-teal-600 hover:text-teal-800 flex items-center gap-1 cursor-pointer hover:underline"
+                            className="text-[11px] font-bold text-teal-600 hover:text-teal-800 flex items-center gap-1 cursor-pointer hover:underline"
                           >
                             <span>Ir para Origem</span>
                             <Eye className="w-3 h-3" />
@@ -373,12 +373,12 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
                         </div>
 
                         <div>
-                          <div className="font-bold text-slate-800 text-[11px]">
+                          <div className="font-bold text-slate-800 text-[12px]">
                             {inw.originAct.tipoAto} nº {inw.originAct.numero}/{inw.originAct.ano}
                           </div>
-                          <p className="text-[10px] text-slate-400 line-clamp-1 break-all font-medium italic mt-0.5">"{inw.originAct.ementa}"</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-1 break-all font-medium italic mt-0.5">"{inw.originAct.ementa}"</p>
                           {inw.details && (
-                            <p className="text-slate-500 font-medium mt-0.5 leading-normal text-[10px]">
+                            <p className="text-slate-500 font-medium mt-0.5 leading-normal text-[11px]">
                               justificativa: {inw.details}
                             </p>
                           )}
@@ -393,7 +393,7 @@ export default function ActRelationships({ acts, onSelectAct }: ActRelationships
 
             {/* Complete original Ementa citation card */}
             <div className="bg-[#00264d] text-slate-100 p-4 rounded-lg border border-blue-900/40 shadow-inner">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 block mb-1">Transcrição Oficial do Cabeçalho</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-yellow-400 block mb-1">Transcrição Oficial do Cabeçalho</span>
               <p className="text-xs italic leading-relaxed font-serif">
                 "{selectedAct.ementa}"
               </p>
