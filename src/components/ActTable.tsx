@@ -207,7 +207,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
               key={c.chave}
               onClick={c.limpar}
               aria-label={`Remover o filtro ${c.rotulo}`}
-              className="chip-filtro inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium transition-colors"
+              className="chip-filtro inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium"
             >
               {c.rotulo}
               <X size={12} aria-hidden="true" />

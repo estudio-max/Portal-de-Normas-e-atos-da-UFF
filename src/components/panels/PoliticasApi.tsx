@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Landmark, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Landmark, BookMarked, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { CartaoGrade, GradeCartoes } from '../ui/CartaoGrade';
+import { PainelFiltros, rotuloFiltro, campoFiltro, ajudaFiltro } from '../ui/PainelFiltros';
 
 // Aba "Políticas": o dossiê temático. Em vez de atos soltos numa busca, o
 // assunto institucional e a sequência de atos que o construíram.
@@ -387,6 +389,11 @@ export default function PoliticasApi() {
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState('');
   const [sel, setSel] = useState<string | null>(null);
+  const [eixoF, setEixoF] = useState('');
+  const [estagioF, setEstagioF] = useState('');
+  const [comFundador, setComFundador] = useState(false);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const avancadosAtivos = [estagioF !== '', comFundador].filter(Boolean).length;
 
   useEffect(() => {
     if (!apiMode) { setCarregando(false); return; }
@@ -405,13 +412,30 @@ export default function PoliticasApi() {
       const alvo = `${p.nome} ${p.descricao ?? ''} ${p.pdi?.subtema ?? ''} ${p.pdi?.eixo ?? ''}`.toLowerCase();
       if (q && !alvo.includes(q)) continue;
       const eixo = p.pdi?.eixo || p.categoria || 'Sem eixo do PDI';
+      if (eixoF && eixo !== eixoF) continue;
+      if (estagioF && p.estagio !== estagioF) continue;
+      if (comFundador && !p.fundador) continue;
       const arr = porEixo.get(eixo) ?? [];
       arr.push(p);
       porEixo.set(eixo, arr);
     }
     for (const arr of porEixo.values()) arr.sort((a, b) => b.atos - a.atos);
     return [...porEixo.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [r, busca]);
+  }, [r, busca, eixoF, estagioF, comFundador]);
+
+  const visiveis = useMemo(
+    () => grupos.reduce((n, [, pols]) => n + pols.length, 0), [grupos]);
+
+  // Os eixos do seletor saem do catálogo inteiro, não do resultado filtrado —
+  // senão escolher um eixo apagaria os outros da lista e não haveria como voltar.
+  const eixos = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of r?.politicas ?? []) {
+      const e = p.pdi?.eixo || p.categoria || 'Sem eixo do PDI';
+      m.set(e, (m.get(e) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [r]);
 
   // A edição do PDI sai do próprio dado. Banco não migrado devolve `pdi` nulo,
   // e aí a nota explicativa não aparece — em vez de anunciar uma âncora que a
@@ -491,55 +515,147 @@ export default function PoliticasApi() {
         </div>
       )}
 
-      <div className="relative max-w-xs">
-        <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
-        <input value={busca} onChange={e => setBusca(e.target.value)}
-          placeholder="Filtrar políticas…"
-          className="w-full bg-white border border-slate-200 rounded pl-8 pr-7 py-1.5 text-xs" />
-        {busca && <button onClick={() => setBusca('')} className="absolute right-2 top-1.5 p-0.5 hover:bg-slate-200 rounded-full text-slate-400"><X className="w-3 h-3" /></button>}
+      {/* Mesma barra de Comissões: busca em destaque, um filtro essencial
+          visível, o resto no painel lateral compartilhado. */}
+      <div className="rounded-xl border border-[#E2E8F0] bg-white p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+          <div>
+            <label htmlFor="busca-politicas" className="sr-only">Buscar política</label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+              <input
+                id="busca-politicas"
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar política por nome, tema ou eixo do PDI"
+                className="w-full rounded-xl border border-[#E2E8F0] bg-white py-2.5 pl-11 pr-10 text-[14px] text-[#1A202C] placeholder:text-[#64748B] focus:border-[#006400] focus:outline-none"
+              />
+              {busca && (
+                <button onClick={() => setBusca('')} aria-label="Limpar a busca"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#64748B] hover:bg-gray-100">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="sm:w-52">
+            <label className={rotuloFiltro} htmlFor="filtro-eixo">Eixo do PDI</label>
+            <select id="filtro-eixo" value={eixoF} onChange={e => setEixoF(e.target.value)} className={campoFiltro}>
+              <option value="">Todos</option>
+              {eixos.map(([e, n]) => <option key={e} value={e}>{e} ({n})</option>)}
+            </select>
+          </div>
+
+          <button
+            onClick={() => setPainelAberto(true)}
+            aria-expanded={painelAberto}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[#E2E8F0] px-4 py-2 text-[13px] font-medium text-[#1A202C] hover:bg-[#F0F7F0]/60"
+          >
+            <SlidersHorizontal size={15} /> Mais filtros
+            {avancadosAtivos > 0 && (
+              <span className="rounded-full bg-[#006400] px-1.5 py-0.5 text-[11px] font-semibold text-white">{avancadosAtivos}</span>
+            )}
+          </button>
+        </div>
       </div>
+
+      <p className="text-[13px] text-[#4A5568]" aria-live="polite">
+        <strong className="font-semibold text-[#1A202C]">{visiveis} de {r.politicas?.length ?? 0}</strong>{' '}
+        {visiveis === 1 ? 'política' : 'políticas'} no catálogo curado
+      </p>
 
       {grupos.map(([eixo, pols]) => (
         <div key={eixo}>
-          <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
+          <h3 className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-wide text-[#4A5568]">
             {eixo} ({pols.length})
           </h3>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <GradeCartoes>
             {pols.map(p => (
-              <button key={p.slug} onClick={() => setSel(p.slug)}
-                className="text-left bg-white border border-slate-200 rounded-lg p-3 hover:border-[#003366] hover:shadow-sm transition group">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center flex-wrap gap-1.5">
-                      <span className="font-bold text-[13px] text-[#003366]">{p.nome}</span>
-                      <EstagioChip estagio={p.estagio} />
-                    </div>
-                    {p.pdi && <div className="mt-1"><SubtemaPdi pdi={p.pdi} /></div>}
-                    <div className="text-[12px] text-slate-500 mt-0.5">
-                      {p.atos > 0
-                        ? <>{p.atos} ato(s){p.anoMin ? ` · ${p.anoMin}–${p.anoMax}` : ''}</>
-                        : <span className="text-slate-400 italic">sem atos localizados ainda</span>}
-                    </div>
-                    <div className="text-[12px] text-slate-500 mt-0.5">
-                      {p.fundador
-                        ? <>Instituída por <strong className="text-slate-600">{p.fundador.label}</strong></>
-                        : <span className="text-slate-400 italic">ato instituidor não localizado no acervo</span>}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#003366] shrink-0 mt-0.5" />
-                </div>
-                <Ciclo papeis={p.papeis} />
-              </button>
+              <CartaoGrade
+                key={p.slug}
+                icone={<BookMarked size={20} />}
+                titulo={p.nome}
+                etiquetas={<EstagioChip estagio={p.estagio} />}
+                destaque={{
+                  rotulo: 'Subtema do PDI',
+                  valor: p.pdi
+                    ? <SubtemaPdi pdi={p.pdi} />
+                    : <span className="italic text-[#4A5568]">sem encaixe no PDI</span>,
+                }}
+                campos={[
+                  { rotulo: 'Atos', valor: p.atos },
+                  {
+                    rotulo: 'Período',
+                    valor: p.anoMin
+                      ? <span className="text-[13px]">{p.anoMin}–{p.anoMax}</span>
+                      : <span className="text-[13px] font-normal italic text-[#4A5568]">sem atos</span>,
+                  },
+                ]}
+                rodape={<>
+                  {p.fundador
+                    ? <>Instituída por <strong className="font-semibold text-[#1A202C]">{p.fundador.label}</strong>.</>
+                    : <span className="italic">Ato instituidor não localizado no acervo.</span>}
+                  <Ciclo papeis={p.papeis} />
+                </>}
+                acao="Ver política"
+                onClick={() => setSel(p.slug)}
+              />
             ))}
-          </div>
+          </GradeCartoes>
         </div>
       ))}
 
       {grupos.length === 0 && (
-        <div className="text-center text-slate-400 text-sm py-8">
-          {busca ? <>Nenhuma política bate com "{busca}".</> : <>Nenhuma política no catálogo ainda.</>}
+        <div className="rounded-xl border border-[#E2E8F0] bg-white px-4 py-12 text-center">
+          <Info className="mx-auto mb-3 h-7 w-7 text-[#64748B]" />
+          <p className="text-[15px] font-semibold text-[#1A202C]">
+            {busca ? 'Nenhuma política corresponde a esta consulta.' : 'Nenhuma política no catálogo ainda.'}
+          </p>
+          {busca && (
+            <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-relaxed text-[#4A5568]">
+              O catálogo curado tem {r.politicas?.length ?? 0} políticas. A busca também
+              alcança o subtema e o eixo do PDI — tente por tema, não só pelo nome.
+            </p>
+          )}
         </div>
       )}
+
+      <PainelFiltros
+        aberto={painelAberto}
+        onFechar={() => setPainelAberto(false)}
+        onLimpar={() => { setEstagioF(''); setComFundador(false); }}
+      >
+        <div>
+          <label className={rotuloFiltro} htmlFor="filtro-estagio">Estágio de curadoria</label>
+          <select id="filtro-estagio" value={estagioF} onChange={e => setEstagioF(e.target.value)} className={campoFiltro}
+            aria-describedby="ajuda-estagio">
+            <option value="">Todos</option>
+            <option value="publicada">Publicada</option>
+            <option value="arquivada">Arquivada</option>
+          </select>
+          <p id="ajuda-estagio" className={ajudaFiltro}>
+            “Publicada” afirma que a <strong>lista de políticas</strong> foi conferida — não
+            que cada vínculo entre ato e política tenha sido, o que continua marcado
+            ato a ato dentro do dossiê.
+          </p>
+        </div>
+
+        <fieldset className="space-y-2 border-t border-[#E2E8F0] pt-4">
+          <legend className="text-[12px] font-medium text-[#1A202C]">Recortes</legend>
+          <label className="flex items-start gap-2 text-[13px] text-[#1A202C]">
+            <input type="checkbox" checked={comFundador}
+              onChange={e => setComFundador(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#006400]" />
+            Só com ato instituidor localizado
+          </label>
+          <p className={ajudaFiltro}>
+            Duas políticas do catálogo não têm o ato fundador localizado no acervo.
+            Isso não significa que ele não exista — o Boletim cobre o que foi
+            publicado nele.
+          </p>
+        </fieldset>
+      </PainelFiltros>
     </div>
   );
 }

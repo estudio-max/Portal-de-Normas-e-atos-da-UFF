@@ -405,13 +405,54 @@ assert.match(actTable, /function EstadoVazio/, 'The acts list must have a real e
 
 // Os filtros secundários abrem em painel, não em modal: quem filtra quer VER a
 // lista mudar, e um modal cobriria justamente o resultado sendo ajustado.
+//
+// O COMPORTAMENTO mora numa casca só (`PainelFiltros`) desde 13/08/2026, quando
+// a segunda e a terceira aba passaram a precisar dele. Sem a casca, cada aba
+// reimplementaria foco, Esc e rodapé — e elas divergiriam em silêncio, que é
+// como um "design system" morre. Por isso a trava é sobre a casca, não sobre
+// cada consumidor.
+const painelFiltros = await read('src/components/ui/PainelFiltros.tsx');
+assert.match(painelFiltros, /e\.key === 'Escape'/, 'The filter panel must close with the keyboard.');
+assert.match(painelFiltros, /aria-label=\{titulo\}/, 'The filter panel must announce its title.');
+assert.match(painelFiltros, /\?\.focus\(\)/, 'The filter panel must move focus into itself when it opens.');
+// "Concluir", não "Aplicar": os filtros já estão aplicados — a lista muda a
+// cada campo. Um "Aplicar" prometeria que nada valeu até clicar nele.
+assert.match(painelFiltros, /Concluir/, 'The filter panel must not promise that nothing applied until a button is pressed.');
+assert.doesNotMatch(painelFiltros, /Aplicar filtros/, 'The filter panel must not offer a misleading apply button.');
+
 const filtrosAvancados = await read('src/components/acts/FiltrosAvancados.tsx');
-assert.match(filtrosAvancados, /e\.key === 'Escape'/, 'The advanced filter panel must close with the keyboard.');
-assert.match(filtrosAvancados, /aria-label="Filtros avançados"/, 'The advanced filter panel must announce its title.');
+assert.match(filtrosAvancados, /<PainelFiltros/, 'The acts filters must reuse the shared panel shell.');
 for (const id of ['filtro-emissor', 'filtro-nome', 'filtro-siape', 'filtro-processo']) {
   assert.ok(filtrosAvancados.includes(`htmlFor="${id}"`) && filtrosAvancados.includes(`id="${id}"`),
     `The advanced filter "${id}" must have a real visible label, not a placeholder.`);
 }
+
+// ── Comissões e Políticas partilham o MESMO cartão ──────────────────────────
+// O desenho é um só e o conteúdo é que muda. Se cada aba tivesse o seu cartão,
+// elas ficariam parecidas até alguém mexer numa delas.
+const cartao = await read('src/components/ui/CartaoGrade.tsx');
+assert.match(cartao, /<button/, 'The record card must be a real button.');
+assert.doesNotMatch(cartao, /role="button"/, 'The record card must not re-implement button semantics on a div.');
+assert.match(cartao, /cartao-grade/, 'The record card surface must come from the theme tokens.');
+assert.match(cartao, /acao: string/, 'The record card action must be written out, never an arrow alone.');
+
+const comissoes = await read('src/components/panels/ComissoesApi.tsx');
+const politicas = await read('src/components/panels/PoliticasApi.tsx');
+for (const [nome, fonte] of [['ComissoesApi', comissoes], ['PoliticasApi', politicas]]) {
+  assert.match(fonte, /<CartaoGrade/, `${nome} must use the shared record card.`);
+  assert.match(fonte, /<PainelFiltros/, `${nome} must use the shared filter panel.`);
+}
+// O mockup punha "MEMBROS 12" no lugar de maior destaque do cartão — e esse
+// dado NÃO EXISTE: `ato_funcao` vem vazio nos atos de comissão e o papel está
+// só em prosa. É pendência declarada da Fase 2 do Dossiê. O cartão mostra ATOS,
+// que é contado de verdade. Ver docs/PROPOSTA-VISUAL-O-QUE-NAO-TEM-DADO.md.
+assert.doesNotMatch(comissoes, /rotulo: 'Membros'/i,
+  'The commission card must not claim a membership count the database does not have.');
+// O `estado` de cada colegiado depende da RÉGUA (12/24/36 meses). Ler o selo
+// sem saber a régua é ler um veredito sem o critério — então ela fica escrita
+// junto do resultado, não escondida dentro do painel.
+assert.match(comissoes, /evidência recente = últimos/,
+  'The commissions list must state the recency ruler next to the results.');
 
 // Cabeçalho de página: toda tela responde "o que é isto?" antes de mostrar
 // dado, e por um <h1> só — é por ele que quem navega por cabeçalhos se situa.
@@ -478,6 +519,21 @@ for (const classe of ['.botao-marca', '.texto-marca']) {
   assert.ok(css.includes(classe), `The stylesheet must define ${classe}.`);
 }
 
+// ── Superfície de token não pode transicionar cor ───────────────────────────
+// MEDIDO EM 13/08/2026, no build de produção. Ao trocar de tema, o elemento que
+// JÁ ESTAVA na página mantinha a cor antiga PARA SEMPRE — cartão branco sobre
+// fundo escuro, contraste 1,75:1 — enquanto um elemento criado depois nascia
+// com a cor certa. A causa é a transição de `background-color` sobre um valor
+// vindo de custom property que muda: ela não completa. Prova que fechou o
+// diagnóstico: `transition-property: none` no elemento corrigia na hora.
+// Nada disso aparece no console, e o dev server mascarava com CSS parcial.
+// Por isso as classes de token declaram a própria transição, limitada à sombra,
+// e o JSX destes componentes não pode reintroduzir `transition-colors`.
+assert.match(css, /\.nav-destaque,\s*\.card-tarefa,\s*\.cartao-grade,\s*\.chip-filtro,\s*\.botao-marca \{\s*transition: box-shadow/,
+  'Token-driven surfaces must restrict their transition to box-shadow.');
+// A varredura do JSX que completa esta trava fica junto do piso tipográfico,
+// mais abaixo, porque ela reaproveita o mesmo `varrerTsx`.
+
 // ── Piso tipográfico ────────────────────────────────────────────────────────
 // Boa parte do público deste portal não tem prática com sites, e o acervo se
 // consulta muito no celular. A escala tem TRÊS degraus e o piso é 11px:
@@ -522,6 +578,19 @@ for (const arquivo of await varrerTsx('src/')) {
 }
 assert.deepEqual(abaixoDoPiso, [],
   'Text below 11px is an access barrier for this audience. Use 11px for short labels, 12px for support text, 13px+ for body.');
+
+// A outra metade da trava da transição (a primeira está lá em cima, no CSS):
+// nenhum componente de superfície-token pode reintroduzir `transition-colors`.
+const CLASSES_TOKEN = ['nav-destaque', 'card-tarefa', 'cartao-grade', 'chip-filtro', 'botao-marca', 'selo-marca'];
+for (const arquivo of await varrerTsx('src/')) {
+  for (const linha of (await read(arquivo)).split('\n')) {
+    if (!linha.includes('transition-colors')) continue;
+    const culpada = CLASSES_TOKEN.find(c => linha.includes(c));
+    assert.ok(!culpada,
+      `${arquivo}: "${culpada}" must not carry transition-colors — the colour comes from a theme ` +
+      'token, and the transition strands the old colour when the theme changes (measured: 1,75:1).');
+  }
+}
 
 // Os tokens da marca precisam existir nos DOIS temas, senão o cartão de tarefa
 // e o chip de filtro ficam verde-escuro sobre fundo escuro — sem erro nenhum no

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Users, Shield, Loader2, Info, ExternalLink, Search, X, ChevronRight, ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { CartaoGrade, GradeCartoes } from '../ui/CartaoGrade';
+import { PainelFiltros, rotuloFiltro, campoFiltro, ajudaFiltro } from '../ui/PainelFiltros';
 
 // Aba "Comissões": centraliza os COLEGIADOS PERMANENTES de alcance institucional
 // da UFF — comitês e comissões estáveis (CPA, CPPD, CEUA, Governança, ...). A
@@ -223,6 +225,8 @@ export default function ComissoesApi() {
   const [estadoF, setEstadoF] = useState('');
   const [janela, setJanela] = useState(24);   // 12 | 24 | 36 meses
   const [sel, setSel] = useState<string | null>(null);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const avancadosAtivos = [obrigF !== '', janela !== 24].filter(Boolean).length;
 
   useEffect(() => {
     if (!apiMode) { setCarregando(false); return; }
@@ -252,6 +256,9 @@ export default function ComissoesApi() {
     for (const arr of porTipo.values()) arr.sort((a, b) => b.atos - a.atos);
     return [...porTipo.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [r, busca, obrigF, estadoF]);
+
+  const visiveis = useMemo(
+    () => grupos.reduce((n, [, corpos]) => n + corpos.length, 0), [grupos]);
 
   if (!apiMode) {
     return (
@@ -306,99 +313,151 @@ export default function ComissoesApi() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative max-w-xs w-full sm:w-auto sm:flex-1 sm:min-w-[180px]">
-          <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
-          <input value={busca} onChange={e => setBusca(e.target.value)}
-            placeholder="Filtrar por nome ou sigla…"
-            className="w-full bg-white border border-slate-200 rounded pl-8 pr-7 py-1.5 text-xs" />
-          {busca && <button onClick={() => setBusca('')} className="absolute right-2 top-1.5 p-0.5 hover:bg-slate-200 rounded-full text-slate-400"><X className="w-3 h-3" /></button>}
+      {/* Busca + o filtro essencial. O resto vai para o painel lateral: a
+          primeira interação não precisa de cinco controles abertos. */}
+      <div className="rounded-xl border border-[#E2E8F0] bg-white p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+          <div>
+            <label htmlFor="busca-comissoes" className="sr-only">Buscar comissão</label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+              <input
+                id="busca-comissoes"
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar comissão por nome ou sigla"
+                className="w-full rounded-xl border border-[#E2E8F0] bg-white py-2.5 pl-11 pr-10 text-[14px] text-[#1A202C] placeholder:text-[#64748B] focus:border-[#006400] focus:outline-none"
+              />
+              {busca && (
+                <button onClick={() => setBusca('')} aria-label="Limpar a busca"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#64748B] hover:bg-gray-100">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="sm:w-52">
+            <label className={rotuloFiltro} htmlFor="filtro-situacao">Situação</label>
+            <select id="filtro-situacao" value={estadoF} onChange={e => setEstadoF(e.target.value as any)} className={campoFiltro}>
+              <option value="">Todas</option>
+              {(['recente', 'sem_recente', 'recomposicao', 'insuficiente'] as const).map(k => {
+                const n = (r.corpos ?? []).filter(c => c.estado === k).length;
+                return n ? <option key={k} value={k}>{ESTADO[k].rot} ({n})</option> : null;
+              })}
+            </select>
+          </div>
+
+          <button
+            onClick={() => setPainelAberto(true)}
+            aria-expanded={painelAberto}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[#E2E8F0] px-4 py-2 text-[13px] font-medium text-[#1A202C] hover:bg-[#F0F7F0]/60"
+          >
+            <SlidersHorizontal size={15} /> Mais filtros
+            {avancadosAtivos > 0 && (
+              <span className="rounded-full bg-[#006400] px-1.5 py-0.5 text-[11px] font-semibold text-white">{avancadosAtivos}</span>
+            )}
+          </button>
         </div>
-        {([['', 'Todas'], ['lei', `⚖ Por lei (${contagem.lei})`], ['controle', `🛡 Órgão de controle (${contagem.controle})`]] as const).map(([k, rot]) => (
-          <button key={k} onClick={() => setObrigF(k)}
-            className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${obrigF === k
-              ? 'bg-[#003366] text-white border-[#003366]'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>{rot}</button>
-        ))}
       </div>
 
-      {/* A janela muda o ESTADO de cada corpo, não só a contagem: um colegiado
-          que se reúne a cada dois anos é "sem evidência recente" em 12 meses e
-          "com evidência recente" em 36. Deixar a régua na mão de quem lê é mais
-          honesto que fixar uma e não dizer qual. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wide">
-          Evidência recente =
-        </span>
-        {([12, 24, 36] as const).map(m => (
-          <button key={m} onClick={() => setJanela(m)}
-            className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${janela === m
-              ? 'bg-[#003366] text-white border-[#003366]'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-            {m} meses
-          </button>
-        ))}
-        <span className="text-slate-300">|</span>
-        {(['', 'recente', 'sem_recente', 'recomposicao', 'insuficiente'] as const).map(k => {
-          const n = k ? (r.corpos ?? []).filter(c => c.estado === k).length : (r.corpos ?? []).length;
-          if (k && n === 0) return null;
-          return (
-            <button key={k || 'todos'} onClick={() => setEstadoF(k)}
-              className={`px-2.5 py-1 rounded text-[12px] font-bold border transition ${estadoF === k
-                ? 'bg-[#003366] text-white border-[#003366]'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-              {k ? ESTADO[k].rot : 'Todos'} ({n})
-            </button>
-          );
-        })}
-      </div>
+      {/* A régua da vigência fica ESCRITA junto do resultado, e não só dentro do
+          painel: o `estado` de cada corpo depende dela — um colegiado que se
+          reúne a cada dois anos é "sem evidência recente" em 12 meses e "com
+          evidência recente" em 36. Ler o selo sem saber a régua é ler um
+          veredito sem o critério. */}
+      <p className="text-[13px] text-[#4A5568]" aria-live="polite">
+        <strong className="font-semibold text-[#1A202C]">{visiveis} de {r.corpos?.length ?? 0}</strong>{' '}
+        {visiveis === 1 ? 'colegiado' : 'colegiados'} · evidência recente = últimos{' '}
+        <strong className="font-semibold text-[#1A202C]">{janela} meses</strong>
+      </p>
 
       {grupos.map(([tipo, corpos]) => (
         <div key={tipo}>
-          <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">
+          <h3 className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-wide text-[#4A5568]">
             {tipo === 'Comitê' ? 'Comitês' : tipo === 'Comissão' ? 'Comissões' : tipo} ({corpos.length})
           </h3>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <GradeCartoes>
             {corpos.map(c => (
-              <button key={c.slug} onClick={() => setSel(c.slug)}
-                className="text-left bg-white border border-slate-200 rounded-lg p-3 hover:border-[#003366] hover:shadow-sm transition flex items-start justify-between gap-2 group">
-                <div>
-                  <div className="flex items-center flex-wrap gap-1.5">
-                    <span className="font-bold text-[13px] text-[#003366]">{c.nome}</span>
-                    {c.sigla && <span className="text-[11px] font-mono text-slate-400 border border-slate-200 rounded px-1">{c.sigla}</span>}
-                    <ObrigChip obrig={c.obrig} />
-                  </div>
-                  <div className="text-[12px] text-slate-500 mt-0.5">
-                    {c.atos > 0
-                      ? <>{c.atos} ato(s){c.anoMin ? ` · ${c.anoMin}–${c.anoMax}` : ''}</>
-                      : <span className="text-slate-400 italic">sem atos localizados ainda</span>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    <EstadoChip estado={c.estado} />
-                    {c.ultimaData && (
-                      <span className="text-[11px] text-slate-400">
-                        última em {fmtData(c.ultimaData)}
-                      </span>
-                    )}
-                  </div>
-                  {c.mandato && (
-                    <div className="text-[11px] text-slate-400 mt-0.5">
-                      {c.mandato.origem === 'periodo' && c.mandato.periodo
-                        ? <>mandato declarado para o período {c.mandato.periodo}</>
-                        : <>mandato com fim previsto em {fmtData(c.mandato.fim)}</>}
-                    </div>
+              <CartaoGrade
+                key={c.slug}
+                icone={c.tipo === 'Comitê' ? <Shield size={20} /> : <Users size={20} />}
+                titulo={c.nome}
+                etiquetas={<>
+                  {c.sigla && (
+                    <span className="rounded border border-slate-200 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+                      {c.sigla}
+                    </span>
                   )}
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#003366] shrink-0 mt-0.5" />
-              </button>
+                  <ObrigChip obrig={c.obrig} />
+                </>}
+                destaque={{
+                  rotulo: 'Período com atos no Boletim',
+                  valor: c.anoMin
+                    ? <>{c.anoMin}–{c.anoMax}{c.ultimaData ? <span className="text-[#4A5568]"> · última em {fmtData(c.ultimaData)}</span> : null}</>
+                    : <span className="italic text-[#4A5568]">sem atos localizados ainda</span>,
+                }}
+                campos={[
+                  { rotulo: 'Atos', valor: c.atos },
+                  { rotulo: 'Situação', valor: <EstadoChip estado={c.estado} /> },
+                ]}
+                rodape={c.mandato ? (
+                  c.mandato.origem === 'periodo' && c.mandato.periodo
+                    ? <>Mandato declarado para o período {c.mandato.periodo}.</>
+                    : <>Mandato com fim previsto em {fmtData(c.mandato.fim)}.</>
+                ) : undefined}
+                acao="Ver comissão"
+                onClick={() => setSel(c.slug)}
+              />
             ))}
-          </div>
+          </GradeCartoes>
         </div>
       ))}
 
       {grupos.length === 0 && (
-        <div className="text-center text-slate-400 text-sm py-8">Nenhuma comissão bate com "{busca}".</div>
+        <div className="rounded-xl border border-[#E2E8F0] bg-white px-4 py-12 text-center">
+          <Info className="mx-auto mb-3 h-7 w-7 text-[#64748B]" />
+          <p className="text-[15px] font-semibold text-[#1A202C]">Nenhum colegiado corresponde a esta consulta.</p>
+          <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-relaxed text-[#4A5568]">
+            São 26 colegiados permanentes ao todo. Tente remover um filtro, ou buscar
+            pela sigla em vez do nome.
+          </p>
+        </div>
       )}
+
+      <PainelFiltros
+        aberto={painelAberto}
+        onFechar={() => setPainelAberto(false)}
+        onLimpar={() => { setObrigF(''); setJanela(24); }}
+      >
+        <div>
+          <label className={rotuloFiltro} htmlFor="filtro-obrig">Obrigatoriedade</label>
+          <select id="filtro-obrig" value={obrigF} onChange={e => setObrigF(e.target.value)} className={campoFiltro}
+            aria-describedby="ajuda-obrig">
+            <option value="">Todas</option>
+            <option value="lei">Por lei ({contagem.lei})</option>
+            <option value="controle">Por órgão de controle ({contagem.controle})</option>
+          </select>
+          <p id="ajuda-obrig" className={ajudaFiltro}>
+            Curadoria do mantenedor, não inferência do texto: obrigatória por lei,
+            exigida por órgão de controle (CGU, TCU), ou nenhuma das duas.
+          </p>
+        </div>
+
+        <div>
+          <label className={rotuloFiltro} htmlFor="filtro-janela">Régua de “evidência recente”</label>
+          <select id="filtro-janela" value={janela} onChange={e => setJanela(Number(e.target.value))} className={campoFiltro}
+            aria-describedby="ajuda-janela">
+            {[12, 24, 36].map(m => <option key={m} value={m}>Últimos {m} meses</option>)}
+          </select>
+          <p id="ajuda-janela" className={ajudaFiltro}>
+            Muda a <strong>situação</strong> de cada colegiado, não só a contagem. Um corpo
+            que se reúne a cada dois anos aparece como “sem evidência recente” em 12
+            meses e “com evidência recente” em 36. A régua escolhida fica escrita
+            acima da lista.
+          </p>
+        </div>
+      </PainelFiltros>
     </div>
   );
 }

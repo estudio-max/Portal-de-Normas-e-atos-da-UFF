@@ -62,6 +62,7 @@
      pintados por regra própria, fora do alcance do `[class*="bg-white"]` que
      converte o resto da interface. */
   --sup-cartao: #FFFFFF;
+  --borda-cartao: #E2E8F0;
 }
 html.fotofobia {
   --chart-mark: #4FA46E;
@@ -84,6 +85,7 @@ html.fotofobia {
   --marca-anel: #6FBE8B;
 
   --sup-cartao: #18221b;
+  --borda-cartao: #39503f;
 }
 
 /* O destaque é pintado por REGRA PRÓPRIA, fora do alcance do conversor do
@@ -97,6 +99,26 @@ html.fotofobia {
   color: var(--destaque-texto);
 }
 .nav-destaque:hover { background-color: var(--destaque-fundo-hover); }
+
+/* ⚠ SUPERFÍCIE QUE VEM DE TOKEN NÃO PODE TER TRANSIÇÃO DE COR.
+   MEDIDO EM 13/08/2026, no build de produção, e o sintoma engana: ao trocar de
+   tema, o elemento que JÁ ESTAVA na página mantém a cor antiga para sempre —
+   cartão branco sobre fundo escuro, 1,75:1 —, enquanto um elemento criado
+   depois nasce com a cor certa. É a transição de `background-color` sobre um
+   valor vindo de custom property que muda: ela não completa, e não há erro
+   nenhum no console.
+   Prova: `transition-property: none` no elemento corrige na hora.
+   Por isso estas classes declaram a própria transição, limitada ao que de fato
+   deve animar (a sombra do hover), e o JSX destes componentes NÃO usa
+   `transition-colors`. Cor de hover troca instantaneamente — é o preço, e é
+   barato perto de um cartão ilegível. */
+.nav-destaque,
+.card-tarefa,
+.cartao-grade,
+.chip-filtro,
+.botao-marca {
+  transition: box-shadow .15s ease;
+}
 
 /* Componentes que usam a MARCA como superfície. Mesma razão do `.nav-destaque`:
    pintados por regra própria, com token, porque o conversor do fotofobia agiria
@@ -145,6 +167,16 @@ html.fotofobia {
 
 /* O mesmo, para texto e ícone soltos que precisam da marca. */
 .texto-marca { color: var(--marca-texto); }
+
+/* Cartão de registro em grade (Comissões, Políticas). Mesma razão do
+   `.card-tarefa`: superfície e contorno por token, e contorno por
+   `box-shadow: inset` em vez de `border`, porque o conversor do fotofobia tem
+   `[class*="border-"]` genérico e apagaria a borda. */
+.cartao-grade {
+  background-color: var(--sup-cartao);
+  box-shadow: inset 0 0 0 1px var(--borda-cartao);
+}
+.cartao-grade:hover { box-shadow: inset 0 0 0 1px var(--marca-anel); }
 
 /* Impressão do documento do Meu SIAPE.
    O documento é renderizado DENTRO da página (e não num pop-up) para que o
@@ -233,7 +265,11 @@ html.fotofobia [class*="text-\[\#A0AEC0\]"] {
 html.fotofobia [class*="text-green-700"], html.fotofobia [class*="text-emerald-700"] { color: #7fd39b !important; }
 html.fotofobia [class*="text-red-700"], html.fotofobia [class*="text-rose-700"] { color: #f19a9a !important; }
 html.fotofobia [class*="text-amber-700"], html.fotofobia [class*="text-yellow-700"] { color: #e8c473 !important; }
+/* `text-[#3182CE]` é o azul de ação ("Ver todas", "Ver mais dados") e NÃO
+   estava nesta lista: media 4,16:1 sobre a superfície escura — passa para texto
+   grande, reprova para corpo. Entra aqui junto da família azul. */
 html.fotofobia [class*="text-blue-700"], html.fotofobia [class*="text-blue-800"],
+html.fotofobia [class*="text-\[\#3182CE\]"],
 html.fotofobia [class*="text-indigo-700"] { color: #9dc0ea !important; }
 html.fotofobia [class*="text-purple-700"], html.fotofobia [class*="text-violet-700"] { color: #c4a9e8 !important; }
 html.fotofobia [class*="text-teal-700"] { color: #7fcfc6 !important; }

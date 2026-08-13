@@ -32,7 +32,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ titulo, descricao, icon, foc
     onClick={onClick}
     data-foco={foco ? '1' : undefined}
     className={cn(
-      'card-tarefa group relative w-full rounded-2xl p-5 text-center transition-colors',
+      'card-tarefa group relative w-full rounded-2xl p-5 text-center',
       'flex flex-col items-center gap-3 min-h-[168px] justify-center'
     )}
   >
@@ -41,7 +41,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ titulo, descricao, icon, foc
         Comece aqui
       </span>
     )}
-    <span className="selo-marca flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors">
+    <span className="selo-marca flex h-14 w-14 shrink-0 items-center justify-center rounded-full">
       {icon}
     </span>
     <span className="text-[15px] font-semibold text-[#1A3A1A]">{titulo}</span>
