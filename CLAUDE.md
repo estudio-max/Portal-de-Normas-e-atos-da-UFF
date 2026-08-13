@@ -68,7 +68,22 @@ existem no job `ods` do CI. Quem só roda o portão local acha que passou.
 
 Foi exatamente o que aconteceu em 04/08/2026: o `teste_politicas_match.php`
 entrou vermelho no commit que o criou e ficou assim por **8 commits**, porque o
-portão local passava e ninguém abriu o Actions. Sem `gh` instalado, confira por:
+portão local passava e ninguém abriu o Actions.
+
+⚠️ **`git push` num branch NÃO roda CI.** O `ci.yml` dispara em `push` só para
+**main**, ou em `pull_request` — empurrar um branch de trabalho produz **zero**
+check-runs, e a API responde `total_count: 0`, que se confunde facilmente com
+"ainda enfileirando". Para ter CI num branch, abra PR.
+
+O `gh` **está instalado** nesta máquina (v2.97.0). Use-o:
+
+```bash
+gh pr create --base main --fill   # abre o PR, que é o que dispara o CI
+gh pr checks <n>                  # estado dos jobs
+gh run view --log-failed          # o log de falha, que a API pública NÃO entrega
+```
+
+Sem `gh`, resta a API pública — que serve para o estado, mas não para o log:
 
 ```bash
 curl -s "https://api.github.com/repos/estudio-max/Portal-de-Normas-e-atos-da-UFF/commits/main/check-runs"
@@ -165,6 +180,21 @@ parado sem ninguém notar. Os três últimos são recentes (`ods_match.php` de
 03/08/2026, `politicas_match.php` e `indicador_politica.php` de 04/08/2026):
 quem subiu o importador antes dessas datas **não os tem**.
 Ao atualizar o importador, suba SEMPRE os auxiliares ANTES dele. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
+
+⚠️ **Importador que fica para trás não dá erro nenhum — ele só deixa de
+escrever.** O `indicador_politica.php` foi criado em 04/08/2026 e **nunca subiu**;
+junto com ele ficou no servidor um `importar_v2.php` sem o `require_once` dele.
+Como a versão implantada não pedia o arquivo, o import rodou 2×/dia por nove
+dias sem falhar uma vez — e a `politica_indicador` seguiu vazia o tempo todo. O
+sintoma não aparece no log nem no `/api/health`; aparece no painel, como um
+gráfico que nunca enche, o que se confunde com "ainda não tem dado".
+Descoberto em 13/08/2026 baixando a pasta `importar/` do servidor e comparando
+com o repo: **14 dos 15 `.php` eram byte a byte idênticos, e só o `importar_v2.php`
+divergia**. Vale como método — o download da pasta é a única forma honesta de
+saber o que está no ar, e é barata.
+Depois de subir importador, confirme pelo EFEITO, não pelo upload: rode
+`curl -s "$BASE/api/politicas?slug=acessibilidade"` **depois da primeira
+importação seguinte** e confira que `historico` traz ao menos 1 snapshot.
 
 A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 `config.php` era da época em que ela tinha senha; ficou sem uso).
