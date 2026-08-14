@@ -128,8 +128,12 @@ aviso e sumia no escuro. Vale para qualquer classe Tailwind nova nesta base:
 confira colisão de substring antes de usar.
 
 Por que `banco_atualizado_em` de 03/08 marcava 18:00, sem bater com 12h nem
-20h: segue sem explicação — pode ser fuso do servidor. Quem souber, corrija
-esta linha.
+20h: **segue sem explicação, mas a hipótese do fuso caiu.** Medido em
+14/08/2026, com o alarme novo: o relógio do PHP e os carimbos do MySQL
+concordam, e ambos estão em **horário de Brasília (UTC-3)** — o cabeçalho
+`Date` do servidor dava 01:24 UTC, a extração gravada dava 21:37, e a API
+calculou 0 h de diferença, que é o correto para 47 minutos. Se fosse
+descompasso de fuso, esse número teria vindo errado. Procure noutro lugar.
 
 Regra de fechamento: **todo trabalho termina em `git commit` + `git push` + o CI
 VERDE.** O GitHub é o espelho único; se não foi empurrado, não aconteceu — e se
