@@ -59,26 +59,34 @@ offline e só mudam quando alguém regera e aplica.
 vazio na tarde do deploy é o esperado, não defeito; confira `banco_atualizado_em`
 em `/api/health` antes de investigar.
 
-**O repositório do GitHub é PRIVADO desde 13/08/2026** (decisão do
-mantenedor, por motivos não ligados aos dados do portal). Consequência
-descoberta no mesmo dia: `raw.githubusercontent.com` não responde a
-requisição anônima para repo privado (404, não 403 — nem revela que o repo
-existe), e o cron do cPanel parou de conseguir buscar `fonte_json` **em
-silêncio** — `ultima_extracao` (`/api/health`) ficou parado por dois dias
-antes de alguém notar. Corrigido com `github_token` (fine-grained PAT,
-só-leitura, escopo restrito a este repositório) em `config.php`; instruções
-completas no `config.example.php`. **Sem esse token no servidor, o cron
-continua falhando** — o código sozinho não resolve, precisa da chave.
+⚠️ **A visibilidade do repositório no GitHub é parte da infraestrutura de
+produção, não só uma preferência.** Em 13/08/2026 o mantenedor fechou o
+repositório e o cron do cPanel parou de importar **em silêncio**;
+`ultima_extracao` (`/api/health`) ficou dois dias congelado antes de alguém
+notar. A causa: `raw.githubusercontent.com` responde **404** (não 403 — nem
+revela que o repo existe) a requisição anônima para repo privado, e o cron
+busca exatamente essa URL (`fonte_json`). No mesmo dia o repositório voltou a
+ser **público** e a importação normalizou (a CDN ainda serviu o 404 cacheado
+por alguns minutos depois da reabertura — se reabrir de novo, espere antes de
+concluir que não funcionou).
 
-⚠️ **O modo estático de contingência ficou quebrado por tabela, e não tem
-conserto do mesmo jeito.** `JSON_FALLBACK` (`src/dataSource.ts`) busca a
-MESMA URL, mas direto do NAVEGADOR — não dá para autenticar isso sem expor o
-token a qualquer visitante no DevTools. Enquanto o repositório estiver
-privado, se a API/banco cair, o fallback estático não funciona: o portal
-perde a rede de segurança que tinha. Consertar exigiria um proxy no próprio
-servidor (rota nova, autentica do lado do PHP, devolve sob o domínio do
-portal) — não construído; é decisão do mantenedor se vale a pena dado que o
-repositório pode voltar a ficar público.
+**Antes de fechar o repositório outra vez, configure o token primeiro.** O
+importador já sabe autenticar: preencha `github_token` em `config.php`
+(fine-grained PAT, só-leitura, escopo restrito a este repositório —
+instruções completas no `config.example.php`). Verificado em 13/08/2026 que
+`raw.githubusercontent.com` **aceita** `Authorization: token` e devolve 200
+para repo privado. Com o campo vazio o comportamento é idêntico ao de antes,
+então deixar assim enquanto o repo é público não custa nada.
+
+⚠️ **O modo estático de contingência não tem conserto pelo mesmo caminho.**
+`JSON_FALLBACK` (`src/dataSource.ts`) busca a MESMA URL, mas direto do
+NAVEGADOR — não dá para autenticar isso sem expor o token a qualquer
+visitante no DevTools. Ou seja: **enquanto o repositório for privado, esse
+fallback fica morto** e o portal perde a rede de segurança para o caso de a
+API/banco cair. Consertar exigiria um proxy no próprio servidor (rota nova,
+autentica do lado do PHP, devolve sob o domínio do portal) — não construído.
+Se um dia o repositório for fechado em definitivo, este proxy passa a ser
+pré-requisito, não melhoria.
 
 Por que `banco_atualizado_em` de 03/08 marcava 18:00, sem bater com 12h nem
 20h: segue sem explicação — pode ser fuso do servidor. Quem souber, corrija

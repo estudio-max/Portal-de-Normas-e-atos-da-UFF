@@ -19,11 +19,14 @@ return [
     'fonte_json' => 'https://raw.githubusercontent.com/estudio-max/'
                   . 'Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json',
 
-    // Token do GitHub para o cron ler `fonte_json` — PRECISO desde que o
-    // repositório ficou PRIVADO (13/08/2026), porque `raw.githubusercontent.com`
-    // não responde a requisição anônima para repo privado (dá 404, não 403 —
-    // não revela nem que o repo existe). Sem este token, o import diário
-    // (cron 12h/20h) FALHA EM SILÊNCIO: só aparece no log do próprio cron.
+    // Token do GitHub para o cron ler `fonte_json`. PODE FICAR VAZIO enquanto o
+    // repositório for PÚBLICO (é o caso hoje) — vazio = comportamento normal,
+    // busca anônima. Vira OBRIGATÓRIO no instante em que o repositório for
+    // fechado: `raw.githubusercontent.com` não responde a requisição anônima
+    // para repo privado (dá 404, não 403 — não revela nem que o repo existe),
+    // e o import diário (cron 12h/20h) passa a FALHAR EM SILÊNCIO — só aparece
+    // no log do próprio cron. Foi o que aconteceu em 13/08/2026: dois dias sem
+    // atualização até alguém notar. Se for fechar o repo, preencha ANTES.
     //
     // Gere um "fine-grained personal access token" (github.com → Settings →
     // Developer settings → Fine-grained tokens):
