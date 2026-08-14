@@ -147,13 +147,39 @@ export function AreaPorAno({ dados }: { dados: [number, number][] }) {
         </div>
       </div>
 
-      <div className="grid mt-1 text-[11px] text-[#64748B] tabular-nums"
-        style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
-        {dados.map(([ano], i) => (
-          <span key={ano} className="text-center truncate">
-            {i === 0 || i === n - 1 || ano % 5 === 0 ? ano : ''}
-          </span>
-        ))}
+      {/* Eixo dos anos — marcos de 5 em 5, e só eles.
+
+          NÃO é uma grade de uma coluna por ano: com 26 anos cada coluna fica
+          com ~27px, e "2026" a 12px não cabe — o `truncate` cortava TODOS os
+          rótulos em "20…", que foi o defeito relatado.
+
+          As PONTAS (2001 e 2026) ficam de fora de propósito. Elas quebram a
+          regularidade (2001 nem é múltiplo de 5) e colidem com o vizinho na
+          largura de celular — medido: 2005 encostava em 2001, e 2025 se
+          sobrepunha a 2026. O intervalo não se perde: está escrito por extenso
+          na legenda logo acima ("2001–2026 · pico N"). */}
+      <div className="relative mt-1 h-4 text-[12px] text-[#64748B] tabular-nums">
+        {dados.map(([ano], i) => {
+          if (ano % 5 !== 0) return null;
+          // CENTRALIZADO no ponto que nomeia, e só desloca se fosse vazar.
+          //
+          // O `clamp` faz isso sem JavaScript e sem medir nada: o rótulo é um
+          // ano de 4 dígitos com `tabular-nums`, então `4ch` É a largura dele
+          // e `2ch` é a metade exata. Fora das bordas o valor do meio vence e
+          // o alinhamento é perfeito; junto às bordas o piso/teto vence e o
+          // rótulo encosta na borda em vez de sair do cartão.
+          //
+          // A alternativa (deslocar todo mundo proporcionalmente) foi medida e
+          // descartada: chegava a 12px de desvio, quase um ano inteiro de
+          // largura, com o rótulo apontando para o vizinho errado.
+          const f = (i / Math.max(1, n - 1)) * 100;
+          return (
+            <span key={ano} className="absolute whitespace-nowrap"
+              style={{ left: `clamp(0px, calc(${f}% - 2ch), calc(100% - 4ch))` }}>
+              {ano}
+            </span>
+          );
+        })}
       </div>
 
       <TabelaDados titulo="a série anual" colunas={['Ano', 'Atos']}
