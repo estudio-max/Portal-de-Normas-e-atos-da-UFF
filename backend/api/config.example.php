@@ -19,6 +19,23 @@ return [
     'fonte_json' => 'https://raw.githubusercontent.com/estudio-max/'
                   . 'Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json',
 
+    // Token do GitHub para o cron ler `fonte_json` — PRECISO desde que o
+    // repositório ficou PRIVADO (13/08/2026), porque `raw.githubusercontent.com`
+    // não responde a requisição anônima para repo privado (dá 404, não 403 —
+    // não revela nem que o repo existe). Sem este token, o import diário
+    // (cron 12h/20h) FALHA EM SILÊNCIO: só aparece no log do próprio cron.
+    //
+    // Gere um "fine-grained personal access token" (github.com → Settings →
+    // Developer settings → Fine-grained tokens):
+    //   - Repository access: SÓ este repositório (não "All repositories")
+    //   - Permissions: Contents = Read-only (nada além disso)
+    //   - Expiration: defina um prazo e agende renovar — token expirado é o
+    //     mesmo defeito silencioso, só que mais tarde
+    // Nunca use aqui um token de escopo amplo (o do `gh` da sua máquina,
+    // por exemplo) — se este arquivo vazar, o estrago fica limitado ao
+    // necessário.
+    'github_token' => '',
+
     // CORS: origem autorizada a consumir a API pelo navegador. Em PRODUÇÃO,
     // use a origem do próprio portal (front e API são same-origin, então nada
     // quebra) — '*' fica só para desenvolvimento local com o mock:

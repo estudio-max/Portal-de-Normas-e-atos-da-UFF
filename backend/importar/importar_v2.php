@@ -298,7 +298,7 @@ if ($cli && isset($argv[1])) {
     $origem = $cfg['fonte_json'] ?? '';
 }
 log_("Lendo dados de: $origem");
-$bruto = ler_origem($origem);
+$bruto = ler_origem($origem, $cfg);
 $dados = json_decode($bruto, true);
 if (!is_array($dados)) { exit("ERRO: JSON inválido.\n"); }
 log_(count($dados) . " atos recebidos. Importando...");
@@ -589,15 +589,41 @@ try {
 }
 
 // ---------------------------------------------------------------------------
-function ler_origem(string $origem): string {
+function ler_origem(string $origem, array $cfg = []): string {
     if ($origem === '') exit("ERRO: origem dos dados não definida.\n");
     if (preg_match('#^https?://#', $origem)) {
         $ch = curl_init($origem);
+        $headers = ['User-Agent: UFF-Importador-v2/1.0'];
+        // O repositório do GitHub ficou PRIVADO em 13/08/2026 (decisão do
+        // mantenedor). Sem isto, `raw.githubusercontent.com` passou a devolver
+        // 404 para requisição anônima — e cURL, por padrão, NÃO trata status
+        // HTTP de erro como falha (curl_exec só falha em erro de CONEXÃO). O
+        // corpo do 404 virava "JSON", `json_decode` falhava, e o cron morria
+        // em silêncio: nada além do log do próprio cron registrava o defeito,
+        // então o site parou de atualizar sem ninguém perceber por dois dias.
+        // Com `github_token` (fine-grained PAT, só leitura, escopo restrito a
+        // este repositório) configurado, autentica; sem ele, comporta-se como
+        // antes — preciso para fonte pública ou arquivo local.
+        if (!empty($cfg['github_token']) && str_contains($origem, 'githubusercontent.com')) {
+            $headers[] = 'Authorization: token ' . $cfg['github_token'];
+        }
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 120,
-            CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'UFF-Importador-v2/1.0']);
+            CURLOPT_FOLLOWLOCATION => true, CURLOPT_HTTPHEADER => $headers]);
         $r = curl_exec($ch);
         if ($r === false) exit("ERRO ao baixar: " . curl_error($ch) . "\n");
+        // Falha HTTP (404/401/403...) não derruba curl_exec — checar explicitamente
+        // dá um erro CLARO no log, em vez de deixar o json_decode falhar por
+        // tabela (que também funcionaria, mas com mensagem opaca: "JSON inválido"
+        // sem dizer POR QUÊ). Foi assim que este defeito ficou dois dias sem
+        // ninguém notar a causa raiz.
+        $codigo = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        if ($codigo >= 400) {
+            exit("ERRO: $origem devolveu HTTP $codigo"
+                . ($codigo === 404 && empty($cfg['github_token'])
+                    ? " (repositório privado sem 'github_token' configurado?)" : "")
+                . "\n");
+        }
         return $r;
     }
     $r = @file_get_contents($origem);
