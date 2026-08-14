@@ -36,7 +36,15 @@ alimenta produção). Mapa em [`../LEIA-ME.md`](../LEIA-ME.md).
    os boletins, extrai os atos e commita `public/portal-data.json`. Isso
    alimenta só o **modo estático de contingência** — não toca o banco.
 2. **Cron no cPanel do servidor**, **duas vezes por dia (12h e 20h)**, roda a
-   importação e é o que de fato atualiza o portal no ar.
+   importação e é o que de fato atualiza o portal no ar. Comando real:
+   `wget -O - -q -t 1 https://inteligencia.fanara.com.br/importar/importar_v2.php?token=...`
+   — sem `&arquivo=`, então cai em `$cfg['fonte_json']` (a URL de
+   `raw.githubusercontent.com`, ver `backend/api/config.example.php`): **os
+   dois agendamentos são uma CADEIA, não dois caminhos independentes** — o
+   cron do cPanel busca exatamente o arquivo que o GitHub Actions acabou de
+   publicar. Se o Actions falhar ou o arquivo ficar inacessível, o cron falha
+   junto, e a saída inteira (stdout+stderr) vai só para
+   `/home1/fanara87/uff-importar.log` — sem alerta em lugar nenhum.
 
 A consequência prática é o que mais se erra aqui: **tudo que o importador
 escreve se mantém sozinho** — `ato`, `relacao`, `prazo`, `ato_processo`,
@@ -51,10 +59,30 @@ offline e só mudam quando alguém regera e aplica.
 vazio na tarde do deploy é o esperado, não defeito; confira `banco_atualizado_em`
 em `/api/health` antes de investigar.
 
-⚠️ **Não confirmei o que exatamente o cron invoca** (se roda o pipeline
-inteiro no servidor ou se busca o JSON já pronto do GitHub), nem por que o
-`banco_atualizado_em` de 03/08 marcava 18:00 — não bate com 12h nem com 20h,
-e pode ser fuso do servidor. Quem souber, corrija esta linha.
+**O repositório do GitHub é PRIVADO desde 13/08/2026** (decisão do
+mantenedor, por motivos não ligados aos dados do portal). Consequência
+descoberta no mesmo dia: `raw.githubusercontent.com` não responde a
+requisição anônima para repo privado (404, não 403 — nem revela que o repo
+existe), e o cron do cPanel parou de conseguir buscar `fonte_json` **em
+silêncio** — `ultima_extracao` (`/api/health`) ficou parado por dois dias
+antes de alguém notar. Corrigido com `github_token` (fine-grained PAT,
+só-leitura, escopo restrito a este repositório) em `config.php`; instruções
+completas no `config.example.php`. **Sem esse token no servidor, o cron
+continua falhando** — o código sozinho não resolve, precisa da chave.
+
+⚠️ **O modo estático de contingência ficou quebrado por tabela, e não tem
+conserto do mesmo jeito.** `JSON_FALLBACK` (`src/dataSource.ts`) busca a
+MESMA URL, mas direto do NAVEGADOR — não dá para autenticar isso sem expor o
+token a qualquer visitante no DevTools. Enquanto o repositório estiver
+privado, se a API/banco cair, o fallback estático não funciona: o portal
+perde a rede de segurança que tinha. Consertar exigiria um proxy no próprio
+servidor (rota nova, autentica do lado do PHP, devolve sob o domínio do
+portal) — não construído; é decisão do mantenedor se vale a pena dado que o
+repositório pode voltar a ficar público.
+
+Por que `banco_atualizado_em` de 03/08 marcava 18:00, sem bater com 12h nem
+20h: segue sem explicação — pode ser fuso do servidor. Quem souber, corrija
+esta linha.
 
 Regra de fechamento: **todo trabalho termina em `git commit` + `git push` + o CI
 VERDE.** O GitHub é o espelho único; se não foi empurrado, não aconteceu — e se
