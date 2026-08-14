@@ -33,18 +33,19 @@ alimenta produção). Mapa em [`../LEIA-ME.md`](../LEIA-ME.md).
 **Nada disso roda nesta máquina, e há DOIS agendamentos, não um.**
 
 1. **GitHub Actions** (`.github/workflows/indexar.yml`, cron 22:10 UTC) baixa
-   os boletins, extrai os atos e commita `public/portal-data.json`. Isso
-   alimenta só o **modo estático de contingência** — não toca o banco.
+   os boletins, extrai os atos, commita `public/portal-data.json` aqui e
+   **espelha no repositório de dados** (seção adiante). Não toca o banco.
 2. **Cron no cPanel do servidor**, **duas vezes por dia (12h e 20h)**, roda a
    importação e é o que de fato atualiza o portal no ar. Comando real:
    `wget -O - -q -t 1 https://inteligencia.fanara.com.br/importar/importar_v2.php?token=...`
-   — sem `&arquivo=`, então cai em `$cfg['fonte_json']` (a URL de
-   `raw.githubusercontent.com`, ver `backend/api/config.example.php`): **os
-   dois agendamentos são uma CADEIA, não dois caminhos independentes** — o
-   cron do cPanel busca exatamente o arquivo que o GitHub Actions acabou de
-   publicar. Se o Actions falhar ou o arquivo ficar inacessível, o cron falha
-   junto, e a saída inteira (stdout+stderr) vai só para
-   `/home1/fanara87/uff-importar.log` — sem alerta em lugar nenhum.
+   — sem `&arquivo=`, então cai em `$cfg['fonte_json']` (a URL do repositório
+   de dados, ver `backend/api/config.example.php`): **os dois agendamentos são
+   uma CADEIA, não dois caminhos independentes** — o cron do cPanel busca
+   exatamente o arquivo que o GitHub Actions acabou de publicar. Se o Actions
+   falhar ou o arquivo ficar inacessível, o cron falha junto, e a saída inteira
+   (stdout+stderr) vai só para `/home1/fanara87/uff-importar.log` — sem alerta
+   em lugar nenhum. **É por isso que existe o alarme de `extracao_atrasada`**
+   (seção adiante): ele é o único aviso que sai desse log.
 
 A consequência prática é o que mais se erra aqui: **tudo que o importador
 escreve se mantém sozinho** — `ato`, `relacao`, `prazo`, `ato_processo`,
@@ -59,34 +60,72 @@ offline e só mudam quando alguém regera e aplica.
 vazio na tarde do deploy é o esperado, não defeito; confira `banco_atualizado_em`
 em `/api/health` antes de investigar.
 
-⚠️ **A visibilidade do repositório no GitHub é parte da infraestrutura de
-produção, não só uma preferência.** Em 13/08/2026 o mantenedor fechou o
-repositório e o cron do cPanel parou de importar **em silêncio**;
-`ultima_extracao` (`/api/health`) ficou dois dias congelado antes de alguém
-notar. A causa: `raw.githubusercontent.com` responde **404** (não 403 — nem
-revela que o repo existe) a requisição anônima para repo privado, e o cron
-busca exatamente essa URL (`fonte_json`). No mesmo dia o repositório voltou a
-ser **público** e a importação normalizou (a CDN ainda serviu o 404 cacheado
-por alguns minutos depois da reabertura — se reabrir de novo, espere antes de
-concluir que não funcionou).
+### O índice mora num repositório SEPARADO, e isso é de propósito
 
-**Antes de fechar o repositório outra vez, configure o token primeiro.** O
-importador já sabe autenticar: preencha `github_token` em `config.php`
-(fine-grained PAT, só-leitura, escopo restrito a este repositório —
-instruções completas no `config.example.php`). Verificado em 13/08/2026 que
-`raw.githubusercontent.com` **aceita** `Authorization: token` e devolve 200
-para repo privado. Com o campo vazio o comportamento é idêntico ao de antes,
-então deixar assim enquanto o repo é público não custa nada.
+Desde 14/08/2026 o pipeline espelha `portal-data.json` e `atos.csv` em
+**[Portal-de-Normas-e-atos-da-UFF-dados](https://github.com/estudio-max/Portal-de-Normas-e-atos-da-UFF-dados)**
+— repositório **público**, só com dados, sem uma linha de código. É de lá que
+o importador (`fonte_json`) e o `JSON_FALLBACK` do front leem hoje.
 
-⚠️ **O modo estático de contingência não tem conserto pelo mesmo caminho.**
-`JSON_FALLBACK` (`src/dataSource.ts`) busca a MESMA URL, mas direto do
-NAVEGADOR — não dá para autenticar isso sem expor o token a qualquer
-visitante no DevTools. Ou seja: **enquanto o repositório for privado, esse
-fallback fica morto** e o portal perde a rede de segurança para o caso de a
-API/banco cair. Consertar exigiria um proxy no próprio servidor (rota nova,
-autentica do lado do PHP, devolve sob o domínio do portal) — não construído.
-Se um dia o repositório for fechado em definitivo, este proxy passa a ser
-pré-requisito, não melhoria.
+**Por que a separação existe.** Em 13/08/2026 o mantenedor fechou este
+repositório e o import parou **em silêncio** por dois dias: o cron busca
+`fonte_json` no `raw.githubusercontent.com`, que responde **404** (não 403 —
+nem revela que o repo existe) a requisição anônima para repo privado. Duas
+peças dependiam desse endereço, e uma delas **não tem conserto por token**:
+
+- o **importador** (servidor) — poderia autenticar, e sabe (`github_token`);
+- o **`JSON_FALLBACK`** (`src/config.ts`) — busca do **navegador do
+  visitante**. Chave embutida no bundle é chave visível no DevTools. Este
+  endereço PRECISA ser público, sempre.
+
+Com o espelho, **este repositório pode ser fechado sem quebrar nada**. Se for
+fechar: confira antes que o passo "Espelhar dados no repositório público"
+rodou na última execução do `indexar.yml` — sem ele, o espelho congela e o
+portal passa a servir dados velhos sem avisar.
+
+**Chave:** deploy key com escrita só no repositório de dados, guardada na
+secret `DADOS_DEPLOY_KEY`. Não é token de conta. Sem a secret o passo **sai
+limpo** (não falha) — de propósito, para o espelho nunca bloquear a
+publicação principal. O `github_token` do `config.php` ficou **sem uso** e
+deve continuar vazio; só volta a importar se alguém apontar `fonte_json` de
+volta para um repositório privado.
+
+⚠️ **Armadilha da CDN:** ao reabrir um repositório fechado,
+`raw.githubusercontent.com` continua servindo o 404 cacheado por alguns
+minutos, inclusive com cache-buster. Não conclua cedo demais que não
+funcionou.
+
+⚠️ **Não publique no repositório de dados a partir do Windows.** Ele tem
+`.gitattributes` fixando LF justamente porque a primeira publicação manual
+reescreveu o `atos.csv` inteiro (3.903 linhas) sem uma vírgula de conteúdo
+diferente — só CRLF vs LF.
+
+### O alarme que denuncia a cadeia parada
+
+`/api/health` devolve `horas_desde_extracao`, `extracao_atrasada` e
+`extracao_limite_horas`; `/api/stats` espelha só o booleano
+(`extracaoAtrasada`), porque é a rota que o front já chama ao abrir — o aviso
+na tela não custa requisição a mais. A TopBar acende a linha de status que já
+existia: bolinha âmbar + aviso escrito.
+
+Três decisões que não devem ser desfeitas sem entender o porquê:
+
+- **Limite de 36h** (`extracao_limite_horas()`): o cron roda 12h e 20h, então
+  o intervalo normal nunca passa de ~16h. E `extracao.executada_em` marca que
+  o importador RODOU, não que veio ato novo — dia sem boletim na UFF não
+  dispara alarme falso.
+- **`ok` continua `true` com dado velho.** `ok` significa "a API responde", e
+  é disso que dependem o smoke test pós-deploy e o teste de "API de pé" antes
+  de virar o DNS. Dado velho não é API fora do ar.
+- **No modo estático o aviso não aparece** (`extracaoAtrasada: false` fixo): o
+  `portal-data.json` não tem carimbo de geração, então não há como saber.
+  Alarme adivinhado é pior que alarme ausente.
+
+⚠️ **A bolinha usa hex literal (`bg-[#D97706]`), não `bg-amber-500`.** As
+regras da fotofobia casam por SUBSTRING (`[class*="bg-amber-50"]`), e
+`bg-amber-500` **contém** `bg-amber-50` — a bolinha herdava o fundo marrom de
+aviso e sumia no escuro. Vale para qualquer classe Tailwind nova nesta base:
+confira colisão de substring antes de usar.
 
 Por que `banco_atualizado_em` de 03/08 marcava 18:00, sem bater com 12h nem
 20h: segue sem explicação — pode ser fuso do servidor. Quem souber, corrija

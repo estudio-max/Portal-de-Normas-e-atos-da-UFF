@@ -15,18 +15,28 @@ return [
         'charset' => 'utf8mb4',
     ],
 
-    // Origem dos dados para o importador (JSON publicado pela extração)
+    // Origem dos dados para o importador (JSON publicado pela extração).
+    //
+    // Aponta para o repositório de DADOS — separado do repositório de código,
+    // e PÚBLICO de propósito. Desde 14/08/2026 o pipeline espelha o índice lá
+    // a cada publicação. Assim o repositório de código pode ser fechado sem
+    // derrubar este import (foi o que aconteceu em 13/08: dois dias parado).
+    //
+    // Se você mudar isto de volta para o repositório de código, volta junto a
+    // dependência de `github_token` abaixo.
     'fonte_json' => 'https://raw.githubusercontent.com/estudio-max/'
-                  . 'Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json',
+                  . 'Portal-de-Normas-e-atos-da-UFF-dados/main/portal-data.json',
 
-    // Token do GitHub para o cron ler `fonte_json`. PODE FICAR VAZIO enquanto o
-    // repositório for PÚBLICO (é o caso hoje) — vazio = comportamento normal,
-    // busca anônima. Vira OBRIGATÓRIO no instante em que o repositório for
-    // fechado: `raw.githubusercontent.com` não responde a requisição anônima
-    // para repo privado (dá 404, não 403 — não revela nem que o repo existe),
-    // e o import diário (cron 12h/20h) passa a FALHAR EM SILÊNCIO — só aparece
-    // no log do próprio cron. Foi o que aconteceu em 13/08/2026: dois dias sem
-    // atualização até alguém notar. Se for fechar o repo, preencha ANTES.
+    // Token do GitHub para o cron ler `fonte_json`. DEIXE VAZIO — desde
+    // 14/08/2026 o `fonte_json` acima aponta para o repositório de DADOS, que
+    // é público por desenho, então não há o que autenticar.
+    //
+    // Só volta a ser necessário se alguém apontar o `fonte_json` de volta para
+    // um repositório privado. Nesse caso, preencha ANTES de fechar o repo:
+    // `raw.githubusercontent.com` não responde a requisição anônima para repo
+    // privado (dá 404, não 403 — não revela nem que o repo existe), e o import
+    // diário passa a FALHAR EM SILÊNCIO. Foi o que aconteceu em 13/08/2026:
+    // dois dias sem atualização até alguém estranhar.
     //
     // Gere um "fine-grained personal access token" (github.com → Settings →
     // Developer settings → Fine-grained tokens):

@@ -53,10 +53,20 @@ export const API_BASE: string =
   (window as any).__API_BASE__ ||
   '/api';
 
-// Origem do JSON no modo estático (fallback)
+// Origem do JSON no modo estático (fallback).
+//
+// Aponta para o repositório de DADOS, separado do código, e o motivo é
+// estrutural: esta busca acontece no NAVEGADOR DO VISITANTE. Não existe token
+// que se possa usar aqui — qualquer chave embutida no bundle fica visível para
+// qualquer um no DevTools. Ou seja, esta URL PRECISA ser pública, sempre.
+//
+// Enquanto o índice morava junto com o código, isso amarrava as duas coisas: em
+// 13/08/2026 o repositório do código foi fechado e este fallback morreu junto,
+// em silêncio. Com o índice num repositório só de dados, o código pode ser
+// fechado sem derrubar a contingência.
 export const JSON_FALLBACK: string =
   'https://raw.githubusercontent.com/estudio-max/' +
-  'Portal-de-Normas-e-atos-da-UFF/main/public/portal-data.json';
+  'Portal-de-Normas-e-atos-da-UFF-dados/main/portal-data.json';
 
 // Primeiro ano da SÉRIE ANUAL. Antes de 2001 o acervo só tem backlog legítimo
 // (o boletim de 2001, digitalizado, publica atos de 1998-2000 de verdade) e
