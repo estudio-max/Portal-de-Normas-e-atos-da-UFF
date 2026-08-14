@@ -435,7 +435,16 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-05.1'; }
+function api_versao(): string { return '2026-08-13.1'; }
+
+// Quantas horas sem importar já significam CADEIA QUEBRADA (não "atraso").
+// O cron do cPanel roda 12h e 20h, então o intervalo normal entre execuções
+// nunca passa de ~16h; 36h só acontece se pelo menos duas execuções seguidas
+// falharem. Margem de sobra para lentidão do GitHub Actions ou dia sem
+// boletim novo — `extracao.executada_em` marca que o importador RODOU, não
+// que veio ato novo, então dia parado da UFF não dispara alarme falso.
+// FUNÇÃO e não `const` pela mesma razão documentada em cache_ttl().
+function extracao_limite_horas(): int { return 36; }
 
 // GET /api/health — leve de propósito (2 queries baratas). Uso: smoke test
 // pós-deploy (tools/smoke_test.sh), diagnóstico rápido e, na migração p/ os
@@ -452,6 +461,33 @@ function health(PDO $pdo): void {
     $mysql = '';
     try { $mysql = (string)$pdo->query('SELECT VERSION()')->fetchColumn(); } catch (Throwable $e) {}
 
+    // ALARME DE CADEIA PARADA.
+    //
+    // Existe por causa de 13/08/2026: o repositório do GitHub ficou privado,
+    // `raw.githubusercontent.com` passou a responder 404 à busca anônima do
+    // `fonte_json`, e o import morreu EM SILÊNCIO por dois dias. A mensagem de
+    // erro ia só para o log do cron, que ninguém lê. O defeito só apareceu
+    // porque o mantenedor estranhou o site parado. Este campo troca "alguém
+    // estranhar" por "o portal avisa".
+    //
+    // Serve para QUALQUER causa, não só a daquele dia: cron desligado no
+    // cPanel, banco cheio, token expirado, GitHub fora do ar. O sinal é
+    // sempre o mesmo — faz tempo demais que o importador não roda.
+    //
+    // `ok` NÃO vira false aqui, de propósito: ele significa "a API responde",
+    // e é isso que o smoke test pós-deploy e o teste de "API de pé" antes de
+    // virar o DNS conferem. Dado velho não é API fora do ar; misturar as duas
+    // coisas faria o deploy falhar por um problema que não é do deploy.
+    $horas = null;
+    if (!empty($ext['ultima'])) {
+        $t = strtotime((string)$ext['ultima']);
+        if ($t !== false) $horas = (int)floor((time() - $t) / 3600);
+    }
+    // Sem NENHUMA extração registrada também conta como atrasada: banco recém
+    //-criado que nunca importou é exatamente o estado que não pode passar
+    // despercebido.
+    $atrasada = ($horas === null) || ($horas > extracao_limite_horas());
+
     responder_json([
         'ok'          => true,
         'api_versao'  => api_versao(),
@@ -461,6 +497,9 @@ function health(PDO $pdo): void {
         'ultimo_ato'  => $ato['ultimo_ato'],
         'banco_atualizado_em' => $ato['atualizado'],
         'ultima_extracao'     => $ext['ultima'],
+        'horas_desde_extracao' => $horas,
+        'extracao_atrasada'    => $atrasada,
+        'extracao_limite_horas' => extracao_limite_horas(),
     ]);
 }
 
@@ -518,12 +557,28 @@ function stats(PDO $pdo): void {
             ];
         }
     }
+    // Espelha o alarme da /api/health aqui porque é ESTA rota que o front já
+    // chama ao abrir (dataSource.tentaApi()) — assim o aviso na tela não custa
+    // uma requisição a mais por visita. A /health continua sendo a fonte de
+    // diagnóstico (não é cacheada e traz o número de horas); aqui vai só o
+    // booleano, que é tudo que a tela precisa.
+    //
+    // O TTL de 10 min do cache não atrapalha: o alarme dispara em 36 HORAS, e
+    // uma resposta cacheada some sozinha muito antes disso.
+    $extAtrasada = true;
+    $ultExt = $pdo->query("SELECT MAX(executada_em) AS ultima FROM extracao")->fetch();
+    if (!empty($ultExt['ultima'])) {
+        $t = strtotime((string)$ultExt['ultima']);
+        if ($t !== false) $extAtrasada = ((time() - $t) / 3600) > extracao_limite_horas();
+    }
+
     responder_json([
         'total' => (int)$row['total'], 'vigentes' => (int)$row['vigentes'],
         'revogados' => (int)$row['revogados'], 'alterados' => (int)$row['alterados'],
         'orgaos' => (int)$row['orgaos'], 'comSei' => (int)$row['com_sei'],
         'boletins' => $boletins, 'porAno' => $porAno,
         'ultimaAtualizacao' => $ultData ?: null,
+        'extracaoAtrasada' => $extAtrasada,
         'ultimoBoletim' => $ult ? [
             'arquivo' => $ult['arquivo'],
             'numero'  => $ult['numero'],

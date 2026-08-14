@@ -33,6 +33,10 @@ export interface Stats {
   orgaos: number; comSei: number; boletins: number;
   porAno: Record<number, number>;
   ultimaAtualizacao?: string | null;                       // yyyy-mm-dd
+  // Alarme de cadeia parada: o importador não roda há mais horas que o limite
+  // da API (36h). Vem de /api/stats para não custar uma requisição a mais;
+  // /api/health traz a versão detalhada, com o número de horas.
+  extracaoAtrasada?: boolean;
   ultimoBoletim?: {
     arquivo: string; numero: string; ano: number; link: string | null;
     atos: DashboardAct[];
@@ -254,6 +258,12 @@ export async function getStats(): Promise<Stats> {
     alterados: c.Alterado || 0, orgaos: orgs.size, comSei: sei, boletins: bols.size,
     porAno,
     ultimaAtualizacao: ultData || null,
+    // No modo estático NÃO dá para saber: o portal-data.json é uma lista pura,
+    // sem carimbo de quando foi gerado (mesma limitação anotada lá em cima). E
+    // aqui a API já está fora do ar — o portal está em contingência, um estado
+    // que o usuário precisa entender por si só. Empilhar um segundo alarme por
+    // cima, sem dado que o sustente, seria alarme adivinhado.
+    extracaoAtrasada: false,
     ultimoBoletim: ultArq ? {
       arquivo: ultArq, numero: m ? m[1] : ultArq, ano: m ? 2000 + parseInt(m[2], 10) : 0,
       link: ultLink, atos: atosUltimoBoletim,

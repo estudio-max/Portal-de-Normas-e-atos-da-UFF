@@ -160,8 +160,21 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
       </div>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[#E2E8F0] pt-2 text-xs text-[#4A5568]">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-[#38A169]" />
+        {/* A bolinha vira âmbar quando a atualização automática para, mas a cor
+            NUNCA é o único sinal: o aviso escrito ao lado é que carrega o
+            recado (daltonismo, tela ruim, modo fotofobia). */}
+        {/* Hex literal, NÃO `bg-amber-500`: as regras da fotofobia casam por
+            SUBSTRING (`[class*="bg-amber-50"]`), e "bg-amber-500" contém
+            "bg-amber-50" — a bolinha herdava o fundo marrom de aviso (#372f1c)
+            e sumia no escuro. Medido, não deduzido. O verde ao lado usa hex
+            pelo mesmo motivo. */}
+        <span className={`h-2 w-2 shrink-0 rounded-full ${portalStats?.extracaoAtrasada ? 'bg-[#D97706]' : 'bg-[#38A169]'}`} />
         {portalStats?.ultimaAtualizacao ? <>Atualização mais recente em <strong>{portalStats.ultimaAtualizacao.slice(0, 10).split('-').reverse().join('/')}</strong></> : 'Atualização mais recente indisponível'}
+        {portalStats?.extracaoAtrasada && (
+          <span role="status" className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700">
+            ⚠ Atualização automática parada — pode faltar ato recente
+          </span>
+        )}
         {portalStats?.ultimoBoletim && <><span>·</span>{portalStats.ultimoBoletim.link ? <a className="font-semibold underline" href={portalStats.ultimoBoletim.link} target="_blank" rel="noreferrer">BS nº {portalStats.ultimoBoletim.numero}/{portalStats.ultimoBoletim.ano} (PDF)</a> : <strong>BS nº {portalStats.ultimoBoletim.numero}/{portalStats.ultimoBoletim.ano}</strong>}</>}
       </div>
 

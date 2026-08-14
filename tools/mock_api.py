@@ -347,6 +347,12 @@ def stats_payload():
             # O JSON não guarda isso, então aqui vale a assinatura mais recente
             # do último boletim, que é a melhor aproximação disponível.
             "ultimaAtualizacao": (do_ultimo[0].get("dataAssinatura") or None) if do_ultimo else None,
+            # Alarme de cadeia parada (API 2026-08-13.1). No banco vem de
+            # MAX(extracao.executada_em); aqui nao existe tabela de extracao,
+            # entao o padrao e False. MOCK_EXTRACAO_ATRASADA=1 forca True --
+            # e a unica forma de VER o aviso na tela em desenvolvimento, sem
+            # ter de sabotar o banco de producao para testar.
+            "extracaoAtrasada": os.environ.get("MOCK_EXTRACAO_ATRASADA") == "1",
             "ultimoBoletim": ultimo_boletim}
 
 

@@ -106,3 +106,63 @@ jobs:
             echo "dossiê da política até alguém regerar o seed. Ver a pendência"
             echo "no CLAUDE.md."
           fi
+
+      # ---------------------------------------------------------------------
+      # Espelha a base num repositório PÚBLICO separado, que só tem os dados.
+      #
+      # POR QUÊ: duas peças do portal precisam ler este índice de um endereço
+      # SEM SENHA — o importador do servidor (cron 12h/20h) e o modo de
+      # contingência, que roda no navegador do visitante. Enquanto o índice
+      # morava só aqui, fechar este repositório derrubava as duas de uma vez,
+      # em silêncio (foi o que aconteceu em 13/08/2026). Com o espelho, este
+      # repositório pode ser fechado sem quebrar nada.
+      #
+      # O modo de contingência é o caso que NÃO tem outra saída: ele busca do
+      # navegador do visitante, então não existe token que dê para usar ali
+      # sem expor a chave a qualquer um no DevTools.
+      #
+      # CHAVE: deploy key com escrita SOMENTE no repositório de dados — não é
+      # token de conta. Se vazar, o estrago se limita a um repositório que só
+      # contém dado já público.
+      #
+      # Sem a chave configurada o passo SAI LIMPO em vez de falhar — assim o
+      # workflow segue verde e a publicação daqui (que é o que alimenta o
+      # portal hoje) nunca é bloqueada por causa do espelho.
+      #
+      # A checagem é feita no SHELL, e não num `if:` de step: a presença do
+      # contexto `secrets` em condição de step é inconsistente entre versões
+      # do Actions, e um `if` que silenciosamente vira sempre-falso pularia o
+      # espelho para sempre sem ninguém notar — exatamente a classe de defeito
+      # que este trabalho todo está tentando eliminar.
+      - name: Espelhar dados no repositório público
+        env:
+          CHAVE: ${{ secrets.DADOS_DEPLOY_KEY }}
+          DESTINO: git@github.com:estudio-max/Portal-de-Normas-e-atos-da-UFF-dados.git
+        run: |
+          if [ -z "$CHAVE" ]; then
+            echo "::notice::DADOS_DEPLOY_KEY não configurada — espelho público PULADO."
+            echo "O portal segue lendo deste repositório. Ver CLAUDE.md."
+            exit 0
+          fi
+          if [ ! -f public/portal-data.json ]; then
+            echo "::warning::public/portal-data.json não existe — nada a espelhar."
+            exit 0
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CHAVE" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git clone --depth 1 "$DESTINO" /tmp/dados
+          cp public/portal-data.json /tmp/dados/portal-data.json
+          cp public/atos.csv /tmp/dados/atos.csv 2>/dev/null || true
+          cd /tmp/dados
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "Espelho já estava em dia — nada a publicar."
+          else
+            git commit -m "Atualiza base do portal (automático) — $(date +%F)"
+            git push
+            echo "Espelho público atualizado."
+          fi
