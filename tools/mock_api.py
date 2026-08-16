@@ -608,11 +608,31 @@ def revalidacao_payload():
         niveis_acc[(r["via"], n)][0] += 1
         niveis_acc[(r["via"], n)][1] += 1 if r["decisao"] == "Deferido" else 0
 
+    # Tramitacao aproximada: o numero do SEI carrega o ano de abertura
+    # (23069.164413/2025-99) e a decisao tem ano. Espelha o mesmo calculo do
+    # PHP -- ver o comentario extenso na rota, incluindo por que isto NAO e o
+    # indicador de 60/180 dias que CGU/TCU pedem.
+    tram_acc = defaultdict(lambda: [0, 0])
+    for a in ATOS:
+        r = a.get("revalidacao")
+        if not isinstance(r, dict) or r.get("via") not in ("Graduação", "Pós-graduação"):
+            continue
+        m = re.search(r"/(\d{4})-", str(a.get("processoSei") or ""))
+        ano = a.get("ano")
+        if not m or not isinstance(ano, int):
+            continue
+        anos = ano - int(m.group(1))
+        if 0 <= anos <= 12:
+            tram_acc[(r["via"], anos)][0] += 1
+            tram_acc[(r["via"], anos)][1] += 1 if r["decisao"] == "Deferido" else 0
+
     return {
         # Mesmo limiar do PHP (reval_minimo_taxa): abaixo disso a tela mostra a
         # contagem e omite a taxa, para nao transformar 1 indeferimento em
         # "0% de aprovacao" e afastar quem talvez devesse pedir.
         "minimoParaTaxa": 5,
+        "tramitacao": [{"via": v, "anos": n, "total": t, "deferidos": d}
+                       for (v, n), (t, d) in sorted(tram_acc.items(), key=lambda x: x[0][1])],
         "resumo": [{"via": v, "total": t, "deferidos": d}
                    for v, (t, d) in sorted(resumo_acc.items())],
         "serie": [{"ano": a, "via": v, "total": t, "deferidos": d}

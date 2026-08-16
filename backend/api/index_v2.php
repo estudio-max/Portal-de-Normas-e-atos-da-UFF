@@ -2900,11 +2900,43 @@ function revalidacao(PDO $pdo): void {
                      'total' => (int)$x['total'], 'deferidos' => (int)$x['d']];
     }
 
+    // TRAMITAÇÃO — o eixo que CGU/TCU mais cobram, na melhor aproximação que o
+    // Boletim de Serviço permite.
+    //
+    // O que o controle pede é "% de processos concluídos em até 60 dias (rito
+    // simplificado) ou 180 (ordinário)", da Resolução CNE/CES nº 1/2022. Isso
+    // exige a data de PROTOCOLO, que o BS não publica — ele publica a decisão.
+    //
+    // O que dá para afirmar: o número do processo SEI carrega o ano de
+    // abertura (23069.164413/2025-99), e a decisão tem data. A diferença em
+    // ANOS é grosseira para um corte em dias, mas responde uma pergunta que
+    // hoje não tem resposta em lugar nenhum: quantos pedidos são decididos no
+    // mesmo ano em que entraram, e quantos atravessam um ano ou mais.
+    //
+    // Rotulado como APROXIMAÇÃO na tela, de propósito. Publicar isto como se
+    // fosse o indicador de 60/180 dias seria pior que não publicar nada.
+    $tramita = [];
+    $sqlT = "SELECT r.via,
+                    (a.ano - CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(a.processo_sei,'/',-1),'-',1) AS UNSIGNED)) AS anos,
+                    COUNT(*) AS total, SUM(r.decisao='Deferido') AS d
+               FROM ato_revalidacao r
+               JOIN ato a ON a.id = r.ato_id
+              WHERE a.processo_sei REGEXP '/[0-9]{4}-'
+                AND a.ano IS NOT NULL
+              GROUP BY r.via, anos
+             HAVING anos BETWEEN 0 AND 12
+              ORDER BY anos";
+    foreach ($pdo->query($sqlT) as $x) {
+        $tramita[] = ['via' => $x['via'], 'anos' => (int)$x['anos'],
+                      'total' => (int)$x['total'], 'deferidos' => (int)$x['d']];
+    }
+
     responder_json([
         'minimoParaTaxa' => reval_minimo_taxa(),
         'resumo'        => $resumo,
         'serie'         => $serie,
         'niveis'        => $niveis,
+        'tramitacao'    => $tramita,
         'paises'        => $agrupa('pais', 'pais'),
         'cursos'        => $agrupa('curso', 'curso'),
         'instituicoes'  => $agrupa('instituicao', 'instituicao'),
