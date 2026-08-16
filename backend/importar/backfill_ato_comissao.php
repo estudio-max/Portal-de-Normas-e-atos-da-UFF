@@ -53,14 +53,42 @@ log_("Recomeço limpo: $n linhas removidas de ato_comissao.");
 $guarda = "(a.ementa LIKE '%comiss%' OR a.ementa LIKE '%comit%'"
         . " OR a.ementa LIKE '%câmara%' OR a.ementa LIKE '%conselho%')";
 
+// Os dois prefixos do registro viram SQL aqui, e a semântica tem que bater com
+// comissoes_casa() no PHP, senão backfill e import divergem:
+//   '!frase'  -> AND a.ementa NOT LIKE '%frase%'
+//   '+frase'  -> entra num OR que dispensa a guarda (a ementa nomeia o
+//                instrumento, não o colegiado — ver o CPFJ no match)
+// Termo comum continua exigindo a guarda. O WHERE fica:
+//   ((comuns AND guarda) OR (fortes)) AND (não bate nenhuma exclusão)
 $total = 0;
 foreach (comissoes_termos() as $slug => $termos) {
-    $variantes = explode('|', $termos);
-    $ors = implode(' OR ', array_map(fn($i) => "a.ementa LIKE :t$i", array_keys($variantes)));
-    $ins = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id, comissao)
-        SELECT a.id, :slug FROM ato a WHERE ($ors) AND $guarda");
+    $comuns = $fortes = $exclui = [];
+    foreach (explode('|', $termos) as $v) {
+        $v = trim($v);
+        if ($v === '') continue;
+        if ($v[0] === '!')      $exclui[] = substr($v, 1);
+        elseif ($v[0] === '+')  $fortes[] = substr($v, 1);
+        else                    $comuns[] = $v;
+    }
     $params = [':slug' => $slug];
-    foreach ($variantes as $i => $v) $params[":t$i"] = '%' . trim($v) . '%';
+    $i = 0;
+    $blocos = [];
+    if ($comuns) {
+        $ors = [];
+        foreach ($comuns as $v) { $ors[] = "a.ementa LIKE :t$i"; $params[":t$i"] = '%' . $v . '%'; $i++; }
+        $blocos[] = '((' . implode(' OR ', $ors) . ") AND $guarda)";
+    }
+    if ($fortes) {
+        $ors = [];
+        foreach ($fortes as $v) { $ors[] = "a.ementa LIKE :t$i"; $params[":t$i"] = '%' . $v . '%'; $i++; }
+        $blocos[] = '(' . implode(' OR ', $ors) . ')';
+    }
+    if (!$blocos) { log_(sprintf('  %-14s   -- sem termo positivo, pulado', $slug)); continue; }
+    $where = '(' . implode(' OR ', $blocos) . ')';
+    foreach ($exclui as $v) { $where .= " AND a.ementa NOT LIKE :t$i"; $params[":t$i"] = '%' . $v . '%'; $i++; }
+
+    $ins = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id, comissao)
+        SELECT a.id, :slug FROM ato a WHERE $where");
     $ins->execute($params);
     $n = $ins->rowCount();
     $total += $n;
@@ -69,18 +97,31 @@ foreach (comissoes_termos() as $slug => $termos) {
 
 // 2ª passada: o ato que a comissão ASSINA (não cita na ementa). Casa o NOME do
 // ÓRGÃO EMISSOR (dimensão curada) — não a sigla, que é ambígua ("CPS"/"CEP" são
-// departamentos). Sem guarda de colegiado: o nome do órgão já é a autoridade.
+// departamentos). Sem guarda de colegiado: o nome do órgão já é a autoridade,
+// então aqui as variantes fortes ('+') e as comuns valem igual. As exclusões
+// continuam valendo — nome de órgão do HUAP não é o corpo central.
 // INSERT IGNORE não duplica o que a 1ª passada já ligou.
 log_('');
 log_('— por órgão emissor (nome canônico) —');
 $totalOrg = 0;
 foreach (comissoes_termos() as $slug => $termos) {
-    $variantes = explode('|', $termos);
-    $ors = implode(' OR ', array_map(fn($i) => "o.nome LIKE :t$i", array_keys($variantes)));
-    $ins = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id, comissao)
-        SELECT a.id, :slug FROM ato a JOIN orgao o ON o.id = a.orgao_id WHERE ($ors)");
+    $positivos = $exclui = [];
+    foreach (explode('|', $termos) as $v) {
+        $v = trim($v);
+        if ($v === '') continue;
+        if ($v[0] === '!') $exclui[] = substr($v, 1);
+        else               $positivos[] = ($v[0] === '+') ? substr($v, 1) : $v;
+    }
+    if (!$positivos) continue;
     $params = [':slug' => $slug];
-    foreach ($variantes as $i => $v) $params[":t$i"] = '%' . trim($v) . '%';
+    $i = 0;
+    $ors = [];
+    foreach ($positivos as $v) { $ors[] = "o.nome LIKE :t$i"; $params[":t$i"] = '%' . $v . '%'; $i++; }
+    $where = '(' . implode(' OR ', $ors) . ')';
+    foreach ($exclui as $v) { $where .= " AND o.nome NOT LIKE :t$i"; $params[":t$i"] = '%' . $v . '%'; $i++; }
+
+    $ins = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id, comissao)
+        SELECT a.id, :slug FROM ato a JOIN orgao o ON o.id = a.orgao_id WHERE $where");
     $ins->execute($params);
     $n = $ins->rowCount();          // só conta o que a ementa NÃO tinha pego
     if ($n > 0) log_(sprintf('  %-14s +%d atos assinados', $slug, $n));

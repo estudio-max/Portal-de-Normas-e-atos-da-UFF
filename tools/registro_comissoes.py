@@ -5,6 +5,13 @@
   termos: uma ou MAIS frases distintivas separadas por '|' (o corpo mudou de
           nome ao longo dos anos -- ex.: CEP e "em pesquisa" hoje mas ja foi
           "na pesquisa"). Casado por LIKE estrito na ementa (nao FULLTEXT).
+          Dois prefixos, os dois criados para o CPFJ e validos para qualquer
+          corpo (racional completo no comissoes_match.php):
+            '!'  EXCLUSAO -- a frase veta o casamento. Recurso para o homonimo
+                 de UNIDADE que nenhum qualificador positivo separa.
+            '+'  TERMO FORTE -- dispensa a guarda de colegiado, para a frase
+                 que nomeia o INSTRUMENTO que o corpo produz e nao o corpo.
+                 So com frase medida a 100% de precisao.
   obrig:  'lei'      -> obrigatoria por lei
           'controle' -> exigida por orgao de controle (CGU, TCU...)
           ''         -> permanente/central, mas nao numa das duas listas.
@@ -63,6 +70,21 @@ REGISTRO = [
     ('cppiq',     'CPPIQ', 'Comissão Permanente de Políticas para Indígenas e Quilombolas', 'Comissão', 'indígenas e quilombolas', ''),
     ('cps',       'CPS',   'Comissão Permanente de Sustentabilidade',            'Comissão', 'permanente de sustentabilidade', ''),
     ('cpt',       'CPT',   'Comissão Permanente de Telefonia',                   'Comissão', 'permanente de telefonia', ''),
+    # CPFJ: o unico corpo que se apura por dois tipos de frase, porque quase
+    # nunca se nomeia na ementa. 'permanente de flexibilizacao' pega a vida do
+    # colegiado (constituicao, retificacoes de composicao, ato que as torna sem
+    # efeito) -- o HUAP tem a sua homonima, dai o '!do hospital'. As tres frases
+    # '+' pegam o que a comissao PRODUZ: as ~54 portarias de plano de UORG, os
+    # atos normativos do rito (57.302/2016, 62.111/2018, NS 672/2019) e a
+    # 68.403/2022. A ementa desses nomeia o INSTRUMENTO e e o preambulo que
+    # registra a CPFJ, entao a guarda de colegiado derrubava todos. Sao tres por
+    # causa do OCR ("d o p l ano d e", "t r a b a l h o") e da alternancia
+    # "da jornada"/"de jornada". Medido no acervo cheio (128.426 atos): 71
+    # atos, zero falso positivo. Racional completo em comissoes_match.php.
+    # A tupla fica numa LINHA SO, por mais longa que seja: o
+    # tools/teste_schema_inteligencia.mjs le este arquivo com um regex de linha
+    # unica, e tupla quebrada some da contagem sem dar erro nenhum aqui.
+    ('cpfj',      'CPFJ',  'Comissão Permanente de Flexibilização da Jornada',   'Comissão', 'permanente de flexibilização|+plano de flexibilização da jornada|+flexibilização da jornada de trabalho|+flexibilização de jornada|!do hospital|!comissão de implantação', ''),
     ('pgd',       '',      'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', 'permanente do programa de gestão', ''),
     ('doc-sig',   '',      'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', 'documentos públicos de natureza sigilosa', ''),
     ('rsc',       'RSC',   'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', 'reconhecimento de saberes', ''),

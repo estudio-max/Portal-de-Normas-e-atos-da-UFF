@@ -86,6 +86,14 @@ jobs:
       - name: Regressão da classificação ODS
         run: php backend/importar/teste_ods_match.php
 
+      # A aba Comissões afirma que um ato é da vida de um colegiado. O erro
+      # caro é o homônimo de UNIDADE (cada unidade tem a sua biossegurança, a
+      # sua acessibilidade, e o HUAP tem a sua Comissão Permanente de
+      # Flexibilização escrita igualzinho à central). Cada caso do teste é uma
+      # ementa real do acervo, medida antes de virar regra.
+      - name: Regressão do vínculo ato↔comissão
+        run: php backend/importar/teste_comissoes_match.php
+
       # O vínculo ato<->política roda no import diário e é dossiê: ele afirma
       # que um ato construiu uma política e diz que papel cumpriu. Rótulo
       # errado aqui não é imprecisão de contagem — é atribuir a uma política

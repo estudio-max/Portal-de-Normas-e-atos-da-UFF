@@ -1998,6 +1998,7 @@ function comissoes_registro(): array {
         ['cppiq', 'CPPIQ', 'Comissão Permanente de Políticas para Indígenas e Quilombolas', 'Comissão', ''],
         ['cps', 'CPS', 'Comissão Permanente de Sustentabilidade', 'Comissão', ''],
         ['cpt', 'CPT', 'Comissão Permanente de Telefonia', 'Comissão', ''],
+        ['cpfj', 'CPFJ', 'Comissão Permanente de Flexibilização da Jornada', 'Comissão', ''],
         ['pgd', '', 'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', ''],
         ['doc-sig', '', 'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', ''],
         ['rsc', 'RSC', 'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', ''],
@@ -2054,7 +2055,7 @@ function comissoes_janela(string $j): int {
  * ("CONSULTA ELEITORAL... 2025-2027", "Comissão Eleitoral Local... 2026-2028"):
  *   1. só se lê período de ato que CONSTITUI o corpo (designa/institui/
  *      constitui + compor), não de ato que apenas o menciona;
- *   2. só se aplica a ato já ligado a um dos 26 corpos curados — comissão
+ *   2. só se aplica a ato já ligado a um dos corpos curados — comissão
  *      eleitoral não está no catálogo, então nem chega aqui.
  *
  * `fim` é 31/12 do ano final: o texto dá o ano, não o dia, e arredondar para o

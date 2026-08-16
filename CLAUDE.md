@@ -343,7 +343,7 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   `ato_processo`. O `ato.processo_sei` guarda só o primeiro número do texto; a
   tabela guarda todos (medido: a coluna única descartava 44% das menções).
   Backfill em `importar/backfill_ato_processo.php`.
-- **Comissões** (`/api/comissoes`): os 26 colegiados PERMANENTES centrais da
+- **Comissões** (`/api/comissoes`): os 27 colegiados PERMANENTES centrais da
   UFF (CPA, CPPD, CEUA, Governança…). A lista é **curada** em
   `comissoes_registro()` (index) + `comissoes_termos()`
   (`importar/comissoes_match.php`) — os dois nascem de
@@ -361,7 +361,40 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   **classificação legal** (`obrig` ∈ `lei` | `controle` | vazio): obrigatória por
   lei, exigida por órgão de controle, ou nenhuma. É curadoria do mantenedor, não
   inferência do texto — a aba mostra o selo e filtra por ele. 7 por lei, 6 por
-  controle, 13 sem.
+  controle, 14 sem.
+  **Duas marcas no `termos` mudam o casamento, e as duas nasceram do CPFJ**
+  (16/08/2026). `!frase` EXCLUI: se a frase aparecer, o ato não casa aquele
+  corpo, por mais que uma variante positiva tenha batido — é o recurso para o
+  homônimo de UNIDADE que nenhum qualificador positivo separa. `+frase`
+  DISPENSA A GUARDA de colegiado: serve à ementa que nomeia o INSTRUMENTO que o
+  corpo produz em vez do corpo, onde a guarda derrubaria tudo. As duas valem
+  para qualquer corpo, no PHP (`comissoes_casa()`) e no SQL do backfill, que
+  precisam concordar.
+  **O CPFJ é o caso que exigiu as duas, e vale como método.** A Comissão
+  Permanente de Flexibilização da Jornada quase nunca se nomeia na ementa: o
+  grosso do que ela faz são as ~54 portarias que aprovam o plano de uma UORG,
+  cuja ementa diz "Aprova o plano de flexibilização da jornada de trabalho…" e
+  só menciona a CPFJ no PREÂMBULO ("no exercício de sua competência, emitiu
+  avaliação anual da UORG flexibilizada"). E o HUAP tem a SUA Comissão
+  Permanente de Flexibilização (Portaria 68.440/2022), escrita igualzinho à
+  central — aqui, ao contrário do CBio e da Acessibilidade, **não existe
+  qualificador positivo que separe**: as retificações do corpo central terminam
+  em "…da Comissão Permanente de Flexibilização" e param aí. Medido no acervo
+  cheio (128.426 atos): o termo solto dava 60% de precisão; com `!do hospital`
+  e as três frases `+` são **71 atos e zero falso positivo**, cobrindo a cadeia
+  inteira — a constituição (62.325/2018), as retificações de composição
+  (62.902/2019 a 68.810/2025), a NS 672/2019 que fixa as competências, e a
+  68.403/2022 que suspende o prazo da avaliação anual.
+  **São TRÊS frases `+` por causa do OCR e da alternância de preposição** — o
+  Boletim escreve "d o p l ano d e flexibilização", "jornada de t r a b a l h o"
+  e alterna "da jornada"/"de jornada"; cada frase alcança o que as outras
+  perdem. Uma só teria custado 3 dos 71.
+  ⚠️ **As Portarias 57.301, 57.303, 57.529 e 57.655/2016 ficam FORA de
+  propósito.** São a história da POLÍTICA de flexibilização — o rito anterior,
+  a jornada de 30h reconhecida e revogada sob pressão do TCU —, não atos do
+  colegiado: a CPFJ só nasce em outubro de 2018. Pendurá-las no card diria que
+  uma comissão inexistente agiu. Essa narrativa pede a aba **Políticas**, que
+  tem `papel` por ato e âncora no PDI; a de Comissões tem vínculo chapado.
   **Dois sinais ligam ato↔corpo** (`comissoes_do_texto` + `comissoes_do_orgao`,
   unidos no import e no backfill): (1) a **ementa** cita o colegiado — com a
   guarda de colegiado; (2) o **órgão emissor** É o colegiado, para o ato que ele
@@ -1115,14 +1148,18 @@ resumo operacional.
   importador recicla `prazo.id` a cada import).
   **Os catálogos foram semeados em 03/08/2026** e conferidos em produção:
   `comissao` 26, `politica` 7, `politica_alias` 40, `ato_politica` 93; as demais
-  seguem vazias. Os seeds são `backend/db/seed_comissao.sql` (de
+  seguem vazias. **O CPFJ entrou depois (16/08/2026) e leva o catálogo a 27** —
+  o seed é idempotente, então reaplicá-lo basta; o `ato_comissao` dele só
+  aparece depois de rodar o `backfill_ato_comissao.php`. Os seeds são
+  `backend/db/seed_comissao.sql` (de
   `tools/registro_comissoes.py`) e `backend/db/seed_politica.sql` (de
   `tools/gerar_seed_politicas.py`) — os dois saem de gerador, e editar o `.sql`
   à mão reprova no CI.
-  O bloco 7 da verificação foi de `0/26/0` para **`26/0/0`**. O zero do meio é a
+  O bloco 7 da verificação foi de `0/26/0` para **`26/0/0`** (e passa a `27/0/0`
+  com o CPFJ). O zero do meio é a
   prova de que os slugs do catálogo são os mesmos que a `ato_comissao` usa: as
   três projeções do registro curado concordam. O terceiro zero diz que **nenhum
-  dos 26 corpos é letra morta** — todos têm ao menos um ato no acervo.
+  corpo é letra morta** — todos têm ao menos um ato no acervo.
   **Como o catálogo de políticas foi montado** (medições em
   `tools/analisar_politicas.py`, reproduzíveis): a semente são os atos com
   `ato_ods.vinculo='proposta'` — 243 linhas em 136 atos. Três achados que valem
