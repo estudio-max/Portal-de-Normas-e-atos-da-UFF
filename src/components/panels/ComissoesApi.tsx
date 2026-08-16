@@ -419,8 +419,10 @@ export default function ComissoesApi() {
           <Info className="mx-auto mb-3 h-7 w-7 text-[#64748B]" />
           <p className="text-[15px] font-semibold text-[#1A202C]">Nenhum colegiado corresponde a esta consulta.</p>
           <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-relaxed text-[#4A5568]">
-            São 26 colegiados permanentes ao todo. Tente remover um filtro, ou buscar
-            pela sigla em vez do nome.
+            {r.corpos?.length
+              ? <>São {r.corpos.length} colegiados permanentes ao todo. Tente remover um filtro, ou buscar
+                 pela sigla em vez do nome.</>
+              : <>Tente remover um filtro, ou buscar pela sigla em vez do nome.</>}
           </p>
         </div>
       )}

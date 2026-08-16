@@ -21,6 +21,18 @@ if (!function_exists('comissoes_termos')) {
         // Valor pode ter VÁRIAS frases separadas por '|' (o corpo mudou de nome
         // ao longo dos anos: o CEP é "em pesquisa" hoje mas já foi "na
         // pesquisa"; a Comissão de Ética aparece como "da UFF" e "Pública").
+        //
+        // Dois prefixos, os dois criados para o CPFJ (ver o comentário lá) e
+        // válidos para qualquer corpo:
+        //   '!'  EXCLUSÃO — se a frase aparecer, o ato não casa aquele corpo,
+        //        por mais que uma variante positiva tenha batido. É o recurso
+        //        para o homônimo de UNIDADE que nenhum qualificador positivo
+        //        separa.
+        //   '+'  TERMO FORTE — dispensa a guarda de colegiado. Serve à frase
+        //        que nomeia o INSTRUMENTO que o corpo produz, não o corpo:
+        //        aí a ementa não diz "comissão" nenhuma e a guarda derrubaria
+        //        tudo. Só se usa com frase medida a 100% de precisão — ela
+        //        entra SEM a rede de segurança que a guarda dá às outras.
         static $t = [
             'cpa'           => 'própria de avaliação',
             'cppd'          => 'permanente de pessoal docente',
@@ -51,6 +63,49 @@ if (!function_exists('comissoes_termos')) {
             'cppiq'         => 'indígenas e quilombolas',
             'cps'           => 'permanente de sustentabilidade',
             'cpt'           => 'permanente de telefonia',
+            // CPFJ — o único corpo do registro que se apura por DOIS tipos de
+            // frase, e o motivo é que ele quase nunca se nomeia na ementa.
+            //
+            // (1) 'permanente de flexibilização' pega a vida do colegiado: a
+            //     constituição (62.325/2018), as retificações de composição
+            //     (62.902 e 62.927/2019, 64.061/2019, 66.247 e 66.765/2020,
+            //     68.471/2022, 68.514/2023, 68.810/2025) e o ato que as torna
+            //     sem efeito (63.682/2019). O HUAP tem a SUA Comissão
+            //     Permanente de Flexibilização (Portaria 68.440/2022) e o
+            //     acervo escreve as duas sem qualificador — aqui, ao
+            //     contrário do CBio e da Acessibilidade, NÃO existe
+            //     qualificador positivo que sirva: as retificações do corpo
+            //     central terminam em "…da Comissão Permanente de
+            //     Flexibilização" e param aí. Daí '!do hospital'.
+            // (2) As três frases '+' pegam o que a comissão PRODUZ: as ~54
+            //     portarias que aprovam ou mantêm o plano de uma UORG, os
+            //     atos normativos do rito (Portaria 57.302/2016, Portaria
+            //     62.111/2018 e a NS 672/2019, que fixa as competências da
+            //     CPFJ nos arts. 10, 11 e 14) e a 68.403/2022, que suspende o
+            //     prazo da avaliação anual do inciso V do art. 10. A ementa
+            //     desses atos nomeia o INSTRUMENTO, e é o preâmbulo que
+            //     registra a CPFJ ("no exercício de sua competência, emitiu
+            //     avaliação anual da UORG flexibilizada") — a guarda de
+            //     colegiado derrubava todos, daí o '+'.
+            //     As três são complementares por causa do OCR, que espaça
+            //     palavra no meio ("d o p l ano d e flexibilização",
+            //     "jornada de t r a b a l h o"), e da alternância
+            //     "da jornada"/"de jornada": cada uma alcança o que as outras
+            //     perdem.
+            // Medido no acervo cheio (128.426 atos do dump v2): 71 atos, ZERO
+            // falso positivo na conferência à mão. As duas exclusões são
+            // corpos de UNIDADE do mesmo tema — o do HUAP e a "Comissão de
+            // Implantação" do CMV (DTS 16/2016).
+            //
+            // FORA daqui de propósito: as Portarias 57.301, 57.303, 57.529 e
+            // 57.655/2016. São a história da POLÍTICA de flexibilização, não
+            // atos do colegiado — a CPFJ só nasce em outubro de 2018, e
+            // pendurá-las neste card diria que uma comissão inexistente agiu.
+            'cpfj'          => 'permanente de flexibilização'
+                             . '|+plano de flexibilização da jornada'
+                             . '|+flexibilização da jornada de trabalho'
+                             . '|+flexibilização de jornada'
+                             . '|!do hospital|!comissão de implantação',
             'pgd'           => 'permanente do programa de gestão',
             'doc-sig'       => 'documentos públicos de natureza sigilosa',
             'rsc'           => 'reconhecimento de saberes',
@@ -70,6 +125,36 @@ if (!function_exists('comissoes_fold')) {
     }
 }
 
+if (!function_exists('comissoes_casa')) {
+    /** O texto (já dobrado) casa o termo de um corpo?
+     *
+     * Uma variante positiva basta; qualquer variante de EXCLUSÃO ('!' na
+     * frente) veta, mesmo que a positiva já tenha batido. O veto sai da função
+     * na hora, então a ordem das variantes no registro não muda o resultado.
+     *
+     * $comGuarda diz se o texto passou na guarda de colegiado. Quando NÃO
+     * passou, só as variantes fortes ('+') contam — as demais dependem da
+     * guarda para não trazer o documento homônimo do colegiado. As exclusões
+     * valem nos dois casos.
+     */
+    function comissoes_casa(string $dobrado, string $termos, bool $comGuarda = true): bool {
+        $positivo = false;
+        foreach (explode('|', $termos) as $termo) {
+            $termo = trim($termo);
+            if ($termo === '') continue;
+            $marca = $termo[0];
+            $frase = ($marca === '!' || $marca === '+') ? substr($termo, 1) : $termo;
+            if ($marca === '!') {
+                if (mb_strpos($dobrado, comissoes_fold($frase)) !== false) return false;
+                continue;
+            }
+            if (!$comGuarda && $marca !== '+') continue;
+            if (mb_strpos($dobrado, comissoes_fold($frase)) !== false) $positivo = true;
+        }
+        return $positivo;
+    }
+}
+
 if (!function_exists('comissoes_do_texto')) {
     /** Slugs dos colegiados mencionados NA EMENTA.
      *
@@ -80,15 +165,18 @@ if (!function_exists('comissoes_do_texto')) {
      * (comissão/comitê/câmara/conselho), senão "Política de Segurança da
      * Informação" (documento, não o Comitê) entraria. Com a guarda, CSI cai
      * para os 3 atos que são mesmo do comitê.
+     *
+     * A guarda deixou de ser eliminatória para o texto inteiro: ementa que não
+     * a passa ainda é testada contra as variantes FORTES ('+'), que existem
+     * justamente para o corpo cuja ementa nomeia o instrumento e não o
+     * colegiado — ver o CPFJ em comissoes_termos().
      */
     function comissoes_do_texto(string $ementa): array {
         $e = comissoes_fold($ementa);
-        if (!preg_match('/comiss|comit|c[aâ]mara|conselho/', $e)) return [];
+        $comGuarda = (bool)preg_match('/comiss|comit|c[aâ]mara|conselho/', $e);
         $out = [];
         foreach (comissoes_termos() as $slug => $termos) {
-            foreach (explode('|', $termos) as $termo) {    // qualquer variante casa
-                if (mb_strpos($e, comissoes_fold($termo)) !== false) { $out[] = $slug; break; }
-            }
+            if (comissoes_casa($e, $termos, $comGuarda)) $out[] = $slug;
         }
         return $out;
     }
@@ -109,15 +197,17 @@ if (!function_exists('comissoes_do_orgao')) {
      * sigla. "CPS"/"CEP"/"CPT" são siglas de DEPARTAMENTO cujos atos (designar
      * professor, alocar vaga) casariam pela sigla, mas o NOME do órgão deles não
      * casa termo de comissão nenhum — medido em 925 órgãos: só o do CGIRC casa.
+     *
+     * Como aqui não há guarda, todas as variantes positivas valem (o `true`);
+     * as de exclusão continuam vetando — nome de órgão do HUAP não pode virar
+     * ato do corpo central.
      */
     function comissoes_do_orgao(string $orgaoNome): array {
         $nome = comissoes_fold($orgaoNome);
         if ($nome === '') return [];
         $out = [];
         foreach (comissoes_termos() as $slug => $termos) {
-            foreach (explode('|', $termos) as $termo) {
-                if (mb_strpos($nome, comissoes_fold($termo)) !== false) { $out[] = $slug; break; }
-            }
+            if (comissoes_casa($nome, $termos, true)) $out[] = $slug;
         }
         return $out;
     }
