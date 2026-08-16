@@ -251,6 +251,10 @@ def converter(dados, urls=None):
             "funcoes": a.get("funcoes", []),
             "aposentadoria": a.get("aposentadoria"),  # {tipo,baseLegal} | None — p/ Insights
             "deslocamento": a.get("deslocamento"),  # {tipo,direcao,motivo,setor} | None — p/ Insights
+            # {via,decisao,nivel,curso,instituicao,pais} | None — p/ a aba
+            # Revalidação. NÃO carrega o nome de quem pediu, por desenho: ver o
+            # cabeçalho de extrai_revalidacao() e de backend/db/ato_revalidacao.sql.
+            "revalidacao": a.get("revalidacao"),
             "textoBusca": mascarar_cpfs(a.get("corpo_busca", "")),  # corpo p/ busca por nome/SIAPE
             "conteudoResumido": ementa_disp if ementa_disp[:1] != "(" else "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo

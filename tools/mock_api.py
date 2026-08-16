@@ -562,6 +562,69 @@ def jornada_payload():
     }
 
 
+def revalidacao_payload():
+    """Espelha /revalidacao do index_v2.php: SO AGREGADOS, nenhuma linha
+    identifica quem pediu -- no banco a coluna de pessoa nem existe.
+
+    Le o campo `revalidacao` de cada ato do portal-data.json, que so passa a
+    existir depois de o extrator reprocessar os boletins. Ate la devolve listas
+    vazias, e a aba mostra o estado vazio -- que e o comportamento certo, e nao
+    tela quebrada.
+    """
+    from collections import defaultdict
+    itens = [a["revalidacao"] for a in ATOS
+             if isinstance(a.get("revalidacao"), dict)
+             and a["revalidacao"].get("via") in ("Graduação", "Pós-graduação")
+             and a["revalidacao"].get("decisao") in ("Deferido", "Indeferido")]
+    anos = {id(a.get("revalidacao")): a.get("ano") for a in ATOS
+            if isinstance(a.get("revalidacao"), dict)}
+
+    def agrupa(campo, alias):
+        acc = defaultdict(lambda: [0, 0])
+        for r in itens:
+            chave = (r.get(campo) or "").strip() or "(não informado)"
+            acc[(r["via"], chave)][0] += 1
+            acc[(r["via"], chave)][1] += 1 if r["decisao"] == "Deferido" else 0
+        saida = [{"via": v, alias: k, "total": t, "deferidos": d}
+                 for (v, k), (t, d) in acc.items()]
+        saida.sort(key=lambda x: (-x["total"], x[alias]))
+        return saida[:400]
+
+    resumo_acc = defaultdict(lambda: [0, 0])
+    for r in itens:
+        resumo_acc[r["via"]][0] += 1
+        resumo_acc[r["via"]][1] += 1 if r["decisao"] == "Deferido" else 0
+
+    serie_acc = defaultdict(lambda: [0, 0])
+    for r in itens:
+        ano = anos.get(id(r))
+        if isinstance(ano, int) and 2001 <= ano <= datetime.date.today().year:
+            serie_acc[(ano, r["via"])][0] += 1
+            serie_acc[(ano, r["via"])][1] += 1 if r["decisao"] == "Deferido" else 0
+
+    niveis_acc = defaultdict(lambda: [0, 0])
+    for r in itens:
+        n = (r.get("nivel") or "").strip() or "(não informado)"
+        niveis_acc[(r["via"], n)][0] += 1
+        niveis_acc[(r["via"], n)][1] += 1 if r["decisao"] == "Deferido" else 0
+
+    return {
+        # Mesmo limiar do PHP (reval_minimo_taxa): abaixo disso a tela mostra a
+        # contagem e omite a taxa, para nao transformar 1 indeferimento em
+        # "0% de aprovacao" e afastar quem talvez devesse pedir.
+        "minimoParaTaxa": 5,
+        "resumo": [{"via": v, "total": t, "deferidos": d}
+                   for v, (t, d) in sorted(resumo_acc.items())],
+        "serie": [{"ano": a, "via": v, "total": t, "deferidos": d}
+                  for (a, v), (t, d) in sorted(serie_acc.items())],
+        "niveis": [{"via": v, "nivel": n, "total": t, "deferidos": d}
+                   for (v, n), (t, d) in sorted(niveis_acc.items(), key=lambda x: -x[1][0])],
+        "paises": agrupa("pais", "pais"),
+        "cursos": agrupa("curso", "curso"),
+        "instituicoes": agrupa("instituicao", "instituicao"),
+    }
+
+
 def cooperacao_payload():
     """Espelha a forma da rota /cooperacao: categoria, instituicao, pais e
     lat/lon ja resolvidos no servidor (o front so filtra e desenha)."""
@@ -1497,6 +1560,8 @@ class H(BaseHTTPRequestHandler):
             self._send(jornada_payload())
         elif recurso == "cooperacao":
             self._send(cooperacao_payload())
+        elif recurso == "revalidacao":
+            self._send(revalidacao_payload())
         elif recurso == "comissoes":
             self._send(comissoes_payload(q.get("corpo", [""])[0],
                                          q.get("janela", [""])[0]))
