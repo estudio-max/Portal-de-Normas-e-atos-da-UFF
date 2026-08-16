@@ -925,6 +925,7 @@ def parse_pdf(caminho):
             "funcoes": extrai_funcoes(trecho, data_ato),
             "aposentadoria": extrai_aposentadoria(trecho),
             "deslocamento": extrai_deslocamento(trecho),
+            "revalidacao": extrai_revalidacao(trecho),
             "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
@@ -1772,6 +1773,121 @@ def extrai_aposentadoria(trecho):
         if romano == "i":
             return {"tipo": "Invalidez", "baseLegal": "art. 40, §1º, I, CF"}
     return {"tipo": "Indefinida", "baseLegal": ""}
+
+
+# ---------------------------------------------------------------------------
+# REVALIDAÇÃO / RECONHECIMENTO DE DIPLOMA OBTIDO NO EXTERIOR
+#
+# NÃO EXTRAI O NOME DA PESSOA, e isso é decisão de desenho, não esquecimento.
+# Decidido pelo mantenedor em 16/08/2026: o painel é AGREGADO — quantos pedidos
+# por país, curso e instituição, e quantos foram deferidos. Serve quem está
+# pensando em pedir revalidação na UFF, não expõe quem pediu. São pessoas
+# PRIVADAS, não servidores; um indeferimento enterrado num PDF de 177 páginas é
+# uma coisa, uma lista navegável de negados é outra. Como o nome nunca entra na
+# estrutura, não há como vazar por descuido de quem consumir isto depois. O ato
+# individual segue acessível pela busca normal, como qualquer outro.
+#
+# São DUAS famílias, com processos e redações diferentes — medido em produção,
+# 18 boletins:
+#
+#  GRADUAÇÃO (371 resoluções CEPEx, "Revalidação de diploma"):
+#    "Deferir a solicitação de Revalidação do Diploma, nível Graduação de
+#     Ingeniero Agrícola, obtido por FULANO, junto a Universidad de los Andes,
+#     Venezuela, nos termos estabelecidos na Resolução 3.790/2024"
+#    -> 47 de 48 dispositivos casaram; 46 com país (96%).
+#
+#  PÓS-GRADUAÇÃO (180 resoluções, "Reconhecimento do Título", Carolina Bori):
+#    "Indeferir a solicitação de Reconhecimento do Título de Doktor der
+#     Philosophie (Dr. phil.), obtido por FULANO, na Universität zu Köln
+#     (Colônia, Alemanha), como equivalente ao de Doutorado em Filosofia"
+#    -> 21 de 23 casaram (91%).
+#
+# As diferenças que obrigam a dois padrões: a pós usa "na" e não "junto a", e
+# põe o país ENTRE PARÊNTESES junto da cidade. Em troca ela declara a
+# equivalência brasileira, de onde sai o nível (Mestrado/Doutorado) — na
+# graduação o nível vem escrito antes do curso.
+_REVAL_GRAD_RE = re.compile(
+    r"(?P<decisao>Deferir|Indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+"
+    r"Revalida[çc][ãa]o\s+do\s+Diploma,?\s*n[íi]vel\s+"
+    r"(?P<nivel>Gradua[çc][ãa]o|Mestrado|Doutorado)\s*(?:de\s+|em\s+)?"
+    r"(?P<curso>.+?),\s*obtid[oa]\s+por\s+.+?,\s*"
+    r"junto\s+[aà]o?\s*(?P<origem>.+?)"
+    r"(?:,\s*nos\s+termos|\.\s|$)", re.I | re.S)
+
+_REVAL_POS_RE = re.compile(
+    r"(?P<decisao>Deferir|Indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+"
+    r"Reconhecimento\s+do\s+T[íi]tulo\s+de\s+(?P<curso>.+?),\s*"
+    r"obtid[oa]\s+por\s+.+?,\s*"
+    r"n[ao]s?\s+(?P<inst>.+?)\s*\((?P<local>[^)]{3,60})\)\s*,?\s*"
+    r"(?:como\s+equivalente\s+ao\s+de\s+(?P<equiv>.+?))?[,.]", re.I | re.S)
+
+# Oração relativa: "...a Resolução X, QUE deferiu a solicitação..." descreve o
+# ato CITADO, não o dispositivo deste. Mesma armadilha já paga em aposentadoria
+# (ver _QUE_ANTES_RE), onde retificação virava concessão nova.
+_REVAL_QUE_RE = re.compile(r"\bque\s*$", re.I)
+
+# O boletim escreve o mesmo país de várias formas, e uma delas é erro de
+# digitação DA FONTE ("Aústria", visto em 2026). Nomes canônicos iguais aos de
+# coop_paises() no index_v2.php, para que o mapa reaproveite as coordenadas em
+# vez de manter duas listas que divergem com o tempo.
+_REVAL_PAIS_CANON = {
+    "eua": "Estados Unidos",
+    "estados unidos da america": "Estados Unidos",
+    "estados unidos de america": "Estados Unidos",
+    "reino unido da gra bretanha": "Reino Unido",
+    "reino unido da gra-bretanha": "Reino Unido",
+    "inglaterra": "Reino Unido",
+    "austria": "Áustria",          # cobre a grafia certa E o "Aústria" da fonte
+    "holanda": "Países Baixos",
+}
+
+
+def _reval_pais(bruto):
+    """Canoniza o nome do país; devolve '' quando não dá para afirmar."""
+    p = limpar(bruto or "").strip(" .,;")
+    if not p or len(p) > 40:
+        return ""
+    # _fold() = minúsculas sem acento. É o que faz "Aústria" (erro da fonte) e
+    # "Áustria" caírem na MESMA chave — sem isso a canonização não pegaria o
+    # caso que a motivou.
+    return _REVAL_PAIS_CANON.get(_fold(p).strip(), p)
+
+
+def extrai_revalidacao(trecho):
+    """{'via','decisao','nivel','curso','instituicao','pais'} ou None.
+
+    `via` separa os dois processos ('Graduação' / 'Pós-graduação'), que têm
+    normas, colegiados e taxas de deferimento distintas — juntá-los num número
+    só esconde justamente o que interessa a quem vai pedir.
+    """
+    texto = re.sub(r"\s+", " ", trecho or "")
+
+    for via, rx in (("Graduação", _REVAL_GRAD_RE), ("Pós-graduação", _REVAL_POS_RE)):
+        for m in rx.finditer(texto):
+            if _REVAL_QUE_RE.search(texto[max(0, m.start() - 10):m.start()]):
+                continue                      # descreve ato citado, não este
+            if via == "Graduação":
+                partes = [x.strip() for x in m.group("origem").split(",") if x.strip()]
+                pais = _reval_pais(partes[-1]) if len(partes) >= 2 else ""
+                inst = ", ".join(partes[:-1]) if len(partes) >= 2 else m.group("origem")
+                nivel = "Graduação" if m.group("nivel").lower().startswith("gradua") \
+                    else m.group("nivel").title()
+            else:
+                local = [x.strip() for x in m.group("local").split(",") if x.strip()]
+                pais = _reval_pais(local[-1]) if local else ""
+                inst = m.group("inst")
+                equiv = m.group("equiv") or ""
+                nivel = ("Doutorado" if re.search(r"doutor", equiv, re.I)
+                         else "Mestrado" if re.search(r"mestr", equiv, re.I) else "")
+            return {
+                "via": via,
+                "decisao": "Deferido" if m.group("decisao").lower().startswith("defer") else "Indeferido",
+                "nivel": nivel,
+                "curso": limpar(m.group("curso")).strip(" .,;")[:180],
+                "instituicao": limpar(inst).strip(" .,;")[:180],
+                "pais": pais,
+            }
+    return None
 
 
 # Deslocamento de servidor (Lei 8.112/90): REMOÇÃO = dentro da própria UFF

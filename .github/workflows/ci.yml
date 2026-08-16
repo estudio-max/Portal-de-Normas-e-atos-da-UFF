@@ -2,8 +2,12 @@ name: CI
 
 # Barreira de qualidade: todo push/PR passa por type-check, build e pelos
 # testes de regressão que rodam sem o corpus.
-# Não valida o extrator aqui — os testes dele (tools/teste_*.py) comparam
-# contra o corpus de boletins, que é local e não vive no repositório.
+#
+# O job `extrator` cobre os testes de tools/ que são UNITÁRIOS — texto de
+# entrada escrito no próprio teste, estrutura esperada na saída. Eles não
+# precisam do corpus de boletins (que é local e não vive no repositório), ao
+# contrário do que este cabeçalho afirmou até 16/08/2026: a afirmação estava
+# errada e mantinha o arquivo mais sensível do projeto sem cobertura nenhuma.
 on:
   push:
     branches: [main]
@@ -106,3 +110,37 @@ jobs:
       # 2x/dia, um snapshot gravado à toa vira 730 linhas por ano.
       - name: Regressão do snapshot de etapas
         run: php backend/importar/teste_indicador_politica.php
+
+  # O extrator é o arquivo mais sensível do projeto: um padrão que deixa de
+  # casar não quebra nada visivelmente — o dado simplesmente para de existir,
+  # e ninguém percebe até alguém procurar por ele meses depois.
+  extrator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # pymupdf porque extrair_boletim.py importa fitz no topo do módulo — os
+      # testes não abrem PDF nenhum, mas o import precisa resolver.
+      - name: Dependências
+        run: pip install --quiet pymupdf
+
+      - name: Sintaxe
+        run: python -m compileall -q tools/extrair_boletim.py
+
+      # Whitelist de cargos + verbo do dispositivo: duas listas fáceis de
+      # deixar incompletas, e a falha é silenciosa (a função some da ficha).
+      - name: Regressão dos cargos de direção
+        run: python tools/teste_funcoes_cd.py
+
+      # Revalidação de diploma: duas famílias com redações incompatíveis, nome
+      # de país que varia (e que a fonte às vezes digita errado), e um
+      # invariante de PRIVACIDADE — o nome da pessoa não pode aparecer na
+      # saída, porque o painel é agregado por decisão do mantenedor.
+      - name: Regressão da revalidação de diplomas
+        run: python tools/teste_revalidacao.py
