@@ -1712,6 +1712,9 @@ function coop_paises(): array {
         'Paraguai'=>[-23.4,-58.4], 'Peru'=>[-9.2,-75.0], 'Polônia'=>[51.9,19.1],
         'Portugal'=>[39.4,-8.2], 'Quênia'=>[-0.02,37.9], 'Reino Unido'=>[55.4,-3.4],
         'República Tcheca'=>[49.8,15.5], 'Romênia'=>[45.9,25.0], 'Rússia'=>[61.5,105.3],
+        // Centro aproximado do território que a Somalilândia administra de fato
+        // (Hargeisa fica a 9.56 / 44.07). Ver a nota em coop_inst_pais_curada().
+        'Somalilândia'=>[9.7,46.2],
         'São Tomé e Príncipe'=>[0.2,6.6], 'Senegal'=>[14.5,-14.5], 'Sérvia'=>[44.0,21.0],
         'Singapura'=>[1.35,103.8], 'Suécia'=>[60.1,18.6], 'Suíça'=>[46.8,8.2],
         'Tailândia'=>[15.9,101.0], 'Timor-Leste'=>[-8.9,125.7], 'Tunísia'=>[33.9,9.5],
@@ -1816,6 +1819,15 @@ function coop_inst_pais_curada(): array {
         'katyavala bwila' => 'Angola',
         'fundan university' => 'China',   // grafia do boletim p/ Fudan (Xangai)
         'daffodil international' => 'Bangladesh', 'limkokwing' => 'Malásia',
+        // Hargeisa fica na SOMALILÂNDIA, que se declarou independente em 1991 e
+        // não é reconhecida pela ONU nem pela maioria dos países, que a tratam
+        // como parte da Somália. O rótulo aqui é decisão do mantenedor
+        // (16/08/2026), não inferência do código: se um dia a orientação
+        // institucional for outra, é ESTA linha que muda.
+        // Fragmento curto de propósito: o boletim hoje escreve "University of
+        // Hargeisa", mas "Universidade de Hargeisa" apareceria sem país — e o
+        // topônimo sozinho já é inequívoco no corpus.
+        'hargeisa' => 'Somalilândia',
     ];
     return $m;
 }
