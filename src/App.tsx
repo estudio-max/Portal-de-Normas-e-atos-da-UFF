@@ -19,6 +19,7 @@ const ComissoesApi = lazy(() => import('./components/panels/ComissoesApi'));
 const PoliticasApi = lazy(() => import('./components/panels/PoliticasApi'));
 const MudancasApi = lazy(() => import('./components/panels/MudancasApi'));
 const CooperacaoApi = lazy(() => import('./components/panels/CooperacaoApi'));
+const RevalidacaoApi = lazy(() => import('./components/panels/RevalidacaoApi'));
 const OdsApi = lazy(() => import('./components/panels/OdsApi'));
 const HelpGuide = lazy(() => import('./components/panels/HelpGuide'));
 const PrivacidadeLGPD = lazy(() => import('./components/panels/PrivacidadeLGPD'));
@@ -54,7 +55,7 @@ const ABAS_VALIDAS = [
   '', 'atos', 'relacoes', 'insights',
   'pessoal/siape', 'pessoal/chefias', 'pessoal/mandatos', 'pessoal/prazos', 'pessoal/jornada',
   'institucional/comissoes', 'institucional/politicas',
-  'institucional/cooperacao', 'institucional/ods',
+  'institucional/cooperacao', 'institucional/revalidacao', 'institucional/ods',
   'mudancas',
   'ajuda', 'privacidade', 'sobre',
 ];
@@ -199,6 +200,7 @@ export default function App() {
     if (aba === 'institucional/politicas') return <Suspense fallback={<PanelFallback />}><PoliticasApi /></Suspense>;
     if (aba === 'mudancas') return <Suspense fallback={<PanelFallback />}><MudancasApi /></Suspense>;
     if (aba === 'institucional/cooperacao') return <Suspense fallback={<PanelFallback />}><CooperacaoApi /></Suspense>;
+    if (aba === 'institucional/revalidacao') return <Suspense fallback={<PanelFallback />}><RevalidacaoApi /></Suspense>;
     if (aba === 'institucional/ods') return <Suspense fallback={<PanelFallback />}><OdsApi /></Suspense>;
 
     // Utilitários

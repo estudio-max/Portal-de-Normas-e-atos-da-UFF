@@ -968,6 +968,37 @@ export interface CoopResp {
   paises: CoopPais[]; acordos: CoopAcordo[];
 }
 
+// ---- Revalidação de diploma obtido no exterior ----------------------------
+// Só agregados: a rota não devolve — e o banco não guarda — quem pediu.
+export interface RevalGrupo { via: string; total: number; deferidos: number }
+export interface RevalResp {
+  /** Abaixo deste nº de pedidos a tela mostra a contagem e OMITE a taxa. Vem
+   *  da API para que as duas pontas nunca discordem sobre onde fica o corte. */
+  minimoParaTaxa: number;
+  resumo: RevalGrupo[];
+  serie: (RevalGrupo & { ano: number })[];
+  niveis: (RevalGrupo & { nivel: string })[];
+  /** Anos entre a abertura do processo (ano do SEI) e a decisão. APROXIMAÇÃO —
+   *  o BS não publica a data de protocolo. Ver o comentário na rota PHP. */
+  tramitacao: (RevalGrupo & { anos: number })[];
+  paises: (RevalGrupo & { pais: string })[];
+  cursos: (RevalGrupo & { curso: string })[];
+  instituicoes: (RevalGrupo & { instituicao: string })[];
+}
+
+export async function getRevalidacao(): Promise<RevalResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/revalidacao`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    // API antiga cai no listar() e devolve outra forma — valida a shape antes
+    // de deixar a tela desenhar em cima de lixo.
+    if (!j || !Array.isArray(j.resumo) || !Array.isArray(j.paises)) return null;
+    return j as RevalResp;
+  } catch { return null; }
+}
+
 export async function getCooperacao(): Promise<CoopResp | null> {
   if (MODO !== 'api') return null;
   try {
