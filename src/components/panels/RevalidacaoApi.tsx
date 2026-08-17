@@ -178,6 +178,23 @@ export default function RevalidacaoApi() {
           Boletim de Serviço. <strong>Só números agregados</strong> — esta aba
           não identifica quem pediu.
         </p>
+        {/* Aviso de consolidação.
+            Fica no cabeçalho, e não em rodapé, porque o risco que ele cobre é
+            alguém citar esses números como total — inclusive em resposta a
+            órgão de controle — e eles mudarem depois.
+            Medido em 17/08/2026: o texto dos atos guardado no banco é cortado
+            em 7.000 caracteres, e em 623 atos o dispositivo pode estar depois
+            do corte. Os números aqui são um PISO verificado, não um total
+            comprovado. Sai quando o acervo for reprocessado a partir dos PDFs. */}
+        <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-[12px] leading-relaxed text-amber-700">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>
+            <strong>Série em consolidação.</strong> Os números representam os
+            atos já processados, e não o total histórico — o acervo mais antigo
+            ainda está sendo incorporado. Para citar em relatório ou resposta
+            oficial, trate-os como <strong>mínimo verificado</strong>.
+          </span>
+        </p>
       </header>
 
       {/* Os dois processos são distintos (normas, colegiados e prazos
