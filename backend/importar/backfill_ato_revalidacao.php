@@ -29,12 +29,13 @@
 //  Uso (CLI):
 //    php backfill_ato_revalidacao.php
 //
-//  NÃO apaga o que o import diário gravou: faz upsert por `ato_id`, e as
-//  linhas do pipeline (que vêm com maiúsculas corretas) são reescritas com o
-//  mesmo conteúdo. Rodar duas vezes é seguro.
+//  Sincroniza todas as linhas de cada ato reconhecido. As linhas existentes
+//  desse ato são substituídas na ordem documental, então rodar duas vezes é
+//  seguro.
 // ============================================================================
 $raiz = dirname(__DIR__);
 require_once $raiz . '/api/db.php';
+require_once __DIR__ . '/revalidacao_lista_legada.php';
 
 $cfg = carregar_config();
 $cli = (PHP_SAPI === 'cli');
@@ -208,60 +209,61 @@ $sql = "SELECT a.id, t.texto_original AS txt
 $st = $pdo->query($sql);
 
 $insere = $pdo->prepare(
-    "INSERT INTO ato_revalidacao (ato_id,via,decisao,nivel,curso,instituicao,pais)
-     VALUES (:id,:v,:d,:n,:c,:i,:p)
-     ON DUPLICATE KEY UPDATE via=VALUES(via), decisao=VALUES(decisao),
-       nivel=VALUES(nivel), curso=VALUES(curso),
-       instituicao=VALUES(instituicao), pais=VALUES(pais)");
+    "INSERT INTO ato_revalidacao (ato_id,ordem,via,decisao,nivel,curso,instituicao,pais)
+     VALUES (:id,:o,:v,:d,:n,:c,:i,:p)");
 
 $vistos = 0; $gravados = 0; $porVia = []; $semPais = 0; $suspeitos = [];
 while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
     $vistos++;
     $txt = preg_replace('/\s+/u', ' ', (string)$row['txt']);
 
-    $achou = null;
-    foreach ([['Graduação', $RE_GRAD], ['Pós-graduação', $RE_POS]] as [$via, $re]) {
-        if (!preg_match($re, $txt, $m, PREG_OFFSET_CAPTURE)) continue;
-        $ini = $m[0][1];
-        if (preg_match($RE_QUE, mb_substr($txt, max(0, $ini - 10), 10))) continue;
+    $achados = extrair_revalidacoes_lista_legada($txt);
+    if (!$achados) {
+        $achou = null;
+        foreach ([['Graduação', $RE_GRAD], ['Pós-graduação', $RE_POS]] as [$via, $re]) {
+            if (!preg_match($re, $txt, $m, PREG_OFFSET_CAPTURE)) continue;
+            $ini = $m[0][1];
+            if (preg_match($RE_QUE, mb_substr($txt, max(0, $ini - 10), 10))) continue;
 
-        $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
-        if ($via === 'Graduação') {
-            $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
-            $pais = count($partes) >= 2 ? pais_canon(end($partes), $PAIS_CANON) : '';
-            $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
-            $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
+            $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
+            if ($via === 'Graduação') {
+                $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
+                $pais = count($partes) >= 2 ? pais_canon(end($partes), $PAIS_CANON) : '';
+                $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
+                $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
 
-            // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".
-            // "homologar a revalidação do diploma de 'doctor of philosophy' …
-            //  como equivalente ao de doutor em letras" é pós-graduação, ainda
-            // que escrito com o vocabulário da graduação. Classificar pelo
-            // texto que casou, e não pelo que o ato AFIRMA, poria doutorados
-            // na conta da graduação e estragaria as duas taxas.
-            $eq = $g('equiv');
-            if (preg_match('/doutor/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Doutorado'; }
-            elseif (preg_match('/mestr/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Mestrado'; }
-            elseif ($nivel !== '' && preg_match('/^(Doutorado|Mestrado)$/u', $nivel)) { $via = 'Pós-graduação'; }
-            elseif ($nivel === '') { $nivel = 'Graduação'; }
-        } else {
-            $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
-            $pais = $loc ? pais_canon(end($loc), $PAIS_CANON) : '';
-            $inst = $g('inst');
-            $eq = $g('equiv');
-            $nivel = preg_match('/doutor/iu', $eq) ? 'Doutorado'
-                   : (preg_match('/mestr/iu', $eq) ? 'Mestrado' : '');
+                // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".
+                // "homologar a revalidação do diploma de 'doctor of philosophy' …
+                //  como equivalente ao de doutor em letras" é pós-graduação, ainda
+                // que escrito com o vocabulário da graduação. Classificar pelo
+                // texto que casou, e não pelo que o ato AFIRMA, poria doutorados
+                // na conta da graduação e estragaria as duas taxas.
+                $eq = $g('equiv');
+                if (preg_match('/doutor/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Doutorado'; }
+                elseif (preg_match('/mestr/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Mestrado'; }
+                elseif ($nivel !== '' && preg_match('/^(Doutorado|Mestrado)$/u', $nivel)) { $via = 'Pós-graduação'; }
+                elseif ($nivel === '') { $nivel = 'Graduação'; }
+            } else {
+                $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
+                $pais = $loc ? pais_canon(end($loc), $PAIS_CANON) : '';
+                $inst = $g('inst');
+                $eq = $g('equiv');
+                $nivel = preg_match('/doutor/iu', $eq) ? 'Doutorado'
+                       : (preg_match('/mestr/iu', $eq) ? 'Mestrado' : '');
+            }
+            $achou = [
+                'via' => $via,
+                'decisao' => (stripos($g('decisao'), 'indefer') === 0) ? 'Indeferido' : 'Deferido',
+                'nivel' => $nivel,
+                'curso' => mb_substr(caixa_nome($g('curso')), 0, 180),
+                'instituicao' => mb_substr(caixa_nome($inst), 0, 180),
+                'pais' => $pais,
+            ];
+            break;
         }
-        $achou = [
-            'via' => $via,
-            'decisao' => (stripos($g('decisao'), 'indefer') === 0) ? 'Indeferido' : 'Deferido',
-            'nivel' => $nivel,
-            'curso' => mb_substr(caixa_nome($g('curso')), 0, 180),
-            'inst'  => mb_substr(caixa_nome($inst), 0, 180),
-            'pais'  => $pais,
-        ];
-        break;
+        if ($achou) $achados = [$achou];
     }
-    if (!$achou) {
+    if (!$achados) {
         // Parece decisão e não casou? Guarda para o relatório.
         // O teste é deliberadamente FROUXO: verbo decisório a até ~120
         // caracteres de "revalida"/"reconhecimento do t". Frouxo de propósito
@@ -278,16 +280,22 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
         continue;
     }
 
-    if ($diagnostico) { $gravados++; $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1; continue; }
-
-    $insere->execute([
-        ':id' => $row['id'], ':v' => $achou['via'], ':d' => $achou['decisao'],
-        ':n' => $achou['nivel'] ?: null, ':c' => $achou['curso'] ?: null,
-        ':i' => $achou['inst'] ?: null, ':p' => $achou['pais'] ?: null,
-    ]);
-    $gravados++;
-    $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1;
-    if ($achou['pais'] === '') $semPais++;
+    if (!$diagnostico && $achados) {
+        $pdo->prepare('DELETE FROM ato_revalidacao WHERE ato_id=?')->execute([$row['id']]);
+        foreach ($achados as $idx => $achou) {
+            $insere->execute([
+                ':id' => $row['id'], ':o' => $idx + 1,
+                ':v' => $achou['via'], ':d' => $achou['decisao'],
+                ':n' => $achou['nivel'] ?: null, ':c' => $achou['curso'] ?: null,
+                ':i' => $achou['instituicao'] ?: null, ':p' => $achou['pais'] ?: null,
+            ]);
+        }
+    }
+    foreach ($achados as $achou) {
+        $gravados++;
+        $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1;
+        if (!$diagnostico && $achou['pais'] === '') $semPais++;
+    }
 }
 
 log_($diagnostico ? "=== MODO DIAGNÓSTICO — nada foi gravado ===" : "");
