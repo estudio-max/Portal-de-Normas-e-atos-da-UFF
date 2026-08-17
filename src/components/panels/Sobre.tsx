@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare } from 'lucide-react';
+import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare, Scale } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { linksEmail } from '../ui/linksEmail';
 
@@ -97,6 +97,8 @@ const fmt = (v: number) => v.toLocaleString('pt-BR');
  *  frase é escrita SEM o número em vez de cair num valor fixo — dizer menos é
  *  melhor que dizer errado. */
 interface Numeros {
+  atos: number;          // atos indexados (era escrito à mão, e envelheceu)
+  boletins: number;      // boletins lidos (idem)
   vinculos: number;      // linhas em ato_ods
   propostas: number;     // as que são ato fundador de política
   politicas: number;     // políticas no catálogo
@@ -108,10 +110,12 @@ function useNumeros(): Numeros | null {
   const [n, setN] = React.useState<Numeros | null>(null);
   React.useEffect(() => {
     let vivo = true;
-    Promise.all([ds.getOds(), ds.getPoliticas()]).then(([ods, pol]) => {
+    Promise.all([ds.getOds(), ds.getPoliticas(), ds.getStats()]).then(([ods, pol, st]) => {
       if (!vivo || !ods || !pol?.politicas) return;
       const assedio = pol.politicas.find(p => p.slug === 'assedio');
       setN({
+        atos: st?.total ?? 0,
+        boletins: st?.boletins ?? 0,
         vinculos: ods.linhas,
         propostas: ods.lista.reduce((s, o) => s + o.proposta, 0),
         politicas: pol.politicas.length,
@@ -142,8 +146,8 @@ export default function Sobre() {
       <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Por que este portal existe">
         <p>
           O Boletim de Serviço da UFF é publicado desde 2001 em PDF, um arquivo por edição, sem
-          versão estruturada. Consultar esse acervo significava abrir boletim por boletim — mais de
-          quatro mil arquivos — e procurar à mão.
+          versão estruturada. Consultar esse acervo significava abrir boletim por boletim
+          {n?.boletins ? <> — {fmt(n.boletins)} arquivos — </> : ' '}e procurar à mão.
         </p>
         <p>
           A necessidade ficou concreta com o RSC (Reconhecimento de Saberes e Competências, Decreto
@@ -178,9 +182,9 @@ export default function Sobre() {
         </p>
         <p>
           A UFF cumpre a parte da publicação desde sempre: o Boletim de Serviço sai
-          regularmente e é público. O problema é o <em>fácil acesso</em>. Um acervo de mais de
-          quatro mil PDFs, sem índice e sem busca entre arquivos, é público no sentido
-          formal e inacessível no sentido prático. Quem procura um ato precisa saber de
+          regularmente e é público. O problema é o <em>fácil acesso</em>. Um acervo de
+          {n?.boletins ? <> {fmt(n.boletins)} </> : ' milhares de '}PDFs, sem índice e sem busca
+          entre arquivos, é público no sentido formal e inacessível no sentido prático. Quem procura um ato precisa saber de
           antemão em qual boletim ele saiu — que é justamente o que não se sabe.
         </p>
         <p>
@@ -360,6 +364,63 @@ export default function Sobre() {
         />
       </Secao>
 
+      {/* O QUE ESTA SEÇÃO É, E O QUE ELA NÃO PODE SER.
+          O pedido foi mostrar o esforço que o portal representa. A tentação
+          seria adjetivo — "trabalho minucioso", "milhares de horas" — e isso
+          não se verifica, então não vale nada aqui. O que sustenta a
+          afirmação é a MEDIÇÃO: cada exemplo abaixo é um número que existe
+          porque alguém conferiu contra o acervo, e vários deles REPROVARAM a
+          ideia que os motivou. É esse o esforço, e é ele que dá para provar. */}
+      <Secao icon={<Scale className="w-4 h-4" />} titulo="O que custou chegar a estes números">
+        <p>
+          A parte cara deste projeto não é ler os boletins — a máquina faz isso em minutos. É
+          decidir <strong>o que se pode afirmar</strong> a partir do que está escrito neles. Cada
+          coluna deste portal é uma regra, e cada regra foi conferida contra o acervo real antes de
+          virar número na tela.
+        </p>
+        <p>
+          Isso significa que boa parte do trabalho foi <em>descartar</em>. Alguns exemplos, com o
+          que a medição mostrou:
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li>
+            Guardar só o <strong>primeiro</strong> número de processo de cada ato parecia
+            suficiente. Medido: descartava <strong>44%</strong> das menções — justamente as que
+            ligam um ato ao processo de outro.
+          </li>
+          <li>
+            Para ligar um ato a uma comissão, bastaria procurar o nome dela. Medido no acervo
+            inteiro: o nome solto acertava <strong>60%</strong> das vezes, porque cada unidade tem
+            a sua comissão com o mesmo nome. Com as regras de exclusão, o mesmo colegiado fecha em{' '}
+            <strong>71 atos e nenhum falso positivo</strong>.
+          </li>
+          <li>
+            Classificar os atos por ODS lendo o <em>corpo</em> inteiro, e não só a ementa, renderia
+            mais vínculos. Medido: 37 vínculos novos com <strong>~3% de precisão</strong> — o termo
+            estava no nome da vaga, na unidade do anexo. A ideia foi reprovada e não entrou.
+          </li>
+          <li>
+            37 setores apareciam como jornada flexibilizada <strong>ativa</strong> para sempre,
+            porque a portaria que os encerrou é de 2019 e nem está no acervo. Hoje o encerramento é
+            lido do próprio ato de revogação.
+          </li>
+        </ul>
+        <p>
+          O acervo também não é confiável só por ser oficial. O OCR de 2001 troca letras; o mesmo
+          órgão aparece grafado de três formas; um boletim publica ato de dezembro do ano anterior.
+          Cada uma dessas coisas foi descoberta errando primeiro — e cada correção virou um teste
+          automático, para que ela não volte silenciosamente. Hoje são <strong>21</strong>{' '}
+          verificações que rodam a cada alteração do código, e nenhuma delas testa a ferramenta
+          contra a imaginação de quem a escreveu: os casos são trechos reais do acervo, incluindo
+          os que <em>não podem</em> ser reconhecidos.
+        </p>
+        <p>
+          É por isso que o portal diz <em>“sem evidência localizada no Boletim”</em> em vez de{' '}
+          <em>“não existe”</em>, e mostra <em>“(não informado)”</em> em vez de adivinhar um rótulo.
+          A diferença entre as duas frases é todo o trabalho.
+        </p>
+      </Secao>
+
       <Secao icon={<BarChart3 className="w-4 h-4" />} titulo="Números do projeto">
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 not-italic">
           <div>
@@ -370,13 +431,18 @@ export default function Sobre() {
             <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Cobertura</dt>
             <dd className="font-bold text-[#003366]">2001–2026 (26 anos)</dd>
           </div>
+          {/* ⚠️ Estes dois vinham ESCRITOS À MÃO, contra a regra que esta
+              própria página declara algumas linhas acima — e envelheceram:
+              diziam 133.176 atos e 4.922 boletins quando o acervo já estava em
+              134.512 e 4.931. Número fixo em página estática não avisa quando
+              passa a mentir. Sem API, o campo mostra "—", que é honesto. */}
           <div>
             <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Atos indexados</dt>
-            <dd className="font-bold text-[#003366]">133.176</dd>
+            <dd className="font-bold text-[#003366]">{n?.atos ? fmt(n.atos) : '—'}</dd>
           </div>
           <div>
             <dt className="text-[12px] text-slate-400 uppercase tracking-wide">Boletins lidos</dt>
-            <dd className="font-bold text-[#003366]">4.922</dd>
+            <dd className="font-bold text-[#003366]">{n?.boletins ? fmt(n.boletins) : '—'}</dd>
           </div>
         </dl>
         <p className="pt-2">
@@ -407,6 +473,27 @@ export default function Sobre() {
           O que ele acrescenta é a ligação entre os atos. Um ato não anuncia a própria revogação:
           ela é publicada anos depois, num outro ato, que você não tem como saber que existe. Ler o
           PDF original responde o que aquele documento diz, não se ele ainda vale.
+        </p>
+        {/* Cobertura e limite, com a data da medição junto.
+            Número de cobertura envelhece — e envelhecer COM data é honesto,
+            enquanto envelhecer sem data vira afirmação falsa. Foi o que
+            aconteceu com "133.176 atos" logo acima nesta mesma página.
+            O dado dos 8 indisponíveis é o tipo de limite que só aparece quando
+            alguém confere item a item; declarar é o que separa "não foi
+            publicado" de "não está acessível". */}
+        <p>
+          <strong>Até onde o acervo alcança.</strong> Em agosto de 2026 o portal foi reprocessado
+          de ponta a ponta: todos os boletins publicados desde 2001 foram lidos de novo, com as
+          mesmas regras de extração — antes, cada ato carregava a versão do programa que o
+          importou, e o acervo era uma colcha de safras diferentes.
+        </p>
+        <p>
+          Da conferência ficou um limite que vale declarar: dos <strong>5.213</strong> boletins que
+          a UFF lista como publicados, <strong>8 não são entregues pelo servidor dela</strong> —
+          estão na lista e o arquivo responde erro. São de 2002, 2004 e 2014. O portal cobre os
+          outros <strong>5.205</strong>. É diferença entre <em>não foi publicado</em> e{' '}
+          <em>não está acessível</em>, e as duas coisas não podem virar a mesma no relatório de
+          ninguém. Medido em 17/08/2026; link quebrado na origem pode voltar.
         </p>
         <Figura
           arquivo="4-teia-de-relacoes.svg"
@@ -451,9 +538,15 @@ export default function Sobre() {
           </a>.
         </p>
         <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
+          {/* A frase dizia "o portal não registra nem esta visita". Não era
+              verdade: o site roda Google Analytics, que conta a visita. O que
+              é verdade — e é o que importa aqui — é que a mensagem não sai
+              sozinha e o texto dela não passa pelo portal. Numa página sobre
+              confiança, a frase generosa demais custa mais caro que a exata. */}
           Qualquer um dos dois abre a mensagem já começada, para você completar. Nada é enviado
-          automaticamente, e o portal não registra nem esta visita nem o que você escrever. Se
-          preferir, o endereço é{' '}
+          automaticamente, e o portal não recebe nem guarda o que você escrever — o texto vai do seu
+          e-mail para o nosso. A medição de audiência do site está descrita na aba{' '}
+          <strong>Privacidade</strong>. Se preferir, o endereço é{' '}
           <span className="font-mono text-slate-600">{LINK_RELATO.destino}</span>.
         </p>
       </div>

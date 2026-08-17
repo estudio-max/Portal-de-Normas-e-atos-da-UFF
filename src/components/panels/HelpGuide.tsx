@@ -113,6 +113,18 @@ export default function HelpGuide() {
           Dica: a matrícula SIAPE é a busca mais precisa (é um número único). Pelo nome, experimente
           partes do nome se não achar de primeira (ex.: só o sobrenome).
         </p>
+        {/* O guia respondia esta pergunta ensinando o filtro da planilha e não
+            mencionava a aba feita exatamente para ela. Quem seguisse só este
+            texto teria o resultado pior — sem a referência do boletim pronta
+            para colar no processo, e sem o bloco de busca por nome, que é o
+            que alcança os atos sem matrícula. */}
+        <p>
+          <strong>Se a pergunta é sobre você mesmo, há um caminho melhor:</strong> a aba{' '}
+          <strong>Meu SIAPE</strong>. Ela devolve a mesma busca já organizada — designações e
+          dispensas de função, atos que citam a matrícula e atos que citam o nome no texto — com a
+          <strong> referência do boletim</strong> (número, seção e página) pronta para copiar num
+          processo, e um botão que gera o documento em PDF.
+        </p>
       </Secao>
 
       {/* Status */}

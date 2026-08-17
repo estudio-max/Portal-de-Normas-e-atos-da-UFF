@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, FileText, Lock, Scale, Database, FolderSearch } from 'lucide-react';
+import { ShieldCheck, FileText, Lock, Scale, Database, FolderSearch, BarChart3 } from 'lucide-react';
 
 function Secao({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -55,19 +55,20 @@ export default function PrivacidadeLGPD() {
           boletim, e não seria honesto tratar os dois como a mesma coisa.
         </p>
         <p>
-          Essa aba nasceu restrita por senha. Foi <strong>aberta em julho de 2026</strong>, e o
-          motivo é o público a que ela passou a servir: com o Decreto 13.048/2026 (Reconhecimento de
-          Saberes e Competências), são os próprios servidores que precisam localizar seus registros
-          antigos no Boletim para instruir seus pedidos — e levantar isso à mão em vinte e cinco
-          anos de PDF não é razoável. Restringir a busca à Gestão de Pessoal significava obrigar
-          cada servidor a pedir a terceiros uma consulta sobre si mesmo, em documentos públicos.
+          A consulta é <strong>aberta</strong>, e o motivo é o público a que ela serve: com o
+          Decreto 13.048/2026 (Reconhecimento de Saberes e Competências), são os próprios
+          servidores que precisam localizar seus registros antigos no Boletim para instruir seus
+          pedidos — e levantar isso à mão em vinte e cinco anos de PDF não é razoável. Exigir
+          intermediação significaria obrigar cada servidor a pedir a terceiros uma consulta sobre
+          si mesmo, em documentos que já são públicos.
         </p>
         <p>
-          As mitigações continuam as mesmas: o resultado é gerado na hora, a partir da consulta
-          digitada, e não fica guardado — o portal não monta nem armazena perfil de ninguém. A aba
-          não pontua e não avalia conduta: devolve os atos publicados e o link do boletim de origem.
-          E vale dizer com clareza: qualquer pessoa pode consultar qualquer matrícula, mas tudo o
-          que aparece já estava publicado pela UFF nos boletins.
+          O desenho da aba é o que reduz o risco: o resultado é gerado na hora, a partir da
+          consulta digitada, e <strong>não fica guardado</strong> — o portal não monta nem armazena
+          perfil de ninguém. A aba não pontua, não classifica e não avalia conduta: devolve os atos
+          publicados e o link do boletim de origem, para você conferir na fonte. E vale dizer com
+          clareza: qualquer pessoa pode consultar qualquer matrícula, mas tudo o que aparece já
+          estava publicado pela UFF nos boletins.
         </p>
       </Secao>
 
@@ -96,6 +97,40 @@ export default function PrivacidadeLGPD() {
           Números de CPF encontrados no texto dos boletins são mascarados automaticamente
           (exibidos como <code className="bg-slate-100 px-1 rounded text-[12px]">***.XXX.XXX-**</code>),
           mantendo visível só o suficiente para conferência, sem publicar o número completo.
+        </p>
+        {/* Esta medida existia e não estava escrita em lugar nenhum voltado ao
+            público. É a mais forte da página: o portal DEIXOU DE republicar um
+            pareamento nome↔matrícula que, junto, é cadastro — mesmo estando
+            cada peça dispersa nos PDFs de origem. Dizer o que se removeu vale
+            mais que prometer cuidado. */}
+        <p>
+          O arquivo de dados que o portal publica <strong>não traz mais a lista de matrículas nem o
+          pareamento nome↔matrícula</strong>. Nos boletins esse pareamento existe, mas disperso em
+          milhares de PDFs; reuni-lo num arquivo único seria produzir um cadastro que a UFF nunca
+          publicou. Ele foi retirado.
+        </p>
+        <p>
+          O que permanece é o necessário para as abas de chefias e mandatos funcionarem sem o banco:
+          quem ocupa cada cargo, com o ato que o designou. Essa é a finalidade da informação, e sem
+          ela a aba não existe.
+        </p>
+      </Secao>
+
+      {/* Medição de audiência: estava ATIVA e não declarada. Uma página de
+          privacidade que omite o analytics do próprio site é o tipo de lacuna
+          que, quando o visitante descobre sozinho, contamina a confiança em
+          tudo o mais que a página afirma. */}
+      <Secao icon={<BarChart3 className="w-4 h-4" />} titulo="Medição de audiência">
+        <p>
+          O portal usa o <strong>Google Analytics</strong> para contar visitas e saber quais abas
+          são usadas. É o que orienta o que construir em seguida.
+        </p>
+        <p>
+          <strong>O que você digita não vai para lá.</strong> A matrícula, o nome e os termos de
+          busca são enviados apenas ao próprio portal, para gerar o resultado na hora — o código do
+          site não manda nenhum desses dados para a medição de audiência. O que o Analytics recebe é
+          a navegação: qual aba foi aberta, quando, e os dados técnicos que qualquer site recebe
+          (tipo de aparelho, navegador, região aproximada).
         </p>
       </Secao>
 
