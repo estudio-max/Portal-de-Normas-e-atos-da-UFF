@@ -321,6 +321,59 @@ if ($suspeitos) {
 }
 log_("");
 
+// ---------------------------------------------------------------------------
+// TRUNCAGEM — a medição que decide se este backfill é fonte confiável.
+//
+// `ato_texto` guarda o corpo já cortado em 7.000 caracteres (importar_v2.php
+// grava `textoBusca`, que sai de corpo_busca = limpar(corpo).lower()[:7000]).
+// Num ato longo, o Art. 1º pode estar DEPOIS do corte — e aí ele não aparece
+// aqui, sem nenhuma diferença visível entre "não é revalidação" e "não deu
+// para ver". Para um número que vai a órgão de controle, essa diferença é a
+// que mais importa.
+//
+// O teste: quantos candidatos estão exatamente no teto. Texto no teto é texto
+// que FOI cortado — o original era maior.
+//   - se poucos, e nenhum deles casaria, o corte não está escondendo decisão;
+//   - se muitos, a origem precisa mudar: reprocessar os PDFs, que é mais
+//     pesado e é a única forma de ver o ato inteiro.
+// ---------------------------------------------------------------------------
+$q = $pdo->query(
+    "SELECT COUNT(*) AS n,
+            SUM(CHAR_LENGTH(t.texto_original) >= 6990) AS no_teto
+       FROM ato a JOIN ato_texto t ON t.ato_id = a.id
+      WHERE t.texto_original LIKE '%revalida%'
+         OR t.texto_original LIKE '%reconhecimento do t%'")->fetch(PDO::FETCH_ASSOC);
+
+$noTeto = (int)($q['no_teto'] ?? 0);
+log_("=== truncagem do texto (limite de 7.000 caracteres) ===");
+log_("candidatos no teto : $noTeto de " . (int)$q['n']);
+
+if ($noTeto > 0) {
+    // Dos cortados, quantos JÁ foram capturados? Se um ato no teto casou, é
+    // porque o dispositivo estava antes do corte — o risco só existe para os
+    // cortados que NÃO casaram.
+    $r2 = $pdo->query(
+        "SELECT SUM(r.ato_id IS NOT NULL) AS capturados, COUNT(*) AS total
+           FROM ato a
+           JOIN ato_texto t ON t.ato_id = a.id
+           LEFT JOIN ato_revalidacao r ON r.ato_id = a.id
+          WHERE CHAR_LENGTH(t.texto_original) >= 6990
+            AND (t.texto_original LIKE '%revalida%'
+                 OR t.texto_original LIKE '%reconhecimento do t%')")->fetch(PDO::FETCH_ASSOC);
+    $cap = (int)($r2['capturados'] ?? 0);
+    $tot = (int)($r2['total'] ?? 0);
+    log_("  destes, já capturados : $cap");
+    log_("  destes, em aberto     : " . ($tot - $cap) . "  <- é AQUI que pode haver decisão escondida");
+    log_("");
+    log_("  Em aberto acima de ~30, vale reprocessar os PDFs em vez do banco:");
+    log_("  o corte pode estar escondendo o Art. 1º e não há como distinguir,");
+    log_("  daqui, 'não é revalidação' de 'não deu para ver'.");
+} else {
+    log_("  Nenhum candidato encostou no teto — o corte de 7.000 caracteres");
+    log_("  NÃO está escondendo dispositivo. O banco é fonte suficiente.");
+}
+log_("");
+
 if ($diagnostico) {
     log_("Nada gravado (diagnóstico). Rode sem &diagnostico=1 para aplicar.");
     exit;
