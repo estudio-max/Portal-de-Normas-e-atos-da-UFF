@@ -36,6 +36,7 @@
 $raiz = dirname(__DIR__);
 require_once $raiz . '/api/db.php';
 require_once __DIR__ . '/revalidacao_lista_legada.php';
+require_once __DIR__ . '/revalidacao_sincronizacao.php';
 
 $cfg = carregar_config();
 $cli = (PHP_SAPI === 'cli');
@@ -211,6 +212,16 @@ $st = $pdo->query($sql);
 $insere = $pdo->prepare(
     "INSERT INTO ato_revalidacao (ato_id,ordem,via,decisao,nivel,curso,instituicao,pais)
      VALUES (:id,:o,:v,:d,:n,:c,:i,:p)");
+$remove = $pdo->prepare('DELETE FROM ato_revalidacao WHERE ato_id=?');
+$removeAto = static fn(int|string $atoId): bool => $remove->execute([$atoId]);
+$insereAto = static function (int|string $atoId, int $ordem, array $achou) use ($insere): void {
+    $insere->execute([
+        ':id' => $atoId, ':o' => $ordem,
+        ':v' => $achou['via'], ':d' => $achou['decisao'],
+        ':n' => $achou['nivel'] ?: null, ':c' => $achou['curso'] ?: null,
+        ':i' => $achou['instituicao'] ?: null, ':p' => $achou['pais'] ?: null,
+    ]);
+};
 
 $vistos = 0; $gravados = 0; $porVia = []; $semPais = 0; $suspeitos = [];
 while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
@@ -280,17 +291,10 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
         continue;
     }
 
-    if (!$diagnostico && $achados) {
-        $pdo->prepare('DELETE FROM ato_revalidacao WHERE ato_id=?')->execute([$row['id']]);
-        foreach ($achados as $idx => $achou) {
-            $insere->execute([
-                ':id' => $row['id'], ':o' => $idx + 1,
-                ':v' => $achou['via'], ':d' => $achou['decisao'],
-                ':n' => $achou['nivel'] ?: null, ':c' => $achou['curso'] ?: null,
-                ':i' => $achou['instituicao'] ?: null, ':p' => $achou['pais'] ?: null,
-            ]);
-        }
-    }
+    sincronizar_revalidacoes_ato(
+        $pdo, $row['id'], $achados, $diagnostico,
+        $removeAto, $insereAto
+    );
     foreach ($achados as $achou) {
         $gravados++;
         $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1;

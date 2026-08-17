@@ -96,12 +96,36 @@ foreach (['julius', 'césar', 'barreto', 'leite', 'orlando', 'gomes', 'loques', 
     checa_legada("nao vaza o fragmento de nome '$nome'", !str_contains($saida, $nome));
 }
 
+$cursoLongo = str_repeat('á', 190);
+$instituicaoLonga = 'université ' . str_repeat('ç', 190);
+$textoLongo = "pela homologação da revalidação do diploma, obtido por: "
+    . "decisão nº. 001/08. pessoa teste, diploma de “{$cursoLongo}” junto à "
+    . "$instituicaoLonga, inglaterra, como doutorado em letras. "
+    . "(processo nº 1). sala das reuniões";
+$longo = extrair_revalidacoes_lista_legada($textoLongo);
+checa_legada('caso multibyte longo produz uma decisao', count($longo) === 1);
+if (isset($longo[0])) {
+    checa_legada('curso coletivo respeita VARCHAR(180)',
+        mb_strlen($longo[0]['curso'], 'UTF-8') === 180
+        && $longo[0]['curso'] === mb_substr($cursoLongo, 0, 180, 'UTF-8'));
+    checa_legada('instituicao coletiva respeita VARCHAR(180)',
+        mb_strlen($longo[0]['instituicao'], 'UTF-8') === 180
+        && $longo[0]['instituicao'] === mb_substr($instituicaoLonga, 0, 180, 'UTF-8'));
+    checa_legada('truncagem coletiva preserva UTF-8 valido',
+        mb_check_encoding($longo[0]['curso'], 'UTF-8')
+        && mb_check_encoding($longo[0]['instituicao'], 'UTF-8'));
+}
+
 $backfill = file_get_contents(__DIR__ . '/backfill_ato_revalidacao.php');
 checa_legada('le backfill', $backfill !== false);
 if ($backfill !== false) {
     checa_legada(
         'backfill inclui helper coletivo',
         str_contains($backfill, "require_once __DIR__ . '/revalidacao_lista_legada.php';")
+    );
+    checa_legada(
+        'backfill inclui nucleo de sincronizacao',
+        str_contains($backfill, "require_once __DIR__ . '/revalidacao_sincronizacao.php';")
     );
     checa_legada(
         'insert do backfill inclui ordem',
@@ -112,17 +136,13 @@ if ($backfill !== false) {
         preg_match('/\$achados\s*=\s*extrair_revalidacoes_lista_legada\(\$txt\);\s*'
                  . 'if\s*\(!\$achados\)\s*\{/s', $backfill) === 1
     );
-    checa_legada(
-        'backfill nao escreve no diagnostico',
-        preg_match('/if\s*\(!\$diagnostico\s*&&\s*\$achados\)\s*\{\s*'
-                 . '\$pdo->prepare\(\'DELETE FROM ato_revalidacao WHERE ato_id=\?\'\)'
-                 . '->execute\(\[\$row\[\'id\'\]\]\);/s', $backfill) === 1
-    );
-    checa_legada(
-        'backfill insere todos os achados com ordem baseada em um',
-        preg_match('/foreach\s*\(\$achados\s+as\s+\$idx\s*=>\s*\$achou\).*?'
-                 . '\':o\'\s*=>\s*\$idx\s*\+\s*1/s', $backfill) === 1
-    );
+    $posDelete = strpos($backfill, '$remove = $pdo->prepare');
+    $posLoop = strpos($backfill, 'while ($row = $st->fetch');
+    checa_legada('delete e preparado fora do loop',
+        $posDelete !== false && $posLoop !== false && $posDelete < $posLoop);
+    checa_legada('backfill delega sincronizacao atomica e diagnostico ao nucleo',
+        preg_match('/sincronizar_revalidacoes_ato\(\s*\$pdo,\s*\$row\[\'id\'\],\s*'
+                 . '\$achados,\s*\$diagnostico,/s', $backfill) === 1);
 }
 
 exit($falhas === 0 ? 0 : 1);

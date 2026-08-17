@@ -93,8 +93,8 @@ function extrair_revalidacoes_lista_legada(string $texto): array {
             'decisao' => 'Deferido',
             'nivel' => str_starts_with(normalizar_revalidacao($item['equiv']), 'doutor')
                 ? 'Doutorado' : 'Mestrado',
-            'curso' => limpar_revalidacao($item['curso']),
-            'instituicao' => $instituicao,
+            'curso' => mb_substr(limpar_revalidacao($item['curso']), 0, 180, 'UTF-8'),
+            'instituicao' => mb_substr($instituicao, 0, 180, 'UTF-8'),
             'pais' => $pais,
         ];
     }
