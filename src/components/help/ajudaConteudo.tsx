@@ -405,6 +405,31 @@ export const AJUDA: Record<string, AjudaAba> = {
       coisa acontece fora dele.</>,
   },
 
+  'institucional/revalidacao': {
+    titulo: 'Revalidação',
+    resumo: <>O que a UFF decidiu sobre pedidos de revalidação e reconhecimento de diplomas
+      obtidos fora do Brasil — em números, sem identificar quem pediu.</>,
+    porQue: [
+      <>Quem estudou no exterior e quer que o diploma valha no Brasil precisa pedir revalidação a
+        uma universidade pública. A decisão sai publicada no Boletim de Serviço, uma por ato, e
+        some no meio de centenas de páginas. Somadas, essas decisões respondem o que ninguém
+        conseguia responder antes: <B>quais cursos e países a UFF mais defere, e quanto tempo a
+        fila leva</B>.</>,
+      <>Serve também à prestação de contas. CGU e TCU cobram das universidades justamente a
+        publicidade desses atos e o tempo de tramitação dos processos.</>,
+    ],
+    passos: [
+      <>Escolha entre <B>Graduação</B> e <B>Pós-graduação</B>: são processos diferentes, com
+        normas e prazos próprios, e somar os dois esconde a diferença entre eles.</>,
+      <>Veja por país, curso ou instituição de origem para ter uma ideia do que costuma ser
+        deferido.</>,
+    ],
+    cuidado: <>Esta aba <B>não mostra nomes</B>: quem pede revalidação é pessoa privada, e o
+      objetivo aqui é orientar, não expor. A taxa de deferimento só aparece a partir de um número
+      mínimo de pedidos — com uma amostra pequena, um único indeferimento viraria "0% de
+      aprovação" e afastaria alguém que talvez devesse pedir. E o tempo de tramitação é uma
+      <B> aproximação</B>: o boletim publica a decisão, não a data em que o processo foi aberto.</>,
+  },
   'institucional/cooperacao': {
     titulo: 'Cooperação',
     resumo: <>Os acordos, protocolos e cotutelas que a UFF firmou, com a instituição parceira e

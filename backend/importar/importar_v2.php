@@ -327,6 +327,12 @@ try {
     $insApos = $pdo->prepare("INSERT INTO ato_aposentadoria (ato_id,tipo,base_legal) VALUES (:id,:t,:b)");
     $delDesl = $pdo->prepare("DELETE FROM ato_deslocamento WHERE ato_id=:id");
     $insDesl = $pdo->prepare("INSERT INTO ato_deslocamento (ato_id,tipo,direcao,motivo,setor) VALUES (:id,:t,:d,:m,:s)");
+    // Revalidação de diploma do exterior. Sem coluna de pessoa, de propósito —
+    // ver o cabeçalho de backend/db/ato_revalidacao.sql.
+    $delReval = $pdo->prepare("DELETE FROM ato_revalidacao WHERE ato_id=:id");
+    $insReval = $pdo->prepare("INSERT INTO ato_revalidacao
+                                (ato_id,via,decisao,nivel,curso,instituicao,pais)
+                                VALUES (:id,:v,:d,:n,:c,:i,:p)");
     $delCom = $pdo->prepare("DELETE FROM ato_comissao WHERE ato_id=:id");
     $insCom = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id,comissao) VALUES (:id,:c)");
     $delProc = $pdo->prepare("DELETE FROM ato_processo WHERE ato_id=:id");
@@ -518,6 +524,29 @@ try {
                 ':d' => $a['deslocamento']['direcao'] ?? null,
                 ':m' => ($a['deslocamento']['motivo'] ?? '') ?: null,
                 ':s' => ($a['deslocamento']['setor'] ?? '') ?: null]);
+        }
+
+        // revalidação de diploma obtido no exterior
+        //
+        // `via` e `decisao` são ENUM no banco: valor fora da lista vira string
+        // vazia no MySQL 5.7 em modo não-estrito, silenciosamente. Por isso a
+        // guarda aqui — se o extrator mudar de vocabulário um dia, o import
+        // PULA a linha em vez de gravar lixo que só apareceria como fatia
+        // anônima no gráfico.
+        $delReval->execute([':id' => $atoId]);
+        $rv = $a['revalidacao'] ?? null;
+        if (is_array($rv)
+            && in_array($rv['via'] ?? '', ['Graduação', 'Pós-graduação'], true)
+            && in_array($rv['decisao'] ?? '', ['Deferido', 'Indeferido'], true)) {
+            $insReval->execute([
+                ':id' => $atoId,
+                ':v'  => $rv['via'],
+                ':d'  => $rv['decisao'],
+                ':n'  => ($rv['nivel'] ?? '') ?: null,
+                ':c'  => ($rv['curso'] ?? '') ?: null,
+                ':i'  => ($rv['instituicao'] ?? '') ?: null,
+                ':p'  => ($rv['pais'] ?? '') ?: null,
+            ]);
         }
 
         // prazos (Radar): extrai datas-limite do texto (mesma lógica do frontend)

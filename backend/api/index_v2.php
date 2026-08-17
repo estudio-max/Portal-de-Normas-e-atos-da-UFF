@@ -99,6 +99,7 @@ switch ($recurso) {
     case 'prazos':   prazos($pdo); break;
     case 'jornada':  jornada($pdo); break;
     case 'cooperacao': cooperacao($pdo); break;
+    case 'revalidacao': revalidacao($pdo); break;
     case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? '', $_GET['janela'] ?? ''); break;
     case 'politicas': politicas($pdo, $_GET['slug'] ?? ''); break;
     case 'ods':      ods($pdo, $_GET['n'] ?? ''); break;
@@ -137,7 +138,7 @@ function cache_rotas(): array {
     // pessoal (fica de fora); `atos`/`ato` variam demais e já são rápidas.
     static $r = ['stats', 'filtros', 'jornada', 'cooperacao', 'comissoes',
                  'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods',
-                 'politicas', 'mudancas'];
+                 'politicas', 'mudancas', 'revalidacao'];
     return $r;
 }
 function cache_cacheavel(string $recurso): bool {
@@ -435,7 +436,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-16.1'; }
+function api_versao(): string { return '2026-08-16.2'; }
 
 // Quantas horas sem importar já significam CADEIA QUEBRADA (não "atraso").
 // O cron do cPanel roda 12h e 20h, então o intervalo normal entre execuções
@@ -2830,6 +2831,115 @@ function ods(PDO $pdo, string $n): void {
         'atosDistintos' => (int)$tot['atos'],
         'curados' => (int)$tot['curados'],
         'cobertura' => ['ate' => $ate, 'ultimoNormativo' => $ultNorm, 'diasParado' => $gap],
+    ]);
+}
+
+// ---- REVALIDAÇÃO DE DIPLOMA OBTIDO NO EXTERIOR ----------------------------
+//
+// Rota 100% AGREGADA: nenhuma linha identifica quem pediu. Não é filtro de
+// exibição, é o dado que não existe — `ato_revalidacao` não tem coluna de
+// pessoa (ver o cabeçalho do .sql). O ato individual segue na busca normal.
+//
+// Serve a uma pergunta concreta: "vale a pena pedir revalidação na UFF com o
+// meu diploma?" — daí agrupar por país, curso e instituição, sempre separando
+// as duas VIAS, que têm normas e taxas distintas.
+
+// Abaixo deste número de pedidos, a tela mostra a CONTAGEM e omite a taxa.
+//
+// Uma instituição com 1 pedido indeferido viraria "0% de aprovação", e alguém
+// desistiria de um pedido que talvez valesse. Indeferimento costuma dizer mais
+// sobre a documentação daquele processo do que sobre a instituição. O limiar
+// viaja NA RESPOSTA para que a API e a tela nunca discordem sobre onde fica o
+// corte — foi assim que o teto da série anual já divergiu em quatro lugares.
+function reval_minimo_taxa(): int { return 5; }
+
+function revalidacao(PDO $pdo): void {
+    // SUM(condição) em vez de FILTER/window: Percona 5.7 não tem nenhum dos
+    // dois. `d` = deferidos; o indeferido é total - d, e não uma segunda soma.
+    $agrupa = function (string $campo, string $alias) use ($pdo): array {
+        $sql = "SELECT r.via, COALESCE(NULLIF(r.$campo,''), '(não informado)') AS chave,
+                       COUNT(*) AS total, SUM(r.decisao='Deferido') AS d
+                  FROM ato_revalidacao r
+                 GROUP BY r.via, chave
+                 HAVING total > 0
+                 ORDER BY total DESC, chave ASC
+                 LIMIT 400";
+        $out = [];
+        foreach ($pdo->query($sql) as $x) {
+            $out[] = ['via' => $x['via'], $alias => $x['chave'],
+                      'total' => (int)$x['total'], 'deferidos' => (int)$x['d']];
+        }
+        return $out;
+    };
+
+    $resumo = [];
+    foreach ($pdo->query("SELECT via, COUNT(*) AS total, SUM(decisao='Deferido') AS d
+                            FROM ato_revalidacao GROUP BY via ORDER BY via") as $x) {
+        $resumo[] = ['via' => $x['via'], 'total' => (int)$x['total'],
+                     'deferidos' => (int)$x['d']];
+    }
+
+    // Série anual: o ano vem do ATO, não da tabela de fatos — a data de decisão
+    // é do ato e duplicá-la aqui criaria duas verdades sobre a mesma coisa.
+    $serie = [];
+    foreach ($pdo->query("SELECT a.ano, r.via, COUNT(*) AS total, SUM(r.decisao='Deferido') AS d
+                            FROM ato_revalidacao r
+                            JOIN ato a ON a.id = r.ato_id
+                           WHERE a.ano BETWEEN 2001 AND YEAR(CURDATE())
+                           GROUP BY a.ano, r.via
+                           ORDER BY a.ano") as $x) {
+        $serie[] = ['ano' => (int)$x['ano'], 'via' => $x['via'],
+                    'total' => (int)$x['total'], 'deferidos' => (int)$x['d']];
+    }
+
+    $niveis = [];
+    foreach ($pdo->query("SELECT via, COALESCE(NULLIF(nivel,''),'(não informado)') AS nivel,
+                                 COUNT(*) AS total, SUM(decisao='Deferido') AS d
+                            FROM ato_revalidacao GROUP BY via, nivel ORDER BY total DESC") as $x) {
+        $niveis[] = ['via' => $x['via'], 'nivel' => $x['nivel'],
+                     'total' => (int)$x['total'], 'deferidos' => (int)$x['d']];
+    }
+
+    // TRAMITAÇÃO — o eixo que CGU/TCU mais cobram, na melhor aproximação que o
+    // Boletim de Serviço permite.
+    //
+    // O que o controle pede é "% de processos concluídos em até 60 dias (rito
+    // simplificado) ou 180 (ordinário)", da Resolução CNE/CES nº 1/2022. Isso
+    // exige a data de PROTOCOLO, que o BS não publica — ele publica a decisão.
+    //
+    // O que dá para afirmar: o número do processo SEI carrega o ano de
+    // abertura (23069.164413/2025-99), e a decisão tem data. A diferença em
+    // ANOS é grosseira para um corte em dias, mas responde uma pergunta que
+    // hoje não tem resposta em lugar nenhum: quantos pedidos são decididos no
+    // mesmo ano em que entraram, e quantos atravessam um ano ou mais.
+    //
+    // Rotulado como APROXIMAÇÃO na tela, de propósito. Publicar isto como se
+    // fosse o indicador de 60/180 dias seria pior que não publicar nada.
+    $tramita = [];
+    $sqlT = "SELECT r.via,
+                    (a.ano - CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(a.processo_sei,'/',-1),'-',1) AS UNSIGNED)) AS anos,
+                    COUNT(*) AS total, SUM(r.decisao='Deferido') AS d
+               FROM ato_revalidacao r
+               JOIN ato a ON a.id = r.ato_id
+              WHERE a.processo_sei REGEXP '/[0-9]{4}-'
+                AND a.ano IS NOT NULL
+              GROUP BY r.via, anos
+             HAVING anos BETWEEN 0 AND 12
+              ORDER BY anos";
+    foreach ($pdo->query($sqlT) as $x) {
+        $tramita[] = ['via' => $x['via'], 'anos' => (int)$x['anos'],
+                      'total' => (int)$x['total'], 'deferidos' => (int)$x['d']];
+    }
+
+    responder_json([
+        'minimoParaTaxa' => reval_minimo_taxa(),
+        'resumo'        => $resumo,
+        'serie'         => $serie,
+        'niveis'        => $niveis,
+        'tramitacao'    => $tramita,
+        'paises'        => $agrupa('pais', 'pais'),
+        'cursos'        => $agrupa('curso', 'curso'),
+        'instituicoes'  => $agrupa('instituicao', 'instituicao'),
     ]);
 }
 
