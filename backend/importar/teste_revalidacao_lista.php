@@ -29,12 +29,17 @@ if (function_exists('revalidacoes_do_json')) {
         'decisao' => 'Indeferido',
         'curso' => 'História',
     ];
+    $singularConflitante = [
+        'via' => 'Graduação',
+        'decisao' => 'Indeferido',
+        'curso' => 'Odontologia',
+    ];
 
     checa('ausente não sincroniza', revalidacoes_do_json([]) === null);
     checa('null explícito zera', revalidacoes_do_json(['revalidacao' => null]) === []);
     checa('singular vira lista', revalidacoes_do_json(['revalidacao' => $a]) === [$a]);
-    checa('plural prevalece', revalidacoes_do_json([
-        'revalidacao' => $a,
+    checa('plural conflitante prevalece', revalidacoes_do_json([
+        'revalidacao' => $singularConflitante,
         'revalidacoes' => [$a, $b],
     ]) === [$a, $b]);
     checa('plural vazio prevalece', revalidacoes_do_json([

@@ -303,10 +303,11 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
 }
 
 log_($diagnostico ? "=== MODO DIAGNÓSTICO — nada foi gravado ===" : "");
-log_("candidatos lidos : $vistos");
-log_(($diagnostico ? "casariam         : " : "gravados         : ") . $gravados);
+log_("atos candidatos lidos : $vistos");
+log_(($diagnostico ? "pedidos que casariam  : " : "pedidos gravados      : ") . $gravados);
+log_("pedidos por via:");
 foreach ($porVia as $v => $n) log_("  $v: $n");
-if (!$diagnostico) log_("sem país         : $semPais");
+if (!$diagnostico) log_("pedidos sem país      : $semPais");
 
 // ---------------------------------------------------------------------------
 // O relatório: quem parece decisão e não casou.
@@ -365,17 +366,18 @@ if ($noTeto > 0) {
     // porque o dispositivo estava antes do corte — o risco só existe para os
     // cortados que NÃO casaram.
     $r2 = $pdo->query(
-        "SELECT SUM(r.ato_id IS NOT NULL) AS capturados, COUNT(*) AS total
+        "SELECT COUNT(DISTINCT CASE WHEN r.ato_id IS NOT NULL THEN a.id END) AS atos_capturados,
+                COUNT(DISTINCT a.id) AS total_atos
            FROM ato a
            JOIN ato_texto t ON t.ato_id = a.id
            LEFT JOIN ato_revalidacao r ON r.ato_id = a.id
           WHERE CHAR_LENGTH(t.texto_original) >= 6990
             AND (t.texto_original LIKE '%revalida%'
                  OR t.texto_original LIKE '%reconhecimento do t%')")->fetch(PDO::FETCH_ASSOC);
-    $cap = (int)($r2['capturados'] ?? 0);
-    $tot = (int)($r2['total'] ?? 0);
-    log_("  destes, já capturados : $cap");
-    log_("  destes, em aberto     : " . ($tot - $cap) . "  <- é AQUI que pode haver decisão escondida");
+    $cap = (int)($r2['atos_capturados'] ?? 0);
+    $tot = (int)($r2['total_atos'] ?? 0);
+    log_("  destes, atos capturados : $cap");
+    log_("  destes, atos em aberto   : " . ($tot - $cap) . "  <- é AQUI que pode haver decisão escondida");
     log_("");
     log_("  Em aberto acima de ~30, vale reprocessar os PDFs em vez do banco:");
     log_("  o corte pode estar escondendo o Art. 1º e não há como distinguir,");

@@ -80,10 +80,17 @@ function separar_origem_revalidacao(string $origem): array {
     return [$origem, ''];
 }
 
+function revalidacao_lista_citada(string $texto, int $inicio): bool {
+    $prefixo = substr($texto, 0, $inicio);
+    $contexto = mb_substr($prefixo, -10, null, 'UTF-8');
+    return preg_match('~\bque\s*$~iu', $contexto) === 1;
+}
+
 function extrair_revalidacoes_lista_legada(string $texto): array {
     global $blocoRe, $itemRe;
-    if (!preg_match($blocoRe, $texto, $bloco)) return [];
-    if (!preg_match_all($itemRe, $bloco['itens'], $itens, PREG_SET_ORDER)) return [];
+    if (!preg_match($blocoRe, $texto, $bloco, PREG_OFFSET_CAPTURE)) return [];
+    if (revalidacao_lista_citada($texto, $bloco[0][1])) return [];
+    if (!preg_match_all($itemRe, $bloco['itens'][0], $itens, PREG_SET_ORDER)) return [];
 
     $saida = [];
     foreach ($itens as $item) {

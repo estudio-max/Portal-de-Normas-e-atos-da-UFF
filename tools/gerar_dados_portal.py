@@ -199,7 +199,7 @@ def converter(dados, urls=None):
         ementa_resumo = mascarar_cpfs((a.get("ementa_resumo") or "").strip())
         ementa_inferida = bool(ementa_resumo) and not ementa_oficial
         ementa_disp = ementa_oficial or ementa_resumo or "(sem ementa formal no boletim)"
-        tem_revalidacao = "revalidacao" in a
+        tem_revalidacao = "revalidacao" in a or "revalidacoes" in a
         lista_reval = a.get("revalidacoes")
         if not isinstance(lista_reval, list):
             lista_reval = [a["revalidacao"]] if a.get("revalidacao") else []

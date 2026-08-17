@@ -24,6 +24,7 @@ final class ConexaoRevalidacaoMemoria {
     public array $linhas;
     public array $eventos = [];
     public ?int $falharNaOrdem = null;
+    public ?Throwable $erroNaOrdem = null;
     private bool $emTransacao = false;
     private array $inicio = [];
     private array $savepoints = [];
@@ -91,7 +92,9 @@ final class ConexaoRevalidacaoMemoria {
 
     public function inserir(int|string $atoId, int $ordem, array $achado): void {
         $this->eventos[] = "INSERT:$atoId:$ordem";
-        if ($this->falharNaOrdem === $ordem) throw new RuntimeException('falha de insert simulada');
+        if ($this->falharNaOrdem === $ordem) {
+            throw $this->erroNaOrdem ?? new RuntimeException('falha de insert simulada');
+        }
         $this->linhas[] = ['ato_id' => $atoId, 'ordem' => $ordem] + $achado;
     }
 }
@@ -159,21 +162,48 @@ $dbExterna = new ConexaoRevalidacaoMemoria([$antiga, $outra]);
 $dbExterna->beginTransaction();
 $dbExterna->eventos = [];
 $dbExterna->falharNaOrdem = 2;
+$erroExterno = new RuntimeException('falha externa original');
+$dbExterna->erroNaOrdem = $erroExterno;
+$capturadoExterno = null;
 try {
     sincronizar_revalidacoes_ato(
         $dbExterna, 42, $novos, false,
         [$dbExterna, 'remover'], [$dbExterna, 'inserir']
     );
-} catch (RuntimeException $e) {
-    // esperado
+} catch (Throwable $e) {
+    $capturadoExterno = $e;
 }
+checa_sincronizacao('falha em savepoint propaga a excecao original por identidade',
+    $capturadoExterno === $erroExterno);
 checa_sincronizacao('savepoint restaura estado dentro de transacao externa',
     $dbExterna->linhas === [$antiga, $outra]);
 checa_sincronizacao('falha nao encerra transacao externa', $dbExterna->inTransaction());
 checa_sincronizacao('falha externa usa savepoint e nao rollback global',
     count(array_filter($dbExterna->eventos, static fn(string $e): bool => str_starts_with($e, 'SAVEPOINT '))) === 1
     && count(array_filter($dbExterna->eventos, static fn(string $e): bool => str_starts_with($e, 'ROLLBACK TO SAVEPOINT '))) === 1
+    && count(array_filter($dbExterna->eventos, static fn(string $e): bool => str_starts_with($e, 'RELEASE SAVEPOINT '))) === 1
     && !in_array('ROLLBACK', $dbExterna->eventos, true)
     && !in_array('COMMIT', $dbExterna->eventos, true));
+
+$dbExternaSucesso = new ConexaoRevalidacaoMemoria([$antiga, $outra]);
+$dbExternaSucesso->beginTransaction();
+$dbExternaSucesso->eventos = [];
+sincronizar_revalidacoes_ato(
+    $dbExternaSucesso, 42, $novos, false,
+    [$dbExternaSucesso, 'remover'], [$dbExternaSucesso, 'inserir']
+);
+$doAtoExterno = array_values(array_filter(
+    $dbExternaSucesso->linhas,
+    static fn(array $l): bool => $l['ato_id'] === 42
+));
+checa_sincronizacao('sucesso em savepoint sincroniza todas as linhas',
+    array_column($doAtoExterno, 'curso') === ['Primeiro', 'Segundo']);
+checa_sincronizacao('sucesso mantem transacao externa aberta',
+    $dbExternaSucesso->inTransaction());
+checa_sincronizacao('sucesso libera savepoint sem commit ou rollback global',
+    count(array_filter($dbExternaSucesso->eventos, static fn(string $e): bool => str_starts_with($e, 'SAVEPOINT '))) === 1
+    && count(array_filter($dbExternaSucesso->eventos, static fn(string $e): bool => str_starts_with($e, 'RELEASE SAVEPOINT '))) === 1
+    && !in_array('ROLLBACK', $dbExternaSucesso->eventos, true)
+    && !in_array('COMMIT', $dbExternaSucesso->eventos, true));
 
 exit($falhas === 0 ? 0 : 1);

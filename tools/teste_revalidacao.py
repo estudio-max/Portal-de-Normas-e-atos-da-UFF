@@ -103,6 +103,9 @@ london, imperial college of science and technology, inglaterra, como doutorado
 em ciência da computação. (processo nº. 23069.054577/07-27). sala das reuniões,
 16 de janeiro de 2008."""
 
+BLOCO_MULTIPLAS_5792 = "pela " + MULTIPLAS_5792.split("pela", 1)[1].lstrip()
+MULTIPLAS_CITADAS_5792 = "a decisão anterior, que " + BLOCO_MULTIPLAS_5792
+
 ESPERADO_5792 = [
     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
      "curso": "doctor of philosophy",
@@ -229,6 +232,11 @@ else:
 if extrai_revalidacao(MULTIPLAS_5792) != ESPERADO_5792[0]:
     falhas += 1
     print("FALHA: wrapper singular não devolve o primeiro item")
+if extrai_revalidacoes(MULTIPLAS_CITADAS_5792) != []:
+    falhas += 1
+    print("FALHA: bloco coletivo de ato citado não deveria produzir decisões")
+else:
+    print("ok   : bloco coletivo de ato citado não produz decisões")
 
 # --- invariante de PRIVACIDADE -------------------------------------------
 # Vale mais que qualquer caso acima: nenhum campo da saida pode conter o nome

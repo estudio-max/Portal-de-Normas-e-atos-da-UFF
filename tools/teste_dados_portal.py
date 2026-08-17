@@ -104,11 +104,20 @@ def main():
     duas = uma + [{"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
                    "curso": "Doctor of Philosophy", "instituicao": "University Y",
                    "pais": "Reino Unido"}]
+    singular_conflitante = {"via": "Graduação", "decisao": "Indeferido",
+                            "nivel": "Graduação", "curso": "Odontologia",
+                            "instituicao": "Universidad Z", "pais": "Argentina"}
     saida_uma = converter_um(CORPO, uma)
     saida_duas = converter_um(CORPO, duas)
     saida_zero = converter_um(CORPO, [])
     saida_ausente = converter_um(CORPO, incluir_revalidacao=False)
     saida_legada = converter_um(CORPO, uma)
+    ato_plural_vazio = _ato(CORPO, incluir_revalidacao=False)
+    ato_plural_vazio["revalidacoes"] = []
+    saida_plural_vazio = G.converter({"atos": [ato_plural_vazio], "boletins": []})[0]
+    ato_conflitante = _ato(CORPO, duas)
+    ato_conflitante["revalidacao"] = singular_conflitante
+    saida_conflitante = G.converter({"atos": [ato_conflitante], "boletins": []})[0]
     checa("uma decisão mantém somente singular",
           saida_uma["revalidacao"] == uma[0] and "revalidacoes" not in saida_uma)
     checa("duas decisões publicam singular e lista completa",
@@ -118,6 +127,12 @@ def main():
           and "revalidacoes" not in saida_zero)
     checa("ausência das duas chaves não publica revalidação",
           "revalidacao" not in saida_ausente and "revalidacoes" not in saida_ausente)
+    checa("plural vazio isolado publica null no alias singular",
+          saida_plural_vazio.get("revalidacao", "ausente") is None
+          and "revalidacoes" not in saida_plural_vazio)
+    checa("plural conflitante prevalece e governa o alias singular",
+          saida_conflitante["revalidacao"] == duas[0]
+          and saida_conflitante.get("revalidacoes") == duas)
     checa("carga legada só com singular mantém decisão",
           saida_legada["revalidacao"] == uma[0] and "revalidacoes" not in saida_legada)
 

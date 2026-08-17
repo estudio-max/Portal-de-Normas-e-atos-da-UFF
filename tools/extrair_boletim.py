@@ -2029,6 +2029,8 @@ def extrai_revalidacoes(trecho):
                 continue
             achados.append((match.start(), match.end(), conversor(match)))
     for bloco in _REVAL_BLOCO_LISTA_RE.finditer(texto):
+        if _reval_citado(texto, bloco.start()):
+            continue
         itens = bloco.group("itens")
         for item in _REVAL_ITEM_LISTA_RE.finditer(itens):
             inicio = bloco.start("itens") + item.start()

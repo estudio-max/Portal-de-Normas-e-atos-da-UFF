@@ -72,6 +72,12 @@ $esperado = [
 $obtido = extrair_revalidacoes_lista_legada($texto);
 checa_legada('ato #5792 produz exatamente duas decisoes', count($obtido) === 2);
 checa_legada('ato #5792 preserva conteudo e ordem documental', $obtido === $esperado);
+$casouBloco = preg_match('/pela\s+homologação.+/su', $texto, $trechoBloco) === 1;
+$blocoCitado = 'a decisão anterior, que ' . ($trechoBloco[0] ?? '');
+checa_legada(
+    'bloco coletivo de ato citado nao produz decisoes',
+    $casouBloco && extrair_revalidacoes_lista_legada($blocoCitado) === []
+);
 checa_legada(
     'instituicoes sao distintas',
     isset($obtido[0]['instituicao'], $obtido[1]['instituicao'])
@@ -143,6 +149,19 @@ if ($backfill !== false) {
     checa_legada('backfill delega sincronizacao atomica e diagnostico ao nucleo',
         preg_match('/sincronizar_revalidacoes_ato\(\s*\$pdo,\s*\$row\[\'id\'\],\s*'
                  . '\$achados,\s*\$diagnostico,/s', $backfill) === 1);
+    checa_legada('diagnostico conta atos capturados sem inflacao do join',
+        preg_match('/COUNT\s*\(\s*DISTINCT\s+CASE\s+WHEN\s+r\.ato_id\s+IS\s+NOT\s+NULL'
+                 . '\s+THEN\s+a\.id\s+END\s*\)\s+AS\s+atos_capturados/is', $backfill) === 1);
+    checa_legada('diagnostico conta total de atos distintos',
+        preg_match('/COUNT\s*\(\s*DISTINCT\s+a\.id\s*\)\s+AS\s+total_atos/is', $backfill) === 1);
+    checa_legada('diagnostico rotula atos, pedidos e linhas sem ambiguidade',
+        str_contains($backfill, 'atos candidatos lidos')
+        && str_contains($backfill, 'pedidos que casariam')
+        && str_contains($backfill, 'pedidos gravados')
+        && str_contains($backfill, 'atos capturados')
+        && str_contains($backfill, 'linha(s)'));
+    checa_legada('contagem intencional de pedidos permanece por ocorrencia',
+        str_contains($backfill, '$gravados++;'));
 }
 
 exit($falhas === 0 ? 0 : 1);
