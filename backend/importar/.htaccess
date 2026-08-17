@@ -43,7 +43,12 @@
 #
 #  `ods_match.php` fica de fora de propósito: é biblioteca (o importador e o
 #  backfill fazem require dela), nunca é chamada pela web.
-<FilesMatch "^(importar_v2|resolver_relacoes_v2|corrigir_siapes|backfill_ato_ods|backfill_ato_ods_auto|backfill_ato_comissao|backfill_ato_politica|backfill_ato_processo|backfill_prazos_pad_sinve)\.php$">
+#  17/08/2026: `backfill_ato_revalidacao` foi acrescentado depois de o aviso
+#  acima se cumprir à risca — o script subiu, respondeu 403, e o primeiro
+#  palpite foi permissão de arquivo (estava 0644, como todos). Só a comparação
+#  com um script JÁ listado, que respondia "Acesso negado. Use ?token=",
+#  mostrou que o PHP nem chegava a rodar.
+<FilesMatch "^(importar_v2|resolver_relacoes_v2|corrigir_siapes|backfill_ato_ods|backfill_ato_ods_auto|backfill_ato_comissao|backfill_ato_politica|backfill_ato_processo|backfill_ato_revalidacao|backfill_prazos_pad_sinve)\.php$">
   Require all granted
 </FilesMatch>
 
