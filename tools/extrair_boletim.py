@@ -1847,6 +1847,29 @@ _REVAL_POS_RE = re.compile(
     r"n[ao]s?\s+(?P<inst>.+?)\s*\((?P<local>[^)]{3,60})\)\s*,?\s*"
     r"(?:como\s+equivalente\s+ao\s+de\s+(?P<equiv>.+?))?[,.]", re.I | re.S)
 
+_REVAL_INDEFERIMENTO_RE = re.compile(
+    r"manifestar-se\s+pelo\s+indeferimento\s+do\s+pedido\s+de\s+"
+    r"revalida[çc][ãa]o\s+do\s+diploma\s+de\s+.+?,\s*"
+    r"em\s+n[íi]vel\s+de\s+(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s+em\s+"
+    r"(?P<curso>.+?),\s*realizad[oa]\s+n[ao]\s+(?P<origem>.+?)\.\s*",
+    re.I | re.S)
+
+_REVAL_GERUNDIO_RE = re.compile(
+    r"homologar\s+o\s+parecer\s+da\s+comiss[ãa]o.+?,\s*"
+    r"indeferindo\s+a\s+solicita[çc][ãa]o\s+de\s+revalida[çc][ãa]o\s+de\s+"
+    r"diploma\s+de\s+.+?,\s*em\s+n[íi]vel\s+de\s+"
+    r"(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s+em\s+"
+    r"(?P<curso>.+?),\s*realizad[oa]\s+n[ao]\s+(?P<origem>.+?)\.\s*",
+    re.I | re.S)
+
+_REVAL_TITULO_LEGADO_RE = re.compile(
+    r"homologar\s+a\s+revalida[çc][ãa]o\s+do\s+t[íi]tulo\s+de\s+[“\"']?"
+    r"(?P<curso>.+?)[”\"']?,\s*obtid[oa]\s+por\s+.+?,\s*"
+    r"junto\s+[aà]o?\s+(?P<origem>.+?),\s*como\s+"
+    r"(?P<equiv>doutor(?:ado)?|mestre|mestrado)\s+em\s+.+?"
+    r"(?:,\s*nos\s+termos|\.\s|$)",
+    re.I | re.S)
+
 # Oração relativa: "...a Resolução X, QUE deferiu a solicitação..." descreve o
 # ato CITADO, não o dispositivo deste. Mesma armadilha já paga em aposentadoria
 # (ver _QUE_ANTES_RE), onde retificação virava concessão nova.
@@ -1877,6 +1900,24 @@ def _reval_pais(bruto):
     # "Áustria" caírem na MESMA chave — sem isso a canonização não pegaria o
     # caso que a motivou.
     return _REVAL_PAIS_CANON.get(_fold(p).strip(), p)
+
+
+def _reval_origem(bruto):
+    partes = [x.strip() for x in limpar(bruto).split(",") if x.strip()]
+    if len(partes) >= 2:
+        pais = _reval_pais(partes[-1])
+        if pais != partes[-1] or _fold(partes[-1]) in _REVAL_PAIS_CANON:
+            return ", ".join(partes[:-1]), pais
+    return limpar(bruto).strip(" .,;"), ""
+
+
+def _reval_nivel(bruto):
+    folded = _fold(bruto or "")
+    if "doutor" in folded:
+        return "Pós-graduação", "Doutorado"
+    if "mestr" in folded:
+        return "Pós-graduação", "Mestrado"
+    return "Graduação", "Graduação"
 
 
 def extrai_revalidacao(trecho):
@@ -1913,6 +1954,36 @@ def extrai_revalidacao(trecho):
                 "instituicao": limpar(inst).strip(" .,;")[:180],
                 "pais": pais,
             }
+
+    for rx, decisao in (
+            (_REVAL_INDEFERIMENTO_RE, "Indeferido"),
+            (_REVAL_GERUNDIO_RE, "Indeferido")):
+        m = rx.search(texto)
+        if not m:
+            continue
+        inst, pais = _reval_origem(m.group("origem"))
+        via, nivel = _reval_nivel(m.group("nivel"))
+        return {
+            "via": via,
+            "decisao": decisao,
+            "nivel": nivel,
+            "curso": limpar(m.group("curso")).strip(" .,;")[:180],
+            "instituicao": inst[:180],
+            "pais": pais,
+        }
+
+    m = _REVAL_TITULO_LEGADO_RE.search(texto)
+    if m:
+        inst, pais = _reval_origem(m.group("origem"))
+        via, nivel = _reval_nivel(m.group("equiv"))
+        return {
+            "via": via,
+            "decisao": "Deferido",
+            "nivel": nivel,
+            "curso": limpar(m.group("curso")).strip(" “”\"'.,;")[:180],
+            "instituicao": inst[:180],
+            "pais": pais,
+        }
     return None
 
 
