@@ -1,0 +1,52 @@
+{
+  "_leia_me": [
+    "Amostra compartilhada da limpeza dos campos da revalidação: país, curso e",
+    "instituição. Cada caso saiu da aba EM PRODUÇÃO, apontado pelo mantenedor.",
+    "",
+    "Existe porque há DOIS caminhos de escrita em `ato_revalidacao`, em",
+    "linguagens diferentes: o backfill (PHP, lê o texto do banco) e o import",
+    "(Python, publica o JSON que o importador consome). Foi a assimetria entre",
+    "eles que deixou passar `\"…Fakultät\", Tübingen, Na Alemanha` como nome de",
+    "instituição depois de a limpeza do PHP já estar no ar.",
+    "",
+    "Conferida por `backend/importar/teste_revalidacao_campos.php` e",
+    "`tools/teste_dados_portal.py`. Os dois têm de concordar — é o que impede",
+    "que uma ponta melhore e a outra fique para trás."
+  ],
+  "pais": [
+    ["na Bolívia", "Bolívia"],
+    ["no México", "México"],
+    ["em Cuba", "Cuba"],
+    ["nos Estados Unidos da América", "Estados Unidos"],
+    ["Estados Unidos da América", "Estados Unidos"],
+    ["deste Conselho", ""],
+    ["na Resolução 97/1996", ""],
+    ["como Doutorado em Comunicação", ""],
+    ["Guiana Francesa", "Guiana Francesa"]
+  ],
+  "curso": [
+    ["em Medicina", "Medicina"],
+    ["Graduação em Medicina", "Medicina"],
+    ["nível de Graduação em Medicina", "Medicina"],
+    ["em Engenharia Civil", "Engenharia Civil"],
+    ["“Doctor of Philosophy”", "Doctor of Philosophy"],
+    ["“Doctor of Philosophy”,", "Doctor of Philosophy"],
+    ["Odontologia - Bacharelado", "Odontologia - Bacharelado"]
+  ],
+  "instituicao": [
+    ["Argentina", ""],
+    ["Bolívia", ""],
+    ["Paraguai", ""],
+    ["França", ""],
+    ["Peru", ""],
+    ["Termos Estabelecidos Na Resolução 267/2013", ""],
+    ["nos termos estabelecidos na Resolução 267/2013", ""],
+    ["“Language", "Language"],
+    ["“Eberhard-Karls-Universität zu Tübingen Die Medizinische Fakultät”, Tübingen, Na Alemanha",
+     "Eberhard-Karls-Universität zu Tübingen Die Medizinische Fakultät, Tübingen"],
+    ["Universidad Tecnológica de la Habana \"José Antonio Echeverría\"",
+     "Universidad Tecnológica de la Habana \"José Antonio Echeverría\""],
+    ["Universidad Mayor de San Simón", "Universidad Mayor de San Simón"],
+    ["na Universidade de Leiden", "Universidade de Leiden"]
+  ]
+}

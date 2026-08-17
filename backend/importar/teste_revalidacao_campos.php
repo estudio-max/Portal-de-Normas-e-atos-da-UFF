@@ -10,13 +10,10 @@
  */
 require_once __DIR__ . '/revalidacao_campos.php';
 
-$PAIS_CANON = [
-    'eua' => 'Estados Unidos', 'estados unidos' => 'Estados Unidos',
-    'estados unidos da america' => 'Estados Unidos',
-    'bolivia' => 'Bolívia', 'argentina' => 'Argentina', 'mexico' => 'México',
-    'cuba' => 'Cuba', 'colombia' => 'Colômbia', 'holanda' => 'Holanda',
-    'paraguai' => 'Paraguai', 'venezuela' => 'Venezuela',
-];
+// A tabela REAL, a mesma que o backfill usa. Uma cópia reduzida aqui fazia o
+// teste passar contra uma realidade inventada: 'França' e 'Peru' não estavam
+// nela, então a limpeza de instituição "passou" enquanto errava em produção.
+$PAIS_CANON = revalidacao_paises_canon();
 
 $falhas = 0;
 $checa = function (string $nome, $obtido, $esperado) use (&$falhas) {
@@ -80,6 +77,23 @@ echo "\n-- o que NAO se faz aqui: fundir grafias --\n";
 // "universidad del quindio" (Colombia, 1). Sao instituicoes diferentes.
 $checa('"Universidade Mayor de San Simon" NAO vira "Universidad …"',
     revalidacao_limpa_campo('Universidade Mayor de San Simon'), 'Universidade Mayor de San Simon');
+
+// A amostra COMPARTILHADA com o lado Python. Há DOIS caminhos de escrita em
+// `ato_revalidacao` — o backfill (PHP, lê o texto do banco) e o import
+// (Python, publica o JSON) — e foi a assimetria entre eles que deixou
+// `"…Fakultät", Tübingen, Na Alemanha` chegar à tela DEPOIS de a limpeza do
+// PHP já estar no ar. Os dois conferem esta mesma lista.
+echo "\n-- amostra compartilhada (a mesma que o teste Python confere) --\n";
+$amostra = json_decode((string)file_get_contents(
+    __DIR__ . '/../../tools/dados_referencia/revalidacao-campos.json'), true);
+foreach (['pais', 'curso', 'instituicao'] as $campo) {
+    foreach ($amostra[$campo] as [$bruto, $esperado]) {
+        if ($campo === 'pais')             $obtido = revalidacao_pais_canon($bruto, $PAIS_CANON);
+        elseif ($campo === 'instituicao')  $obtido = revalidacao_limpa_instituicao($bruto, $PAIS_CANON);
+        else                               $obtido = revalidacao_limpa_campo($bruto);
+        $checa("$campo: " . mb_substr($bruto, 0, 44), $obtido, $esperado);
+    }
+}
 
 echo "\n", $falhas ? "$falhas FALHA(S)\n" : "TODOS OK\n";
 exit($falhas ? 1 : 0);
