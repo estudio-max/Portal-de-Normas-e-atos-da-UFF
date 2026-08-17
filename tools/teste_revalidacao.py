@@ -27,7 +27,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from extrair_boletim import extrai_revalidacao  # noqa: E402
+from extrair_boletim import extrai_revalidacao, extrai_revalidacoes  # noqa: E402
 
 GRAD_VENEZUELA = """Art. 1º - Deferir a solicitação de Revalidação do Diploma, nível
 Graduação de Ingeniero Agrícola, obtido por Juan Vicente Liendro Moncada,
@@ -88,6 +88,33 @@ LEGADOS_CITADOS = [
     ("indeferimento substantivado", "que " + LEGADO_INDEFERIMENTO.removeprefix("decide ")),
     ("parecer homologado", "que homologar" + LEGADO_GERUNDIO.split("homologar", 1)[1]),
     ("revalidacao de titulo", "que " + LEGADO_TITULO.removeprefix("decide ")),
+]
+
+MULTIPLAS_5792 = """o conselho de ensino e pesquisa da universidade federal
+fluminense, no uso de suas atribuições, através das decisões n.ºs 018 e
+019/2008, pronuncia-se, em face do que dispõe a legislação em vigor, pela
+homologação da revalidação do diploma, obtido por: decisão nº. 018/08. julius
+césar barreto leite, diploma de “doctor of philosophy” junto à the victoria
+university of manchester, institute of science and technology, departament of
+eletrical engineering and electronics, inglaterra, como doutorado em ciência
+da computação. (processo nº 23069.054576/07-82); e decisão nº. 019/08. orlando
+gomes loques filho, diploma de “doctor of philosophy” junto à university of
+london, imperial college of science and technology, inglaterra, como doutorado
+em ciência da computação. (processo nº. 23069.054577/07-27). sala das reuniões,
+16 de janeiro de 2008."""
+
+BLOCO_MULTIPLAS_5792 = "pela " + MULTIPLAS_5792.split("pela", 1)[1].lstrip()
+MULTIPLAS_CITADAS_5792 = "a decisão anterior, que " + BLOCO_MULTIPLAS_5792
+
+ESPERADO_5792 = [
+    {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+     "curso": "doctor of philosophy",
+     "instituicao": "the victoria university of manchester, institute of science and technology, departament of eletrical engineering and electronics",
+     "pais": "Reino Unido"},
+    {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+     "curso": "doctor of philosophy",
+     "instituicao": "university of london, imperial college of science and technology",
+     "pais": "Reino Unido"},
 ]
 
 # --- casos ----------------------------------------------------------------
@@ -196,6 +223,21 @@ for rotulo, texto, esperado in CASOS:
     else:
         print(f"ok   : {rotulo}")
 
+obtidas_5792 = extrai_revalidacoes(MULTIPLAS_5792)
+if obtidas_5792 != ESPERADO_5792:
+    falhas += 1
+    print(f"FALHA: ato 5792 deveria produzir duas decisões\n   {obtidas_5792}")
+else:
+    print("ok   : ato 5792 produz duas decisões na ordem documental")
+if extrai_revalidacao(MULTIPLAS_5792) != ESPERADO_5792[0]:
+    falhas += 1
+    print("FALHA: wrapper singular não devolve o primeiro item")
+if extrai_revalidacoes(MULTIPLAS_CITADAS_5792) != []:
+    falhas += 1
+    print("FALHA: bloco coletivo de ato citado não deveria produzir decisões")
+else:
+    print("ok   : bloco coletivo de ato citado não produz decisões")
+
 # --- invariante de PRIVACIDADE -------------------------------------------
 # Vale mais que qualquer caso acima: nenhum campo da saida pode conter o nome
 # da pessoa. E o que sustenta a decisao de o painel ser agregado.
@@ -208,16 +250,22 @@ NOMES = [
     (LEGADO_INDEFERIMENTO, ["tatiane", "costa", "santos"]),
     (LEGADO_GERUNDIO, ["tito", "victor", "martinez", "carrasco"]),
     (LEGADO_TITULO, ["bianca", "zadrozny"]),
+    (MULTIPLAS_5792, ["julius", "césar", "barreto", "leite", "orlando", "gomes", "loques", "filho"]),
 ]
 for texto, pedacos in NOMES:
-    r = extrai_revalidacao(texto) or {}
-    tudo = " | ".join(str(v) for v in r.values())
+    tudo = " | ".join(
+        str(valor)
+        for resultado in extrai_revalidacoes(texto)
+        for valor in resultado.values())
     vazou = [p for p in pedacos if p.lower() in tudo.lower()]
     if vazou:
         falhas += 1
         print(f"FALHA: nome da pessoa vazou na saida: {vazou}\n   -> {tudo}")
-if not any(p.lower() in " ".join(str(v) for v in (extrai_revalidacao(t) or {}).values()).lower()
-           for t, ps in NOMES for p in ps):
+if not any(p.lower() in " ".join(
+        str(valor)
+        for resultado in extrai_revalidacoes(texto)
+        for valor in resultado.values()).lower()
+           for texto, pedacos in NOMES for p in pedacos):
     print("ok   : nenhum nome de pessoa aparece na saida (invariante de privacidade)")
 
 print(f"\n{len(CASOS)} caso(s), {falhas} falha(s).")

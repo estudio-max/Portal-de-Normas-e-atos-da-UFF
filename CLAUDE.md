@@ -250,14 +250,18 @@ para a pasta `importar/` do servidor e visite
 `basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
 É seguro repetir: o upsert casa por chave natural
 `(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
-chama o `resolver_relacoes_v2.php` sozinho. Confira que **os SEIS** arquivos de
+chama o `resolver_relacoes_v2.php` sozinho. Confira que **os SETE** arquivos de
 `require_once` estão na mesma pasta — `extrair_prazos.php`,
 `extrair_prazos_pad_sinve.php`, `comissoes_match.php`, `ods_match.php`,
-`politicas_match.php` e `indicador_politica.php`: **a falta de qualquer um dá
+`politicas_match.php`, `indicador_politica.php` e `revalidacao_lista.php`: **a
+falta de qualquer um dá
 HTTP 500 de corpo vazio**, e com o cron rodando 2x/dia isso significa portal
-parado sem ninguém notar. Os três últimos são recentes (`ods_match.php` de
-03/08/2026, `politicas_match.php` e `indicador_politica.php` de 04/08/2026):
-quem subiu o importador antes dessas datas **não os tem**.
+parado sem ninguém notar. Entre eles, `ods_match.php` (03/08/2026),
+`politicas_match.php` e `indicador_politica.php` (04/08/2026) são recentes:
+quem subiu o importador antes dessas datas **não os tem**. O backfill de
+revalidações também depende obrigatoriamente de `revalidacao_lista_legada.php`
+e `revalidacao_sincronizacao.php`; suba os dois antes de
+`backfill_ato_revalidacao.php`.
 Ao atualizar o importador, suba SEMPRE os auxiliares ANTES dele. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
 
 ⚠️ **Importador que fica para trás não dá erro nenhum — ele só deixa de
@@ -339,6 +343,14 @@ centenas de acessos simultâneos.
 Quatro abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
 e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
 
+- **Revalidação** (`/api/revalidacoes`): **um ato pode decidir vários pedidos
+  de revalidação.** O extrator mantém `revalidacao` como alias do primeiro item
+  e só publica `revalidacoes` quando há mais de um, sempre na ordem documental.
+  A tabela usa UNIQUE `(ato_id, ordem)`. Ausência das duas chaves no JSON antigo
+  preserva os fatos já gravados; `revalidacao: null` declara explicitamente zero
+  decisões e os sincroniza. Deploy obrigatório: migração
+  `backend/db/migrar_ato_revalidacao_multiplas.sql` → importador/auxiliares → JSON
+  novo. Inverter essa ordem perde silenciosamente os itens após o primeiro.
 - **Busca por processo** (`/api/atos?processo=…`): casa por DÍGITOS na tabela
   `ato_processo`. O `ato.processo_sei` guarda só o primeiro número do texto; a
   tabela guarda todos (medido: a coluna única descartava 44% das menções).

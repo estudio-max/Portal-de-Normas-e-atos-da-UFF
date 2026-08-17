@@ -44,19 +44,25 @@ CORPO = (
 )
 
 
-def _ato(corpo_texto):
+def _ato(corpo_texto, revalidacoes=None, incluir_revalidacao=True):
     """Ato no formato do extrator (out/atos.json), com o minimo que o
     conversor exige. `corpo_busca` e o que o extrator emite hoje."""
-    return {
+    ato = {
         "arquivo": "001-26.pdf", "bs_numero": "1", "bs_data": "05/01/2026",
         "tipo": "PORTARIA", "sigla": "GAR", "numero": "68440", "ano": "2022",
         "data_ato": "2022-03-14", "ementa": "Homologa revalidacao de diploma.",
         "corpo_texto": corpo_texto, "corpo_busca": corpo_texto.lower(),
     }
+    if incluir_revalidacao:
+        ato["revalidacao"] = revalidacoes[0] if revalidacoes else None
+    if revalidacoes and len(revalidacoes) > 1:
+        ato["revalidacoes"] = revalidacoes
+    return ato
 
 
-def converter_um(corpo_texto):
-    return G.converter({"atos": [_ato(corpo_texto)], "boletins": []})[0]
+def converter_um(corpo_texto, revalidacoes=None, incluir_revalidacao=True):
+    return G.converter({"atos": [_ato(corpo_texto, revalidacoes, incluir_revalidacao)],
+                        "boletins": []})[0]
 
 
 def main():
@@ -91,6 +97,44 @@ def main():
     checa("atos.json SEM `corpo_texto` (safra antiga) cai em `corpo_busca`",
           antigo["textoOriginal"] == G.mascarar_cpfs(CORPO.lower()),
           "o corpo sumiu do arquivo publicado")
+
+    print("\n-- contrato revalidacao singular/plural --")
+    uma = [{"via": "Graduação", "decisao": "Deferido", "nivel": "Graduação",
+            "curso": "Medicina", "instituicao": "Universidad X", "pais": "Cuba"}]
+    duas = uma + [{"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+                   "curso": "Doctor of Philosophy", "instituicao": "University Y",
+                   "pais": "Reino Unido"}]
+    singular_conflitante = {"via": "Graduação", "decisao": "Indeferido",
+                            "nivel": "Graduação", "curso": "Odontologia",
+                            "instituicao": "Universidad Z", "pais": "Argentina"}
+    saida_uma = converter_um(CORPO, uma)
+    saida_duas = converter_um(CORPO, duas)
+    saida_zero = converter_um(CORPO, [])
+    saida_ausente = converter_um(CORPO, incluir_revalidacao=False)
+    saida_legada = converter_um(CORPO, uma)
+    ato_plural_vazio = _ato(CORPO, incluir_revalidacao=False)
+    ato_plural_vazio["revalidacoes"] = []
+    saida_plural_vazio = G.converter({"atos": [ato_plural_vazio], "boletins": []})[0]
+    ato_conflitante = _ato(CORPO, duas)
+    ato_conflitante["revalidacao"] = singular_conflitante
+    saida_conflitante = G.converter({"atos": [ato_conflitante], "boletins": []})[0]
+    checa("uma decisão mantém somente singular",
+          saida_uma["revalidacao"] == uma[0] and "revalidacoes" not in saida_uma)
+    checa("duas decisões publicam singular e lista completa",
+          saida_duas["revalidacao"] == duas[0] and saida_duas.get("revalidacoes") == duas)
+    checa("zero decisões publica null sem plural",
+          "revalidacao" in saida_zero and saida_zero["revalidacao"] is None
+          and "revalidacoes" not in saida_zero)
+    checa("ausência das duas chaves não publica revalidação",
+          "revalidacao" not in saida_ausente and "revalidacoes" not in saida_ausente)
+    checa("plural vazio isolado publica null no alias singular",
+          saida_plural_vazio.get("revalidacao", "ausente") is None
+          and "revalidacoes" not in saida_plural_vazio)
+    checa("plural conflitante prevalece e governa o alias singular",
+          saida_conflitante["revalidacao"] == duas[0]
+          and saida_conflitante.get("revalidacoes") == duas)
+    checa("carga legada só com singular mantém decisão",
+          saida_legada["revalidacao"] == uma[0] and "revalidacoes" not in saida_legada)
 
     print("\n-- mascara de CPF (o invariante que sustenta a derivacao) --")
     original = saida["textoOriginal"]

@@ -29,12 +29,14 @@
 //  Uso (CLI):
 //    php backfill_ato_revalidacao.php
 //
-//  NÃO apaga o que o import diário gravou: faz upsert por `ato_id`, e as
-//  linhas do pipeline (que vêm com maiúsculas corretas) são reescritas com o
-//  mesmo conteúdo. Rodar duas vezes é seguro.
+//  Sincroniza todas as linhas de cada ato reconhecido. As linhas existentes
+//  desse ato são substituídas na ordem documental, então rodar duas vezes é
+//  seguro.
 // ============================================================================
 $raiz = dirname(__DIR__);
 require_once $raiz . '/api/db.php';
+require_once __DIR__ . '/revalidacao_lista_legada.php';
+require_once __DIR__ . '/revalidacao_sincronizacao.php';
 
 $cfg = carregar_config();
 $cli = (PHP_SAPI === 'cli');
@@ -208,60 +210,71 @@ $sql = "SELECT a.id, t.texto_original AS txt
 $st = $pdo->query($sql);
 
 $insere = $pdo->prepare(
-    "INSERT INTO ato_revalidacao (ato_id,via,decisao,nivel,curso,instituicao,pais)
-     VALUES (:id,:v,:d,:n,:c,:i,:p)
-     ON DUPLICATE KEY UPDATE via=VALUES(via), decisao=VALUES(decisao),
-       nivel=VALUES(nivel), curso=VALUES(curso),
-       instituicao=VALUES(instituicao), pais=VALUES(pais)");
+    "INSERT INTO ato_revalidacao (ato_id,ordem,via,decisao,nivel,curso,instituicao,pais)
+     VALUES (:id,:o,:v,:d,:n,:c,:i,:p)");
+$remove = $pdo->prepare('DELETE FROM ato_revalidacao WHERE ato_id=?');
+$removeAto = static fn(int|string $atoId): bool => $remove->execute([$atoId]);
+$insereAto = static function (int|string $atoId, int $ordem, array $achou) use ($insere): void {
+    $insere->execute([
+        ':id' => $atoId, ':o' => $ordem,
+        ':v' => $achou['via'], ':d' => $achou['decisao'],
+        ':n' => $achou['nivel'] ?: null, ':c' => $achou['curso'] ?: null,
+        ':i' => $achou['instituicao'] ?: null, ':p' => $achou['pais'] ?: null,
+    ]);
+};
 
 $vistos = 0; $gravados = 0; $porVia = []; $semPais = 0; $suspeitos = [];
 while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
     $vistos++;
     $txt = preg_replace('/\s+/u', ' ', (string)$row['txt']);
 
-    $achou = null;
-    foreach ([['Graduação', $RE_GRAD], ['Pós-graduação', $RE_POS]] as [$via, $re]) {
-        if (!preg_match($re, $txt, $m, PREG_OFFSET_CAPTURE)) continue;
-        $ini = $m[0][1];
-        if (preg_match($RE_QUE, mb_substr($txt, max(0, $ini - 10), 10))) continue;
+    $achados = extrair_revalidacoes_lista_legada($txt);
+    if (!$achados) {
+        $achou = null;
+        foreach ([['Graduação', $RE_GRAD], ['Pós-graduação', $RE_POS]] as [$via, $re]) {
+            if (!preg_match($re, $txt, $m, PREG_OFFSET_CAPTURE)) continue;
+            $ini = $m[0][1];
+            if (preg_match($RE_QUE, mb_substr($txt, max(0, $ini - 10), 10))) continue;
 
-        $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
-        if ($via === 'Graduação') {
-            $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
-            $pais = count($partes) >= 2 ? pais_canon(end($partes), $PAIS_CANON) : '';
-            $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
-            $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
+            $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
+            if ($via === 'Graduação') {
+                $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
+                $pais = count($partes) >= 2 ? pais_canon(end($partes), $PAIS_CANON) : '';
+                $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
+                $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
 
-            // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".
-            // "homologar a revalidação do diploma de 'doctor of philosophy' …
-            //  como equivalente ao de doutor em letras" é pós-graduação, ainda
-            // que escrito com o vocabulário da graduação. Classificar pelo
-            // texto que casou, e não pelo que o ato AFIRMA, poria doutorados
-            // na conta da graduação e estragaria as duas taxas.
-            $eq = $g('equiv');
-            if (preg_match('/doutor/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Doutorado'; }
-            elseif (preg_match('/mestr/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Mestrado'; }
-            elseif ($nivel !== '' && preg_match('/^(Doutorado|Mestrado)$/u', $nivel)) { $via = 'Pós-graduação'; }
-            elseif ($nivel === '') { $nivel = 'Graduação'; }
-        } else {
-            $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
-            $pais = $loc ? pais_canon(end($loc), $PAIS_CANON) : '';
-            $inst = $g('inst');
-            $eq = $g('equiv');
-            $nivel = preg_match('/doutor/iu', $eq) ? 'Doutorado'
-                   : (preg_match('/mestr/iu', $eq) ? 'Mestrado' : '');
+                // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".
+                // "homologar a revalidação do diploma de 'doctor of philosophy' …
+                //  como equivalente ao de doutor em letras" é pós-graduação, ainda
+                // que escrito com o vocabulário da graduação. Classificar pelo
+                // texto que casou, e não pelo que o ato AFIRMA, poria doutorados
+                // na conta da graduação e estragaria as duas taxas.
+                $eq = $g('equiv');
+                if (preg_match('/doutor/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Doutorado'; }
+                elseif (preg_match('/mestr/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Mestrado'; }
+                elseif ($nivel !== '' && preg_match('/^(Doutorado|Mestrado)$/u', $nivel)) { $via = 'Pós-graduação'; }
+                elseif ($nivel === '') { $nivel = 'Graduação'; }
+            } else {
+                $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
+                $pais = $loc ? pais_canon(end($loc), $PAIS_CANON) : '';
+                $inst = $g('inst');
+                $eq = $g('equiv');
+                $nivel = preg_match('/doutor/iu', $eq) ? 'Doutorado'
+                       : (preg_match('/mestr/iu', $eq) ? 'Mestrado' : '');
+            }
+            $achou = [
+                'via' => $via,
+                'decisao' => (stripos($g('decisao'), 'indefer') === 0) ? 'Indeferido' : 'Deferido',
+                'nivel' => $nivel,
+                'curso' => mb_substr(caixa_nome($g('curso')), 0, 180),
+                'instituicao' => mb_substr(caixa_nome($inst), 0, 180),
+                'pais' => $pais,
+            ];
+            break;
         }
-        $achou = [
-            'via' => $via,
-            'decisao' => (stripos($g('decisao'), 'indefer') === 0) ? 'Indeferido' : 'Deferido',
-            'nivel' => $nivel,
-            'curso' => mb_substr(caixa_nome($g('curso')), 0, 180),
-            'inst'  => mb_substr(caixa_nome($inst), 0, 180),
-            'pais'  => $pais,
-        ];
-        break;
+        if ($achou) $achados = [$achou];
     }
-    if (!$achou) {
+    if (!$achados) {
         // Parece decisão e não casou? Guarda para o relatório.
         // O teste é deliberadamente FROUXO: verbo decisório a até ~120
         // caracteres de "revalida"/"reconhecimento do t". Frouxo de propósito
@@ -278,23 +291,23 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
         continue;
     }
 
-    if ($diagnostico) { $gravados++; $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1; continue; }
-
-    $insere->execute([
-        ':id' => $row['id'], ':v' => $achou['via'], ':d' => $achou['decisao'],
-        ':n' => $achou['nivel'] ?: null, ':c' => $achou['curso'] ?: null,
-        ':i' => $achou['inst'] ?: null, ':p' => $achou['pais'] ?: null,
-    ]);
-    $gravados++;
-    $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1;
-    if ($achou['pais'] === '') $semPais++;
+    sincronizar_revalidacoes_ato(
+        $pdo, $row['id'], $achados, $diagnostico,
+        $removeAto, $insereAto
+    );
+    foreach ($achados as $achou) {
+        $gravados++;
+        $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1;
+        if (!$diagnostico && $achou['pais'] === '') $semPais++;
+    }
 }
 
 log_($diagnostico ? "=== MODO DIAGNÓSTICO — nada foi gravado ===" : "");
-log_("candidatos lidos : $vistos");
-log_(($diagnostico ? "casariam         : " : "gravados         : ") . $gravados);
+log_("atos candidatos lidos : $vistos");
+log_(($diagnostico ? "pedidos que casariam  : " : "pedidos gravados      : ") . $gravados);
+log_("pedidos por via:");
 foreach ($porVia as $v => $n) log_("  $v: $n");
-if (!$diagnostico) log_("sem país         : $semPais");
+if (!$diagnostico) log_("pedidos sem país      : $semPais");
 
 // ---------------------------------------------------------------------------
 // O relatório: quem parece decisão e não casou.
@@ -353,17 +366,18 @@ if ($noTeto > 0) {
     // porque o dispositivo estava antes do corte — o risco só existe para os
     // cortados que NÃO casaram.
     $r2 = $pdo->query(
-        "SELECT SUM(r.ato_id IS NOT NULL) AS capturados, COUNT(*) AS total
+        "SELECT COUNT(DISTINCT CASE WHEN r.ato_id IS NOT NULL THEN a.id END) AS atos_capturados,
+                COUNT(DISTINCT a.id) AS total_atos
            FROM ato a
            JOIN ato_texto t ON t.ato_id = a.id
            LEFT JOIN ato_revalidacao r ON r.ato_id = a.id
           WHERE CHAR_LENGTH(t.texto_original) >= 6990
             AND (t.texto_original LIKE '%revalida%'
                  OR t.texto_original LIKE '%reconhecimento do t%')")->fetch(PDO::FETCH_ASSOC);
-    $cap = (int)($r2['capturados'] ?? 0);
-    $tot = (int)($r2['total'] ?? 0);
-    log_("  destes, já capturados : $cap");
-    log_("  destes, em aberto     : " . ($tot - $cap) . "  <- é AQUI que pode haver decisão escondida");
+    $cap = (int)($r2['atos_capturados'] ?? 0);
+    $tot = (int)($r2['total_atos'] ?? 0);
+    log_("  destes, atos capturados : $cap");
+    log_("  destes, atos em aberto   : " . ($tot - $cap) . "  <- é AQUI que pode haver decisão escondida");
     log_("");
     log_("  Em aberto acima de ~30, vale reprocessar os PDFs em vez do banco:");
     log_("  o corte pode estar escondendo o Art. 1º e não há como distinguir,");

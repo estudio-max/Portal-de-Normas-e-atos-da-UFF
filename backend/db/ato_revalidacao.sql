@@ -28,10 +28,8 @@
 -- são os MESMOS de coop_paises() no index_v2.php, para que o mapa reaproveite
 -- as coordenadas em vez de manter duas listas que divergem com o tempo.
 --
--- Um ato decide UM pedido — daí a chave natural ser `ato_id` sozinho. Se algum
--- dia aparecer resolução que decide vários pedidos de uma vez, esta UNIQUE é
--- o lugar onde isso vai estourar de forma visível, em vez de gravar só o
--- primeiro em silêncio.
+-- Um ato pode decidir mais de um pedido. `ordem` numera cada decisão dentro do
+-- ato; as linhas históricas, que só tinham um pedido, usam sempre a ordem 1.
 --
 -- `curso` e `instituicao` ficam FORA dos índices de propósito: são VARCHAR(180)
 -- e, em utf8mb4, 180 caracteres = 720 bytes — perto do limite de 767 bytes por
@@ -46,6 +44,7 @@
 CREATE TABLE IF NOT EXISTS `ato_revalidacao` (
   `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `ato_id`      BIGINT UNSIGNED NOT NULL,
+  `ordem`       SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   `via`         ENUM('Graduação','Pós-graduação') NOT NULL,
   `decisao`     ENUM('Deferido','Indeferido') NOT NULL,
   -- Nível do título. Na graduação vem escrito no dispositivo; na pós sai da
@@ -60,7 +59,7 @@ CREATE TABLE IF NOT EXISTS `ato_revalidacao` (
   -- América Latina.
   `pais`        VARCHAR(60)  NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_ato_revalidacao` (`ato_id`),
+  UNIQUE KEY `uq_ato_revalidacao` (`ato_id`, `ordem`),
   KEY `ix_via_decisao` (`via`, `decisao`),
   KEY `ix_pais` (`pais`, `via`),
   CONSTRAINT `fk_atorevalidacao_ato` FOREIGN KEY (`ato_id`) REFERENCES `ato` (`id`) ON DELETE CASCADE

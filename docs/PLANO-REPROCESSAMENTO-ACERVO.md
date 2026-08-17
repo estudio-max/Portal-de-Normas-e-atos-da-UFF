@@ -78,9 +78,10 @@ O extrator de hoje é muito melhor que o que fez a carga histórica.
 | **Comissões, ODS, políticas** | classificadores que amadureceram depois da carga inicial |
 | **Revalidação** | os 623 cegos + as 4 redações de 2000–2008 (ver abaixo) |
 
-### As 4 redações de revalidação ainda descobertas
+### As 4 redações de revalidação incorporadas
 
-Colhidas pelo modo diagnóstico, todas reais:
+Colhidas pelo modo diagnóstico, todas reais e já cobertas pelos parsers e
+testes de regressão:
 
 | ato | forma |
 |---|---|
@@ -92,16 +93,13 @@ Colhidas pelo modo diagnóstico, todas reais:
 O padrão comum: a decisão vira **substantivo** ("indeferimento", "homologação")
 ou **gerúndio** ("indeferindo"), e a origem aparece como "realizado na".
 
-### Um defeito conhecido, ainda não corrigido
+### Correção de múltiplos pedidos concluída
 
-**Ato que decide vários pedidos de uma vez grava só o primeiro.** O `#5792` é
-assim (formato de lista). O código dá `break` na primeira ocorrência e a chave
-única é `ato_id` sozinho.
-
-O comentário em `backend/db/ato_revalidacao.sql` afirma que isso "estouraria de
-forma visível" — **está errado**: grava o primeiro e ignora o resto, em
-silêncio. Corrigir exige chave `(ato_id, ordem)` e percorrer todas as
-ocorrências. Numa contagem auditada, é subnotificação invisível.
+O `#5792` decide dois pedidos no mesmo ato (formato de lista). A etapa 2 passou
+a extrair todas as ocorrências em ordem documental, manter `revalidacao` como
+alias da primeira, sincronizar importador e backfill de forma atômica e usar a
+chave `(ato_id, ordem)`. Assim, a contagem auditada preserva cada pedido sem
+duplicar o ato.
 
 ## Etapas
 
@@ -126,7 +124,7 @@ A etapa 5 pode usar esse contrato sem republicar a cópia minúscula do corpo.
 | # | Etapa | Estado |
 |---|---|---|
 | 1 | Corrigir truncagem e lowercase no extrator/importador | ✅ |
-| 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ⬜ |
+| 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ✅ |
 | 3 | Acrescentar as redações antigas de decisão única (`#5792` segue na etapa 2) | ✅ |
 | 4 | Baixar o acervo completo de boletins | ⬜ |
 | 5 | Reprocessar e gerar a base completa | ⬜ |

@@ -67,6 +67,9 @@ jobs:
       - name: Regressão do schema de inteligência institucional
         run: node tools/teste_schema_inteligencia.mjs
 
+      - name: Regressão do schema de múltiplas revalidações
+        run: node tools/teste_ato_revalidacao_schema.mjs
+
   # A classificação ODS roda no import (backend/importar/ods_match.php) e é a
   # única parte do backend que dá para testar sem banco: é regex puro sobre o
   # dispositivo. Cada caso do teste é um falso-positivo que já esteve em
@@ -111,6 +114,15 @@ jobs:
       - name: Regressão do snapshot de etapas
         run: php backend/importar/teste_indicador_politica.php
 
+      - name: Regressão da lista de revalidações no importador
+        run: php backend/importar/teste_revalidacao_lista.php
+
+      - name: Regressão da lista histórica de revalidações
+        run: php backend/importar/teste_revalidacao_lista_legada.php
+
+      - name: Regressão da sincronização atômica de revalidações
+        run: php backend/importar/teste_revalidacao_sincronizacao.php
+
   # O extrator é o arquivo mais sensível do projeto: um padrão que deixa de
   # casar não quebra nada visivelmente — o dado simplesmente para de existir,
   # e ninguém percebe até alguém procurar por ele meses depois.
@@ -144,3 +156,6 @@ jobs:
       # saída, porque o painel é agregado por decisão do mantenedor.
       - name: Regressão da revalidação de diplomas
         run: python tools/teste_revalidacao.py
+
+      - name: Regressão do contrato de dados do portal
+        run: python tools/teste_dados_portal.py
