@@ -123,6 +123,15 @@ jobs:
       - name: Regressão da sincronização atômica de revalidações
         run: php backend/importar/teste_revalidacao_sincronizacao.php
 
+      # O corpo do ato viaja no JSON numa forma só (caixa preservada) e o
+      # `texto_busca` — que alimenta o FULLTEXT — é DERIVADO aqui por
+      # mb_strtolower(). Python, PHP e JavaScript precisam rebaixar a caixa
+      # igual: se um divergir numa letra, a mesma busca passa a dar resultado
+      # diferente no modo banco e no modo estático, sem erro e sem log. A
+      # amostra é a mesma que o teste Python confere.
+      - name: Regressão da caixa do corpo do ato
+        run: php backend/importar/teste_caixa_texto.php
+
   # O extrator é o arquivo mais sensível do projeto: um padrão que deixa de
   # casar não quebra nada visivelmente — o dado simplesmente para de existir,
   # e ninguém percebe até alguém procurar por ele meses depois.
