@@ -122,15 +122,28 @@ export default function PrivacidadeLGPD() {
           tudo o mais que a página afirma. */}
       <Secao icon={<BarChart3 className="w-4 h-4" />} titulo="Medição de audiência">
         <p>
-          O portal usa o <strong>Google Analytics</strong> para contar visitas e saber quais abas
-          são usadas. É o que orienta o que construir em seguida.
+          O portal usa o <strong>Google Analytics</strong> para contar visitas — quantas pessoas
+          chegam e de que tipo de aparelho.
         </p>
         <p>
           <strong>O que você digita não vai para lá.</strong> A matrícula, o nome e os termos de
           busca são enviados apenas ao próprio portal, para gerar o resultado na hora — o código do
-          site não manda nenhum desses dados para a medição de audiência. O que o Analytics recebe é
-          a navegação: qual aba foi aberta, quando, e os dados técnicos que qualquer site recebe
-          (tipo de aparelho, navegador, região aproximada).
+          site não manda nenhum desses dados para a medição de audiência.
+        </p>
+        {/* Precisão que custou uma correção: a primeira versão dizia que o
+            Analytics recebia "qual aba foi aberta". Não recebe. A troca de aba
+            altera só o fragmento do endereço (depois do #) e o portal não
+            dispara evento nenhum por conta própria — então o percurso dentro do
+            site não chega lá. Numa página sobre privacidade, dizer que se
+            coleta MAIS do que se coleta é tão errado quanto o contrário: as
+            duas versões desinformam quem lê para decidir se usa. */}
+        <p>
+          <strong>A navegação dentro do portal também não.</strong> Trocar de aba muda só o
+          fragmento do endereço (o trecho depois do <code className="bg-slate-100 px-1 rounded text-[12px]">#</code>),
+          e isso não gera um novo registro — o Analytics não mostra por onde você andou. O que ele
+          recebe é o acesso em si, com os dados técnicos que qualquer site recebe: tipo de
+          aparelho, navegador e região aproximada. Se você chegou por um link direto para uma aba,
+          esse endereço de entrada é registrado como o de qualquer visita.
         </p>
       </Secao>
 
