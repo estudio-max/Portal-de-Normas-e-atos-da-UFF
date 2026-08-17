@@ -199,10 +199,11 @@ def converter(dados, urls=None):
         ementa_resumo = mascarar_cpfs((a.get("ementa_resumo") or "").strip())
         ementa_inferida = bool(ementa_resumo) and not ementa_oficial
         ementa_disp = ementa_oficial or ementa_resumo or "(sem ementa formal no boletim)"
+        tem_revalidacao = "revalidacao" in a
         lista_reval = a.get("revalidacoes")
         if not isinstance(lista_reval, list):
             lista_reval = [a["revalidacao"]] if a.get("revalidacao") else []
-        saida.append({
+        registro = {
             "id": aid,
             "_idx": i,
             "tipoAto": TIPO_MAP.get(a.get("tipo", ""), "Outro"),
@@ -257,7 +258,6 @@ def converter(dados, urls=None):
             # {via,decisao,nivel,curso,instituicao,pais} | None — p/ a aba
             # Revalidação. NÃO carrega o nome de quem pediu, por desenho: ver o
             # cabeçalho de extrai_revalidacao() e de backend/db/ato_revalidacao.sql.
-            "revalidacao": lista_reval[0] if lista_reval else None,
             # O corpo do ato viaja numa forma só: a de CAIXA PRESERVADA. Quem
             # precisa da versão minúscula (busca por nome/SIAPE, FULLTEXT,
             # regex de prazo) a DERIVA — `mb_strtolower()` no importador,
@@ -294,9 +294,12 @@ def converter(dados, urls=None):
                               + (f" Assinante: {a['signatario']}." if a.get("signatario") else "")),
             # data estável (a do próprio ato) — evita commits diários sem mudança
             "dataCriacao": a.get("data_ato") or "",
-        })
+        }
+        if tem_revalidacao or lista_reval:
+            registro["revalidacao"] = lista_reval[0] if lista_reval else None
         if len(lista_reval) > 1:
-            saida[-1]["revalidacoes"] = lista_reval
+            registro["revalidacoes"] = lista_reval
+        saida.append(registro)
 
     # --- status de vigência via índice reverso (quem revoga/altera quem) ------
     # chave por (numero_digits) -> lista de índices na saída
