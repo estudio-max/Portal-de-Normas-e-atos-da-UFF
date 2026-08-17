@@ -55,6 +55,31 @@ Master of Science - Communication, obtido por Pedro Mendonça Renaux Wanderley,
 na University of Amsterdam (Amsterdã, Holanda), como equivalente ao de Mestrado
 em Comunicação, nos termos estabelecidos na Resolução n.º 583/2017."""
 
+LEGADO_INDEFERIMENTO = """decide manifestar-se pelo indeferimento do pedido de
+revalidação do diploma de tatiane costa dos santos, em nível de graduação em
+bioquímica, realizado na universidade de suffolk, boston, estados unidos da
+américa."""
+
+LEGADO_GERUNDIO = """decide 1-homologar o parecer da comissão de equivalência
+do colegiado do curso de medicina, indeferindo a solicitação de revalidação de
+diploma de tito victor martinez carrasco, em nível de graduação em medicina,
+realizado na universidad mayor real y pontifícia de san francisco xavier de
+chuquisaca."""
+
+LEGADO_TITULO = """decide homologar a revalidação do título de “doctor of
+philosophy in computer science”, obtido por bianca zadrozny, junto a university
+of california, san diego, estados unidos da américa, como doutor em ciência da
+computação, nos termos estabelecidos na resolução 97/1996, deste conselho."""
+
+REGIMENTO_REVALIDACAO = """cabe ao colegiado aprovar a comissão de validação e
+revalidação de diplomas, indicados pela coordenação do programa, bem como os
+respectivos pareceres; homologar os relatórios das comissões examinadoras;
+julgar as decisões do coordenador do programa a respeito de recursos."""
+
+RECURSO_INDEFERIMENTO = """resolve: art. 1º conhecer o pedido de recurso
+relativo ao indeferimento do pedido de reconhecimento de diploma de
+pós-graduação obtido no exterior, e dar-lhe provimento."""
+
 # --- casos ----------------------------------------------------------------
 # (rotulo, texto, esperado | None)
 CASOS = [
@@ -110,6 +135,29 @@ CASOS = [
     ("ato sem nada a ver",
      "Art. 1º - Conceder aposentadoria voluntária a Fulano de Tal, matrícula "
      "SIAPE 1234567, nos termos do art. 40 da Constituição.", None),
+
+    ("legado: indeferimento substantivado, ato 6095", LEGADO_INDEFERIMENTO, {
+        "via": "Graduação", "decisao": "Indeferido", "nivel": "Graduação",
+        "curso": "bioquímica", "instituicao": "universidade de suffolk, boston",
+        "pais": "Estados Unidos"}),
+
+    ("legado: indeferindo em parecer homologado, ato 8910", LEGADO_GERUNDIO, {
+        "via": "Graduação", "decisao": "Indeferido", "nivel": "Graduação",
+        "curso": "medicina",
+        "instituicao": "universidad mayor real y pontifícia de san francisco xavier de chuquisaca",
+        "pais": ""}),
+
+    ("legado: revalidacao de titulo como doutor, ato 10848", LEGADO_TITULO, {
+        "via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+        "curso": "doctor of philosophy in computer science",
+        "instituicao": "university of california, san diego",
+        "pais": "Estados Unidos"}),
+
+    ("regimento apenas define competencia sobre revalidacao",
+     REGIMENTO_REVALIDACAO, None),
+
+    ("recurso menciona indeferimento anterior, mas decide dar provimento",
+     RECURSO_INDEFERIMENTO, None),
 ]
 
 falhas = 0
@@ -144,6 +192,9 @@ NOMES = [
     (GRAD_INDEFERIDO, ["Maria", "Silva", "Santos"]),
     (POS_ALEMANHA, ["Rodrigo", "Gomes", "Ferrari", "Cesar"]),
     (POS_MESTRADO, ["Pedro", "Mendonça", "Renaux", "Wanderley"]),
+    (LEGADO_INDEFERIMENTO, ["tatiane", "costa", "santos"]),
+    (LEGADO_GERUNDIO, ["tito", "victor", "martinez", "carrasco"]),
+    (LEGADO_TITULO, ["bianca", "zadrozny"]),
 ]
 for texto, pedacos in NOMES:
     r = extrai_revalidacao(texto) or {}
