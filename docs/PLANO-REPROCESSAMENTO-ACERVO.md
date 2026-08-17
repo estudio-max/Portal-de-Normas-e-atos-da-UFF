@@ -105,9 +105,29 @@ ocorrências. Numa contagem auditada, é subnotificação invisível.
 
 ## Etapas
 
+> **Divisão de trabalho:** este plano é executado a quatro mãos com o Codex.
+> Fronteiras, formato do caso de teste e ordem de merge em
+> [`CONTRIBUINDO-REPROCESSAMENTO.md`](CONTRIBUINDO-REPROCESSAMENTO.md).
+
+### ⚠️ Pendência aberta da etapa 1 — duplicação no JSON
+
+O extrator passou a emitir `corpo_texto` (caixa preservada) **e**
+`corpo_busca` (dobrada), e `gerar_dados_portal.py` publica os dois. Medido nos
+15 boletins de teste: **3,71 MB → 6,70 MB**, quase o dobro. Extrapolando para
+o índice publicado, ~24 MB trafegando por Git todo dia e baixados pelo
+navegador no modo de contingência.
+
+É desperdício: `textoBusca` é literalmente `textoOriginal.lower()`. **Publicar
+só o original** e dobrar no consumo (`mb_strtolower()` no importador,
+`.toLowerCase()` no `dataSource.ts`) corta a duplicação e deixa o crescimento
+sendo só o do texto mais longo — que é o que se quer pagar.
+
+Mexe em três camadas ao mesmo tempo (extrator, importador, front), então
+**precisa de teste antes de gravar**. Resolver ANTES de rodar a etapa 5.
+
 | # | Etapa | Estado |
 |---|---|---|
-| 1 | Corrigir truncagem e lowercase no extrator/importador | ⬜ |
+| 1 | Corrigir truncagem e lowercase no extrator/importador | 🔶 feito, com a pendência acima |
 | 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ⬜ |
 | 3 | Acrescentar as 4 redações antigas | ⬜ |
 | 4 | Baixar o acervo completo de boletins | ⬜ |

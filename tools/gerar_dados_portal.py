@@ -256,6 +256,12 @@ def converter(dados, urls=None):
             # cabeçalho de extrai_revalidacao() e de backend/db/ato_revalidacao.sql.
             "revalidacao": a.get("revalidacao"),
             "textoBusca": mascarar_cpfs(a.get("corpo_busca", "")),  # corpo p/ busca por nome/SIAPE
+            # Mesma coisa, com a CAIXA PRESERVADA. Separado desde 17/08/2026:
+            # antes só existia a versão minúscula, e o banco gravava ela nas
+            # duas colunas — daí `texto_original` não ser o original. Extração
+            # de estrutura (instituição, curso, país) usa esta; busca usa a de
+            # cima. `mascarar_cpfs` vale para as DUAS, sem exceção.
+            "textoOriginal": mascarar_cpfs(a.get("corpo_texto", "")),
             "conteudoResumido": ementa_disp if ementa_disp[:1] != "(" else "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo
             "boletimNumero": f"BS nº {a.get('bs_numero','')}/{ano_pub}",

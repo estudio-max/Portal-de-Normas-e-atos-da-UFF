@@ -877,9 +877,34 @@ def parse_pdf(caminho):
         ma = ACAO_EMENTA_RE.search(ementa)
         tipo_acao = ma.group(1).title() if ma else ""
 
-        # Texto do corpo para busca por NOME (pega nomes em tabelas, listas etc.)
-        # e SIAPEs explícitas para exibição. O texto cobre o que a ementa não tem.
-        corpo_busca = limpar(corpo).lower()[:7000]
+        # Texto do corpo, em DUAS formas — antes era uma só, e isso custou caro.
+        #
+        # A linha anterior era `limpar(corpo).lower()[:7000]`, e fazia dois
+        # estragos de uma vez:
+        #
+        # 1. CORTAVA em 7.000 caracteres. Medido em 17/08/2026, em produção:
+        #    624 atos candidatos a revalidação estavam exatamente no teto, e em
+        #    623 deles o dispositivo pode estar DEPOIS do corte — sem como
+        #    distinguir "não é revalidação" de "não deu para ver". Ponto cego
+        #    invisível, que é o pior tipo num dado que vai a órgão de controle.
+        #
+        # 2. REBAIXAVA A CAIXA e gravava assim nas duas colunas do banco. Por
+        #    isso `ato_texto.texto_original` NÃO era o texto original, e o
+        #    backfill de revalidação precisou de uma função inteira para
+        #    reconstruir nome próprio a partir de "universidad de los andes".
+        #
+        # Agora: `corpo_texto` preserva a caixa, `corpo_busca` é a versão
+        # dobrada. Quem busca usa a segunda; quem extrai estrutura usa a
+        # primeira.
+        #
+        # ⚠️ O TETO NOVO É DECISÃO DE CUSTO, não de schema: `ato_texto` é
+        # MEDIUMTEXT (16 MB), mas este texto viaja no portal-data.json, que vai
+        # por Git todo dia e é baixado pelo NAVEGADOR no modo de contingência.
+        # 40.000 cobre com folga o ato mais longo visto no acervo; se o JSON
+        # crescer demais, o lugar de mexer é AQUI, e a consequência de abaixar
+        # é reintroduzir o ponto cego acima.
+        corpo_texto = limpar(corpo)[:40000]
+        corpo_busca = corpo_texto.lower()
         siapes = sorted(set(SIAPE_RE.findall(trecho)))
 
         # Ementa inferida: só quando NÃO há ementa formal. Resume o dispositivo.
@@ -926,6 +951,7 @@ def parse_pdf(caminho):
             "aposentadoria": extrai_aposentadoria(trecho),
             "deslocamento": extrai_deslocamento(trecho),
             "revalidacao": extrai_revalidacao(trecho),
+            "corpo_texto": corpo_texto,
             "corpo_busca": corpo_busca,
         }
         # filtra falsos positivos: títulos capturados dentro do sumário costumam

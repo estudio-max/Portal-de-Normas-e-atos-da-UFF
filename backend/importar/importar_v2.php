@@ -378,8 +378,18 @@ try {
                                     (string)($a['numero'] ?? ''), $ano, $a);
         if ($rc === 1) $novos++; elseif ($rc === 2) $atualizados++;
 
-        $texto = (string)($a['textoBusca'] ?? '');
-        $insTexto->execute([':id' => $atoId, ':t' => $texto, ':t2' => $texto]);
+        // As DUAS colunas passam a receber conteúdo diferente, como o nome
+        // delas sempre prometeu. Até 17/08/2026 ambas recebiam `textoBusca`
+        // (minúsculo), e por isso `texto_original` não era o original — o
+        // backfill de revalidação teve de reconstruir nome próprio a partir de
+        // "universidad de los andes".
+        //
+        // `textoOriginal` só existe em base gerada pelo extrator novo; base
+        // antiga cai no `?:` e mantém o comportamento de antes, sem quebrar
+        // importação de safra velha.
+        $textoBusca = (string)($a['textoBusca'] ?? '');
+        $textoOrig  = (string)($a['textoOriginal'] ?? '') ?: $textoBusca;
+        $insTexto->execute([':id' => $atoId, ':t' => $textoOrig, ':t2' => $textoBusca]);
 
         // pessoas citadas (siapes/pessoas)
         $delPessoa->execute([':id' => $atoId]);
