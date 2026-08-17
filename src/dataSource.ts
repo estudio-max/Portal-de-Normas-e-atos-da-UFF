@@ -1000,7 +1000,10 @@ export interface RevalResp {
   /** Anos entre a abertura do processo (ano do SEI) e a decisão. APROXIMAÇÃO —
    *  o BS não publica a data de protocolo. Ver o comentário na rota PHP. */
   tramitacao: (RevalGrupo & { anos: number })[];
-  paises: (RevalGrupo & { pais: string })[];
+  // `lat`/`lon` vêm da tabela curada de centroides do servidor (a mesma da
+  // Cooperação) e são NULOS quando o país não está nela — a aba plota o que
+  // tem e declara quantos ficaram de fora, em vez de sumir com eles.
+  paises: (RevalGrupo & { pais: string; lat?: number | null; lon?: number | null })[];
   cursos: (RevalGrupo & { curso: string })[];
   instituicoes: (RevalGrupo & { instituicao: string })[];
 }

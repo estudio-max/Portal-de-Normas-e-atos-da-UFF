@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Handshake, Loader2, Info, ExternalLink, Globe2, Search, X } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { MapaMundi, type PontoMapa } from '../ui/MapaMundi';
 
 // Aba "Cooperação": acordos, protocolos e cotutelas que a UFF celebra com
 // outras instituições. Tudo vem da EMENTA, que nesses atos é muito estruturada:
@@ -24,73 +25,10 @@ const CORES = ['#0b66c3', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6',
                '#7c3aed', '#059669', '#dc2626', '#2563eb', '#ca8a04'];
 const corDe = (cat: string, todas: string[]) => CORES[Math.max(0, todas.indexOf(cat)) % CORES.length];
 
-// ---- Mapa-múndi ------------------------------------------------------------
-// Projeção equiretangular (x = lon, y = lat), a mais simples que permite plotar
-// um ponto a partir de lat/lon sem biblioteca. A silhueta dos continentes é
-// ESQUEMÁTICA (poucos vértices, feita à mão) — serve para orientar o olho; o
-// que é preciso são as bolhas, posicionadas pelo centroide real do país.
-const CONTINENTES: [number, number][][] = [
-  // [lon, lat]
-  [[-168,65],[-160,71],[-140,70],[-125,70],[-110,68],[-95,70],[-85,70],[-75,68],[-60,58],
-   [-55,50],[-65,45],[-70,42],[-75,35],[-81,25],[-90,29],[-97,26],[-105,20],[-115,30],
-   [-125,40],[-125,48],[-135,58],[-150,60]],                                     // Am. do Norte
-  [[-92,17],[-84,15],[-78,9],[-77,8],[-83,9],[-88,15]],                          // Am. Central
-  [[-81,-4],[-75,10],[-60,12],[-52,5],[-35,-5],[-38,-13],[-48,-25],[-58,-34],[-62,-40],
-   [-65,-45],[-68,-53],[-75,-50],[-73,-40],[-71,-30],[-70,-18],[-77,-12]],       // Am. do Sul
-  [[-17,15],[-10,28],[0,35],[10,37],[25,32],[35,31],[43,12],[51,12],[42,-2],[40,-15],
-   [35,-25],[25,-34],[18,-34],[12,-18],[9,4],[-8,5]],                            // África
-  [[-10,36],[-9,44],[-2,49],[2,51],[8,54],[12,55],[18,55],[30,60],[30,70],[20,70],
-   [10,63],[5,58],[-5,50],[-10,43]],                                             // Europa
-  [[30,70],[60,72],[100,77],[140,72],[160,68],[170,60],[145,45],[135,35],[122,30],
-   [120,22],[105,10],[95,5],[80,8],[70,20],[60,25],[50,28],[45,40],[40,42],[30,45],[28,55]], // Ásia
-  [[113,-22],[130,-12],[142,-11],[150,-25],[153,-28],[147,-38],[140,-38],[135,-35],
-   [125,-33],[115,-34]],                                                          // Oceania
-];
-
-function MapaMundi({ paises, selecionado, aoSelecionar }: {
-  paises: ds.CoopPais[]; selecionado: string; aoSelecionar: (p: string) => void;
-}) {
-  const W = 760, H = 380;
-  const px = (lon: number) => ((lon + 180) / 360) * W;
-  const py = (lat: number) => ((90 - lat) / 180) * H;
-  const max = Math.max(1, ...paises.map(p => p.n));
-  const raio = (n: number) => 4 + Math.sqrt(n / max) * 16;
-
-  return (
-    <div className="overflow-x-auto">
-      <svg width={W} height={H} role="img"
-        aria-label={`Mapa-múndi com ${paises.length} países parceiros da UFF.`}
-        className="min-w-[560px]">
-        <rect x={0} y={0} width={W} height={H} fill="#f1f5f9" rx={6} />
-        {/* graticule discreto */}
-        {[-120, -60, 0, 60, 120].map(l => (
-          <line key={`v${l}`} x1={px(l)} y1={0} x2={px(l)} y2={H} stroke="#e2e8f0" strokeWidth={1} />
-        ))}
-        {[-60, -30, 0, 30, 60].map(l => (
-          <line key={`h${l}`} x1={0} y1={py(l)} x2={W} y2={py(l)}
-            stroke={l === 0 ? '#cbd5e1' : '#e2e8f0'} strokeWidth={l === 0 ? 1.2 : 1} />
-        ))}
-        {CONTINENTES.map((poly, i) => (
-          <polygon key={i} fill="#cfd8e3" stroke="#b6c2d1" strokeWidth={0.8}
-            points={poly.map(([lon, lat]) => `${px(lon)},${py(lat)}`).join(' ')} />
-        ))}
-        {paises.map(p => {
-          const ativo = !selecionado || selecionado === p.pais;
-          return (
-            <g key={p.pais} onClick={() => aoSelecionar(selecionado === p.pais ? '' : p.pais)}
-              style={{ cursor: 'pointer' }}>
-              <circle cx={px(p.lon)} cy={py(p.lat)} r={raio(p.n)}
-                fill={selecionado === p.pais ? '#b45309' : '#f59e0b'}
-                fillOpacity={ativo ? 0.75 : 0.18}
-                stroke="#fff" strokeWidth={1.2} />
-              <title>{`${p.pais} — ${p.n} acordo(s)`}</title>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
+// O mapa-múndi vive em `ui/MapaMundi` desde 17/08/2026: a aba Revalidação
+// passou a plotar países também, e duas cópias do mesmo mapa divergiriam em
+// silêncio. A cor aqui é âmbar por identidade da aba — o componente aceita
+// token/cor e não impõe a sua.
 
 // ---- Gráfico: acordos por ano, empilhado por categoria ----------------------
 function GraficoCategorias({ serie, cats }: { serie: ds.CoopSerieAno[]; cats: string[] }) {
@@ -271,7 +209,14 @@ export default function CooperacaoApi() {
                 {internacionais} acordo(s) com país identificado · clique numa bolha para filtrar
               </span>
             </div>
-            <MapaMundi paises={paisesFiltrados} selecionado={pais} aoSelecionar={setPais} />
+            <MapaMundi
+              pontos={paisesFiltrados.map((p): PontoMapa => ({
+                pais: p.pais, valor: p.n, lat: p.lat, lon: p.lon,
+                detalhe: `${p.pais} — ${p.n} acordo(s)`,
+              }))}
+              selecionado={pais} aoSelecionar={setPais}
+              cor="#f59e0b" corSelecionada="#b45309" unidade="acordo(s)"
+              rotulo={`Mapa-múndi com ${paisesFiltrados.length} países parceiros da UFF.`} />
             <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">
               A silhueta dos continentes é <strong>esquemática</strong> (serve para orientar o olho);
               as bolhas usam o centroide real do país e o tamanho é proporcional ao nº de acordos.

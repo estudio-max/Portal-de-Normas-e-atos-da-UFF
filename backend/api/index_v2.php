@@ -436,7 +436,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-16.2'; }
+function api_versao(): string { return '2026-08-17.1'; }
 
 // Quantas horas sem importar já significam CADEIA QUEBRADA (não "atraso").
 // O cron do cPanel roda 12h e 20h, então o intervalo normal entre execuções
@@ -1721,6 +1721,13 @@ function coop_paises(): array {
         'Tailândia'=>[15.9,101.0], 'Timor-Leste'=>[-8.9,125.7], 'Tunísia'=>[33.9,9.5],
         'Turquia'=>[39.0,35.2], 'Ucrânia'=>[48.4,31.2], 'Uruguai'=>[-32.5,-55.8],
         'Venezuela'=>[6.4,-66.6], 'Vietnã'=>[14.1,108.3],
+        // Acrescentados em 17/08/2026 ao plotar a aba Revalidação no mapa:
+        // apareciam nos pedidos e não tinham coordenada, então sumiam do mapa
+        // sem nada acusar. País sem coordenada não vira erro — vira ausência,
+        // que é o defeito que este projeto mais persegue.
+        'República Dominicana'=>[18.7,-70.2], 'Síria'=>[34.8,39.0],
+        'Porto Rico'=>[18.2,-66.6], 'Malta'=>[35.9,14.4],
+        'Haiti'=>[19.0,-72.3], 'Iêmen'=>[15.6,48.5],
         // países que só aparecem via tabela curada de instituições (nenhum
         // ato os declara em texto): parceiros reais achados na curadoria.
         'Albânia'=>[41.15,20.17], 'Belarus'=>[53.7,27.95], 'Bangladesh'=>[23.7,90.35],
@@ -2937,10 +2944,34 @@ function revalidacao(PDO $pdo): void {
         'serie'         => $serie,
         'niveis'        => $niveis,
         'tramitacao'    => $tramita,
-        'paises'        => $agrupa('pais', 'pais'),
+        // O país vai com COORDENADA quando a temos, para a aba plotar no mapa.
+        // A tabela é a MESMA da Cooperação (`coop_paises()`): duas listas de
+        // centroide divergiriam, e o mesmo país apareceria em lugares
+        // diferentes em duas abas do mesmo portal.
+        //
+        // País sem coordenada NÃO é descartado — sai na lista com `lat`/`lon`
+        // nulos e a aba conta quantos ficaram fora do mapa. Sumir em silêncio é
+        // o defeito; declarar a ausência é o mínimo.
+        'paises'        => reval_com_coordenada($agrupa('pais', 'pais')),
         'cursos'        => $agrupa('curso', 'curso'),
         'instituicoes'  => $agrupa('instituicao', 'instituicao'),
     ]);
+}
+
+/**
+ * Acrescenta lat/lon a cada linha de país da revalidação, a partir da tabela
+ * curada de centroides que a Cooperação já usa. Sem correspondência, devolve
+ * null nos dois — quem desenha decide o que fazer, e a aba declara quantos
+ * ficaram fora em vez de calar.
+ */
+function reval_com_coordenada(array $linhas): array {
+    $mapa = coop_paises();
+    foreach ($linhas as &$l) {
+        $c = $mapa[$l['pais']] ?? null;
+        $l['lat'] = $c ? (float)$c[0] : null;
+        $l['lon'] = $c ? (float)$c[1] : null;
+    }
+    return $linhas;
 }
 
 function cooperacao(PDO $pdo): void {
