@@ -31,8 +31,15 @@ SET @uq_cols := (
     AND TABLE_NAME = 'ato_revalidacao'
     AND INDEX_NAME = 'uq_ato_revalidacao'
 );
+SET @uq_nao_unico := (
+  SELECT MAX(NON_UNIQUE)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'ato_revalidacao'
+    AND INDEX_NAME = 'uq_ato_revalidacao'
+);
 SET @sql := CASE
-  WHEN @uq_cols = 'ato_id,ordem' THEN 'SELECT ''chave já migrada'' AS info'
+  WHEN @uq_cols = 'ato_id,ordem' AND @uq_nao_unico = 0 THEN 'SELECT ''chave já migrada'' AS info'
   WHEN @uq_cols IS NULL THEN 'ALTER TABLE `ato_revalidacao` ADD UNIQUE KEY `uq_ato_revalidacao` (`ato_id`,`ordem`)'
   ELSE 'ALTER TABLE `ato_revalidacao` DROP INDEX `uq_ato_revalidacao`, ADD UNIQUE KEY `uq_ato_revalidacao` (`ato_id`,`ordem`)'
 END;
