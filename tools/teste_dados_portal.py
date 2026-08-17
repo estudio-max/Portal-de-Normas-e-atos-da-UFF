@@ -153,6 +153,23 @@ def main():
     checa("o derivado nao reexpoe CPF",
           "123.456.789-09" not in derivado and "98765432100" not in derivado)
 
+    print("\n-- guarda de ano implausivel --")
+    # 1771 e o caso REAL do reprocessamento de 17/08/2026 (fragmento de OCR).
+    for bruto, pub, esperado, nome in [
+        ("1771", "2013", 2013, "ano absurdo cai para o ano do boletim"),
+        ("2013", "2013", 2013, "ano normal passa intacto"),
+        ("1998", "2001", 1998, "backlog real de 1998 num BS de 2001 e PRESERVADO"),
+        # +1 e ACEITO de proposito: BS de dezembro sai em janeiro, e o ato
+        # assinado ja no ano novo entra no boletim do ano velho.
+        ("2026", "2025", 2026, "ano do boletim + 1 e aceito (ato de virada)"),
+        ("2027", "2026", 2027, "idem, um ano adiante do boletim"),
+        ("2030", "2026", 2026, "ano futuro DE VERDADE cai para o boletim"),
+        ("", "2013", 2013, "ano ausente cai para o ano do boletim"),
+    ]:
+        obtido = G.ano_do_ato(bruto, pub)
+        checa(f"{nome} ({bruto or 'vazio'} / BS {pub})", obtido == esperado,
+              f"obtido {obtido}, esperado {esperado}")
+
     print("\n-- caixa: Python contra a amostra compartilhada --")
     with io.open(FIXTURE, encoding="utf-8") as f:
         pares = json.load(f)["pares"]

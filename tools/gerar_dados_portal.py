@@ -147,6 +147,37 @@ def _ano_do_arquivo(arq):
     return str(2000 + int(m.group(1))) if m else ""
 
 
+# Piso do ano de um ato. O acervo começa em 2001 e os boletins de 2001-2003
+# publicam backlog real de 1996-2000 (ver docs/PLANO-REPROCESSAMENTO-ACERVO.md),
+# então o piso não pode ser o ano do boletim — mas também não pode ser aberto.
+ANO_PISO = 1990
+
+
+def ano_do_ato(ano_bruto, ano_pub):
+    """Ano do ato, com guarda de plausibilidade.
+
+    Medido no reprocessamento de 17/08/2026 (136.248 atos): UM ato saiu com
+    ano **1771** — fragmento de OCR ("085 THIAGO SIMONATO MOZER FUC
+    COORDENADOR…") que o extrator leu como ato e cujo "ano" veio de um número
+    solto no meio da linha. É pouco, e é justamente o tipo de sujeira que
+    aparece grande: o ano vira opção no filtro da interface e uma barra no
+    gráfico, e quem olha conclui que o acervo vai até o século XVIII.
+
+    Fora da faixa, CAI PARA O ANO DO BOLETIM em vez de o ato ser descartado.
+    Descartar registro por regra é decisão que este projeto só toma com
+    medição (foi assim na guarda de folha de rosto), e aqui a amostra é 1.
+    O ato continua no acervo, achável, com ano plausível — e a etapa 7 decide
+    se ele é ato de verdade.
+    """
+    ano = int(ano_bruto) if str(ano_bruto or "").isdigit() else 0
+    teto = (int(ano_pub) if str(ano_pub or "").isdigit() else 0) or 0
+    if ANO_PISO <= ano <= (teto + 1 if teto else 2026):
+        return ano
+    if teto:
+        return teto
+    return ano if ANO_PISO <= ano <= 2026 else 2026
+
+
 def converter(dados, urls=None):
     """urls: dict opcional {arquivo.pdf: url_oficial_uff} para linkar o PDF
     de origem na UFF (sem hospedar cópia)."""
@@ -208,7 +239,7 @@ def converter(dados, urls=None):
             "_idx": i,
             "tipoAto": TIPO_MAP.get(a.get("tipo", ""), "Outro"),
             "numero": a.get("numero", ""),
-            "ano": int(a["ano"]) if str(a.get("ano", "")).isdigit() else 2026,
+            "ano": ano_do_ato(a.get("ano"), ano_pub),
             "dataAssinatura": a.get("data_ato") or "",
             "orgaoEmissor": orgao,
             "ementa": ementa_disp,
