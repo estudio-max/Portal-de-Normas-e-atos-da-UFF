@@ -1920,6 +1920,10 @@ def _reval_nivel(bruto):
     return "Graduação", "Graduação"
 
 
+def _reval_citado(texto, inicio):
+    return _REVAL_QUE_RE.search(texto[max(0, inicio - 10):inicio])
+
+
 def extrai_revalidacao(trecho):
     """{'via','decisao','nivel','curso','instituicao','pais'} ou None.
 
@@ -1931,7 +1935,7 @@ def extrai_revalidacao(trecho):
 
     for via, rx in (("Graduação", _REVAL_GRAD_RE), ("Pós-graduação", _REVAL_POS_RE)):
         for m in rx.finditer(texto):
-            if _REVAL_QUE_RE.search(texto[max(0, m.start() - 10):m.start()]):
+            if _reval_citado(texto, m.start()):
                 continue                      # descreve ato citado, não este
             if via == "Graduação":
                 partes = [x.strip() for x in m.group("origem").split(",") if x.strip()]
@@ -1958,22 +1962,23 @@ def extrai_revalidacao(trecho):
     for rx, decisao in (
             (_REVAL_INDEFERIMENTO_RE, "Indeferido"),
             (_REVAL_GERUNDIO_RE, "Indeferido")):
-        m = rx.search(texto)
-        if not m:
-            continue
-        inst, pais = _reval_origem(m.group("origem"))
-        via, nivel = _reval_nivel(m.group("nivel"))
-        return {
-            "via": via,
-            "decisao": decisao,
-            "nivel": nivel,
-            "curso": limpar(m.group("curso")).strip(" .,;")[:180],
-            "instituicao": inst[:180],
-            "pais": pais,
-        }
+        for m in rx.finditer(texto):
+            if _reval_citado(texto, m.start()):
+                continue
+            inst, pais = _reval_origem(m.group("origem"))
+            via, nivel = _reval_nivel(m.group("nivel"))
+            return {
+                "via": via,
+                "decisao": decisao,
+                "nivel": nivel,
+                "curso": limpar(m.group("curso")).strip(" .,;")[:180],
+                "instituicao": inst[:180],
+                "pais": pais,
+            }
 
-    m = _REVAL_TITULO_LEGADO_RE.search(texto)
-    if m:
+    for m in _REVAL_TITULO_LEGADO_RE.finditer(texto):
+        if _reval_citado(texto, m.start()):
+            continue
         inst, pais = _reval_origem(m.group("origem"))
         via, nivel = _reval_nivel(m.group("equiv"))
         return {

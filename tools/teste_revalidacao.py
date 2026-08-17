@@ -80,6 +80,16 @@ RECURSO_INDEFERIMENTO = """resolve: art. 1º conhecer o pedido de recurso
 relativo ao indeferimento do pedido de reconhecimento de diploma de
 pós-graduação obtido no exterior, e dar-lhe provimento."""
 
+# Exceção autorizada pelo mantenedor: não há contraexemplo publicado no acervo.
+# Cada trecho abaixo deriva literalmente de um positivo real (#6095, #8910 e
+# #10848); só é removido o cabeçalho decisório e acrescentado "que " para
+# simular a oração relativa de citação que a guarda precisa recusar.
+LEGADOS_CITADOS = [
+    ("indeferimento substantivado", "que " + LEGADO_INDEFERIMENTO.removeprefix("decide ")),
+    ("parecer homologado", "que homologar" + LEGADO_GERUNDIO.split("homologar", 1)[1]),
+    ("revalidacao de titulo", "que " + LEGADO_TITULO.removeprefix("decide ")),
+]
+
 # --- casos ----------------------------------------------------------------
 # (rotulo, texto, esperado | None)
 CASOS = [
@@ -159,6 +169,9 @@ CASOS = [
     ("recurso menciona indeferimento anterior, mas decide dar provimento",
      RECURSO_INDEFERIMENTO, None),
 ]
+
+CASOS += [(f"legado citado por oracao relativa: {rotulo}", texto, None)
+          for rotulo, texto in LEGADOS_CITADOS]
 
 falhas = 0
 for rotulo, texto, esperado in CASOS:
