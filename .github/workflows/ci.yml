@@ -132,6 +132,14 @@ jobs:
       - name: Regressão da caixa do corpo do ato
         run: php backend/importar/teste_caixa_texto.php
 
+      # A aba mostrava "Na Argentina" ao lado de "Argentina" e "Em Medicina" ao
+      # lado de "Medicina" — a mesma coisa em duas fatias do gráfico, 30% do
+      # painel de cursos na fatia errada. A fonte cola a preposição no valor, e
+      # a limpeza tem de tirar isso sem estragar o nome que LEVA aspas de
+      # verdade (`Universidad … "José Antonio Echeverría"`).
+      - name: Regressão da limpeza de campos da revalidação
+        run: php backend/importar/teste_revalidacao_campos.php
+
       # `php -l` NÃO vê variável indefinida — é aviso, não erro de sintaxe. Foi
       # assim que uma renomeação deixou três referências penduradas no
       # importador, o CI ficou verde e o defeito só apareceu na primeira
