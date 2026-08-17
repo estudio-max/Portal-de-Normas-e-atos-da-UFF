@@ -178,6 +178,126 @@ def ano_do_ato(ano_bruto, ano_pub):
     return ano if ANO_PISO <= ano <= 2026 else 2026
 
 
+# ── Limpeza dos campos da revalidação ────────────────────────────────────────
+# ESPELHA `backend/importar/revalidacao_campos.php`, e a amostra em
+# `dados_referencia/revalidacao-campos.json` é conferida pelos DOIS — é o que
+# impede uma ponta de melhorar e a outra ficar para trás.
+#
+# POR QUE PRECISA EXISTIR AQUI TAMBÉM: há dois caminhos de escrita em
+# `ato_revalidacao`. O backfill lê o texto do banco (PHP, já limpo desde
+# 17/08/2026) e o import lê ESTE JSON. Com a limpeza só de um lado, a aba
+# continuou exibindo `"…Die Medizinische Fakultät", Tübingen, Na Alemanha`
+# como nome de instituição depois de o conserto já estar no ar — porque aquele
+# registro veio por aqui.
+def _carrega_paises_canon():
+    """Lê a tabela de canonização do PHP em vez de copiá-la.
+
+    Uma terceira cópia da lista de países (já há a do PHP e a de
+    `coop_paises()` na API) divergiria no primeiro país novo. Ler o arquivo é
+    feio e é honesto — e se o formato mudar, a tabela vem VAZIA, e aí a
+    limpeza deixa o país passar em vez de apagá-lo. Falhar para o lado de não
+    mexer no dado é a direção certa quando o instrumento quebra.
+    """
+    caminho = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "..", "backend", "importar", "revalidacao_campos.php")
+    try:
+        with open(caminho, encoding="utf-8") as f:
+            php = f.read()
+    except OSError:
+        return {}
+    m = re.search(r"function revalidacao_paises_canon\(\): array \{\s*static \$p = \[(.*?)\n    \];",
+                  php, re.S)
+    if not m:
+        return {}
+    return dict(re.findall(r"'([^']+)'\s*=>\s*'([^']+)'", m.group(1)))
+
+
+PAISES_CANON = _carrega_paises_canon()
+
+_ASPAS = '"“”\'«»'
+_PREFIXO = re.compile(
+    r"^(?:n[íi]vel\s+(?:de\s+)?)?"
+    r"(?:gradua[çc][ãa]o|bacharelado|licenciatura|mestrado|doutorado|p[óo]s-?gradua[çc][ãa]o)\s+em\s+",
+    re.I)
+_PREPOSICAO = re.compile(r"^(?:na|no|nos|nas|em|de|da|do|dos|das|como)\s+", re.I)
+_NAO_PAIS = ("conselho", "resolucao", "termos", "parecer", "comissao", "colegiado",
+             "processo", "decisao", "reuniao", "sala", "universidade", "universidad",
+             "faculdade", "instituto", "departamento", "curso", "diploma", "titulo",
+             "equivalente", "doutor", "mestre", "bacharel", "mestrado", "doutorado",
+             "licenciatura", "ph.d", "phd", "sorbonne")
+_NAO_INST = ("resolucao", "termos estabelecidos", "deste conselho",
+             "parecer da comissao", "nos termos", "processo n", "decisao n")
+
+
+def _limpa_campo(s):
+    s = re.sub(r"\s+", " ", (s or "").strip())
+    for _ in range(4):
+        antes = s
+        s = re.sub(r"^[\s.,;:\-–—]+|[\s.,;:\-–—]+$", "", s)
+        if len(s) > 1 and s[0] in _ASPAS and s[-1] in _ASPAS:
+            s = s[1:-1].strip()
+        s = s.strip()
+        if s == antes:
+            break
+    s = _PREFIXO.sub("", s)
+    return _PREPOSICAO.sub("", s).strip()
+
+
+def _e_pais(s):
+    k = _fold(_limpa_campo(s))
+    return bool(k) and (k in PAISES_CANON
+                        or any(_fold(v) == k for v in PAISES_CANON.values()))
+
+
+def _limpa_pais(s):
+    p = _limpa_campo(s)
+    if not p or len(p) > 40:
+        return ""
+    k = _fold(p)
+    if k in PAISES_CANON:
+        return PAISES_CANON[k]
+    if any(w in k for w in _NAO_PAIS) or len(k.split()) > 4:
+        return ""
+    return p
+
+
+def _limpa_instituicao(s):
+    partes = []
+    for p in (s or "").split(","):
+        p = _limpa_campo(p)
+        # Aspa de abertura sem a de fechamento: captura truncada ("“Language").
+        if len(p) > 1 and p[0] in _ASPAS and not any(c in p[1:] for c in _ASPAS):
+            p = p[1:].strip()
+        if p:
+            partes.append(p)
+    while len(partes) > 1 and _e_pais(partes[-1]):
+        partes.pop()
+    if not partes:
+        return ""
+    junto = ", ".join(partes)
+    # Só o país sobrou: não é instituição. Lacuna é honesta; país no lugar de
+    # instituição é erro — e foi o que a aba mostrou ("Argentina", "Peru").
+    if len(partes) <= 1 and _e_pais(junto):
+        return ""
+    if any(w in _fold(junto) for w in _NAO_INST):
+        return ""
+    return junto
+
+
+def limpa_revalidacao(r):
+    """Aplica a limpeza aos campos de um pedido, preservando o resto."""
+    if not isinstance(r, dict):
+        return r
+    saida = dict(r)
+    if "pais" in saida:
+        saida["pais"] = _limpa_pais(saida.get("pais") or "")
+    if "curso" in saida:
+        saida["curso"] = _limpa_campo(saida.get("curso") or "")
+    if "instituicao" in saida:
+        saida["instituicao"] = _limpa_instituicao(saida.get("instituicao") or "")
+    return saida
+
+
 def converter(dados, urls=None):
     """urls: dict opcional {arquivo.pdf: url_oficial_uff} para linkar o PDF
     de origem na UFF (sem hospedar cópia)."""
@@ -234,6 +354,7 @@ def converter(dados, urls=None):
         lista_reval = a.get("revalidacoes")
         if not isinstance(lista_reval, list):
             lista_reval = [a["revalidacao"]] if a.get("revalidacao") else []
+        lista_reval = [limpa_revalidacao(r) for r in lista_reval if r]
         registro = {
             "id": aid,
             "_idx": i,

@@ -135,58 +135,11 @@ $RE_POS  = '/(?P<decisao>deferir|indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+'
 // Oração relativa: "...a Resolução X, QUE deferiu..." descreve o ato CITADO.
 $RE_QUE = '/\bque\s*$/iu';
 
-// Canonização de país. Chave = nome sem acento e em minúsculas, para casar
-// tanto o texto do banco (caixa baixa) quanto as variantes e o erro de
-// digitação da fonte ("Aústria"). O VALOR é o nome próprio canônico, igual ao
-// de coop_paises() — é ele que garante que o histórico se junte ao que o
-// pipeline diário grava, em vez de virar uma fatia separada no gráfico.
-$PAIS_CANON = [
-    'eua' => 'Estados Unidos',
-    'estados unidos' => 'Estados Unidos',
-    'estados unidos da america' => 'Estados Unidos',
-    'estados unidos de america' => 'Estados Unidos',
-    'reino unido' => 'Reino Unido',
-    'reino unido da gra bretanha' => 'Reino Unido',
-    'reino unido da gra-bretanha' => 'Reino Unido',
-    'inglaterra' => 'Reino Unido',
-    'austria' => 'Áustria',
-    'holanda' => 'Países Baixos',
-    'paises baixos' => 'Países Baixos',
-    'alemanha' => 'Alemanha', 'argentina' => 'Argentina', 'angola' => 'Angola',
-    'bolivia' => 'Bolívia', 'brasil' => 'Brasil', 'canada' => 'Canadá',
-    'chile' => 'Chile', 'china' => 'China', 'colombia' => 'Colômbia',
-    'cuba' => 'Cuba', 'egito' => 'Egito', 'equador' => 'Equador',
-    'espanha' => 'Espanha', 'franca' => 'França', 'haiti' => 'Haiti',
-    'honduras' => 'Honduras', 'italia' => 'Itália', 'iemen' => 'Iêmen',
-    'japao' => 'Japão', 'mexico' => 'México', 'mocambique' => 'Moçambique',
-    'nigeria' => 'Nigéria', 'noruega' => 'Noruega', 'paraguai' => 'Paraguai',
-    'peru' => 'Peru', 'polonia' => 'Polônia', 'portugal' => 'Portugal',
-    'republica tcheca' => 'República Tcheca', 'romenia' => 'Romênia',
-    'russia' => 'Rússia', 'suecia' => 'Suécia', 'suica' => 'Suíça',
-    'uruguai' => 'Uruguai', 'venezuela' => 'Venezuela',
-    'cabo verde' => 'Cabo Verde', 'guine-bissau' => 'Guiné-Bissau',
-    'coreia do sul' => 'Coreia do Sul', 'india' => 'Índia',
-    'irlanda' => 'Irlanda', 'israel' => 'Israel', 'dinamarca' => 'Dinamarca',
-    'finlandia' => 'Finlândia', 'belgica' => 'Bélgica', 'turquia' => 'Turquia',
-    'somalilandia' => 'Somalilândia', 'bangladesh' => 'Bangladesh',
-    // Formas longas, cidade no lugar do país e erro de digitação da fonte.
-    // Levantados em 17/08/2026 ao medir a cobertura do mapa: cada um destes
-    // era um país que existe na tabela de coordenadas mas não era alcançado,
-    // então ficava fora do mapa sem que nada acusasse.
-    'paises baixos' => 'Holanda',
-    'inglaterra' => 'Reino Unido',
-    'gra bretanha' => 'Reino Unido',
-    'republica bolivariana de venezuela' => 'Venezuela',
-    'republica do peru' => 'Peru',
-    'republica arabe da siria' => 'Síria',
-    'siria' => 'Síria',
-    'cochabamba bolivia' => 'Bolívia',
-    'cochabamba - bolivia' => 'Bolívia',
-    'paraguayl' => 'Paraguai',   // erro de digitação do próprio Boletim
-    'republica dominicana' => 'República Dominicana',
-    'porto rico' => 'Porto Rico',
-    'malta' => 'Malta', 'haiti' => 'Haiti', 'iemen' => 'Iêmen',
-];
+// A tabela de canonização de país vive em `revalidacao_campos.php`: o teste
+// precisa da MESMA tabela, e uma cópia reduzida dentro do teste o fazia
+// passar contra uma realidade que não existe — foi assim que 'França' e
+// 'Peru' escaparam da limpeza de instituição na primeira tentativa.
+$PAIS_CANON = revalidacao_paises_canon();
 
 
 /** Nome próprio a partir de texto em caixa baixa. "universidad de los andes"
@@ -234,8 +187,13 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
             if ($via === 'Graduação') {
                 $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
-                $pais = count($partes) >= 2 ? revalidacao_pais_canon(end($partes), $PAIS_CANON) : '';
-                $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
+                // Origem SEM vírgula pode ser o próprio país ("…obtido por
+                // Fulano, na Argentina"): antes isso virava instituição
+                // "Argentina", que é erro, e não lacuna.
+                $pais = revalidacao_pais_canon(end($partes), $PAIS_CANON);
+                $inst = count($partes) >= 2
+                    ? revalidacao_limpa_instituicao(implode(', ', array_slice($partes, 0, -1)), $PAIS_CANON)
+                    : revalidacao_limpa_instituicao($g('origem'), $PAIS_CANON);
                 $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
 
                 // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".
@@ -252,7 +210,7 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             } else {
                 $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
                 $pais = $loc ? revalidacao_pais_canon(end($loc), $PAIS_CANON) : '';
-                $inst = $g('inst');
+                $inst = revalidacao_limpa_instituicao($g('inst'), $PAIS_CANON);
                 $eq = $g('equiv');
                 $nivel = preg_match('/doutor/iu', $eq) ? 'Doutorado'
                        : (preg_match('/mestr/iu', $eq) ? 'Mestrado' : '');
@@ -267,7 +225,7 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
                 // mesma coisa virava duas fatias do gráfico — "Medicina" com
                 // 306 pedidos e "Em Medicina" com outros 275.
                 'curso' => mb_substr(revalidacao_caixa_nome(revalidacao_limpa_campo($g('curso'))), 0, 180),
-                'instituicao' => mb_substr(revalidacao_caixa_nome(revalidacao_limpa_campo($inst)), 0, 180),
+                'instituicao' => mb_substr($inst === '' ? '' : revalidacao_caixa_nome($inst), 0, 180),
                 'pais' => $pais,
             ];
             break;

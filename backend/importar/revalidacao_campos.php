@@ -114,6 +114,86 @@ const REVALIDACAO_NAO_PAIS = [
 ];
 
 /**
+ * Nome de INSTITUIÇÃO. Três defeitos reais, todos apontados na aba em
+ * produção em 17/08/2026, e cada um com causa própria:
+ *
+ * 1. **País no lugar de instituição** — "Argentina", "Bolívia", "Paraguai".
+ *    Nasce quando a origem capturada não tem vírgula: o código toma a parte
+ *    única como instituição, mesmo quando ela é claramente o país. O ato diz
+ *    "…obtido por Fulano, na Argentina" e ponto — não nomeia instituição
+ *    nenhuma. O honesto é ficar sem instituição, não inventar uma.
+ *
+ * 2. **Cláusula inteira** — "Termos Estabelecidos Na Resolução 267/2013",
+ *    3 pedidos. Mesma família do "Deste Conselho" que virava país.
+ *
+ * 3. **País grudado no fim do nome** — "…Die Medizinische Fakultät”,
+ *    Tübingen, Na Alemanha". Este veio pelo caminho do EXTRATOR, que não
+ *    passava por esta limpeza; é o que motivou a amostra compartilhada.
+ */
+function revalidacao_limpa_instituicao(string $bruto, array $mapa): string {
+    $s = trim($bruto);
+    if ($s === '') return '';
+
+    // Limpa CADA parte separada por vírgula, e não a string inteira: o nome
+    // costuma vir entre aspas junto do endereço — `“…Fakultät”, Tübingen` —
+    // e desembrulhar só quando a aspa cerca o TODO não alcançaria a primeira
+    // parte. Parte por parte, `“…Fakultät”` desembrulha e `Tübingen` fica.
+    $partes = [];
+    foreach (explode(',', $s) as $p) {
+        $p = revalidacao_limpa_campo($p);
+        // Aspa de abertura sem a de fechamento: captura truncada ("“Language").
+        $p = preg_replace('/^["“”«»]\s*(?=[^"“”«»]*$)/u', '', $p);
+        $p = trim($p);
+        if ($p !== '') $partes[] = $p;
+    }
+    if (!$partes) return '';
+
+    // País no FIM do nome: "…, Tübingen, Na Alemanha" -> tira a última parte.
+    // Só quando ela é país RECONHECIDO — cidade fica, porque faz parte do
+    // endereço e ajuda a distinguir instituições homônimas.
+    while (count($partes) > 1 && revalidacao_e_pais(end($partes), $mapa)) {
+        array_pop($partes);
+    }
+    $s = implode(', ', $partes);
+
+    // Sobrou só o país (ou a origem nunca teve vírgula e era o país): não é
+    // instituição. Sem instituição é lacuna; país como instituição é erro.
+    if (count($partes) <= 1 && revalidacao_e_pais($s, $mapa)) return '';
+
+    foreach (REVALIDACAO_NAO_INSTITUICAO as $palavra) {
+        if (strpos(revalidacao_dobra($s), $palavra) !== false) return '';
+    }
+    return $s;
+}
+
+/**
+ * O trecho É um país reconhecido?
+ *
+ * ⚠️ Teste ESTRITO — pertence à tabela, seja como chave (variante) ou como
+ * valor (nome canônico). Usar `revalidacao_pais_canon()` para isto foi erro
+ * meu, pego pelo teste: ela é PERMISSIVA de propósito (devolve nome plausível
+ * desconhecido, para a curadoria ver depois), então "Tübingen" e "Language"
+ * respondiam "sim, é país" — e a limpeza engolia a cidade do endereço e o
+ * único nome que a instituição tinha.
+ */
+function revalidacao_e_pais(string $s, array $mapa): bool {
+    $k = revalidacao_dobra(revalidacao_limpa_campo($s));
+    if ($k === '') return false;
+    if (isset($mapa[$k])) return true;
+    foreach ($mapa as $canonico) {
+        if (revalidacao_dobra($canonico) === $k) return true;
+    }
+    return false;
+}
+
+/** O que denuncia cláusula no lugar de nome de instituição. Mais curta que a
+ *  lista de país: "universidade" e "instituto" são nomes LEGÍTIMOS aqui. */
+const REVALIDACAO_NAO_INSTITUICAO = [
+    'resolucao', 'termos estabelecidos', 'deste conselho', 'parecer da comissao',
+    'nos termos', 'processo n', 'decisao n',
+];
+
+/**
  * País canônico. Devolve '' quando não dá para afirmar — e isso é decisão:
  * a aba mostra "(não informado)", que é honesto, enquanto um rótulo inventado
  * vira fatia no gráfico e número em relatório de controle.
@@ -132,4 +212,67 @@ function revalidacao_pais_canon(string $bruto, array $mapa): string {
     // espaço basta e não mente.
     if (count(preg_split('/\s+/u', $k)) > 4) return '';
     return revalidacao_caixa_nome($p);
+}
+
+/**
+ * Canonização de país. Chave = nome sem acento e em minúsculas, para casar
+ * tanto o texto do banco quanto as variantes e o erro de digitação da fonte
+ * ("Aústria"). O VALOR é o nome próprio canônico, igual ao de `coop_paises()`
+ * — é ele que garante que o histórico se junte ao que o pipeline diário
+ * grava, em vez de virar uma fatia separada no gráfico.
+ *
+ * Mora AQUI, e não no backfill, porque o teste precisa da mesma tabela: uma
+ * cópia reduzida dentro do teste o fazia passar contra uma realidade que não
+ * existe — 'França' e 'Peru' não estavam nela, e a limpeza de instituição
+ * "passou" no teste enquanto errava na tela.
+ */
+function revalidacao_paises_canon(): array {
+    static $p = [
+    'eua' => 'Estados Unidos',
+    'estados unidos' => 'Estados Unidos',
+    'estados unidos da america' => 'Estados Unidos',
+    'estados unidos de america' => 'Estados Unidos',
+    'reino unido' => 'Reino Unido',
+    'reino unido da gra bretanha' => 'Reino Unido',
+    'reino unido da gra-bretanha' => 'Reino Unido',
+    'inglaterra' => 'Reino Unido',
+    'austria' => 'Áustria',
+    'holanda' => 'Países Baixos',
+    'paises baixos' => 'Países Baixos',
+    'alemanha' => 'Alemanha', 'argentina' => 'Argentina', 'angola' => 'Angola',
+    'bolivia' => 'Bolívia', 'brasil' => 'Brasil', 'canada' => 'Canadá',
+    'chile' => 'Chile', 'china' => 'China', 'colombia' => 'Colômbia',
+    'cuba' => 'Cuba', 'egito' => 'Egito', 'equador' => 'Equador',
+    'espanha' => 'Espanha', 'franca' => 'França', 'haiti' => 'Haiti',
+    'honduras' => 'Honduras', 'italia' => 'Itália', 'iemen' => 'Iêmen',
+    'japao' => 'Japão', 'mexico' => 'México', 'mocambique' => 'Moçambique',
+    'nigeria' => 'Nigéria', 'noruega' => 'Noruega', 'paraguai' => 'Paraguai',
+    'peru' => 'Peru', 'polonia' => 'Polônia', 'portugal' => 'Portugal',
+    'republica tcheca' => 'República Tcheca', 'romenia' => 'Romênia',
+    'russia' => 'Rússia', 'suecia' => 'Suécia', 'suica' => 'Suíça',
+    'uruguai' => 'Uruguai', 'venezuela' => 'Venezuela',
+    'cabo verde' => 'Cabo Verde', 'guine-bissau' => 'Guiné-Bissau',
+    'coreia do sul' => 'Coreia do Sul', 'india' => 'Índia',
+    'irlanda' => 'Irlanda', 'israel' => 'Israel', 'dinamarca' => 'Dinamarca',
+    'finlandia' => 'Finlândia', 'belgica' => 'Bélgica', 'turquia' => 'Turquia',
+    'somalilandia' => 'Somalilândia', 'bangladesh' => 'Bangladesh',
+    // Formas longas, cidade no lugar do país e erro de digitação da fonte.
+    // Levantados em 17/08/2026 ao medir a cobertura do mapa: cada um destes
+    // era um país que existe na tabela de coordenadas mas não era alcançado,
+    // então ficava fora do mapa sem que nada acusasse.
+    'paises baixos' => 'Holanda',
+    'inglaterra' => 'Reino Unido',
+    'gra bretanha' => 'Reino Unido',
+    'republica bolivariana de venezuela' => 'Venezuela',
+    'republica do peru' => 'Peru',
+    'republica arabe da siria' => 'Síria',
+    'siria' => 'Síria',
+    'cochabamba bolivia' => 'Bolívia',
+    'cochabamba - bolivia' => 'Bolívia',
+    'paraguayl' => 'Paraguai',   // erro de digitação do próprio Boletim
+    'republica dominicana' => 'República Dominicana',
+    'porto rico' => 'Porto Rico',
+    'malta' => 'Malta', 'haiti' => 'Haiti', 'iemen' => 'Iêmen',
+    ];
+    return $p;
 }

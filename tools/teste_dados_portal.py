@@ -170,6 +170,25 @@ def main():
         checa(f"{nome} ({bruto or 'vazio'} / BS {pub})", obtido == esperado,
               f"obtido {obtido}, esperado {esperado}")
 
+    # A MESMA amostra que `backend/importar/teste_revalidacao_campos.php`
+    # confere. Há dois caminhos de escrita em `ato_revalidacao` — o backfill
+    # (PHP, lê o banco) e o import (este JSON) — e foi a assimetria entre eles
+    # que deixou `"…Fakultät", Tübingen, Na Alemanha` chegar à tela DEPOIS de a
+    # limpeza do PHP já estar no ar.
+    print("\n-- limpeza dos campos: amostra compartilhada com o PHP --")
+    amostra = json.load(io.open(
+        os.path.join(os.path.dirname(FIXTURE), "revalidacao-campos.json"),
+        encoding="utf-8"))
+    checa(f"tabela de paises lida do PHP ({len(G.PAISES_CANON)} entradas)",
+          len(G.PAISES_CANON) > 50, "a leitura do revalidacao_campos.php falhou")
+    funcao = {"pais": G._limpa_pais, "curso": G._limpa_campo,
+              "instituicao": G._limpa_instituicao}
+    for campo, fn in funcao.items():
+        for bruto, esperado in amostra[campo]:
+            obtido = fn(bruto)
+            checa(f"{campo}: {bruto[:44]}", obtido == esperado,
+                  f"obtido {obtido!r}, esperado {esperado!r}")
+
     print("\n-- caixa: Python contra a amostra compartilhada --")
     with io.open(FIXTURE, encoding="utf-8") as f:
         pares = json.load(f)["pares"]
