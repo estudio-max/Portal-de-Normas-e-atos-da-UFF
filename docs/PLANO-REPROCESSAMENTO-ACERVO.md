@@ -1,8 +1,14 @@
 # Plano — reprocessar o acervo a partir dos PDFs
 
-> **Estado: etapas 1 a 3 concluídas e em produção; a 4 é a próxima.** Documento
-> vivo — atualize o quadro de etapas ao concluir cada uma. Escrito em
-> 17/08/2026.
+> **Estado: etapas 1 a 6 concluídas e em produção. Faltam a 7 (conferir contra
+> o PDF) e a 8 (remover o aviso).** Documento vivo — atualize o quadro de
+> etapas ao concluir cada uma. Escrito em 17/08/2026.
+>
+> ⚠️ **A etapa 8 está BLOQUEADA por um instrumento quebrado**, não por falta de
+> trabalho: o teste de truncagem do backfill ainda mede o teto antigo de 7.000
+> caracteres, então hoje não há como responder "ainda existe decisão escondida?"
+> — que é a pergunta que autoriza tirar o aviso da tela. Ver as pendências do
+> Codex adiante.
 
 ## Por que existe este documento
 
@@ -151,15 +157,71 @@ A etapa 5 pode usar esse contrato sem republicar a cópia minúscula do corpo.
 |---|---|---|
 | 1 | Corrigir truncagem e lowercase no extrator/importador | ✅ |
 | 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ✅ |
-| 3 | Acrescentar as redações antigas de decisão única (`#5792` segue na etapa 2) | ✅ |
+| 3 | Acrescentar as redações antigas de decisão única (`#5792` segue na etapa 2) | ✅ **no extrator**; o backfill segue sem elas (ver abaixo) |
 | 4 | Baixar o acervo completo de boletins | ✅ 5.205 de 5.213 (8 não existem na fonte) |
-| 5 | Reprocessar e gerar a base completa | ⬜ |
-| 6 | Importar no servidor | ⬜ |
+| 5 | Reprocessar e gerar a base completa | ✅ 136.248 atos, 19 min, 474 MB em 5 blocos |
+| 6 | Importar no servidor | ✅ 17/08/2026 — banco em 134.512 atos |
 | 7 | Conferir amostra aleatória contra o PDF original | ⬜ |
 | 8 | Remover o aviso de "série em consolidação" | ⬜ |
 
 A etapa 7 é a que transforma "o regex casou" em "o número está certo". Sem
 ela, o resto não sustenta auditoria.
+
+### Etapas 5 e 6 — o que a carga completa rendeu (17/08/2026)
+
+Cinco blocos importados em sequência. **O banco foi de 133.686 para 134.512
+atos (+826)** — e NÃO duplicou, que era o risco medido antes de começar
+(previsão para o bloco 1: 133.782; realizado: 133.759).
+
+**Revalidação, que é o que motivou tudo:**
+
+| momento | pedidos |
+|---|---|
+| antes do reprocessamento | 1.027 |
+| logo após a importação | **299** ⚠️ |
+| após rodar o backfill | **1.079** |
+
+⚠️ **A queda para 299 não foi perda: foi o import fazendo o que ele faz.**
+O `importar_v2.php` reescreve `ato_revalidacao` a partir do JSON, e o JSON só
+carrega o que o EXTRATOR enxerga (299 no acervo inteiro). Os 1.027 vinham do
+**backfill**, que lê o texto do banco com outro conjunto de padrões e acha
+1.069. Os dois são **complementares, não redundantes**.
+
+**Regra que fica: toda importação em massa é seguida do backfill de
+revalidação.** Não é passo opcional — sem ele o painel cai para o que o
+extrator sozinho vê. A união é segura porque o backfill só apaga o ato que ele
+próprio casou (`if (!$achados) … continue;` antes do `sincronizar`), então os
+10 pedidos que só o extrator conhece sobrevivem: 1.069 + 10 = **1.079**.
+
+### 🔧 Duas pendências no `backfill_ato_revalidacao.php` (frente do Codex)
+
+Levantadas na conferência de 17/08/2026. **Não toquei no arquivo** — ele é da
+frente de padrões de extração.
+
+**1. O teste de truncagem virou alarme falso.** A consulta é
+`CHAR_LENGTH(t.texto_original) >= 6990`, fixa no teto ANTIGO. Com o teto novo
+de 40.000, todo texto longo passa a contar como "no teto": o relatório acusa
+**1.247 em aberto**, contra 628 antes do reprocessamento, exatamente quando o
+problema deixou de existir. A prova de que é o medidor, e não o dado: os
+candidatos cresceram 20% (3.355 → 4.027) e os "no teto" **dobraram** (629 →
+1.249) — se o corte ainda fosse em 7.000 os dois teriam crescido junto. O
+limiar precisa acompanhar o teto do extrator (hoje 39.990), senão a etapa 8
+não tem como ser decidida: é este número que diz se ainda há decisão escondida.
+
+**2. As 4 redações antigas estão só no extrator.** Testadas com o texto REAL
+do acervo, vindo do diagnóstico rodado em produção:
+
+| trecho | extrator | backfill |
+|---|---|---|
+| `#6095` "indeferimento do pedido … em nível de … realizado na" | ✅ | ❌ |
+| `#8910` / `#8911` "indeferindo a solicitação de" | ✅ | ❌ |
+| `#10848` "homologar a revalidação do Título … como Doutor em" | ✅ | ❌ |
+| `#1651` regimento ("julgar as decisões do Coordenador") — NEGATIVO | rejeita ✅ | rejeita ✅ |
+
+`RE_GRAD` exige a forma "revalidação do diploma …, obtido por …, junto a …",
+e essas redações usam "do pedido de" e "realizado na". Por isso elas seguem na
+lista de "parecem decisão e NÃO casaram" mesmo com a etapa 3 concluída — ela
+foi feita no `extrai_revalidacoes()`, não aqui.
 
 ### Etapa 4 — o acervo já estava quase todo aqui (17/08/2026)
 
