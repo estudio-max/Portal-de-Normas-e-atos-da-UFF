@@ -1870,6 +1870,18 @@ _REVAL_TITULO_LEGADO_RE = re.compile(
     r"(?:,\s*nos\s+termos|\.\s|$)",
     re.I | re.S)
 
+_REVAL_BLOCO_LISTA_RE = re.compile(
+    r"pela\s+homologa[çc][ãa]o\s+da\s+revalida[çc][ãa]o\s+do\s+diploma,?\s*"
+    r"obtid[oa]\s+por:\s*(?P<itens>.+?)(?=\bsala\s+das\s+reuni[õo]es\b|$)",
+    re.I | re.S)
+
+_REVAL_ITEM_LISTA_RE = re.compile(
+    r"decis[ãa]o\s+n[º°.]?\s*\.?\s*(?P<numero>\d+)\s*/\s*(?P<ano>\d{2,4})\s*\.\s*"
+    r".+?,\s*diploma\s+de\s+[“\"']?(?P<curso>.+?)[”\"']?\s+"
+    r"junto\s+[aà]o?\s+(?P<origem>.+?),\s*como\s+"
+    r"(?P<equiv>doutor(?:ado)?|mestre|mestrado)\s+em\s+.+?"
+    r"(?=\.\s*\(processo|;\s*e\s*decis[ãa]o|$)", re.I | re.S)
+
 # Oração relativa: "...a Resolução X, QUE deferiu a solicitação..." descreve o
 # ato CITADO, não o dispositivo deste. Mesma armadilha já paga em aposentadoria
 # (ver _QUE_ANTES_RE), onde retificação virava concessão nova.
@@ -1924,72 +1936,116 @@ def _reval_citado(texto, inicio):
     return _REVAL_QUE_RE.search(texto[max(0, inicio - 10):inicio])
 
 
-def extrai_revalidacao(trecho):
-    """{'via','decisao','nivel','curso','instituicao','pais'} ou None.
+def _revalidacao_grad(match):
+    partes = [x.strip() for x in match.group("origem").split(",") if x.strip()]
+    pais = _reval_pais(partes[-1]) if len(partes) >= 2 else ""
+    inst = ", ".join(partes[:-1]) if len(partes) >= 2 else match.group("origem")
+    nivel = "Graduação" if match.group("nivel").lower().startswith("gradua") \
+        else match.group("nivel").title()
+    return {
+        "via": "Graduação",
+        "decisao": "Deferido" if match.group("decisao").lower().startswith("defer") else "Indeferido",
+        "nivel": nivel,
+        "curso": limpar(match.group("curso")).strip(" .,;")[:180],
+        "instituicao": limpar(inst).strip(" .,;")[:180],
+        "pais": pais,
+    }
 
-    `via` separa os dois processos ('Graduação' / 'Pós-graduação'), que têm
-    normas, colegiados e taxas de deferimento distintas — juntá-los num número
-    só esconde justamente o que interessa a quem vai pedir.
-    """
+
+def _revalidacao_pos(match):
+    local = [x.strip() for x in match.group("local").split(",") if x.strip()]
+    pais = _reval_pais(local[-1]) if local else ""
+    equiv = match.group("equiv") or ""
+    nivel = ("Doutorado" if re.search(r"doutor", equiv, re.I)
+             else "Mestrado" if re.search(r"mestr", equiv, re.I) else "")
+    return {
+        "via": "Pós-graduação",
+        "decisao": "Deferido" if match.group("decisao").lower().startswith("defer") else "Indeferido",
+        "nivel": nivel,
+        "curso": limpar(match.group("curso")).strip(" .,;")[:180],
+        "instituicao": limpar(match.group("inst")).strip(" .,;")[:180],
+        "pais": pais,
+    }
+
+
+def _revalidacao_indeferida(match, decisao):
+    inst, pais = _reval_origem(match.group("origem"))
+    via, nivel = _reval_nivel(match.group("nivel"))
+    return {
+        "via": via,
+        "decisao": decisao,
+        "nivel": nivel,
+        "curso": limpar(match.group("curso")).strip(" .,;")[:180],
+        "instituicao": inst[:180],
+        "pais": pais,
+    }
+
+
+def _revalidacao_titulo_legado(match):
+    inst, pais = _reval_origem(match.group("origem"))
+    via, nivel = _reval_nivel(match.group("equiv"))
+    return {
+        "via": via,
+        "decisao": "Deferido",
+        "nivel": nivel,
+        "curso": limpar(match.group("curso")).strip(" “”\"'.,;")[:180],
+        "instituicao": inst[:180],
+        "pais": pais,
+    }
+
+
+def _revalidacao_de_item_lista(match):
+    inst, pais = _reval_origem(match.group("origem"))
+    via, nivel = _reval_nivel(match.group("equiv"))
+    return {
+        "via": via,
+        "decisao": "Deferido",
+        "nivel": nivel,
+        "curso": limpar(match.group("curso")).strip(" “”\"'.,;")[:180],
+        "instituicao": inst[:180],
+        "pais": pais,
+    }
+
+
+_REVALIDACAO_MATCHERS = (
+    (_REVAL_GRAD_RE, _revalidacao_grad),
+    (_REVAL_POS_RE, _revalidacao_pos),
+    (_REVAL_INDEFERIMENTO_RE, lambda match: _revalidacao_indeferida(match, "Indeferido")),
+    (_REVAL_GERUNDIO_RE, lambda match: _revalidacao_indeferida(match, "Indeferido")),
+    (_REVAL_TITULO_LEGADO_RE, _revalidacao_titulo_legado),
+)
+
+
+def extrai_revalidacoes(trecho):
+    """Decisões de revalidação em ordem documental, sem dados pessoais."""
     texto = re.sub(r"\s+", " ", trecho or "")
-
-    for via, rx in (("Graduação", _REVAL_GRAD_RE), ("Pós-graduação", _REVAL_POS_RE)):
-        for m in rx.finditer(texto):
-            if _reval_citado(texto, m.start()):
-                continue                      # descreve ato citado, não este
-            if via == "Graduação":
-                partes = [x.strip() for x in m.group("origem").split(",") if x.strip()]
-                pais = _reval_pais(partes[-1]) if len(partes) >= 2 else ""
-                inst = ", ".join(partes[:-1]) if len(partes) >= 2 else m.group("origem")
-                nivel = "Graduação" if m.group("nivel").lower().startswith("gradua") \
-                    else m.group("nivel").title()
-            else:
-                local = [x.strip() for x in m.group("local").split(",") if x.strip()]
-                pais = _reval_pais(local[-1]) if local else ""
-                inst = m.group("inst")
-                equiv = m.group("equiv") or ""
-                nivel = ("Doutorado" if re.search(r"doutor", equiv, re.I)
-                         else "Mestrado" if re.search(r"mestr", equiv, re.I) else "")
-            return {
-                "via": via,
-                "decisao": "Deferido" if m.group("decisao").lower().startswith("defer") else "Indeferido",
-                "nivel": nivel,
-                "curso": limpar(m.group("curso")).strip(" .,;")[:180],
-                "instituicao": limpar(inst).strip(" .,;")[:180],
-                "pais": pais,
-            }
-
-    for rx, decisao in (
-            (_REVAL_INDEFERIMENTO_RE, "Indeferido"),
-            (_REVAL_GERUNDIO_RE, "Indeferido")):
-        for m in rx.finditer(texto):
-            if _reval_citado(texto, m.start()):
+    achados = []
+    for matcher, conversor in _REVALIDACAO_MATCHERS:
+        for match in matcher.finditer(texto):
+            if _reval_citado(texto, match.start()):
                 continue
-            inst, pais = _reval_origem(m.group("origem"))
-            via, nivel = _reval_nivel(m.group("nivel"))
-            return {
-                "via": via,
-                "decisao": decisao,
-                "nivel": nivel,
-                "curso": limpar(m.group("curso")).strip(" .,;")[:180],
-                "instituicao": inst[:180],
-                "pais": pais,
-            }
+            achados.append((match.start(), match.end(), conversor(match)))
+    for bloco in _REVAL_BLOCO_LISTA_RE.finditer(texto):
+        itens = bloco.group("itens")
+        for item in _REVAL_ITEM_LISTA_RE.finditer(itens):
+            inicio = bloco.start("itens") + item.start()
+            fim = bloco.start("itens") + item.end()
+            achados.append((inicio, fim, _revalidacao_de_item_lista(item)))
+    achados.sort(key=lambda achado: achado[0])
+    vistos = set()
+    saida = []
+    for inicio, fim, dado in achados:
+        chave = (inicio, fim)
+        if chave not in vistos:
+            vistos.add(chave)
+            saida.append(dado)
+    return saida
 
-    for m in _REVAL_TITULO_LEGADO_RE.finditer(texto):
-        if _reval_citado(texto, m.start()):
-            continue
-        inst, pais = _reval_origem(m.group("origem"))
-        via, nivel = _reval_nivel(m.group("equiv"))
-        return {
-            "via": via,
-            "decisao": "Deferido",
-            "nivel": nivel,
-            "curso": limpar(m.group("curso")).strip(" “”\"'.,;")[:180],
-            "instituicao": inst[:180],
-            "pais": pais,
-        }
-    return None
+
+def extrai_revalidacao(trecho):
+    """Primeira decisão de revalidação, para compatibilidade com consumidores atuais."""
+    achados = extrai_revalidacoes(trecho)
+    return achados[0] if achados else None
 
 
 # Deslocamento de servidor (Lei 8.112/90): REMOÇÃO = dentro da própria UFF
