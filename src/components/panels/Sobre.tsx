@@ -155,10 +155,15 @@ export default function Sobre() {
           no Boletim — designações, participações em comissões, portarias antigas. Folhear décadas
           de PDF atrás disso não é razoável, e o portal ajuda exatamente nesse ponto.
         </p>
+        {/* w/h = o viewBox do SVG, e a altura acompanha o número de abas: com 15
+            painéis são 5 fileiras. O valor antigo (606, de quando eram 12)
+            reservava uma caixa menor que a imagem. Regerar a figura sem ajustar
+            aqui volta a desalinhar — `tools/gerar_figuras_doc.py` imprime o
+            tamanho de cada uma ao gerar. */}
         <Figura
           arquivo="7-abas-do-portal.svg"
-          w={960} h={606}
-          alt="Grade com os painéis do portal e uma linha explicando o que cada um faz: Planilha, Relações, Chefias, Meu SIAPE, Insights, Mandatos, Prazos, Jornada, Cooperação, Comissões, Políticas e ODS."
+          w={960} h={658}
+          alt="Grade com um cartão por painel do portal — Dashboard, Atos e Normas, Mapa de Relações, Insights, Meu SIAPE, Chefias, Mandatos, Prazos, Jornada, Comissões, Políticas, Cooperação, Revalidação, ODS e O que mudou — cada um com uma linha explicando a que pergunta ele responde."
           legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
         />
         <p>
@@ -353,7 +358,7 @@ export default function Sobre() {
         <Figura
           arquivo="2-jornada-do-ato.svg"
           w={1000} h={420}
-          alt="Fluxo em cinco etapas: a UFF publica o Boletim em PDF, um robô baixa todo dia às 19h10, o texto é recortado em atos, os atos vão para a base com 133 mil registros, e o usuário pesquisa."
+          alt="Fluxo em cinco etapas: a UFF publica o Boletim em PDF, um robô baixa todo dia às 19h10, o texto é recortado em atos, os atos vão para a base, e o usuário pesquisa por palavra, número, órgão, ano ou nome."
           legenda="A etapa do meio é a difícil: o PDF não marca onde um ato termina e o outro começa."
         />
         <Figura
@@ -452,8 +457,8 @@ export default function Sobre() {
         <Figura
           arquivo="5-mapa-cooperacao.svg"
           w={1000} h={520}
-          alt="Mapa-múndi com círculos proporcionais marcando os países com acordos de cooperação da UFF, e ao lado o ranking dos oito maiores: França 89, Portugal 86, Espanha 67, Itália 47, Alemanha 38, Colômbia 37, Argentina 35 e Estados Unidos 25."
-          legenda="1.467 acordos de cooperação em 59 países, extraídos dos atos. São acordos aprovados por ato do Boletim, não necessariamente parcerias ativas hoje: o Boletim não registra o encerramento de um convênio."
+          alt="Mapa-múndi com círculos proporcionais sobre os países onde a UFF tem acordos de cooperação, maiores na Europa e na América do Sul, e ao lado o ranking dos oito com mais acordos, encabeçado por França e Portugal."
+          legenda="Acordos de cooperação extraídos dos atos, com os números no próprio gráfico — a aba Cooperação traz a lista completa e o filtro por país. São acordos aprovados por ato do Boletim, não necessariamente parcerias ativas hoje: o Boletim não registra o encerramento de um convênio."
         />
       </Secao>
 
