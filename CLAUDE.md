@@ -250,14 +250,18 @@ para a pasta `importar/` do servidor e visite
 `basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
 É seguro repetir: o upsert casa por chave natural
 `(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
-chama o `resolver_relacoes_v2.php` sozinho. Confira que **os SEIS** arquivos de
+chama o `resolver_relacoes_v2.php` sozinho. Confira que **os SETE** arquivos de
 `require_once` estão na mesma pasta — `extrair_prazos.php`,
 `extrair_prazos_pad_sinve.php`, `comissoes_match.php`, `ods_match.php`,
-`politicas_match.php` e `indicador_politica.php`: **a falta de qualquer um dá
+`politicas_match.php`, `indicador_politica.php` e `revalidacao_lista.php`: **a
+falta de qualquer um dá
 HTTP 500 de corpo vazio**, e com o cron rodando 2x/dia isso significa portal
-parado sem ninguém notar. Os três últimos são recentes (`ods_match.php` de
-03/08/2026, `politicas_match.php` e `indicador_politica.php` de 04/08/2026):
-quem subiu o importador antes dessas datas **não os tem**.
+parado sem ninguém notar. Entre eles, `ods_match.php` (03/08/2026),
+`politicas_match.php` e `indicador_politica.php` (04/08/2026) são recentes:
+quem subiu o importador antes dessas datas **não os tem**. O backfill de
+revalidações também depende obrigatoriamente de `revalidacao_lista_legada.php`
+e `revalidacao_sincronizacao.php`; suba os dois antes de
+`backfill_ato_revalidacao.php`.
 Ao atualizar o importador, suba SEMPRE os auxiliares ANTES dele. Feito assim em 21/07/2026 para os 4.234 atos do buraco do CEPEx.
 
 ⚠️ **Importador que fica para trás não dá erro nenhum — ele só deixa de
