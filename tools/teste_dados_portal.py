@@ -44,19 +44,23 @@ CORPO = (
 )
 
 
-def _ato(corpo_texto):
+def _ato(corpo_texto, revalidacoes=None):
     """Ato no formato do extrator (out/atos.json), com o minimo que o
     conversor exige. `corpo_busca` e o que o extrator emite hoje."""
-    return {
+    ato = {
         "arquivo": "001-26.pdf", "bs_numero": "1", "bs_data": "05/01/2026",
         "tipo": "PORTARIA", "sigla": "GAR", "numero": "68440", "ano": "2022",
         "data_ato": "2022-03-14", "ementa": "Homologa revalidacao de diploma.",
+        "revalidacao": revalidacoes[0] if revalidacoes else None,
         "corpo_texto": corpo_texto, "corpo_busca": corpo_texto.lower(),
     }
+    if revalidacoes and len(revalidacoes) > 1:
+        ato["revalidacoes"] = revalidacoes
+    return ato
 
 
-def converter_um(corpo_texto):
-    return G.converter({"atos": [_ato(corpo_texto)], "boletins": []})[0]
+def converter_um(corpo_texto, revalidacoes=None):
+    return G.converter({"atos": [_ato(corpo_texto, revalidacoes)], "boletins": []})[0]
 
 
 def main():
@@ -91,6 +95,22 @@ def main():
     checa("atos.json SEM `corpo_texto` (safra antiga) cai em `corpo_busca`",
           antigo["textoOriginal"] == G.mascarar_cpfs(CORPO.lower()),
           "o corpo sumiu do arquivo publicado")
+
+    print("\n-- contrato revalidacao singular/plural --")
+    uma = [{"via": "Graduação", "decisao": "Deferido", "nivel": "Graduação",
+            "curso": "Medicina", "instituicao": "Universidad X", "pais": "Cuba"}]
+    duas = uma + [{"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+                   "curso": "Doctor of Philosophy", "instituicao": "University Y",
+                   "pais": "Reino Unido"}]
+    saida_uma = converter_um(CORPO, uma)
+    saida_duas = converter_um(CORPO, duas)
+    saida_zero = converter_um(CORPO, [])
+    checa("uma decisão mantém somente singular",
+          saida_uma["revalidacao"] == uma[0] and "revalidacoes" not in saida_uma)
+    checa("duas decisões publicam singular e lista completa",
+          saida_duas["revalidacao"] == duas[0] and saida_duas.get("revalidacoes") == duas)
+    checa("zero decisões publica null sem plural",
+          saida_zero["revalidacao"] is None and "revalidacoes" not in saida_zero)
 
     print("\n-- mascara de CPF (o invariante que sustenta a derivacao) --")
     original = saida["textoOriginal"]

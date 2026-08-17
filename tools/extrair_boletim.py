@@ -916,6 +916,7 @@ def parse_pdf(caminho):
         ementa_resumo, ementa_inferida = "", False
         if len(ementa.strip()) < 12:
             ementa_resumo, ementa_inferida = sintetiza_ementa(corpo)
+        revalidacoes = extrai_revalidacoes(trecho)
 
         ato = {
             "arquivo": arquivo,
@@ -950,10 +951,12 @@ def parse_pdf(caminho):
             "funcoes": extrai_funcoes(trecho, data_ato),
             "aposentadoria": extrai_aposentadoria(trecho),
             "deslocamento": extrai_deslocamento(trecho),
-            "revalidacao": extrai_revalidacao(trecho),
             "corpo_texto": corpo_texto,
             "corpo_busca": corpo_busca,
         }
+        ato["revalidacao"] = revalidacoes[0] if revalidacoes else None
+        if len(revalidacoes) > 1:
+            ato["revalidacoes"] = revalidacoes
         # filtra falsos positivos: títulos capturados dentro do sumário costumam
         # ter corpo muito curto e nenhum verbo "RESOLVE/Art./O ... DA UFF".
         corpo_baixo = trecho.lower()
