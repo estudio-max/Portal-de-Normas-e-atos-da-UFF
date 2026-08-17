@@ -30,6 +30,30 @@
 // CRSC-UFF; quem escreve o memorial é a pessoa.
 //
 // ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ O SELO ESTÁ DESLIGADO DESDE 17/08/2026 — DECISÃO DA GESTÃO, NÃO DEFEITO
+//
+// A gestora da PROGEPE avaliou que exibir o selo cria risco de o servidor
+// entender que o direito está reconhecido e cobrá-lo — **mesmo com o texto
+// dizendo o contrário na tela e no PDF**. Essa leitura é dela, não do portal, e
+// é ela quem responde pelo processo de RSC na universidade.
+//
+// O que isso ensina, e vale além deste caso: quando o mal-entendido acontece
+// apesar do aviso escrito, o aviso não é o remédio. O portal pode afirmar "isto
+// não é decisão" com todas as letras e ainda assim ser lido como decisão,
+// porque quem lê está procurando uma resposta, não uma ressalva.
+//
+// O QUE FOI DESLIGADO: só a EXIBIÇÃO — o selo na tela, o resumo no topo, a
+// coluna e a legenda no PDF, e os passos da ajuda que os descrevem.
+//
+// O QUE FICA, DE PROPÓSITO: este classificador inteiro, com os testes de
+// regressão (`tools/teste_rsc_requisitos.ts`, 45 casos) e a metodologia
+// (`docs/METODOLOGIA-RSC.md`). Apagar custaria a medição que já foi paga — foi
+// aqui que se descobriu o regex morto no singular (cobertura de 158 para 1.169)
+// e o bloco de assinatura (101 dos 112 falsos do Requisito V). Se a decisão for
+// revista, religar é trocar `false` por `true` nesta linha.
+export const SELO_RSC_ATIVO = false;
+//
+// ─────────────────────────────────────────────────────────────────────────────
 // LIMITE DE ALCANCE, medido em 4.000 atos de 2025-2026 do acervo
 //
 // Só três dos seis requisitos são detectáveis a partir do que o Boletim publica:

@@ -3,7 +3,7 @@ import { FolderSearch, Printer, Search, Loader2, Info, AlertTriangle, ExternalLi
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 import { PageHeader } from '../ui/PageHeader';
-import { requisitosDoAto, requisitosDaFuncao, REQUISITOS, type Requisito } from './rscRequisitos';
+import { requisitosDoAto, requisitosDaFuncao, REQUISITOS, SELO_RSC_ATIVO, type Requisito } from './rscRequisitos';
 
 // Aba "Meu SIAPE": digite a matrícula, receba os atos do Boletim que a citam,
 // com a referência do BS — para instruir processo.
@@ -90,8 +90,12 @@ const ehIOS = () =>
 // e o vermelho é "nome divergente" — três avisos na mesma cor viram um só.
 // O `title` carrega o texto do requisito porque o selo é curto por necessidade
 // (cabe na tabela) e sozinho não explica nada.
+// Desligado em 17/08/2026 por decisão da PROGEPE — ver o cabeçalho de
+// `rscRequisitos.ts`. A guarda fica AQUI, num ponto só, em vez de nos quatro
+// lugares que renderizam o selo: espalhar a condição é como se esquece um deles
+// numa mudança futura, e o esquecido seria justamente o que continua exibindo.
 const SeloRSC = ({ reqs }: { reqs: Requisito[] }) =>
-  reqs.length ? (
+  SELO_RSC_ATIVO && reqs.length ? (
     <>
       {reqs.map(r => (
         <span
@@ -176,7 +180,7 @@ export default function DossieApi() {
   // `divergente`), e resumir os dois juntos daria um número que mistura gente.
   const resumoRSC = React.useMemo(() => {
     const m = new Map<Requisito, number>();
-    if (r) {
+    if (r && SELO_RSC_ATIVO) {
       for (const f of r.funcoes) for (const q of requisitosDaFuncao(f)) m.set(q, (m.get(q) ?? 0) + 1);
       for (const a of r.atos) for (const q of requisitosDoAto(a)) m.set(q, (m.get(q) ?? 0) + 1);
     }
@@ -210,13 +214,20 @@ export default function DossieApi() {
     // (art. 18, §3º), e uma coluna se ordena e se confere; um sufixo, não.
     const selo = (reqs: Requisito[]) =>
       reqs.length ? reqs.map(q => `Req. ${q}`).join('<br>') : '—';
+    // Com o selo desligado, a coluna sai INTEIRA do documento — cabeçalho e
+    // células. Deixar a coluna vazia seria pior que tê-la: quem recebe o papel
+    // veria um campo em branco onde antes havia requisito e leria como "não
+    // tem direito", que é exatamente o mal-entendido que se quer evitar.
+    const thRsc = SELO_RSC_ATIVO ? `<th>RSC</th>` : '';
+    const tdRsc = (reqs: Requisito[]) =>
+      SELO_RSC_ATIVO ? `<td class="rsc">${selo(reqs)}</td>` : '';
     const linhasF = r.funcoes.map(f =>
       `<tr><td>${esc(f.acao === 'designar' ? 'Designação' : 'Dispensa')}</td><td>${esc(f.cargo)}</td>` +
       `<td>${esc(f.unidade)}</td><td>${fmtData(f.dataAto)}</td><td>${esc(f.atoLabel)}</td>` +
-      `<td class="rsc">${selo(requisitosDaFuncao(f))}</td></tr>`).join('');
+      `${tdRsc(requisitosDaFuncao(f))}</tr>`).join('');
     const linhaAto = (a: ds.DossieAto) =>
       `<tr><td>${esc(rotuloAto(a))}</td><td>${fmtData(a.dataAto)}</td><td>${esc(a.ementa || '—')}</td>` +
-      `<td>${esc(refBS(a))}</td><td class="rsc">${selo(requisitosDoAto(a))}</td></tr>`;
+      `<td>${esc(refBS(a))}</td>${tdRsc(requisitosDoAto(a))}</tr>`;
     const linhasA = r.atos.map(linhaAto).join('');
     // O 3º bloco — atos achados pelo NOME — ficava de fora do PDF até
     // 05/08/2026, e o efeito era o pior possível para o que esta aba faz.
@@ -243,6 +254,7 @@ export default function DossieApi() {
       // Legenda do RSC. Vai no PDF com o MESMO peso que tem na tela: quem lê o
       // papel (a CRSC, a chefia) não viu a tela, e uma coluna "RSC · Req. I" sem
       // explicação pareceria uma pontuação que o portal não apurou.
+      (SELO_RSC_ATIVO ?
       `<div class="rsclegenda"><strong>Sobre a coluna RSC.</strong> Ela indica que o ato é <strong>do tipo</strong> que o ` +
       `requisito descreve no art. 2º da Instrução Normativa GAR/RET/UFF nº 129, de 24/07/2026 — <strong>não</strong> que ele ` +
       `será pontuado. A própria IN determina que atender aos requisitos objetivos “não assegura, por si só, a concessão” ` +
@@ -254,14 +266,15 @@ export default function DossieApi() {
       `<strong>Req. V</strong> — exercício de função ou cargo de direção ou assessoramento (Anexo V).<br>` +
       `Os requisitos <strong>II</strong> (projetos institucionais), <strong>III</strong> (premiação) e <strong>VI</strong> ` +
       `(produção científica) <strong>não são detectáveis</strong> a partir do Boletim e por isso nunca aparecem nesta coluna — ` +
-      `comprovam-se por certificado, publicação ou declaração. Coluna vazia não significa ausência de direito.</div>` +
+      `comprovam-se por certificado, publicação ou declaração. Coluna vazia não significa ausência de direito.</div>`
+      : '') +
       (linhasF
         ? `<h2>Designações e dispensas de função (${r.funcoes.length})</h2>` +
-          `<div class="tw"><table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th><th>RSC</th></tr></thead>` +
+          `<div class="tw"><table><thead><tr><th>Ação</th><th>Cargo</th><th>Unidade</th><th>Data</th><th>Ato</th>${thRsc}</tr></thead>` +
           `<tbody>${linhasF}</tbody></table></div>`
         : '') +
       `<h2>Atos que citam o SIAPE ${esc(r.siape)} (${r.atos.length})</h2>` +
-      `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
+      `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th>${thRsc}</tr></thead>` +
       `<tbody>${linhasA}</tbody></table></div>` +
       // Bloco do nome: sai com a MESMA ressalva que a tela mostra. Busca por
       // nome alcança o que a matrícula não acha, e em troca pode trazer
@@ -272,7 +285,7 @@ export default function DossieApi() {
           `o nome <strong>“${esc(r.porNome?.termo ?? '')}”</strong>, que não corresponde a ` +
           `<strong>${esc(r.nomes.join(' · ') || 'quem consta na matrícula')}</strong>. Se a intenção era buscar o titular, refaça ` +
           `a consulta com o nome dele; se era buscar outra pessoa, use uma consulta separada.</div>` +
-          `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
+          `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th>${thRsc}</tr></thead>` +
           `<tbody>${linhasN}</tbody></table></div>`
         : '') +
       (linhasN && !divergente
@@ -282,7 +295,7 @@ export default function DossieApi() {
           `cargo de direção, os atos que ela <strong>assinou</strong> aparecem nesta lista, e assinar não é participar; ` +
           `e a busca por nome pode trazer <strong>pessoas de nome parecido</strong>. Confira ato por ato antes de usar. ` +
           `Os atos já listados acima não se repetem aqui.</div>` +
-          `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th><th>RSC</th></tr></thead>` +
+          `<div class="tw"><table><thead><tr><th>Ato</th><th>Data</th><th>Ementa</th><th>Referência no BS</th>${thRsc}</tr></thead>` +
           `<tbody>${linhasN}</tbody></table></div>`
         : '') +
       '';
@@ -611,7 +624,13 @@ export default function DossieApi() {
           {/* Legenda do RSC. Aparece sempre que houve consulta, inclusive quando
               NADA foi marcado — a ausência de selo é informação, e sem a
               ressalva ela seria lida como "você não tem direito a nada". */}
-          {(!!r.atos.length || !!r.funcoes.length) && (
+          {/* ⚠️ O PAINEL INTEIRO sai com o selo desligado, e não só os selos.
+              Deixar a moldura sem os selos produzia a pior tela possível: o
+              bloco "Requisitos do RSC-PCCTAE identificados" caía SEMPRE no
+              ramo "Nenhum requisito foi reconhecido", que é lido como negativa
+              de direito por todo mundo que consulta. A ressalva escrita não
+              conserta isso — foi exatamente esse o motivo do desligamento. */}
+          {SELO_RSC_ATIVO && (!!r.atos.length || !!r.funcoes.length) && (
             <div className="bg-white rounded-lg border border-indigo-200 shadow-xs overflow-hidden">
               <div className="px-3 py-2 border-b border-indigo-100 bg-indigo-50/60">
                 {/* `text-indigo-700` e `text-slate-600`, não 800/900: o modo

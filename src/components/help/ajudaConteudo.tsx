@@ -205,12 +205,10 @@ export const AJUDA: Record<string, AjudaAba> = {
       <>Preencha também o <B>nome</B>, no campo ao lado.</>,
       <>Clique em <B>Buscar atos</B>. O resultado vem em até três blocos: designações e dispensas de
         função, atos que citam a matrícula, e atos que citam o nome no texto.</>,
-      <>Repare nos selos <B>RSC · Req. I / IV / V</B>. Eles marcam os registros que correspondem
-        a um dos requisitos do art. 2º da IN 129/2026 — passe o mouse para ler qual. O painel no
-        topo resume quantos foram encontrados de cada tipo.</>,
-      <>Use <B>Exportar / Imprimir PDF</B> para gerar a lista pronta para anexar ao processo. O
-        requisito sai numa coluna própria, o que ajuda a organizar a documentação <B>na ordem dos
-        requisitos</B>, como o art. 18, §3º recomenda.</>,
+      <>Use <B>Exportar / Imprimir PDF</B> para gerar a lista pronta para anexar ao processo, com a
+        referência do boletim em cada linha. Organizar a documentação <B>na ordem dos requisitos</B>,
+        como o art. 18, §3º recomenda, é trabalho de quem monta o processo: o portal entrega os
+        atos e onde eles saíram, não a classificação deles.</>,
     ],
     destaque: <>Preencha os <B>dois</B> campos, sempre. Só uma parte dos atos do Boletim registra
       a matrícula de quem eles citam — o resto traz apenas o nome escrito no texto. Buscando só
@@ -219,15 +217,15 @@ export const AJUDA: Record<string, AjudaAba> = {
     cuidado: <>Isto é <B>material de instrução, não decisão</B>. A lista mostra que existe um ato
       publicado que cita você e onde ele saiu — ela não comprova participação por si só (numa
       banca, o avaliado também é citado), não é exaustiva, e não apura pontuação nenhuma: quem
-      avalia é a <B>CRSC-UFF</B>. O selo diz que o ato é <B>do tipo</B> que o requisito descreve,
-      nunca que ele será pontuado: a IN é expressa ao dizer que atender aos requisitos objetivos
-      “não assegura, por si só, a concessão” (art. 15, §8º), e não se pontua o que for
-      “exclusivamente o desempenho ordinário das atribuições legais do cargo” (art. 20, §2º) —
-      isso depende do seu memorial. Além disso, <B>só 3 dos 6 requisitos</B> são detectáveis a
-      partir do Boletim: projetos (II), premiação (III) e produção científica (VI) comprovam-se
-      por certificado ou publicação, e <B>a ausência de selo nunca significa ausência de
-      direito</B>. A busca por nome pode trazer <B>pessoas de nome parecido</B>. Confira ato por
-      ato antes de usar.</>,
+      avalia é a <B>CRSC-UFF</B>. <B>O portal não classifica ato por requisito</B> e não diz se
+      algo pontua: a IN é expressa ao dizer que atender aos requisitos objetivos “não assegura,
+      por si só, a concessão” (art. 15, §8º), e não se pontua o que for “exclusivamente o
+      desempenho ordinário das atribuições legais do cargo” (art. 20, §2º) — isso depende do seu
+      memorial. O que esta aba entrega é o <B>ato e a referência do boletim</B>, que é o documento
+      que o art. 19, parágrafo único, I aceita como prova; enquadrá-lo é parte do seu pedido. Nem
+      tudo que conta está no Boletim: projetos, premiação e produção científica comprovam-se por
+      certificado ou publicação. A busca por nome pode trazer <B>pessoas de nome parecido</B>.
+      Confira ato por ato antes de usar.</>,
   },
 
   'pessoal/chefias': {
