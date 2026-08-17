@@ -409,6 +409,25 @@ try {
         }
         $insTexto->execute([':id' => $atoId, ':t' => $textoOrig, ':t2' => $textoBusca]);
 
+        // ⚠️ `$texto` É O CORPO QUE OS CLASSIFICADORES RECEBEM, e precisa
+        // continuar existindo: ODS (`ods_do_ato`), PAD/SINVE
+        // (`extrair_prazos_pad_sinve`) e o radar de prazos leem esta variável
+        // mais adiante no mesmo laço.
+        //
+        // Ela sumiu em 17/08/2026, quando o bloco acima trocou `$texto` por
+        // `$textoBusca`/`$textoOrig` e os três usos lá embaixo ficaram
+        // pendurados. `php -l` não vê isso — variável indefinida é aviso, não
+        // erro de sintaxe —, então o CI passou verde e o defeito só apareceu
+        // na primeira importação depois do deploy: `ods_do_ato(): Argument #3
+        // ($corpo) must be of type string, null given`, com a transação
+        // inteira revertida. O portal parou de receber ato até alguém abrir o
+        // log do cron.
+        //
+        // É a versão MINÚSCULA, como sempre foi: os classificadores nasceram
+        // medidos sobre este texto. Guarda em
+        // `backend/importar/teste_variaveis_importador.php`.
+        $texto = $textoBusca;
+
         // pessoas citadas (siapes/pessoas)
         $delPessoa->execute([':id' => $atoId]);
         $nomeDe = [];
