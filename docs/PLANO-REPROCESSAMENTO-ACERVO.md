@@ -126,7 +126,7 @@ A etapa 5 pode usar esse contrato sem republicar a cópia minúscula do corpo.
 | # | Etapa | Estado |
 |---|---|---|
 | 1 | Corrigir truncagem e lowercase no extrator/importador | ✅ |
-| 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ⬜ |
+| 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ✅ |
 | 3 | Acrescentar as redações antigas de decisão única (`#5792` segue na etapa 2) | ✅ |
 | 4 | Baixar o acervo completo de boletins | ⬜ |
 | 5 | Reprocessar e gerar a base completa | ⬜ |

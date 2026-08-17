@@ -339,6 +339,14 @@ centenas de acessos simultâneos.
 Quatro abas ligam um ATO a uma entidade por uma tabela-fato preenchida no import
 e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
 
+- **Revalidação** (`/api/revalidacoes`): **um ato pode decidir vários pedidos
+  de revalidação.** O extrator mantém `revalidacao` como alias do primeiro item
+  e só publica `revalidacoes` quando há mais de um, sempre na ordem documental.
+  A tabela usa UNIQUE `(ato_id, ordem)`. Ausência das duas chaves no JSON antigo
+  preserva os fatos já gravados; `revalidacao: null` declara explicitamente zero
+  decisões e os sincroniza. Deploy obrigatório: migração
+  `backend/db/migrar_ato_revalidacao_multiplas.sql` → importador/auxiliares → JSON
+  novo. Inverter essa ordem perde silenciosamente os itens após o primeiro.
 - **Busca por processo** (`/api/atos?processo=…`): casa por DÍGITOS na tabela
   `ato_processo`. O `ato.processo_sei` guarda só o primeiro número do texto; a
   tabela guarda todos (medido: a coluna única descartava 44% das menções).
