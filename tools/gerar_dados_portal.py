@@ -255,13 +255,30 @@ def converter(dados, urls=None):
             # Revalidação. NÃO carrega o nome de quem pediu, por desenho: ver o
             # cabeçalho de extrai_revalidacao() e de backend/db/ato_revalidacao.sql.
             "revalidacao": a.get("revalidacao"),
-            "textoBusca": mascarar_cpfs(a.get("corpo_busca", "")),  # corpo p/ busca por nome/SIAPE
-            # Mesma coisa, com a CAIXA PRESERVADA. Separado desde 17/08/2026:
-            # antes só existia a versão minúscula, e o banco gravava ela nas
-            # duas colunas — daí `texto_original` não ser o original. Extração
-            # de estrutura (instituição, curso, país) usa esta; busca usa a de
-            # cima. `mascarar_cpfs` vale para as DUAS, sem exceção.
-            "textoOriginal": mascarar_cpfs(a.get("corpo_texto", "")),
+            # O corpo do ato viaja numa forma só: a de CAIXA PRESERVADA. Quem
+            # precisa da versão minúscula (busca por nome/SIAPE, FULLTEXT,
+            # regex de prazo) a DERIVA — `mb_strtolower()` no importador,
+            # `.toLowerCase()` no `dataSource.ts` e no `mock_api.py`.
+            #
+            # Publicar as duas foi o estado entre 17 e 18/08/2026 e custava o
+            # DOBRO do arquivo (3,71 -> 6,70 MB nos 15 boletins de teste;
+            # ~24 MB no índice completo) para republicar a mesma informação —
+            # este arquivo vai por Git todo dia E é baixado pelo navegador do
+            # visitante no modo de contingência.
+            #
+            # Derivar é idêntico a republicar porque `mascarar_cpfs()` COMUTA
+            # com o rebaixamento de caixa (a máscara só tem dígito e `*`).
+            # É invariante, não coincidência: `tools/teste_dados_portal.py`
+            # reprova quem o quebrar. `mascarar_cpfs` vale sem exceção — o
+            # texto que sai daqui é o único que existe.
+            #
+            # O `or corpo_busca` atende safra ANTIGA: `corpo_texto` só existe
+            # em atos.json gerado pelo extrator de 17/08/2026 em diante, e a
+            # bancada tem cargas anteriores (import-2002-2003,
+            # reprocessamento-*). Sem ele, rodar o gerador sobre uma dessas
+            # publicaria o corpo VAZIO — perda silenciosa, que é o defeito que
+            # este projeto mais paga. Vem minúsculo, como vinha antes.
+            "textoOriginal": mascarar_cpfs(a.get("corpo_texto") or a.get("corpo_busca") or ""),
             "conteudoResumido": ementa_disp if ementa_disp[:1] != "(" else "Ato administrativo publicado no Boletim de Serviço da UFF.",
             "status": "Ativo",  # ajustado abaixo
             "boletimNumero": f"BS nº {a.get('bs_numero','')}/{ano_pub}",

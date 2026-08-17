@@ -92,6 +92,25 @@ export async function init(): Promise<'api' | 'estatico'> {
   return MODO;
 }
 
+// Corpo do ato no modo estático. O portal-data.json publica UMA forma só —
+// `textoOriginal`, com a caixa preservada — e a minúscula é derivada por quem
+// precisa dela. Publicar as duas dobrava o arquivo (3,71 → 6,70 MB nos 15
+// boletins de teste), e este arquivo é baixado pelo NAVEGADOR do visitante.
+//
+// Não rebaixa a caixa aqui de propósito: os quatro pontos de uso abaixo já
+// normalizam por conta própria — `buscaCasa()` faz `.toLowerCase()` no blob,
+// `extrairPrazos()` faz na primeira linha, os insights fazem na concatenação,
+// e os filtros de SIAPE/processo comparam só dígitos. Rebaixar aqui alocaria
+// uma cópia de até 40 KB por ato a cada chamada, sem mudar resultado nenhum.
+// Se algum ponto de uso novo depender da caixa baixa, ele que chame
+// `.toLowerCase()` — e o custo fica visível onde nasceu.
+//
+// O `|| textoBusca` atende o JSON de ontem: o arquivo publicado só troca na
+// próxima execução do indexar.yml, e o modo estático lê o que estiver no ar.
+function corpoDe(a: { textoOriginal?: string; textoBusca?: string }): string {
+  return a.textoOriginal || a.textoBusca || '';
+}
+
 // Sintaxe de busca aceita na caixa principal (espelha booleanize() do PHP —
 // os dois têm que concordar, senão modo API e modo estático dão resultados
 // diferentes pra mesma busca):
@@ -148,11 +167,11 @@ function filtraEstatico(p: ListaParams): UffAct[] {
     // "frase exata" funcionaria no banco e não no estático, e palavra solta
     // casaria em qualquer ordem no banco e só adjacente aqui.
     if (nome) {
-      const blobNome = `${a.textoBusca || ''} ${a.ementa} ${a.orgaoEmissor || ''}`;
+      const blobNome = `${corpoDe(a)} ${a.ementa} ${a.orgaoEmissor || ''}`;
       if (!buscaCasa(blobNome, nome)) return false;
     }
     if (siape) {
-      const ok = (a.siapes || []).some(s => s.includes(siape)) || (a.textoBusca || '').includes(siape);
+      const ok = (a.siapes || []).some(s => s.includes(siape)) || corpoDe(a).includes(siape);
       if (!ok) return false;
     }
     // Processo: casa por DÍGITOS, igual ao modo banco. No estático não há a
@@ -161,7 +180,7 @@ function filtraEstatico(p: ListaParams): UffAct[] {
     // "23069.154690/2019-45" achar o mesmo ato que "23069154690201945".
     const proc = (p.processo || '').replace(/\D/g, '');
     if (proc) {
-      const alvo = `${a.processoSei || ''} ${a.textoBusca || ''}`.replace(/\D/g, '');
+      const alvo = `${a.processoSei || ''} ${corpoDe(a)}`.replace(/\D/g, '');
       if (!alvo.includes(proc)) return false;
     }
     if (p.com_sei && !a.processoSei) return false;
@@ -756,7 +775,7 @@ export async function getAnalitico(): Promise<Analitico> {
     const ano = Number(a.ano);
     if (!ano || ano < 1990 || ano > 2100) continue;
     const tipoApos: string | undefined = a.aposentadoria?.tipo;
-    const t = `${a.ementa || ''} ${a.conteudoResumido || ''} ${a.textoBusca || ''}`.toLowerCase();
+    const t = `${a.ementa || ''} ${a.conteudoResumido || ''} ${corpoDe(a)}`.toLowerCase();
     const vac8 = reVago.test(t) && reCausa8.test(t);
     if (!tipoApos && !vac8) continue;
     const s = rhAno.get(ano) || { ...vazioRh };
@@ -1379,7 +1398,7 @@ export async function getPrazos(): Promise<Prazo[]> {
       const mexido = (a.referenciadoPor || []).some((x: any) => x.relacao === 'Altera' || x.relacao === 'Revoga');
       prazos.push(..._montaPrazos({
         id: a.id, label: `${a.tipoAto} nº ${a.numero}/${a.ano}`, sigla: a.orgaoEmissor || '', ementa: a.ementa || '',
-        texto: `${a.ementa || ''} . ${a.conteudoResumido || ''} . ${a.textoBusca || ''}`,
+        texto: `${a.ementa || ''} . ${a.conteudoResumido || ''} . ${corpoDe(a)}`,
         dataAto: a.dataAssinatura || null, link: a.linkBoletim || null, mexido, status: a.status || 'Ativo',
       }));
     }

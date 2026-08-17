@@ -6,6 +6,23 @@ const read = (path) => readFile(new URL(path, root), 'utf8');
 const dataSource = await read('src/dataSource.ts');
 const mockPy = await read('tools/mock_api.py');
 
+// Desde 18/08/2026 o JSON publica apenas `textoOriginal`. Todo consumidor do
+// mock precisa passar por corpo_de(); acesso direto a `textoBusca` funciona
+// com a safra antiga e quebra silenciosamente com a nova.
+assert.equal(
+  [...mockPy.matchAll(/a\.get\(["']textoBusca["']\)/g)].length,
+  1,
+  'mock_api.py must read textoBusca directly only inside corpo_de() fallback.'
+);
+
+// Python, PHP e JavaScript derivam a mesma caixa baixa a partir da única forma
+// publicada. A fixture inclui os casos Unicode que não são troca ASCII simples.
+const caixaFixture = JSON.parse(await read('tools/dados_referencia/caixa-texto.json'));
+for (const [original, esperado] of caixaFixture.pares) {
+  assert.equal(original.toLowerCase(), esperado,
+    `JavaScript lowercase must match the shared fixture for ${JSON.stringify(original)}.`);
+}
+
 const tsconfig = JSON.parse(await read('tsconfig.json'));
 assert.deepEqual(
   tsconfig.include,

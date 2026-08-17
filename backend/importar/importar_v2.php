@@ -378,17 +378,34 @@ try {
                                     (string)($a['numero'] ?? ''), $ano, $a);
         if ($rc === 1) $novos++; elseif ($rc === 2) $atualizados++;
 
-        // As DUAS colunas passam a receber conteúdo diferente, como o nome
-        // delas sempre prometeu. Até 17/08/2026 ambas recebiam `textoBusca`
-        // (minúsculo), e por isso `texto_original` não era o original — o
-        // backfill de revalidação teve de reconstruir nome próprio a partir de
+        // As DUAS colunas recebem conteúdo diferente, como o nome delas sempre
+        // prometeu. Até 17/08/2026 ambas recebiam `textoBusca` (minúsculo), e
+        // por isso `texto_original` não era o original — o backfill de
+        // revalidação teve de reconstruir nome próprio a partir de
         // "universidad de los andes".
         //
-        // `textoOriginal` só existe em base gerada pelo extrator novo; base
-        // antiga cai no `?:` e mantém o comportamento de antes, sem quebrar
-        // importação de safra velha.
+        // O JSON traz UMA forma só (`textoOriginal`, caixa preservada) e a
+        // minúscula é DERIVADA aqui: publicar as duas dobrava o arquivo, que
+        // trafega por Git todo dia e é baixado pelo navegador do visitante.
+        // O resultado é idêntico ao que se gravava antes porque o
+        // `mascarar_cpfs()` do gerador comuta com o rebaixamento de caixa —
+        // conferido em `tools/teste_dados_portal.py`, e a caixa em si nos três
+        // consumidores (`backend/importar/teste_caixa_texto.php`).
+        //
+        // ⚠️ `mb_strtolower` COM o 'UTF-8' explícito: sem ele o PHP usa
+        // `mbstring.internal_encoding`, que é do servidor e não do dado —
+        // acento vira byte quebrado no índice FULLTEXT, e isso não dá erro,
+        // só deixa de casar.
+        //
+        // As duas quedas atendem safra antiga e nova ao mesmo tempo: JSON
+        // velho (só `textoBusca`) importa como antes; JSON novo (só
+        // `textoOriginal`) deriva. Vale enquanto houver base das duas épocas
+        // circulando pela pasta `importar/` do servidor.
         $textoBusca = (string)($a['textoBusca'] ?? '');
         $textoOrig  = (string)($a['textoOriginal'] ?? '') ?: $textoBusca;
+        if ($textoBusca === '' && $textoOrig !== '') {
+            $textoBusca = mb_strtolower($textoOrig, 'UTF-8');
+        }
         $insTexto->execute([':id' => $atoId, ':t' => $textoOrig, ':t2' => $textoBusca]);
 
         // pessoas citadas (siapes/pessoas)

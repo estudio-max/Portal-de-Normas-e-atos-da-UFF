@@ -1,0 +1,41 @@
+{
+  "_leia_me": [
+    "Amostra de CAIXA para o corpo do ato. Existe porque o portal-data.json passou",
+    "a publicar SÓ o texto de caixa preservada (`textoOriginal`), e a versão",
+    "minúscula — a que alimenta o FULLTEXT e toda busca — é DERIVADA em três",
+    "linguagens diferentes: Python (`.lower()`), PHP (`mb_strtolower`) e JavaScript",
+    "(`.toLowerCase()`). Se as três discordarem numa letra, a mesma busca passa a",
+    "dar resultado diferente no modo banco e no modo estático, sem erro nenhum.",
+    "",
+    "Cada par é conferido pelos três: tools/teste_dados_portal.py,",
+    "backend/importar/teste_caixa_texto.php e tools/test_redesign_integrity.mjs.",
+    "",
+    "Os casos não são inventados: acentuação maiúscula é o pão do Boletim; a",
+    "ligadura `Ɵ` é como o extrator decodifica 'ti' de certos PDFs; 'İ' e 'ẞ'",
+    "aparecem em nome de instituição estrangeira nos pedidos de revalidação, e são",
+    "justamente as duas letras cuja minúscula não é uma troca de um caractere por",
+    "outro (o 'İ' vira DOIS pontos de código).",
+    "",
+    "A ligadura merece nota: `Ɵ` é U+019F, e a minúscula dela é `ɵ` (U+0275) — o",
+    "par registra que as três linguagens FAZEM essa troca, e igual. Quem escrever",
+    "padrão contra o texto minúsculo tem de escrevê-lo já com `ɵ`."
+  ],
+  "pares": [
+    ["SUPERINTENDÊNCIA DE OPERAÇÕES E MANUTENÇÃO",
+     "superintendência de operações e manutenção"],
+    ["PORTARIA Nº 68.440/2022 – REITORIA",
+     "portaria nº 68.440/2022 – reitoria"],
+    ["ConsƟtuir Comissão de ÉƟca Pública",
+     "consɵtuir comissão de éɵca pública"],
+    ["Universidad de Los Andes, Bogotá — Colômbia",
+     "universidad de los andes, bogotá — colômbia"],
+    ["Doctor of Philosophy in Computer Science",
+     "doctor of philosophy in computer science"],
+    ["İstanbul Üniversitesi",
+     "i̇stanbul üniversitesi"],
+    ["KAISERSTRAẞE 12",
+     "kaiserstraße 12"],
+    ["CPF nº ***.456.789-**",
+     "cpf nº ***.456.789-**"]
+  ]
+}

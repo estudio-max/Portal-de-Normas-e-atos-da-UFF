@@ -48,7 +48,14 @@ export interface UffAct {
   // Pessoas/matrículas para o filtro por servidor
   siapes?: string[];        // matrículas SIAPE citadas no ato
   pessoas?: { nome: string; siape: string }[];  // nome + matrícula p/ a Ficha
-  textoBusca?: string;      // corpo do ato (minúsculo) para busca por nome/SIAPE
+  // Corpo do ato, com a CAIXA PRESERVADA — é a única forma que o
+  // portal-data.json publica desde 18/08/2026. Quem precisa da versão
+  // minúscula a deriva na hora (ver `corpoDe()` no dataSource.ts).
+  textoOriginal?: string;
+  // Safra ANTIGA do JSON, que publicava o corpo já minúsculo. Fica porque o
+  // arquivo publicado só troca na próxima execução do indexar.yml, e o
+  // navegador do visitante pode estar lendo o de ontem.
+  textoBusca?: string;
   signatario?: string;
 }
 

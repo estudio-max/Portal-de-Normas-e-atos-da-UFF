@@ -43,6 +43,21 @@ BASE = os.environ.get("PORTAL_DATA") or next(
 ATOS = json.load(open(BASE, encoding="utf-8"))
 POR_ID = {a["id"]: a for a in ATOS}
 
+
+def corpo_de(a):
+    """Corpo do ato. Espelha corpoDe() do dataSource.ts.
+
+    O portal-data.json publica UMA forma só (`textoOriginal`, caixa
+    preservada); a minúscula é derivada por quem precisa. O `or textoBusca`
+    atende safra anterior a 18/08/2026, que o mock ainda abre pelo
+    PORTAL_DATA (é o uso dele: conferir um lote antes de a carga entrar).
+
+    NÃO rebaixa a caixa aqui: os pontos de uso já normalizam — busca_casa() e
+    extrair_prazos() fazem .lower(), o classificador PAD passa pelo norm(), e
+    SIAPE/processo comparam dígito.
+    """
+    return a.get("textoOriginal") or a.get("textoBusca") or ""
+
 # ---- /mandatos: setores sem chefia formalmente constituída ------------------
 # Espelha mandatos() do index.php e getMandatos() do dataSource.ts. A regra de
 # mandato da UFF (confirmada em 5.555 designações do BS): o CARGO decide o
@@ -209,7 +224,7 @@ def busca_casa(blob, busca):
 # entao sem busca_casa() aqui os modos discordariam -- "frase exata" valeria
 # no banco e nao aqui.
 def casa_nome(a, nome):
-    blob = " ".join([a.get("textoBusca", "") or "", a.get("ementa", "") or "",
+    blob = " ".join([corpo_de(a), a.get("ementa", "") or "",
                      a.get("orgaoEmissor", "") or ""])
     return busca_casa(blob, nome)
 
@@ -244,7 +259,7 @@ def filtrar(q):
         if nome and not casa_nome(a, nome):
             continue
         if siape and not (any(siape in s for s in a.get("siapes", []))
-                          or siape in (a.get("textoBusca", "") or "")):
+                          or siape in corpo_de(a)):
             continue
         if com_sei and not a.get("processoSei"):
             continue
@@ -1205,7 +1220,7 @@ def analitico_payload():
         if not isinstance(ano, int) or not (1990 <= ano <= 2100):
             continue
         tipo_apos = (a.get("aposentadoria") or {}).get("tipo")
-        t = f"{a.get('ementa') or ''} {a.get('conteudoResumido') or ''} {a.get('textoBusca') or ''}".lower()
+        t = f"{a.get('ementa') or ''} {a.get('conteudoResumido') or ''} {corpo_de(a)}".lower()
         vac8 = bool(re_vago.search(t) and re_causa8.search(t))
         if not tipo_apos and not vac8:
             continue
@@ -1417,7 +1432,7 @@ def _prazos_pad_sinve():
     achados = []
     for a in ATOS:
         blob = _norm_pad(a.get("ementa") or "") + " " + _norm_pad(
-            f"{a.get('conteudoResumido') or ''} {a.get('textoBusca') or ''}")
+            f"{a.get('conteudoResumido') or ''} {corpo_de(a)}")
         tipo = classifica_tipo(blob)
         if tipo is None:
             continue
@@ -1472,7 +1487,7 @@ def prazos_payload():
 
     # (2) prazos gerais, heurísticos.
     for a in ATOS:
-        texto = f"{a.get('ementa') or ''} . {a.get('conteudoResumido') or ''} . {a.get('textoBusca') or ''}"
+        texto = f"{a.get('ementa') or ''} . {a.get('conteudoResumido') or ''} . {corpo_de(a)}"
         for p in extrair_prazos(texto, a.get("dataAssinatura")):
             prazos.append({
                 "atoId": a["id"], "atoLabel": f"{a.get('tipoAto')} nº {a.get('numero')}/{a.get('ano')}",
