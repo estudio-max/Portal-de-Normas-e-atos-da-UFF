@@ -48,6 +48,25 @@ if (!$cli) {
 }
 function log_($m) { echo $m . "\n"; @flush(); }
 
+// MODO DIAGNÓSTICO — `&diagnostico=1` (ou `php ... --diagnostico`).
+//
+// Existe porque não dá para saber, de fora, se 245 é o total ou metade dele.
+// A busca do portal NÃO serve de denominador: procurar a frase exata
+// "Revalidação do Diploma" devolve 20 atos, enquanto este mesmo script casou
+// 135 de graduação com um regex que exige essa frase. As duas coisas não podem
+// estar certas — a busca por frase não varre o corpo como se supunha.
+//
+// Então em vez de estimar, este modo MOSTRA: lista os candidatos que parecem
+// decisão (têm "deferir/indeferir" perto de "revalidação/reconhecimento") e
+// mesmo assim não casaram padrão nenhum. Se vierem redações antigas
+// reconhecíveis, acrescenta-se o padrão; se vier só designação de comitê e
+// edital, então 245 É o número real.
+//
+// NÃO GRAVA NADA neste modo — é seguro rodar a qualquer hora.
+$diagnostico = $cli
+    ? in_array('--diagnostico', $argv ?? [], true)
+    : (($_GET['diagnostico'] ?? '') !== '');
+
 $pdo = conectar($cfg);
 
 // ---------------------------------------------------------------------------
@@ -169,7 +188,7 @@ $insere = $pdo->prepare(
        nivel=VALUES(nivel), curso=VALUES(curso),
        instituicao=VALUES(instituicao), pais=VALUES(pais)");
 
-$vistos = 0; $gravados = 0; $porVia = []; $semPais = 0;
+$vistos = 0; $gravados = 0; $porVia = []; $semPais = 0; $suspeitos = [];
 while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
     $vistos++;
     $txt = preg_replace('/\s+/u', ' ', (string)$row['txt']);
@@ -204,7 +223,24 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
         ];
         break;
     }
-    if (!$achou) continue;
+    if (!$achou) {
+        // Parece decisão e não casou? Guarda para o relatório.
+        // O teste é deliberadamente FROUXO: verbo decisório a até ~120
+        // caracteres de "revalida"/"reconhecimento do t". Frouxo de propósito
+        // — o objetivo aqui é achar redação que eu não conheço, então errar
+        // para o lado de mostrar demais é melhor que filtrar cedo e concluir
+        // que não há nada.
+        if (preg_match('/\b(defer\w+|indefer\w+|homolog\w+|revalid\w+)\b.{0,120}?'
+                     . '(revalida|reconhecimento do t)|'
+                     . '(revalida|reconhecimento do t).{0,120}?\b(defer\w+|indefer\w+|homolog\w+)\b/iu',
+                       $txt, $mm, PREG_OFFSET_CAPTURE)) {
+            $ini = max(0, $mm[0][1] - 40);
+            $suspeitos[] = [$row['id'], mb_substr($txt, $ini, 230)];
+        }
+        continue;
+    }
+
+    if ($diagnostico) { $gravados++; $porVia[$achou['via']] = ($porVia[$achou['via']] ?? 0) + 1; continue; }
 
     $insere->execute([
         ':id' => $row['id'], ':v' => $achou['via'], ':d' => $achou['decisao'],
@@ -216,10 +252,41 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
     if ($achou['pais'] === '') $semPais++;
 }
 
+log_($diagnostico ? "=== MODO DIAGNÓSTICO — nada foi gravado ===" : "");
 log_("candidatos lidos : $vistos");
-log_("gravados         : $gravados");
+log_(($diagnostico ? "casariam         : " : "gravados         : ") . $gravados);
 foreach ($porVia as $v => $n) log_("  $v: $n");
-log_("sem país         : $semPais");
+if (!$diagnostico) log_("sem país         : $semPais");
+
+// ---------------------------------------------------------------------------
+// O relatório: quem parece decisão e não casou.
+// ---------------------------------------------------------------------------
+log_("");
+log_("parecem decisão e NÃO casaram: " . count($suspeitos));
+if ($suspeitos) {
+    $mostrar = $diagnostico ? 25 : 5;
+    log_("(amostra de até $mostrar — o trecho começa 40 caracteres antes do verbo)");
+    log_("");
+    foreach (array_slice($suspeitos, 0, $mostrar) as [$id, $trecho]) {
+        log_("  ato #$id");
+        log_("    …" . preg_replace('/\s+/u', ' ', $trecho) . "…");
+    }
+    if (!$diagnostico && count($suspeitos) > 5) {
+        log_("");
+        log_("  Rode com &diagnostico=1 para ver mais e entender se são");
+        log_("  redações antigas (que faltam padrão) ou só designação de comitê");
+        log_("  e edital, que corretamente não viram decisão.");
+    }
+} else {
+    log_("  Nenhum. Todo candidato que parece decisão foi capturado —");
+    log_("  o que sobrou no filtro são atos que só mencionam a palavra.");
+}
+log_("");
+
+if ($diagnostico) {
+    log_("Nada gravado (diagnóstico). Rode sem &diagnostico=1 para aplicar.");
+    exit;
+}
 
 $tot = (int)$pdo->query("SELECT COUNT(*) FROM ato_revalidacao")->fetchColumn();
 log_("ato_revalidacao agora com $tot linha(s).");
