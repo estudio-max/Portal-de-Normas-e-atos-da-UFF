@@ -129,7 +129,7 @@ Mexe em três camadas ao mesmo tempo (extrator, importador, front), então
 |---|---|---|
 | 1 | Corrigir truncagem e lowercase no extrator/importador | 🔶 feito, com a pendência acima |
 | 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ⬜ |
-| 3 | Acrescentar as 4 redações antigas | ⬜ |
+| 3 | Acrescentar as redações antigas de decisão única (`#5792` segue na etapa 2) | ✅ |
 | 4 | Baixar o acervo completo de boletins | ⬜ |
 | 5 | Reprocessar e gerar a base completa | ⬜ |
 | 6 | Importar no servidor | ⬜ |
