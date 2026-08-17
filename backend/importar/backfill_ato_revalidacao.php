@@ -78,11 +78,37 @@ $pdo = conectar($cfg);
 // `u` (unicode) + `i` (maiúsculas/minúsculas) porque o texto do banco está em
 // caixa baixa e com acento.
 // ---------------------------------------------------------------------------
-$RE_GRAD = '/(?P<decisao>deferir|indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+'
-         . 'revalida[çc][ãa]o\s+do\s+diploma,?\s*n[íi]vel\s+'
-         . '(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s*(?:de\s+|em\s+)?'
-         . '(?P<curso>.+?),\s*obtid[oa]\s+por\s+.+?,\s*'
-         . 'junto\s+[aà]o?\s*(?P<origem>.+?)(?:,\s*nos\s+termos|\.\s|$)/iu';
+// Generalizado em 17/08/2026 a partir do modo diagnóstico, que revelou TRÊS
+// redações antigas que a forma moderna não cobria. Todas reais, do acervo:
+//
+//   2013-15  "decide: 1- indeferir O PEDIDO de revalidação do diploma,
+//             NÍVEL DE GRADUAÇÃO EM medicina, obtido por FULANO, junto a
+//             universidad del norte, paraguai, nos termos..."
+//   sem nível "indeferir o pedido de revalidação DO DIPLOMA DE licenciado em
+//             informática de gestão, obtido por FULANO, junto AO instituto
+//             politecnico de coimbra, portugal..."
+//   2008-14  "decide HOMOLOGAR a revalidação do diploma de 'doctor of
+//             philosophy', obtido por FULANA, NA university of california,
+//             los angeles, estados unidos da américa, COMO EQUIVALENTE AO DE
+//             doutor em letras"
+//
+// O que varia, e por isso virou alternativa em vez de regex nova: o verbo
+// (deferir/indeferir/homologar), o objeto ("a solicitação de" / "o pedido de"
+// / nada), a forma do nível ("nível Graduação de" / "nível de graduação em" /
+// ausente), e a preposição da origem ("junto a" / "junto ao" / "na").
+//
+// A VIA não é decidida por qual regex casou — é decidida pela evidência: se o
+// ato declara equivalência a doutor/mestre, é pós-graduação, mesmo escrito
+// como "revalidação do diploma". Foi o caso do "doctor of philosophy ... como
+// equivalente ao de doutor em letras", que a leitura ingênua classificaria
+// como graduação.
+$RE_GRAD = '/(?P<decisao>defer|indefer|homolog)\w*\s+'
+         . '(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|a\s+)?'
+         . 'revalida[çc][ãa]o\s+do\s+diploma\s*'
+         . '(?:,?\s*n[íi]vel\s+(?:de\s+)?(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s*(?:em|de)?\s*)?'
+         . '(?:de\s+)?(?P<curso>[^,]{0,180}?)\s*,\s*obtid[oa]\s+por\s+.+?,\s*'
+         . '(?:junto\s+[aà]o?s?|n[ao]s?)\s+(?P<origem>.+?)'
+         . '(?:,\s*nos\s+termos|,\s*como\s+equivalente\s+ao\s+de\s+(?P<equiv>[^,.]{0,80})|\.\s|$)/iu';
 
 $RE_POS  = '/(?P<decisao>deferir|indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+'
          . 'reconhecimento\s+do\s+t[íi]tulo\s+de\s+(?P<curso>.+?),\s*'
@@ -205,6 +231,18 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             $pais = count($partes) >= 2 ? pais_canon(end($partes), $PAIS_CANON) : '';
             $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
             $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
+
+            // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".
+            // "homologar a revalidação do diploma de 'doctor of philosophy' …
+            //  como equivalente ao de doutor em letras" é pós-graduação, ainda
+            // que escrito com o vocabulário da graduação. Classificar pelo
+            // texto que casou, e não pelo que o ato AFIRMA, poria doutorados
+            // na conta da graduação e estragaria as duas taxas.
+            $eq = $g('equiv');
+            if (preg_match('/doutor/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Doutorado'; }
+            elseif (preg_match('/mestr/iu', $eq)) { $via = 'Pós-graduação'; $nivel = 'Mestrado'; }
+            elseif ($nivel !== '' && preg_match('/^(Doutorado|Mestrado)$/u', $nivel)) { $via = 'Pós-graduação'; }
+            elseif ($nivel === '') { $nivel = 'Graduação'; }
         } else {
             $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
             $pais = $loc ? pais_canon(end($loc), $PAIS_CANON) : '';
