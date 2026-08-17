@@ -75,7 +75,7 @@ function revalidacao_limpa_campo(string $s): string {
     // "Graduação em Medicina" viraria "Graduação em Medicina" (o `em` não está
     // no começo) e depois nada mais casaria.
     $s = preg_replace('/^(?:n[íi]vel\s+(?:de\s+)?)?(?:gradua[çc][ãa]o|bacharelado|licenciatura|mestrado|doutorado|p[óo]s-?gradua[çc][ãa]o)\s+em\s+/iu', '', $s);
-    $s = preg_replace('/^(?:na|no|nos|nas|em|de|da|do|dos|das)\s+/iu', '', $s);
+    $s = preg_replace('/^(?:na|no|nos|nas|em|de|da|do|dos|das|como)\s+/iu', '', $s);
     return trim($s);
 }
 
@@ -107,6 +107,10 @@ const REVALIDACAO_NAO_PAIS = [
     'processo', 'decisao', 'reuniao', 'sala', 'universidade', 'universidad',
     'faculdade', 'instituto', 'departamento', 'curso', 'diploma', 'titulo',
     'equivalente', 'doutor', 'mestre', 'bacharel',
+    // A cláusula de equivalência vaza inteira quando a origem varre até o
+    // ponto: "…, como Mestrado em Economia" virava país. Medido no acervo: 6
+    // rótulos assim, um por área.
+    'mestrado', 'doutorado', 'licenciatura', 'ph.d', 'phd', 'sorbonne',
 ];
 
 /**

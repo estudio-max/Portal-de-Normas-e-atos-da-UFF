@@ -17,6 +17,7 @@ Endpoints (iguais aos do PHP):
 O que o mock NÃO reproduz, por desenho: o cache em disco da API PHP e o
 `X-Cache`. Tudo aqui é calculado a cada requisição sobre o JSON em memória.
 """
+import io
 import json, os, re, math, sys, datetime, unicodedata
 from collections import defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -577,6 +578,31 @@ def jornada_payload():
     }
 
 
+def _coop_paises_do_php():
+    """Le a tabela de centroides do index_v2.php em vez de copia-la.
+
+    O mock existe para ESPELHAR a API; uma segunda lista de coordenadas aqui
+    divergiria da de la no primeiro pais novo, e o mock passaria a mostrar um
+    mundo que producao nao mostra. Ler o PHP e feio e e honesto -- e se o
+    formato mudar, o mock fica sem coordenada (mapa vazio), que e barulho
+    visivel, nao dado errado.
+    """
+    import re as _re
+    caminho = os.path.join(_raiz, "backend", "api", "index_v2.php")
+    try:
+        php = io.open(caminho, encoding="utf-8").read()
+    except OSError:
+        return {}
+    m = _re.search(r"function coop_paises\(\): array \{\s*static \$p = \[(.*?)\];", php, _re.S)
+    if not m:
+        return {}
+    return {a: (float(b), float(c)) for a, b, c in
+            _re.findall(r"'([^']+)'\s*=>\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\]", m.group(1))}
+
+
+PAISES_COORD = _coop_paises_do_php()
+
+
 def revalidacao_payload():
     """Espelha /revalidacao do index_v2.php: SO AGREGADOS, nenhuma linha
     identifica quem pediu -- no banco a coluna de pessoa nem existe.
@@ -654,7 +680,12 @@ def revalidacao_payload():
                   for (a, v), (t, d) in sorted(serie_acc.items())],
         "niveis": [{"via": v, "nivel": n, "total": t, "deferidos": d}
                    for (v, n), (t, d) in sorted(niveis_acc.items(), key=lambda x: -x[1][0])],
-        "paises": agrupa("pais", "pais"),
+        # lat/lon vao junto, como no index_v2.php (reval_com_coordenada):
+        # pais sem coordenada sai com None nos dois e a aba declara quantos
+        # ficaram fora do mapa, em vez de some-los.
+        "paises": [dict(x, lat=PAISES_COORD.get(x["pais"], (None, None))[0],
+                           lon=PAISES_COORD.get(x["pais"], (None, None))[1])
+                   for x in agrupa("pais", "pais")],
         "cursos": agrupa("curso", "curso"),
         "instituicoes": agrupa("instituicao", "instituicao"),
     }

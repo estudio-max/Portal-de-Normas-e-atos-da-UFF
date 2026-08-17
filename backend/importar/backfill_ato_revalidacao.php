@@ -169,6 +169,23 @@ $PAIS_CANON = [
     'irlanda' => 'Irlanda', 'israel' => 'Israel', 'dinamarca' => 'Dinamarca',
     'finlandia' => 'Finlândia', 'belgica' => 'Bélgica', 'turquia' => 'Turquia',
     'somalilandia' => 'Somalilândia', 'bangladesh' => 'Bangladesh',
+    // Formas longas, cidade no lugar do país e erro de digitação da fonte.
+    // Levantados em 17/08/2026 ao medir a cobertura do mapa: cada um destes
+    // era um país que existe na tabela de coordenadas mas não era alcançado,
+    // então ficava fora do mapa sem que nada acusasse.
+    'paises baixos' => 'Holanda',
+    'inglaterra' => 'Reino Unido',
+    'gra bretanha' => 'Reino Unido',
+    'republica bolivariana de venezuela' => 'Venezuela',
+    'republica do peru' => 'Peru',
+    'republica arabe da siria' => 'Síria',
+    'siria' => 'Síria',
+    'cochabamba bolivia' => 'Bolívia',
+    'cochabamba - bolivia' => 'Bolívia',
+    'paraguayl' => 'Paraguai',   // erro de digitação do próprio Boletim
+    'republica dominicana' => 'República Dominicana',
+    'porto rico' => 'Porto Rico',
+    'malta' => 'Malta', 'haiti' => 'Haiti', 'iemen' => 'Iêmen',
 ];
 
 

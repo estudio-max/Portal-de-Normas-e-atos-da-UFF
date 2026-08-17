@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Loader2, Info, Clock } from 'lucide-react';
+import { GraduationCap, Loader2, Info, Clock, Globe2 } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { MapaMundi, LegendaTamanho, type PontoMapa } from '../ui/MapaMundi';
 
 // ---------------------------------------------------------------------------
 // Revalidação de diploma obtido no exterior.
@@ -115,6 +116,10 @@ export default function RevalidacaoApi() {
   const [dados, setDados] = useState<ds.RevalResp | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [via, setVia] = useState<Via>('Graduação');
+  // País destacado no mapa. Mora aqui, e não dentro do mapa, porque a
+  // seleção também grifa a linha na lista — o mapa mostra ONDE, a lista diz
+  // QUANTO, e clicar num lugar tem de acender os dois.
+  const [paisSel, setPaisSel] = useState('');
 
   useEffect(() => {
     let vivo = true;
@@ -164,6 +169,17 @@ export default function RevalidacaoApi() {
   const min = dados.minimoParaTaxa;
   const t = taxa(resumo.deferidos, resumo.total, min);
   const noPrazo = tramitacao.find(x => x.anos === 0);
+
+  // Quem tem coordenada vai ao mapa; quem não tem é CONTADO e declarado ao pé
+  // dele. O balão traz total e deferidos porque a bolha só carrega um sinal
+  // (grandeza) — o segundo número tem de vir escrito.
+  const noMapa: PontoMapa[] = paises
+    .filter(p => typeof p.lat === 'number' && typeof p.lon === 'number')
+    .map(p => ({
+      pais: p.pais, valor: p.total, lat: p.lat as number, lon: p.lon as number,
+      detalhe: `${p.pais} — ${p.total} pedido(s), ${p.deferidos} deferido(s)`,
+    }));
+  const foraDoMapa = paises.filter(p => typeof p.lat !== 'number' || typeof p.lon !== 'number');
 
   return (
     <div className="p-3 md:p-4 space-y-4">
@@ -309,9 +325,51 @@ export default function RevalidacaoApi() {
         </section>
       )}
 
+      {/* MAPA — a âncora visual da aba.
+          O assunto é "diploma obtido FORA do Brasil", e até aqui isso era só
+          uma coluna de nomes de país. O mapa responde de relance a pergunta que
+          a lista responde só depois de lida: de onde vem o acervo.
+          A bolha mede GRANDEZA (área ∝ pedidos), não taxa de deferimento —
+          uma marca, um sinal. A taxa continua na lista logo abaixo, onde o
+          número exato pode ser lido. */}
+      {noMapa.length > 0 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-3">
+          <h3 className="flex items-center gap-2 text-[13px] font-bold text-slate-900">
+            <Globe2 className="w-4 h-4 text-slate-600" aria-hidden="true" />
+            De onde vêm os diplomas — {via}
+          </h3>
+          <div className="mt-3">
+            <MapaMundi
+              pontos={noMapa}
+              selecionado={paisSel}
+              aoSelecionar={setPaisSel}
+              unidade="pedido(s)"
+              rotulo={`Mapa-múndi com ${noMapa.length} países de origem dos diplomas, `
+                + `bolhas proporcionais ao número de pedidos de ${via.toLowerCase()}. `
+                + `A tabela logo abaixo traz os mesmos números.`}
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <LegendaTamanho max={Math.max(...noMapa.map(p => p.valor))} unidade="pedidos" />
+            <p className="text-[12px] leading-relaxed text-slate-600">
+              Clique num país para destacá-lo. A área da bolha é proporcional ao
+              número de pedidos.
+              {foraDoMapa.length > 0 && (
+                <>
+                  {' '}
+                  <strong>{foraDoMapa.reduce((s, x) => s + x.total, 0)} pedido(s)</strong> não
+                  aparecem no mapa: o país não foi reconhecido no texto do ato ou
+                  ainda não tem coordenada cadastrada. Eles continuam na lista abaixo.
+                </>
+              )}
+            </p>
+          </div>
+        </section>
+      )}
+
       <ListaAgrupada titulo="Países de origem do diploma" rotuloColuna="País"
         itens={paises.map(x => ({ chave: x.pais, total: x.total, deferidos: x.deferidos }))}
-        minimo={min} />
+        minimo={min} destaque={paisSel} />
 
       <ListaAgrupada titulo="Cursos mais pedidos" rotuloColuna="Curso"
         itens={cursos.map(x => ({ chave: x.curso, total: x.total, deferidos: x.deferidos }))}
@@ -334,13 +392,19 @@ export default function RevalidacaoApi() {
 
 /** Lista país/curso/instituição: cartões no mobile, tabela no desktop — o par
  *  que a trava de regressão do redesign exige (test_redesign_integrity.mjs). */
-function ListaAgrupada({ titulo, rotuloColuna, itens, minimo }: {
-  titulo: string; rotuloColuna: string; minimo: number;
+function ListaAgrupada({ titulo, rotuloColuna, itens, minimo, destaque = '' }: {
+  titulo: string; rotuloColuna: string; minimo: number; destaque?: string;
   itens: { chave: string; total: number; deferidos: number }[];
 }) {
   const [tudo, setTudo] = useState(false);
   if (!itens.length) return null;
-  const mostrar = tudo ? itens : itens.slice(0, 10);
+  // O destacado vem PRIMEIRO. Sem isso, clicar num país pequeno no mapa não
+  // mostraria nada: a lista corta em 10 e ele ficaria escondido atrás do
+  // "ver todos", que é o oposto do que o clique promete.
+  const ordenados = destaque
+    ? [...itens].sort((a, b) => Number(b.chave === destaque) - Number(a.chave === destaque))
+    : itens;
+  const mostrar = tudo ? ordenados : ordenados.slice(0, 10);
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
@@ -374,8 +438,12 @@ function ListaAgrupada({ titulo, rotuloColuna, itens, minimo }: {
             {mostrar.map(i => {
               const t = taxa(i.deferidos, i.total, minimo);
               return (
-                <tr key={i.chave} className="border-t border-slate-200">
-                  <td className="py-1.5 pr-3">{i.chave}</td>
+                <tr key={i.chave}
+                  className={`border-t border-slate-200 ${i.chave === destaque ? 'bg-[var(--destaque-fundo)]' : ''}`}>
+                  <td className="py-1.5 pr-3">
+                    {i.chave === destaque && <span className="sr-only">Selecionado no mapa: </span>}
+                    {i.chave}
+                  </td>
                   <td className="py-1.5 pr-3 text-right tabular-nums">{i.total}</td>
                   <td className="py-1.5 pr-3 text-right tabular-nums">
                     {i.deferidos}

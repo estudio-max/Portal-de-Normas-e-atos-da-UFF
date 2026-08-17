@@ -37,6 +37,16 @@
   --chart-axis: #64748B;
   --chart-hover: rgba(27, 107, 58, .08);
 
+  /* Mapa-múndi (aba Cooperação e aba Revalidação). Tokens PRÓPRIOS, e não
+     reaproveitamento de `--chart-grid`: a grade de um gráfico é recessiva de
+     propósito, e o continente NÃO é recessivo — ele é a referência que permite
+     ao olho achar onde a bolha está. Medido no navegador: com a grade servindo
+     de terra (E2E8F0 a 55% sobre oceano quase branco), o continente sumia e o
+     mapa virava bolhas flutuando no vazio. */
+  --mapa-oceano: #EDF2F7;
+  --mapa-terra: #CBD5E1;
+  --mapa-borda: #94A3B8;
+
   /* Item de navegação em destaque (Meu SIAPE). Token, e não classe do Tailwind,
      pela mesma razão dos gráficos: o modo fotofobia converte por lista de
      classes conhecidas, e o verde institucional `#006400` não está nessa lista
@@ -72,6 +82,12 @@ html.fotofobia {
   --chart-grid: #2C3A31;
   --chart-axis: #9BB0A2;
   --chart-hover: rgba(79, 164, 110, .12);
+
+  /* No escuro a lógica se inverte: o oceano é o fundo profundo e a terra é
+     mais CLARA que ele, senão o mapa some no cartão. */
+  --mapa-oceano: #16211B;
+  --mapa-terra: #33443A;
+  --mapa-borda: #4E6657;
 
   --destaque-fundo: #1B2E20;
   --destaque-borda: #3E6B48;
