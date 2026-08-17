@@ -109,25 +109,23 @@ ocorrências. Numa contagem auditada, é subnotificação invisível.
 > Fronteiras, formato do caso de teste e ordem de merge em
 > [`CONTRIBUINDO-REPROCESSAMENTO.md`](CONTRIBUINDO-REPROCESSAMENTO.md).
 
-### ⚠️ Pendência aberta da etapa 1 — duplicação no JSON
+### ✅ Pendência da etapa 1 resolvida — duplicação removida do JSON
 
-O extrator passou a emitir `corpo_texto` (caixa preservada) **e**
-`corpo_busca` (dobrada), e `gerar_dados_portal.py` publica os dois. Medido nos
-15 boletins de teste: **3,71 MB → 6,70 MB**, quase o dobro. Extrapolando para
-o índice publicado, ~24 MB trafegando por Git todo dia e baixados pelo
-navegador no modo de contingência.
+O extrator continua emitindo `corpo_texto` (caixa preservada) **e**
+`corpo_busca` (dobrada) para uso interno, mas `gerar_dados_portal.py` publica
+somente `textoOriginal`. O importador deriva `texto_busca` com
+`mb_strtolower(..., 'UTF-8')`; o frontend e o mock derivam na leitura e mantêm
+fallback para a safra antiga do JSON.
 
-É desperdício: `textoBusca` é literalmente `textoOriginal.lower()`. **Publicar
-só o original** e dobrar no consumo (`mb_strtolower()` no importador,
-`.toLowerCase()` no `dataSource.ts`) corta a duplicação e deixa o crescimento
-sendo só o do texto mais longo — que é o que se quer pagar.
+Testes compartilhados em Python, PHP e JavaScript conferem a caixa Unicode, a
+máscara de CPF e a compatibilidade das duas safras. Na publicação automática
+de 17/08/2026: **3.971 atos com `textoOriginal` e zero com `textoBusca`**.
 
-Mexe em três camadas ao mesmo tempo (extrator, importador, front), então
-**precisa de teste antes de gravar**. Resolver ANTES de rodar a etapa 5.
+A etapa 5 pode usar esse contrato sem republicar a cópia minúscula do corpo.
 
 | # | Etapa | Estado |
 |---|---|---|
-| 1 | Corrigir truncagem e lowercase no extrator/importador | 🔶 feito, com a pendência acima |
+| 1 | Corrigir truncagem e lowercase no extrator/importador | ✅ |
 | 2 | Corrigir a chave de `ato_revalidacao` para múltiplas decisões | ⬜ |
 | 3 | Acrescentar as redações antigas de decisão única (`#5792` segue na etapa 2) | ✅ |
 | 4 | Baixar o acervo completo de boletins | ⬜ |
