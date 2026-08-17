@@ -30,6 +30,7 @@ require_once __DIR__ . '/comissoes_match.php';               // aba Comissões (
 require_once __DIR__ . '/ods_match.php';                     // aba ODS (classifica pelo dispositivo)
 require_once __DIR__ . '/politicas_match.php';               // aba Políticas (vínculo + papel)
 require_once __DIR__ . '/indicador_politica.php';            // snapshot das etapas da política
+require_once __DIR__ . '/revalidacao_lista.php';             // aceita formatos singular e plural
 $cfg = carregar_config();
 
 $cli = (PHP_SAPI === 'cli');
@@ -331,8 +332,8 @@ try {
     // ver o cabeçalho de backend/db/ato_revalidacao.sql.
     $delReval = $pdo->prepare("DELETE FROM ato_revalidacao WHERE ato_id=:id");
     $insReval = $pdo->prepare("INSERT INTO ato_revalidacao
-                                (ato_id,via,decisao,nivel,curso,instituicao,pais)
-                                VALUES (:id,:v,:d,:n,:c,:i,:p)");
+                                (ato_id,ordem,via,decisao,nivel,curso,instituicao,pais)
+                                VALUES (:id,:o,:v,:d,:n,:c,:i,:p)");
     $delCom = $pdo->prepare("DELETE FROM ato_comissao WHERE ato_id=:id");
     $insCom = $pdo->prepare("INSERT IGNORE INTO ato_comissao (ato_id,comissao) VALUES (:id,:c)");
     $delProc = $pdo->prepare("DELETE FROM ato_processo WHERE ato_id=:id");
@@ -560,20 +561,26 @@ try {
         // guarda aqui — se o extrator mudar de vocabulário um dia, o import
         // PULA a linha em vez de gravar lixo que só apareceria como fatia
         // anônima no gráfico.
-        $delReval->execute([':id' => $atoId]);
-        $rv = $a['revalidacao'] ?? null;
-        if (is_array($rv)
-            && in_array($rv['via'] ?? '', ['Graduação', 'Pós-graduação'], true)
-            && in_array($rv['decisao'] ?? '', ['Deferido', 'Indeferido'], true)) {
-            $insReval->execute([
-                ':id' => $atoId,
-                ':v'  => $rv['via'],
-                ':d'  => $rv['decisao'],
-                ':n'  => ($rv['nivel'] ?? '') ?: null,
-                ':c'  => ($rv['curso'] ?? '') ?: null,
-                ':i'  => ($rv['instituicao'] ?? '') ?: null,
-                ':p'  => ($rv['pais'] ?? '') ?: null,
-            ]);
+        $listaReval = revalidacoes_do_json($a);
+        if ($listaReval !== null) {
+            $delReval->execute([':id' => $atoId]);
+            foreach ($listaReval as $idx => $rv) {
+                if (!is_array($rv)
+                    || !in_array($rv['via'] ?? '', ['Graduação', 'Pós-graduação'], true)
+                    || !in_array($rv['decisao'] ?? '', ['Deferido', 'Indeferido'], true)) {
+                    continue;
+                }
+                $insReval->execute([
+                    ':id' => $atoId,
+                    ':o'  => $idx + 1,
+                    ':v'  => $rv['via'],
+                    ':d'  => $rv['decisao'],
+                    ':n'  => ($rv['nivel'] ?? '') ?: null,
+                    ':c'  => ($rv['curso'] ?? '') ?: null,
+                    ':i'  => ($rv['instituicao'] ?? '') ?: null,
+                    ':p'  => ($rv['pais'] ?? '') ?: null,
+                ]);
+            }
         }
 
         // prazos (Radar): extrai datas-limite do texto (mesma lógica do frontend)
