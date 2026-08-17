@@ -1,10 +1,89 @@
 # -*- coding: utf-8 -*-
-"""Gera os 5 diagramas SVG da documentacao visual do Portal.
-Autocontidos: sem fonte externa, sem script, sem imagem embutida."""
-import io, os, math
+"""Gera os diagramas SVG da documentacao visual do Portal (aba Sobre).
+Autocontidos: sem fonte externa, sem script, sem imagem embutida.
 
-SAIDA = r'C:\Users\estud\OneDrive\Imagens\RAW\portal-normas-uff\repo\docs\figuras'
+    python tools/gerar_figuras_doc.py
+    python tools/gerar_figuras_doc.py --coop cooperacao.json   # sem rede
+
+⚠️ AS FIGURAS DERIVAM DO APP, NAO DE LISTAS ESCRITAS AQUI.
+
+Em 17/08/2026 o mantenedor abriu a aba Sobre e viu duas coisas erradas: o mapa
+era o desenho ESQUEMATICO antigo, que o portal ja tinha trocado por geografia
+real, e o quadro "o que tem em cada aba" mostrava doze paineis quando o portal
+tem quinze — faltava a Revalidacao, que existe desde 16/08. A legenda dizia
+1.467 acordos em 59 paises quando ja eram 1.524 em 63.
+
+Nenhum desses erros da aviso: a figura continua bonita, so passa a mostrar um
+portal que nao existe mais. Por isso agora:
+
+  - o contorno dos continentes vem de `src/components/ui/mapaTerras.ts`, o
+    MESMO arquivo que o mapa da tela usa;
+  - a lista de abas vem de `src/components/help/ajudaConteudo.tsx`, que o
+    `test_redesign_integrity.mjs` ja obriga a cobrir TODA aba de `ABAS_VALIDAS`
+    — aba nova sem entrada la reprova o CI, e agora tambem aparece aqui;
+  - os numeros de cooperacao vem da API, nao da memoria de quem escreveu.
+
+O texto alternativo tambem e montado a partir dos dados. Alt escrito a mao
+envelhece igual, e ele e o que o leitor de tela anuncia."""
+import argparse, io, json, os, math, re, sys, urllib.request
+
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAIDA = os.path.join(RAIZ, 'public', 'figuras')      # o que a aba Sobre serve
+SAIDA_DOCS = os.path.join(RAIZ, 'docs', 'figuras')   # copia para a documentacao
 os.makedirs(SAIDA, exist_ok=True)
+os.makedirs(SAIDA_DOCS, exist_ok=True)
+
+
+def carrega_terras():
+    """Contorno das massas de terra, do mesmo modulo que o app usa."""
+    caminho = os.path.join(RAIZ, 'src', 'components', 'ui', 'mapaTerras.ts')
+    with io.open(caminho, encoding='utf-8') as f:
+        txt = f.read()
+    corpo = txt[txt.index('= ['):]
+    return [[(float(a), float(b)) for a, b in re.findall(r'\[(-?[\d.]+),(-?[\d.]+)\]', poly)]
+            for poly in re.findall(r'\[(\[[^\]]*\](?:,\[[^\]]*\])*)\]', corpo)]
+
+
+def carrega_abas():
+    """(titulo, resumo) de cada aba de CONTEUDO, na ordem de ABAS_VALIDAS.
+
+    A fonte e a ajuda contextual, que ja e obrigada por teste a cobrir todas as
+    abas. As tres abas de apoio (ajuda, privacidade, sobre) ficam de fora: a
+    figura responde "o que da para consultar", nao "quantas telas existem"."""
+    app = io.open(os.path.join(RAIZ, 'src', 'App.tsx'), encoding='utf-8').read()
+    m = re.search(r'const ABAS_VALIDAS = \[(.*?)\];', app, re.S)
+    ordem = [c for c in re.findall(r"'([^']*)'", m.group(1))
+             if c not in ('ajuda', 'privacidade', 'sobre')]
+    ajuda = io.open(os.path.join(RAIZ, 'src', 'components', 'help', 'ajudaConteudo.tsx'),
+                    encoding='utf-8').read()
+    titulos = dict(re.findall(r"^\s*'?([\w/]*)'?:\s*\{\s*\n\s*titulo:\s*'([^']+)'",
+                              ajuda, re.M))
+    return [(c, titulos.get(c, c or 'Dashboard')) for c in ordem]
+
+
+def carrega_stats(arquivo=None):
+    """Total de atos, para a figura do fluxo. Mesma razao das outras: '133 mil'
+    escrito a mao envelheceu sem avisar."""
+    if arquivo:
+        return json.load(io.open(arquivo, encoding='utf-8'))
+    req = urllib.request.Request(
+        'https://inteligencia.fanara.com.br/api/stats',
+        headers={'User-Agent': 'UFF-Indexador/1.0 (figuras da doc; '
+                               'contato estudio@fanara.com.br)'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.load(r)
+
+
+def carrega_cooperacao(arquivo=None):
+    """Numeros da aba Cooperação: da API, ou de um arquivo salvo."""
+    if arquivo:
+        return json.load(io.open(arquivo, encoding='utf-8'))
+    req = urllib.request.Request(
+        'https://inteligencia.fanara.com.br/api/cooperacao',
+        headers={'User-Agent': 'UFF-Indexador/1.0 (figuras da doc; '
+                               'contato estudio@fanara.com.br)'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.load(r)
 
 AZUL, AMAR, CINZA = '#003366', '#EAB308', '#64748B'
 VERDE, VERM, CLARO = '#059669', '#DC2626', '#E2E8F0'
@@ -17,7 +96,8 @@ def salvar(nome, corpo, w, h, titulo):
            f"<title>{titulo}</title>"
            f"<rect width='{w}' height='{h}' fill='#ffffff'/>"
            f"{corpo}</svg>")
-    io.open(os.path.join(SAIDA, nome), 'w', encoding='utf-8').write(svg)
+    for destino in (SAIDA, SAIDA_DOCS):
+        io.open(os.path.join(destino, nome), 'w', encoding='utf-8').write(svg)
     print(f'  {nome}  ({len(svg)//1024} KB)')
 
 
@@ -32,7 +112,7 @@ def quebra(x, y, linhas, tam=11, cor=CINZA, dy=14, anchor='middle'):
 
 
 # ---------------------------------------------------------------- PECA 2
-def peca2():
+def peca2(total_atos):
     W, H = 1000, 420
     p = []
     p.append(texto(40, 42, 'Como um ato do Boletim vira um registro pesquisável',
@@ -43,7 +123,7 @@ def peca2():
         ('A UFF publica',   ['Boletim de Serviço em PDF,', 'quase todo dia útil']),
         ('Um robô baixa',   ['Todo dia às 19h10,', 'sem ninguém apertar botão']),
         ('O texto é recortado', ['Cada ato vira um registro:', 'tipo, número, órgão, data, ementa']),
-        ('Vai para a base', ['133 mil atos,', 'de 2001 a hoje']),
+        ('Vai para a base', [f'{total_atos // 1000} mil atos,', 'de 2001 a hoje']),
         ('Você pesquisa',   ['Por palavra, número, órgão,', 'ano ou nome de pessoa']),
     ]
     x0, larg, alt, y = 40, 168, 118, 110
@@ -232,35 +312,19 @@ def peca4():
 
 
 # ---------------------------------------------------------------- PECA 5
-CONTINENTES = [
-    [(-168,65),(-160,71),(-140,70),(-125,70),(-110,68),(-95,70),(-85,70),(-75,68),(-60,58),
-     (-55,50),(-65,45),(-70,42),(-75,35),(-81,25),(-90,29),(-97,26),(-105,20),(-115,30),
-     (-125,40),(-125,48),(-135,58),(-150,60)],
-    [(-92,17),(-84,15),(-78,9),(-77,8),(-83,9),(-88,15)],
-    [(-81,-4),(-75,10),(-60,12),(-52,5),(-35,-5),(-38,-13),(-48,-25),(-58,-34),(-62,-40),
-     (-65,-45),(-68,-53),(-75,-50),(-73,-40),(-71,-30),(-70,-18),(-77,-12)],
-    [(-17,15),(-10,28),(0,35),(10,37),(25,32),(35,31),(43,12),(51,12),(42,-2),(40,-15),
-     (35,-25),(25,-34),(18,-34),(12,-18),(9,4),(-8,5)],
-    [(-10,36),(-9,44),(-2,49),(2,51),(8,54),(12,55),(18,55),(30,60),(30,70),(20,70),
-     (10,63),(5,58),(-5,50),(-10,43)],
-    [(30,70),(60,72),(100,77),(140,72),(160,68),(170,60),(145,45),(135,35),(122,30),
-     (120,22),(105,10),(95,5),(80,8),(70,20),(60,25),(50,28),(45,40),(40,42),(30,45),(28,55)],
-    [(113,-22),(130,-12),(142,-11),(150,-25),(153,-28),(147,-38),(140,-38),(135,-35),
-     (125,-33),(115,-34)],
-]
-GRANDES = [('França',89,2.3,46.6),('Portugal',86,-8.2,39.4),('Espanha',67,-3.7,40.4),
-           ('Itália',47,12.5,41.9),('Alemanha',38,10.4,51.2),('Colômbia',37,-74.3,4.6),
-           ('Argentina',35,-63.6,-38.4),('Estados Unidos',25,-98.6,39.8)]
-MENORES = [(-56,-32),(-70,-16),(-77,-9),(-90,15),(-99,23),(-52,-14),(-8,53),(4,50),
-           (7,46),(14,50),(19,52),(23,47),(15,49),(26,58),(24,42),(20,44),(28,-26),
-           (32,-1),(37,0),(-1,8),(-6,14),(3,12),(-15,14),(30,31),(35,34),(51,25),
-           (55,24),(45,24),(77,21),(80,7),(100,15),(105,20),(114,4),(121,14),(127,37),
-           (139,36),(116,40),(103,36),(35,39),(9,34),(10,-2),(29,-13),(47,-19),(24,-30),
-           (-58,-16),(-64,-19),(-88,13),(-84,10),(133,-25),(174,-41),(20,-22)]
+TERRAS = carrega_terras()
 
-
-def peca5():
+def peca5(coop):
     W, H = 1000, 520
+    paises = sorted(coop.get('paises') or [], key=lambda x: -x['n'])
+    grandes = [(x['pais'], x['n'], x['lon'], x['lat']) for x in paises[:8]]
+    menores = [(x['lon'], x['lat']) for x in paises[8:]]
+    # DOIS numeros, e a diferenca entre eles importa: `acordos` e tudo que a
+    # aba reconhece; `plotados` e o que tem pais identificado e portanto cabe no
+    # mapa. Mostrar so o primeiro faria o leitor contar circulos e nao fechar a
+    # conta; mostrar so o segundo esconderia um terco do acervo.
+    acordos = len(coop.get('acordos') or [])
+    plotados = sum(x['n'] for x in paises)
     # Mapa a esquerda, ranking a direita. Os rotulos NAO vao sobre o mapa: os
     # cinco maiores sao europeus e os circulos se sobrepoem -- numero em cima
     # de numero vira borrao ilegivel justamente na regiao mais importante.
@@ -272,21 +336,21 @@ def peca5():
     p.append(texto(40, 66, 'Acordos aprovados entre 2001 e 2026. O tamanho do círculo '
                            'é a quantidade.', 12.5, CINZA))
 
-    for poly in CONTINENTES:
+    for poly in TERRAS:
         pts = ' '.join(f'{px(a):.1f},{py(b):.1f}' for a, b in poly)
         p.append(f"<polygon points='{pts}' fill='{CLARO}' stroke='#CBD5E1' stroke-width='0.8'/>")
 
-    for lon, lat in MENORES:
+    for lon, lat in menores:
         p.append(f"<circle cx='{px(lon):.1f}' cy='{py(lat):.1f}' r='2.6' fill='{AZUL}' "
                  f"opacity='0.4'/>")
 
     bx, by = px(-47), py(-15)
-    for _, _, lon, lat in GRANDES:
+    for _, _, lon, lat in grandes:
         p.append(f"<path d='M{bx:.1f} {by:.1f} Q {(bx+px(lon))/2:.1f} "
                  f"{min(by,py(lat))-46:.1f} {px(lon):.1f} {py(lat):.1f}' fill='none' "
                  f"stroke='{AMAR}' stroke-width='1' opacity='0.65'/>")
 
-    for nome, n, lon, lat in GRANDES:
+    for nome, n, lon, lat in grandes:
         r = 4 + math.sqrt(n) * 1.5
         p.append(f"<circle cx='{px(lon):.1f}' cy='{py(lat):.1f}' r='{r:.1f}' fill='{AZUL}' "
                  f"opacity='0.5' stroke='{AZUL}' stroke-width='1.1'/>")
@@ -299,14 +363,15 @@ def peca5():
     PX_, PY_, PW = 752, 104, 214
     p.append(f"<rect x='{PX_}' y='{PY_}' width='{PW}' height='84' rx='8' fill='#F8FAFC' "
              f"stroke='#CBD5E1' stroke-width='1.2'/>")
-    for i, (v, r) in enumerate([('1.467', 'acordos'), ('59', 'países'),
+    for i, (v, r) in enumerate([(f'{acordos:,}'.replace(',', '.'), 'acordos'),
+                                (str(len(paises)), 'países'),
                                 ('2001 a 2026', 'período')]):
         p.append(texto(PX_ + 16, PY_ + 26 + i*22, v, 13.5, AZUL, '700'))
         p.append(texto(PX_ + 16 + (54 if i < 2 else 82), PY_ + 26 + i*22, r, 10.5, CINZA))
 
     p.append(texto(PX_, PY_ + 116, 'OS OITO MAIORES', 10.5, CINZA, '700'))
-    ymax = max(n for _, n, _, _ in GRANDES)
-    for i, (nome, n, _, _) in enumerate(GRANDES):
+    ymax = max(n for _, n, _, _ in grandes)
+    for i, (nome, n, _, _) in enumerate(grandes):
         yy = PY_ + 138 + i * 26
         bw = (n / ymax) * 118
         p.append(f"<rect x='{PX_}' y='{yy - 9}' width='{bw:.1f}' height='13' rx='3' "
@@ -314,39 +379,55 @@ def peca5():
         p.append(texto(PX_ + 4, yy + 1, nome, 11, '#0f172a'))
         p.append(texto(PX_ + PW, yy + 1, str(n), 11.5, AZUL, '700', 'end'))
 
-    p.append(texto(24, H - 16, 'São acordos aprovados por ato do Boletim, não '
+    p.append(texto(24, H - 30, f'O mapa mostra os {plotados} acordos cujo país foi '
+                   f'identificado no ato; nos demais a ementa não nomeia o país.', 10.5, CINZA))
+    p.append(texto(24, H - 14, 'São acordos aprovados por ato do Boletim, não '
                    'necessariamente parcerias ativas hoje: o Boletim não registra '
                    'o encerramento de um convênio.', 10.5, CINZA))
+    ranking = ', '.join(f'{nome} {n}' for nome, n, _, _ in grandes)
     salvar('5-mapa-cooperacao.svg', ''.join(p), W, H,
-           'Mapa-múndi com círculos proporcionais marcando os países com acordos de '
-           'cooperação da UFF, e ao lado o ranking dos oito maiores: França 89, '
-           'Portugal 86, Espanha 67, Itália 47, Alemanha 38, Colômbia 37, '
-           'Argentina 35 e Estados Unidos 25.')
+           f'Mapa-múndi com círculos proporcionais marcando os {len(paises)} países com '
+           f'acordos de cooperação da UFF. São {acordos} acordos no total, dos quais '
+           f'{plotados} têm país identificado e aparecem no mapa. Ranking dos oito maiores: '
+           f'{ranking}.')
 
 
 # ---------------------------------------------------------------- PECA 7
 def peca7():
-    W, H = 960, 606
     p = []
-    p.append(texto(40, 42, 'O que tem em cada aba do portal', 19, AZUL, '700'))
-    p.append(texto(40, 66, 'Doze painéis, cada um respondendo uma pergunta diferente', 12.5, CINZA))
-
-    abas = [
-        ('Planilha', ['Todos os atos, com filtro por', 'tipo, órgão, ano e palavra']),
-        ('Relações', ['Quem revoga ou', 'altera quem']),
-        ('Chefias', ['Quem ocupa qual função,', 'e desde quando']),
-        ('Meu SIAPE', ['Os atos que citam', 'a sua matrícula']),
-        ('Insights', ['Padrões do acervo: aposentadorias,', 'deslocamentos, volume']),
-        ('Mandatos', ['Prazos de designação', 'e o que já venceu']),
-        ('Prazos', ['O que tem data', 'para acabar']),
-        ('Jornada', ['Setores em trabalho flexível', 'ou programa de gestão']),
-        ('Cooperação', ['Acordos com instituições, com', 'mapa e filtro por país']),
-        ('Comissões', ['Comitês, comissões e GTs', 'permanentes num só lugar']),
-        ('Políticas', ['A sequência de atos que', 'construiu cada política']),
-        ('ODS', ['O que a UFF propôs em cada', 'Objetivo da Agenda 2030']),
-    ]
+    # A lista vem do app (ABAS_VALIDAS + os titulos da ajuda contextual).
+    # Escrita a mao, ela ficou tres abas atras do portal sem nada acusar.
+    pares = carrega_abas()
+    resumos = {
+        '': ['O que saiu no boletim mais', 'recente e o tamanho do acervo'],
+        'atos': ['Todos os atos, com filtro por', 'tipo, órgão, ano e palavra'],
+        'relacoes': ['Quem revoga ou', 'altera quem'],
+        'insights': ['Padrões do acervo: aposentadorias,', 'deslocamentos, volume'],
+        'pessoal/siape': ['Os atos que citam', 'a sua matrícula'],
+        'pessoal/chefias': ['Quem ocupa qual função,', 'e desde quando'],
+        'pessoal/mandatos': ['Prazos de designação', 'e o que já venceu'],
+        'pessoal/prazos': ['O que tem data', 'para acabar'],
+        'pessoal/jornada': ['Setores em trabalho flexível', 'ou programa de gestão'],
+        'institucional/comissoes': ['Comitês, comissões e GTs', 'permanentes num só lugar'],
+        'institucional/politicas': ['A sequência de atos que', 'construiu cada política'],
+        'institucional/cooperacao': ['Acordos com instituições, com', 'mapa e filtro por país'],
+        'institucional/revalidacao': ['Diplomas do exterior: pedidos,', 'origem e decisão'],
+        'institucional/ods': ['O que a UFF propôs em cada', 'Objetivo da Agenda 2030'],
+        'mudancas': ['O que mudou de fato no', 'acervo nos últimos meses'],
+    }
+    abas = [(titulo, resumos.get(chave, ['', ''])) for chave, titulo in pares]
+    # ⚠️ A ALTURA ACOMPANHA O NUMERO DE ABAS. Estava fixa em 606, dimensionada
+    # para as 12 de entao; com 15 a quinta fileira terminava em 612 e era
+    # CORTADA pelo viewBox, com o rodape escrito por cima dela. Figura cortada
+    # nao da erro: ela so mostra menos do que deveria, e quem gerou nao ve.
     cw, ch, gx, gy = 282, 92, 14, 14
     x0, y0 = 40, 96
+    linhas = -(-len(abas) // 3)
+    W = 960
+    H = y0 + linhas * (ch + gy) - gy + 46
+    p.append(texto(40, 42, 'O que tem em cada aba do portal', 19, AZUL, '700'))
+    p.append(texto(40, 66, f'{len(abas)} painéis, cada um respondendo uma pergunta diferente', 12.5, CINZA))
+
     for i, (nome, desc) in enumerate(abas):
         c, l = i % 3, i // 3
         x, y = x0 + c * (cw + gx), y0 + l * (ch + gy)
@@ -360,8 +441,15 @@ def peca7():
     p.append(texto(40, H - 22, 'A aba "Políticas" mostra o PAPEL de cada ato — instituir, regulamentar, '
                    'executar — e deixa visível a etapa sem evidência.', 10.5, CINZA))
     salvar('7-abas-do-portal.svg', ''.join(p), W, H,
-           'Grade com os doze painéis do portal e uma linha explicando o que cada um faz.')
+           f'Grade com os {len(abas)} painéis do portal e uma linha explicando o que cada '
+           f'um faz: ' + ', '.join(nome for nome, _ in abas) + '.')
 
 
-print('Gerando SVGs em docs/figuras/')
-peca2(); peca3(); peca4(); peca5(); peca7()
+print('Gerando SVGs em public/figuras/ (e copia em docs/figuras/)')
+ap = argparse.ArgumentParser()
+ap.add_argument('--coop', help='JSON de /api/cooperacao salvo, para rodar sem rede')
+ap.add_argument('--stats', help='JSON de /api/stats salvo, para rodar sem rede')
+args = ap.parse_args()
+coop = carrega_cooperacao(args.coop)
+stats = carrega_stats(args.stats)
+peca2(stats['total']); peca3(); peca4(); peca5(coop); peca7()
