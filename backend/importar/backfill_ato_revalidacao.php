@@ -14,15 +14,21 @@
 //  a busca por "junto a Universidad" — frase que só existe no Art. 1º, nunca
 //  na ementa — devolve 447 atos. O dispositivo está no banco.
 //
-//  ⚠️ O TEXTO ESTÁ EM MINÚSCULAS, e isso é a armadilha central deste script.
-//  Apesar do nome, `ato_texto.texto_original` NÃO é o texto original: o
-//  importador grava nas duas colunas o mesmo `textoBusca`, que é o corpo já
-//  passado por lower() e cortado em 7.000 caracteres (ver importar_v2.php,
-//  onde `$texto` alimenta `:t` e `:t2`). Sem tratar isso, o histórico entraria
-//  como "universidad de los andes / venezuela" e NÃO se juntaria ao
-//  "Universidad de los Andes / Venezuela" que o pipeline diário grava — o
-//  mesmo país viraria duas fatias do gráfico, que é exatamente o defeito que a
-//  canonização de país existe para evitar.
+//  ⚠️ O TEXTO DEIXOU DE SER MINÚSCULO em 17/08/2026, e isso INVERTEU a
+//  armadilha central deste script. Até então o importador gravava `textoBusca`
+//  nas duas colunas, e `ato_texto.texto_original` não era o original: vinha em
+//  caixa baixa e cortado em 7.000 caracteres. Hoje ele é o texto de verdade,
+//  com a caixa preservada e o teto em 40.000.
+//
+//  O QUE ISSO MUDA AQUI: os padrões seguem com `i`, então casam igual; mas o
+//  `revalidacao_caixa_nome()` foi escrito para RECONSTRUIR nome próprio a
+//  partir de caixa baixa, e agora recebe texto que já vem certo. Ele continua
+//  porque as linhas ANTIGAS do banco seguem minúsculas até serem reescritas —
+//  e porque aplicá-lo a texto já correto é inofensivo. Se um dia todo o acervo
+//  tiver sido reimportado, este é o primeiro código a poder sair.
+//
+//  O que NÃO mudou é o motivo de a canonização de país existir: sem ela o mesmo
+//  país vira duas fatias do gráfico.
 //
 //  Uso (navegador, protegido por token):
 //    https://SEU_SITE/importar/backfill_ato_revalidacao.php?token=SEU_TOKEN
@@ -37,6 +43,7 @@ $raiz = dirname(__DIR__);
 require_once $raiz . '/api/db.php';
 require_once __DIR__ . '/revalidacao_lista_legada.php';
 require_once __DIR__ . '/revalidacao_sincronizacao.php';
+require_once __DIR__ . '/revalidacao_campos.php';   // limpeza de curso/instituição/país
 
 $cfg = carregar_config();
 $cli = (PHP_SAPI === 'cli');
@@ -106,7 +113,14 @@ $pdo = conectar($cfg);
 // como graduação.
 $RE_GRAD = '/(?P<decisao>defer|indefer|homolog)\w*\s+'
          . '(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|a\s+)?'
-         . 'revalida[çc][ãa]o\s+do\s+diploma\s*'
+         // "do diploma" OU "do título": o Conselho escreve das duas formas, e
+         // exigir só "diploma" deixava fora ato real — caso #324/2005,
+         // "homologar a revalidação do Título de Máster Degree obtido pela
+         // Professora …, na Universidade de Leiden, Holanda". Conferido contra
+         // o texto ARMAZENADO, não contra o trecho limpo do relatório: foi
+         // testando com o trecho limpo que eu concluí, antes, que o extrator
+         // já cobria este caso — e não cobria.
+         . 'revalida[çc][ãa]o\s+d[oe]\s+(?:diploma|t[íi]tulo)\s*'
          . '(?:,?\s*n[íi]vel\s+(?:de\s+)?(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s*(?:em|de)?\s*)?'
          . '(?:de\s+)?(?P<curso>[^,]{0,180}?)\s*,\s*obtid[oa]\s+por\s+.+?,\s*'
          . '(?:junto\s+[aà]o?s?|n[ao]s?)\s+(?P<origem>.+?)'
@@ -157,47 +171,11 @@ $PAIS_CANON = [
     'somalilandia' => 'Somalilândia', 'bangladesh' => 'Bangladesh',
 ];
 
-function dobra(string $s): string {
-    $s = mb_strtolower(trim($s), 'UTF-8');
-    $s = strtr($s, [
-        'á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a','é'=>'e','ê'=>'e','è'=>'e',
-        'í'=>'i','ì'=>'i','î'=>'i','ó'=>'o','ô'=>'o','õ'=>'o','ò'=>'o','ö'=>'o',
-        'ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u','ç'=>'c','ñ'=>'n',
-    ]);
-    return preg_replace('/\s+/', ' ', $s);
-}
 
 /** Nome próprio a partir de texto em caixa baixa. "universidad de los andes"
  *  -> "Universidad de los Andes". Preposições e artigos ficam minúsculos, como
  *  manda a grafia de nome próprio nas línguas do corpus. */
-function caixa_nome(string $s): string {
-    $s = preg_replace('/\s+/u', ' ', trim($s));
-    if ($s === '') return '';
-    $minusculas = ['de','da','do','das','dos','del','della','di','du','e','y',
-                   'la','le','les','las','los','el','a','o','of','the','and',
-                   'van','von','zu','der','den','för','för'];
-    $palavras = explode(' ', $s);
-    $saida = [];
-    foreach ($palavras as $i => $p) {
-        $limpa = dobra($p);
-        // Sigla curta toda junta (uff, unam) vira maiúscula inteira só quando
-        // já vinha assim seria impossível saber — o texto está todo em caixa
-        // baixa. Então NÃO se adivinha sigla: capitaliza como palavra comum.
-        if ($i > 0 && in_array($limpa, $minusculas, true)) { $saida[] = $limpa; continue; }
-        $saida[] = mb_convert_case($p, MB_CASE_TITLE, 'UTF-8');
-    }
-    return implode(' ', $saida);
-}
 
-function pais_canon(string $bruto, array $mapa): string {
-    $p = trim($bruto, " \t\n\r\0\x0B.,;");
-    if ($p === '' || mb_strlen($p) > 40) return '';
-    $k = dobra($p);
-    if (isset($mapa[$k])) return $mapa[$k];
-    // Não está na lista: devolve capitalizado, para pelo menos não poluir o
-    // gráfico com caixa baixa. Fica visível para curadoria depois.
-    return caixa_nome($p);
-}
 
 // ---------------------------------------------------------------------------
 // Só os candidatos: filtro barato no SQL antes do regex caro.
@@ -239,7 +217,7 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
             if ($via === 'Graduação') {
                 $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
-                $pais = count($partes) >= 2 ? pais_canon(end($partes), $PAIS_CANON) : '';
+                $pais = count($partes) >= 2 ? revalidacao_pais_canon(end($partes), $PAIS_CANON) : '';
                 $inst = count($partes) >= 2 ? implode(', ', array_slice($partes, 0, -1)) : $g('origem');
                 $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
 
@@ -256,7 +234,7 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
                 elseif ($nivel === '') { $nivel = 'Graduação'; }
             } else {
                 $loc = array_values(array_filter(array_map('trim', explode(',', $g('local'))), 'strlen'));
-                $pais = $loc ? pais_canon(end($loc), $PAIS_CANON) : '';
+                $pais = $loc ? revalidacao_pais_canon(end($loc), $PAIS_CANON) : '';
                 $inst = $g('inst');
                 $eq = $g('equiv');
                 $nivel = preg_match('/doutor/iu', $eq) ? 'Doutorado'
@@ -266,8 +244,13 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
                 'via' => $via,
                 'decisao' => (stripos($g('decisao'), 'indefer') === 0) ? 'Indeferido' : 'Deferido',
                 'nivel' => $nivel,
-                'curso' => mb_substr(caixa_nome($g('curso')), 0, 180),
-                'instituicao' => mb_substr(caixa_nome($inst), 0, 180),
+                // `revalidacao_limpa_campo` ANTES do `caixa_nome`: é ela que
+                // tira a preposição e as aspas de embrulho que a fonte cola no
+                // valor ("em Medicina", "“Doctor of Philosophy”"). Sem isso a
+                // mesma coisa virava duas fatias do gráfico — "Medicina" com
+                // 306 pedidos e "Em Medicina" com outros 275.
+                'curso' => mb_substr(revalidacao_caixa_nome(revalidacao_limpa_campo($g('curso'))), 0, 180),
+                'instituicao' => mb_substr(revalidacao_caixa_nome(revalidacao_limpa_campo($inst)), 0, 180),
                 'pais' => $pais,
             ];
             break;
@@ -337,28 +320,39 @@ log_("");
 // ---------------------------------------------------------------------------
 // TRUNCAGEM — a medição que decide se este backfill é fonte confiável.
 //
-// `ato_texto` guarda o corpo já cortado em 7.000 caracteres (importar_v2.php
-// grava `textoBusca`, que sai de corpo_busca = limpar(corpo).lower()[:7000]).
-// Num ato longo, o Art. 1º pode estar DEPOIS do corte — e aí ele não aparece
-// aqui, sem nenhuma diferença visível entre "não é revalidação" e "não deu
-// para ver". Para um número que vai a órgão de controle, essa diferença é a
-// que mais importa.
+// `ato_texto` guarda o corpo cortado no teto do extrator. Num ato longo, o
+// Art. 1º pode estar DEPOIS do corte — e aí ele não aparece aqui, sem nenhuma
+// diferença visível entre "não é revalidação" e "não deu para ver". Para um
+// número que vai a órgão de controle, essa diferença é a que mais importa.
 //
 // O teste: quantos candidatos estão exatamente no teto. Texto no teto é texto
 // que FOI cortado — o original era maior.
 //   - se poucos, e nenhum deles casaria, o corte não está escondendo decisão;
 //   - se muitos, a origem precisa mudar: reprocessar os PDFs, que é mais
 //     pesado e é a única forma de ver o ato inteiro.
+//
+// ⚠️ O TETO É PARÂMETRO, e ficou defasado uma vez — custou caro. Estava fixo em
+// 6.990 quando o extrator passou a cortar em 40.000 (17/08/2026): a partir dali
+// o teste contava TODO texto longo como truncado e passou a relatar 1.247 atos
+// "em aberto", contra 628 antes, justamente quando o problema tinha sido
+// resolvido. Um instrumento que piora quando a realidade melhora não mede nada
+// — e era ele que precisava responder se ainda há decisão escondida, pergunta
+// que autoriza remover o aviso de "série em consolidação" da tela.
+//
+// Se o teto do extrator mudar de novo, muda AQUI: `tools/extrair_boletim.py`,
+// `corpo_texto = limpar(corpo)[:40000]`.
 // ---------------------------------------------------------------------------
+const REVALIDACAO_TETO_EXTRATOR = 40000;
+$tetoMin = REVALIDACAO_TETO_EXTRATOR - 10;   // folga para a limpeza de espaços
 $q = $pdo->query(
     "SELECT COUNT(*) AS n,
-            SUM(CHAR_LENGTH(t.texto_original) >= 6990) AS no_teto
+            SUM(CHAR_LENGTH(t.texto_original) >= $tetoMin) AS no_teto
        FROM ato a JOIN ato_texto t ON t.ato_id = a.id
       WHERE t.texto_original LIKE '%revalida%'
          OR t.texto_original LIKE '%reconhecimento do t%'")->fetch(PDO::FETCH_ASSOC);
 
 $noTeto = (int)($q['no_teto'] ?? 0);
-log_("=== truncagem do texto (limite de 7.000 caracteres) ===");
+log_("=== truncagem do texto (limite de " . number_format(REVALIDACAO_TETO_EXTRATOR, 0, ',', '.') . " caracteres) ===");
 log_("candidatos no teto : $noTeto de " . (int)$q['n']);
 
 if ($noTeto > 0) {
@@ -371,7 +365,7 @@ if ($noTeto > 0) {
            FROM ato a
            JOIN ato_texto t ON t.ato_id = a.id
            LEFT JOIN ato_revalidacao r ON r.ato_id = a.id
-          WHERE CHAR_LENGTH(t.texto_original) >= 6990
+          WHERE CHAR_LENGTH(t.texto_original) >= $tetoMin
             AND (t.texto_original LIKE '%revalida%'
                  OR t.texto_original LIKE '%reconhecimento do t%')")->fetch(PDO::FETCH_ASSOC);
     $cap = (int)($r2['atos_capturados'] ?? 0);
@@ -383,7 +377,7 @@ if ($noTeto > 0) {
     log_("  o corte pode estar escondendo o Art. 1º e não há como distinguir,");
     log_("  daqui, 'não é revalidação' de 'não deu para ver'.");
 } else {
-    log_("  Nenhum candidato encostou no teto — o corte de 7.000 caracteres");
+    log_("  Nenhum candidato encostou no teto — o corte do extrator");
     log_("  NÃO está escondendo dispositivo. O banco é fonte suficiente.");
 }
 log_("");
