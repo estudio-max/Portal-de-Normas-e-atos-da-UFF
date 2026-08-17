@@ -132,6 +132,15 @@ jobs:
       - name: Regressão da caixa do corpo do ato
         run: php backend/importar/teste_caixa_texto.php
 
+      # `php -l` NÃO vê variável indefinida — é aviso, não erro de sintaxe. Foi
+      # assim que uma renomeação deixou três referências penduradas no
+      # importador, o CI ficou verde e o defeito só apareceu na primeira
+      # importação depois do deploy, derrubando a transação inteira:
+      # "ods_do_ato(): Argument #3 ($corpo) must be of type string, null given".
+      # Com o cron rodando 2×/dia, isso é portal parado sem ninguém notar.
+      - name: Variável usada e nunca atribuída em importar/
+        run: php backend/importar/teste_variaveis_importador.php
+
   # O extrator é o arquivo mais sensível do projeto: um padrão que deixa de
   # casar não quebra nada visivelmente — o dado simplesmente para de existir,
   # e ninguém percebe até alguém procurar por ele meses depois.
