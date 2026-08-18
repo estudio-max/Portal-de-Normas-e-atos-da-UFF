@@ -301,8 +301,12 @@ assert.match(actListCard, /md:hidden/, 'Act list card must be mobile-only.');
 // classe marcadora: a versão anterior procurava `mobile-stack-table`, string que
 // não existia em CSS nenhum, então bastava colá-la num arquivo para o teste
 // passar sem que nada ficasse responsivo.
+// `Sobre.tsx` entrou na lista depois que o painel de decisoes nasceu como
+// tabela crua: no celular as tres colunas ficavam com 75px cada e as linhas
+// com 300px de altura -- texto de duas palavras por linha. A tabela cabia na
+// tela, entao nada acusou; so medindo a linha e que aparece.
 for (const file of ['ChefiasApi.tsx', 'JornadaApi.tsx', 'ComissoesApi.tsx', 'CooperacaoApi.tsx',
-                    'DossieApi.tsx', 'RevalidacaoApi.tsx']) {
+                    'DossieApi.tsx', 'RevalidacaoApi.tsx', 'Sobre.tsx']) {
   const source = await read(`src/components/panels/${file}`);
   assert.match(source, /<RecordCardList/,
     `${file} must render one card per row on mobile.`);

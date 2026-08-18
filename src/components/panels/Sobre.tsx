@@ -4,6 +4,7 @@ import * as ds from '../../dataSource';
 import { linksEmail } from '../ui/linksEmail';
 import { ANO_INICIO_ACERVO } from '../../config';
 import { AJUDA } from '../help/ajudaConteudo';
+import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 const ANO_ATUAL = new Date().getFullYear();
 
@@ -222,6 +223,22 @@ const REGRAS_TESTADAS: [string, string, string][] = [
    '37 setores ficavam "ativo" para sempre: a portaria que os encerrou é de 2019 e nem está no acervo',
    'corrigida'],
 ];
+
+
+/** O selo da decisao, escrito uma vez e usado nas duas formas da tabela.
+ *  12px e nao 11: e uma palavra que o visitante precisa ler, nao um enfeite. */
+function SeloDecisao({ decisao }: { decisao: string }) {
+  return (
+    <span className={
+      'inline-block rounded px-1.5 py-0.5 text-[12px] font-bold border ' +
+      (decisao === 'descartada'
+        ? 'bg-red-50 text-red-700 border-red-200'
+        : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+    }>
+      {decisao}
+    </span>
+  );
+}
 
 
 export default function Sobre() {
@@ -588,16 +605,25 @@ export default function Sobre() {
           experimento com três partes — o que se supôs, o que a medição mostrou, e o que se
           decidiu:
         </p>
-        <div className="overflow-x-auto pt-1">
+        {/* SELO DA DECISAO. Cor sozinha nao decide nada aqui: a palavra
+            "descartada"/"corrigida"/"refinada" e que informa, e a cor so
+            reforca. Vale para o cartao e para a tabela. */}
+        <RecordCardList className="pt-1 space-y-2">
+          {REGRAS_TESTADAS.map(([regra, medida, decisao]) => (
+            <RecordCard key={regra} titulo={regra} selo={<SeloDecisao decisao={decisao} />}
+              texto={medida} />
+          ))}
+        </RecordCardList>
+        <DesktopTable className="pt-1">
           <table className="w-full text-[12px] border-collapse">
             <caption className="sr-only">
-              Regras testadas contra o acervo, com o resultado medido e a decisão tomada.
+              Regras testadas contra o acervo, com o resultado medido e a decisao tomada.
             </caption>
             <thead>
               <tr className="text-left text-slate-600 border-b border-slate-300">
                 <th scope="col" className="py-1.5 pr-3 font-semibold">A regra que parecia certa</th>
-                <th scope="col" className="py-1.5 pr-3 font-semibold">O que a medição mostrou</th>
-                <th scope="col" className="py-1.5 font-semibold w-24">Decisão</th>
+                <th scope="col" className="py-1.5 pr-3 font-semibold">O que a medicao mostrou</th>
+                <th scope="col" className="py-1.5 font-semibold w-24">Decisao</th>
               </tr>
             </thead>
             <tbody className="text-slate-700 align-top">
@@ -605,23 +631,12 @@ export default function Sobre() {
                 <tr key={regra} className="border-b border-slate-200">
                   <td className="py-2 pr-3">{regra}</td>
                   <td className="py-2 pr-3">{medida}</td>
-                  <td className="py-2">
-                    <span
-                      className={
-                        'inline-block rounded px-1.5 py-0.5 text-[11px] font-bold border ' +
-                        (decisao === 'descartada'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200')
-                      }
-                    >
-                      {decisao}
-                    </span>
-                  </td>
+                  <td className="py-2"><SeloDecisao decisao={decisao} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </DesktopTable>
         <p>
           O acervo também não é confiável só por ser oficial. O OCR de 2001 troca letras; o mesmo
           órgão aparece grafado de três formas; um boletim publica ato de dezembro do ano anterior.

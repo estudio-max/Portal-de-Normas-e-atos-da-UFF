@@ -51,8 +51,17 @@ export interface MapaMundiProps {
   cor?: string;
   corSelecionada?: string;
   rotulo: string;
-  /** Palavra do valor no balão e na legenda: "acordo(s)", "pedido(s)". */
+  /** Nome da coisa contada, no SINGULAR: "acordo", "pedido". Quem imprime
+   *  flexiona — ver `conta()`. */
   unidade?: string;
+}
+
+/** "1 pedido", "468 pedidos". Só o `+s` porque as duas palavras que passam
+ *  por aqui são regulares; se um dia entrar uma irregular, ela vira parâmetro
+ *  e não exceção escondida dentro desta função. */
+function conta(n: number, unidade: string) {
+  if (!unidade) return String(n);
+  return `${n} ${n === 1 ? unidade : unidade + 's'}`;
 }
 
 export function MapaMundi({
@@ -67,9 +76,19 @@ export function MapaMundi({
   // pequenos, e clicar neles ficaria impossível.
   const ordenados = [...pontos].sort((a, b) => b.valor - a.valor);
 
+  /* O MAPA ESCALA, NAO ROLA. Com largura fixa de 760px ele ficava dentro de
+   *  uma faixa rolavel: no celular apareciam 30% do desenho, e o visitante
+   *  precisava arrastar de lado para descobrir que existia mundo fora do
+   *  pedaco que via -- sem nada na tela dizendo isso. Com `viewBox` o mapa
+   *  inteiro cabe sempre, menor. As bolhas encolhem junto e no celular ficam
+   *  pequenas demais para acertar o toque; quem carrega o numero exato e o
+   *  alvo de clique e o ranking ao lado, que e a divisao de trabalho que
+   *  esta tela ja assume. Mapa inteiro pequeno informa mais que 30% grande.
+   *  O teto de 760px preserva o tamanho de antes no desktop. */
   return (
-    <div className="overflow-x-auto">
-      <svg width={W} height={H} role="img" aria-label={rotulo} className="min-w-[560px]">
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={rotulo}
+        className="w-full h-auto max-w-[760px]">
         <rect x={0} y={0} width={W} height={H} fill="var(--mapa-oceano)" rx={6} />
         {[-120, -60, 0, 60, 120].map(l => (
           <line key={`v${l}`} x1={px(l)} y1={0} x2={px(l)} y2={H} stroke="var(--chart-grid)" strokeWidth={1} />
@@ -93,7 +112,7 @@ export function MapaMundi({
                 fill={eSel ? corSelecionada : cor}
                 fillOpacity={ativo ? 0.75 : 0.18}
                 stroke="var(--sup-cartao)" strokeWidth={1.2} />
-              <title>{p.detalhe ?? `${p.pais} — ${p.valor}${unidade ? ' ' + unidade : ''}`}</title>
+              <title>{p.detalhe ?? `${p.pais} — ${conta(p.valor, unidade)}`}</title>
             </g>
           );
         })}
@@ -118,7 +137,7 @@ export function LegendaTamanho({ max, unidade = '', cor = 'var(--chart-mark)' }:
   return (
     <div className="flex items-end gap-3">
       <svg width={larg} height={alt} role="img"
-        aria-label={`Escala do mapa: a maior bolha vale ${max} ${unidade}.`}>
+        aria-label={`Escala do mapa: a maior bolha vale ${conta(max, unidade)}.`}>
         {passos.map(v => {
           const r = raio(v);
           return (
@@ -127,8 +146,8 @@ export function LegendaTamanho({ max, unidade = '', cor = 'var(--chart-mark)' }:
           );
         })}
       </svg>
-      <ul className="text-[11px] leading-tight text-slate-600 tabular-nums">
-        {passos.map(v => <li key={v}>{v} {unidade}</li>)}
+      <ul className="text-[12px] leading-tight text-slate-600 tabular-nums">
+        {passos.map(v => <li key={v}>{conta(v, unidade)}</li>)}
       </ul>
     </div>
   );

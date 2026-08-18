@@ -44,23 +44,6 @@ def carrega_terras():
             for poly in re.findall(r'\[(\[[^\]]*\](?:,\[[^\]]*\])*)\]', corpo)]
 
 
-def carrega_abas():
-    """(titulo, resumo) de cada aba de CONTEUDO, na ordem de ABAS_VALIDAS.
-
-    A fonte e a ajuda contextual, que ja e obrigada por teste a cobrir todas as
-    abas. As tres abas de apoio (ajuda, privacidade, sobre) ficam de fora: a
-    figura responde "o que da para consultar", nao "quantas telas existem"."""
-    app = io.open(os.path.join(RAIZ, 'src', 'App.tsx'), encoding='utf-8').read()
-    m = re.search(r'const ABAS_VALIDAS = \[(.*?)\];', app, re.S)
-    ordem = [c for c in re.findall(r"'([^']*)'", m.group(1))
-             if c not in ('ajuda', 'privacidade', 'sobre')]
-    ajuda = io.open(os.path.join(RAIZ, 'src', 'components', 'help', 'ajudaConteudo.tsx'),
-                    encoding='utf-8').read()
-    titulos = dict(re.findall(r"^\s*'?([\w/]*)'?:\s*\{\s*\n\s*titulo:\s*'([^']+)'",
-                              ajuda, re.M))
-    return [(c, titulos.get(c, c or 'Dashboard')) for c in ordem]
-
-
 def carrega_stats(arquivo=None):
     """Total de atos, para a figura do fluxo. Mesma razao das outras: '133 mil'
     escrito a mao envelheceu sem avisar."""
@@ -392,59 +375,6 @@ def peca5(coop):
            f'{ranking}.')
 
 
-# ---------------------------------------------------------------- PECA 7
-def peca7():
-    p = []
-    # A lista vem do app (ABAS_VALIDAS + os titulos da ajuda contextual).
-    # Escrita a mao, ela ficou tres abas atras do portal sem nada acusar.
-    pares = carrega_abas()
-    resumos = {
-        '': ['O que saiu no boletim mais', 'recente e o tamanho do acervo'],
-        'atos': ['Todos os atos, com filtro por', 'tipo, órgão, ano e palavra'],
-        'relacoes': ['Quem revoga ou', 'altera quem'],
-        'insights': ['Padrões do acervo: aposentadorias,', 'deslocamentos, volume'],
-        'pessoal/siape': ['Os atos que citam', 'a sua matrícula'],
-        'pessoal/chefias': ['Quem ocupa qual função,', 'e desde quando'],
-        'pessoal/mandatos': ['Prazos de designação', 'e o que já venceu'],
-        'pessoal/prazos': ['O que tem data', 'para acabar'],
-        'pessoal/jornada': ['Setores em trabalho flexível', 'ou programa de gestão'],
-        'institucional/comissoes': ['Comitês, comissões e GTs', 'permanentes num só lugar'],
-        'institucional/politicas': ['A sequência de atos que', 'construiu cada política'],
-        'institucional/cooperacao': ['Acordos com instituições, com', 'mapa e filtro por país'],
-        'institucional/revalidacao': ['Diplomas do exterior: pedidos,', 'origem e decisão'],
-        'institucional/ods': ['O que a UFF propôs em cada', 'Objetivo da Agenda 2030'],
-        'mudancas': ['O que mudou de fato no', 'acervo nos últimos meses'],
-    }
-    abas = [(titulo, resumos.get(chave, ['', ''])) for chave, titulo in pares]
-    # ⚠️ A ALTURA ACOMPANHA O NUMERO DE ABAS. Estava fixa em 606, dimensionada
-    # para as 12 de entao; com 15 a quinta fileira terminava em 612 e era
-    # CORTADA pelo viewBox, com o rodape escrito por cima dela. Figura cortada
-    # nao da erro: ela so mostra menos do que deveria, e quem gerou nao ve.
-    cw, ch, gx, gy = 282, 92, 14, 14
-    x0, y0 = 40, 96
-    linhas = -(-len(abas) // 3)
-    W = 960
-    H = y0 + linhas * (ch + gy) - gy + 46
-    p.append(texto(40, 42, 'O que tem em cada aba do portal', 19, AZUL, '700'))
-    p.append(texto(40, 66, f'{len(abas)} painéis, cada um respondendo uma pergunta diferente', 12.5, CINZA))
-
-    for i, (nome, desc) in enumerate(abas):
-        c, l = i % 3, i // 3
-        x, y = x0 + c * (cw + gx), y0 + l * (ch + gy)
-        p.append(f"<rect x='{x}' y='{y}' width='{cw}' height='{ch}' rx='9' fill='#F8FAFC' "
-                 f"stroke='#CBD5E1' stroke-width='1.2'/>")
-        p.append(f"<rect x='{x}' y='{y}' width='4' height='{ch}' rx='2' fill='{AZUL}'/>")
-        p.append(texto(x + 20, y + 32, nome, 14, AZUL, '700'))
-        for j, d in enumerate(desc):
-            p.append(texto(x + 20, y + 54 + j * 15, d, 10.5, CINZA))
-
-    p.append(texto(40, H - 22, 'A aba "Políticas" mostra o PAPEL de cada ato — instituir, regulamentar, '
-                   'executar — e deixa visível a etapa sem evidência.', 10.5, CINZA))
-    salvar('7-abas-do-portal.svg', ''.join(p), W, H,
-           f'Grade com os {len(abas)} painéis do portal e uma linha explicando o que cada '
-           f'um faz: ' + ', '.join(nome for nome, _ in abas) + '.')
-
-
 print('Gerando SVGs em public/figuras/ (e copia em docs/figuras/)')
 ap = argparse.ArgumentParser()
 ap.add_argument('--coop', help='JSON de /api/cooperacao salvo, para rodar sem rede')
@@ -452,4 +382,4 @@ ap.add_argument('--stats', help='JSON de /api/stats salvo, para rodar sem rede')
 args = ap.parse_args()
 coop = carrega_cooperacao(args.coop)
 stats = carrega_stats(args.stats)
-peca2(stats['total']); peca3(); peca4(); peca5(coop); peca7()
+peca2(stats['total']); peca3(); peca4(); peca5(coop)

@@ -55,7 +55,7 @@ function TabelaEquivalente({ titulo, colunas, linhas }: {
 }) {
   return (
     <details className="mt-2">
-      <summary className="cursor-pointer text-[12px] text-slate-600 hover:underline">
+      <summary className="cursor-pointer py-1.5 text-[12px] text-slate-600 hover:underline">
         Ver {titulo} em tabela
       </summary>
       <div className="mt-2 overflow-x-auto">
@@ -87,13 +87,22 @@ function Colunas({ dados, rotulo }: {
 }) {
   const max = Math.max(1, ...dados.map(d => d.total));
   if (!dados.length) return null;
+  // DENSO = mais categorias do que cabe rotular uma a uma. Com 20 anos numa
+  // faixa de 230px sobram 11px por coluna: o numero em cima de cada barra nao
+  // cabe, e ele nao encolhe -- era ele que empurrava a pagina para o lado.
+  // Numero em TODO ponto ja e ruim num grafico largo; num estreito e ilegivel.
+  // Fica so o maior, que e o que a barra sozinha nao diz. Os valores exatos
+  // continuam inteiros na tabela do <details> e no rotulo lido em voz alta.
+  const denso = dados.length > 10;
   return (
     <div>
-      <div className="flex items-end gap-1.5 h-28" role="img"
+      <div className={`flex items-end h-28 ${denso ? 'gap-0.5 sm:gap-1.5' : 'gap-1.5'}`} role="img"
         aria-label={`${rotulo}. ${dados.map(d => `${d.chave}: ${d.total}`).join('; ')}.`}>
         {dados.map(d => (
           <div key={d.chave} className="flex-1 min-w-0 flex flex-col items-center justify-end gap-1">
-            <span className="text-[11px] tabular-nums text-slate-600">{d.total}</span>
+            {(!denso || d.total === max) && (
+              <span className="text-[12px] tabular-nums text-slate-600">{d.total}</span>
+            )}
             <span className="w-full rounded-t"
               style={{ height: `${(d.total / max) * 100}%`, minHeight: 3, background: 'var(--chart-fill)' }}>
               <span className="block w-full rounded-t"
@@ -102,12 +111,22 @@ function Colunas({ dados, rotulo }: {
           </div>
         ))}
       </div>
-      <div className="flex gap-1.5 mt-1">
+      {/* O eixo tem DUAS FORMAS. Um rotulo por coluna enquanto couber; na tela
+          estreita, so as pontas. Vinte rotulos truncados em "2…" nao informam
+          nada, e a faixa de pontas ao menos diz o periodo que o grafico cobre.
+          As colunas ficam de pe nas duas: a forma e a leitura principal. */}
+      <div className={`gap-1.5 mt-1 ${denso ? 'hidden sm:flex' : 'flex'}`}>
         {dados.map(d => (
           <span key={d.chave} className="flex-1 min-w-0 text-center text-[12px] text-slate-600 truncate"
             title={d.chave}>{d.chave}</span>
         ))}
       </div>
+      {denso && (
+        <div className="flex justify-between mt-1 text-[12px] text-slate-600 sm:hidden">
+          <span>{dados[0].chave}</span>
+          <span>{dados[dados.length - 1].chave}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -223,7 +242,7 @@ export default function RevalidacaoApi() {
               Boletim de Serviço.
             </p>
           </div>
-          <p className="shrink-0 rounded-md bg-white/10 px-2.5 py-1.5 text-[12px] font-semibold text-blue-50">
+          <p className="sm:shrink-0 rounded-md bg-white/10 px-2.5 py-1.5 text-[12px] font-semibold text-blue-50">
             Dados agregados · sem identificação de pessoas
           </p>
         </div>
@@ -311,7 +330,7 @@ export default function RevalidacaoApi() {
           horizontal vira cartão empilhado na tela estreita. */}
       <div className="grid lg:grid-cols-2 gap-4 items-start">
         {tramitacao.length > 0 && (
-          <section className="rounded-lg border border-slate-200 bg-white p-3">
+          <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-3">
             <h3 className="flex items-center gap-2 text-[13px] font-bold text-slate-900">
               <Clock className="w-4 h-4 text-slate-600" aria-hidden="true" />
               Quanto tempo entre abrir o processo e decidir
@@ -349,7 +368,7 @@ export default function RevalidacaoApi() {
 
         {/* Série anual */}
         {serie.length > 0 && (
-          <section className="rounded-lg border border-slate-200 bg-white p-3">
+          <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-3">
             <h3 className="text-[13px] font-bold text-slate-900">Decisões por ano</h3>
             <div className="mt-3">
               <Colunas rotulo={`Decisões por ano, ${via}`}
@@ -363,7 +382,7 @@ export default function RevalidacaoApi() {
       </div>
 
       {niveis.length > 1 && (
-        <section className="rounded-lg border border-slate-200 bg-white p-3">
+        <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-3">
           <h3 className="text-[13px] font-bold text-slate-900">Por nível do título</h3>
           <ul className="mt-2 space-y-2">
             {niveis.map(n => (
@@ -384,7 +403,7 @@ export default function RevalidacaoApi() {
           uma marca, um sinal. A taxa continua na lista logo abaixo, onde o
           número exato pode ser lido. */}
       {noMapa.length > 0 && (
-        <section className="rounded-lg border border-slate-200 bg-white p-3">
+        <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-3">
           <h3 className="flex items-center gap-2 text-[13px] font-bold text-slate-900">
             <Globe2 className="w-4 h-4 text-slate-600" aria-hidden="true" />
             De onde vêm os diplomas — {via}
@@ -394,14 +413,14 @@ export default function RevalidacaoApi() {
               pontos={noMapa}
               selecionado={paisSel}
               aoSelecionar={setPaisSel}
-              unidade="pedido(s)"
+              unidade="pedido"
               rotulo={`Mapa-múndi com ${noMapa.length} países de origem dos diplomas, `
                 + `bolhas proporcionais ao número de pedidos de ${via.toLowerCase()}. `
                 + `A tabela logo abaixo traz os mesmos números.`}
             />
           </div>
           <div className="mt-2 flex flex-wrap items-end gap-4">
-            <LegendaTamanho max={Math.max(...noMapa.map(p => p.valor))} unidade="pedidos" />
+            <LegendaTamanho max={Math.max(...noMapa.map(p => p.valor))} unidade="pedido" />
             <p className="text-[12px] leading-relaxed text-slate-600 flex-1 min-w-[200px]">
               Clique num país para destacá-lo, na lista e no mapa. A área da bolha é
               proporcional ao número de pedidos.
@@ -415,7 +434,7 @@ export default function RevalidacaoApi() {
               celular, onde o mapa vira faixa estreita. É a mesma divisão de
               trabalho da aba Cooperação. */}
           <div className="mt-4 grid lg:grid-cols-[1fr_auto] gap-4 items-start">
-            <div>
+            <div className="min-w-0">
               <RecordCardList className="space-y-2">
                 {topoPaises.map((pt, i) => {
                   const def = paises.find(x => x.pais === pt.pais)?.deferidos ?? 0;
@@ -428,7 +447,7 @@ export default function RevalidacaoApi() {
                       acoes={
                         <button type="button"
                           onClick={() => setPaisSel(paisSel === pt.pais ? '' : pt.pais)}
-                          className="text-[12px] font-semibold text-blue-700 underline">
+                          className="-my-1 inline-block py-1 text-[12px] font-semibold text-blue-700 underline">
                           {paisSel === pt.pais ? 'Tirar destaque' : 'Destacar no mapa'}
                         </button>
                       } />
