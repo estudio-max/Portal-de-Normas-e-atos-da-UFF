@@ -136,6 +136,21 @@ $RE_POS  = '/(?P<decisao>deferir|indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+'
          . 'n[ao]s?\s+(?P<inst>.+?)\s*\((?P<local>[^)]{3,60})\)\s*,?\s*'
          . '(?:como\s+equivalente\s+ao\s+de\s+(?P<equiv>.+?))?[,.]/iu';
 
+// AS DUAS REDAÇÕES DE 2011-2017, que o extrator em Python já cobria e este
+// arquivo não. Enquanto só um dos dois caminhos as conhecesse, o mesmo ato
+// aparecia ou sumia conforme quem o gravou — a divergência que o projeto evita
+// mantendo extrator e backfill espelhados.
+//
+// O prefixo "in" é OPCIONAL e capturado. Ter a decisão escrita dentro do padrão
+// foi o defeito que produziu a taxa falsa; não repita.
+// Ver docs/EQUIVALENCIAS-DE-TERMOS.md.
+$RE_PARECER = '/(?:manifestar-se\s+pelo\s+(?P<neg1>in)?deferimento\s+do\s+pedido\s+de\s+'
+            . 'revalida[çc][ãa]o\s+do\s+diploma\s+de\s+'
+            . '|homologar\s+o\s+parecer\s+da\s+comiss[ãa]o.+?,\s*(?P<neg2>in)?deferindo\s+'
+            . 'a\s+solicita[çc][ãa]o\s+de\s+revalida[çc][ãa]o\s+de\s+diploma\s+de\s+)'
+            . '.+?,\s*em\s+n[íi]vel\s+de\s+(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s+em\s+'
+            . '(?P<curso>.+?),\s*realizad[oa]\s+n[ao]\s+(?P<origem>.+?)\.\s*/iu';
+
 // Oração relativa: "...a Resolução X, QUE deferiu..." descreve o ato CITADO.
 $RE_QUE = '/\bque\s*$/iu';
 
@@ -181,6 +196,30 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
     $txt = preg_replace('/\s+/u', ' ', (string)$row['txt']);
 
     $achados = extrair_revalidacoes_lista_legada($txt);
+
+    // As redações de 2011-2017 vêm ANTES das outras: a de parecer contém
+    // "revalidação do diploma de <curso>", que o $RE_GRAD casaria pela metade,
+    // lendo o nome da pessoa como curso.
+    if (!$achados && preg_match($RE_PARECER, $txt, $mp, PREG_OFFSET_CAPTURE)) {
+        if (!preg_match($RE_QUE, mb_substr($txt, max(0, $mp[0][1] - 10), 10))) {
+            $gp = fn($k) => isset($mp[$k]) ? trim($mp[$k][0]) : '';
+            $partes = array_values(array_filter(array_map('trim', explode(',', $gp('origem'))), 'strlen'));
+            $paisP = revalidacao_pais_canon(end($partes), $PAIS_CANON);
+            $instP = count($partes) >= 2
+                ? revalidacao_limpa_instituicao(implode(', ', array_slice($partes, 0, -1)), $PAIS_CANON)
+                : revalidacao_limpa_instituicao($gp('origem'), $PAIS_CANON);
+            $nivelP = mb_convert_case($gp('nivel'), MB_CASE_TITLE, 'UTF-8');
+            $achados = [[
+                'via' => preg_match('/^(Doutorado|Mestrado)$/u', $nivelP) ? 'Pós-graduação' : 'Graduação',
+                'decisao' => ($gp('neg1') !== '' || $gp('neg2') !== '') ? 'Indeferido' : 'Deferido',
+                'nivel' => $nivelP,
+                'curso' => mb_substr(revalidacao_caixa_nome(revalidacao_limpa_campo($gp('curso'))), 0, 180),
+                'instituicao' => mb_substr($instP === '' ? '' : revalidacao_caixa_nome($instP), 0, 180),
+                'pais' => $paisP,
+            ]];
+        }
+    }
+
     if (!$achados) {
         $achou = null;
         foreach ([['Graduação', $RE_GRAD], ['Pós-graduação', $RE_POS]] as [$via, $re]) {
