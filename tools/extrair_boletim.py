@@ -1754,12 +1754,26 @@ _APOSENT_RETRO_RE = re.compile(
     r"oriund[ao]\s+de\s+vac[aâ]ncia|vac[aâ]ncia\s+corresponde|corresponde\s+[aà]\s+aposentadoria",
     re.I,
 )
+# ⚠️ "APOSENTAR POR INVALIDEZ" — a redação que faltava, achada em 17/08/2026
+# aplicando a docs/VIES-DE-EXTRACAO.md à aposentadoria, por sugestão do
+# mantenedor: se o verbo faltava na revalidação, podia faltar aqui. Faltava.
+# 64 atos "Art. 1º Aposentar por invalidez FULANO, matrícula SIAPE nº …" não
+# eram vistos por padrão nenhum, e o painel publicava `invalidez = 0` em TODOS
+# os anos da série — o mesmo zero absoluto que denunciou a revalidação.
+#
+# O QUALIFICADOR DEPOIS DO VERBO É OBRIGATÓRIO de propósito. Sem ele, "ao se
+# aposentar poderá orientar dissertações" — cláusula de regimento — entraria
+# como ato de aposentadoria.
 _APOSENT_DISPOSITIVO_RE = re.compile(
-    r"conced\w*\s+(?:a\s+)?aposentadoria|declara\w*\s+aposentad[oa](?:\s*\([aA]\))?\b", re.I,
+    r"conced\w*\s+(?:a\s+)?aposentadoria|declara\w*\s+aposentad[oa](?:\s*\([aA]\))?\b"
+    r"|aposentar\s+(?:por\s+(?:invalidez|incapacidade)|compulsoriamente|voluntariamente)", re.I,
 )
 _APOSENT_COMPULSORIA_RE = re.compile(r"aposentadoria\s+compuls[oó]ria|compulsoriamente", re.I)
-_APOSENT_VOLUNTARIA_RE = re.compile(r"aposentadoria\s+volunt[aá]ria", re.I)
-_APOSENT_INVALIDEZ_RE = re.compile(r"aposentadoria\s+por\s+(?:invalidez|incapacidade)", re.I)
+_APOSENT_VOLUNTARIA_RE = re.compile(
+    r"aposentadoria\s+volunt[aá]ria|aposentar\s+voluntariamente", re.I)
+_APOSENT_INVALIDEZ_RE = re.compile(
+    r"aposentadoria\s+por\s+(?:invalidez|incapacidade)"
+    r"|aposentar\s+por\s+(?:invalidez|incapacidade)", re.I)
 _ART40_RE = re.compile(r"art(?:igo)?\.?\s*40\b", re.I)
 _INCISO_ART40_RE = re.compile(r"inciso\s+(i{1,3})\b|§\s*1[ºo]?[^.;]{0,15}?\b(i{1,3})\b", re.I)
 # Retificação que CITA uma concessão anterior: "...a portaria nº X de DD/MM/AAAA,

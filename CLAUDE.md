@@ -831,6 +831,16 @@ reprova `fetch`/`useEffect` nesse arquivo.
 
 ## Regras do domínio que já custaram retrabalho
 
+⚠️ **Antes de escrever padrão de extração novo, leia
+[`docs/EQUIVALENCIAS-DE-TERMOS.md`](docs/EQUIVALENCIAS-DE-TERMOS.md)** — a lista
+das redações que o Boletim usa para o MESMO fato, com trecho real de cada uma. E
+[`docs/VIES-DE-EXTRACAO.md`](docs/VIES-DE-EXTRACAO.md), que é o método: um padrão
+cego não erra, ele emudece, e o sintoma aparece como número plausível na tela.
+Foi assim que o portal publicou **0% de deferimento** em revalidação por anos
+inteiros (faltava o verbo `Aprovar`) e `invalidez = 0` em toda a série de
+aposentadoria (faltava `Aposentar por invalidez`). **Zero absoluto num período
+longo é suspeita, não resultado.**
+
 O catálogo completo está em [`docs/GUIA-EXTRACAO-BS.md`](docs/GUIA-EXTRACAO-BS.md)
 — a **linha do tempo do corpus** (o BS é vários formatos em sequência: o marcador
 de fim de ato nasce em 2002 com cinco `#`, vira seis em 2004; o SIGAEx aparece em
