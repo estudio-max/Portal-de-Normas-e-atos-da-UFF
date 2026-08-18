@@ -436,7 +436,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-17.1'; }
+function api_versao(): string { return '2026-08-18.1'; }
 
 // Quantas horas sem importar já significam CADEIA QUEBRADA (não "atraso").
 // O cron do cPanel roda 12h e 20h, então o intervalo normal entre execuções
@@ -2566,7 +2566,8 @@ function politicas(PDO $pdo, string $slug): void {
 }
 
 // ===========================================================================
-//  ODS — dossiê de evidência dos atos nas 17 ODS (docs/METODOLOGIA-ODS.md).
+//  ODS — dossiê de evidência dos atos nos ODS (docs/METODOLOGIA-ODS.md).
+//  1–17: Agenda 2030/ONU. 18: iniciativa brasileira (igualdade étnico-racial).
 //
 //  Lê o índice pronto `ato_ods` (backfill offline: classificação híbrida
 //  IA + curadoria, ancorada no THE Impact Rankings e nas metas IPEA). A rota
@@ -2714,6 +2715,16 @@ function mudancas(PDO $pdo, string $publico, string $de): void {
 
 function ods_registro(): array {
     // [n, nome curto, cor oficial ONU]
+    //
+    // ⚠️ O 18 NÃO É DA ONU, e a diferença precisa sobreviver ao código. Os
+    // objetivos 1 a 17 são da Agenda 2030; o ODS 18 — Igualdade Étnico-Racial
+    // é uma INICIATIVA BRASILEIRA construída no contexto da Agenda, adotada
+    // aqui em 18/08/2026 por indicação da área de documentação. Por isso a
+    // interface nunca escreve "18 ODS da ONU": escreve "cada Objetivo de
+    // Desenvolvimento Sustentável", que é verdadeiro para os dois casos, e a
+    // ficha do 18 abre declarando a origem. A cor não é da paleta oficial da
+    // ONU (não existe uma para ele) — usa-se o verde-escuro institucional do
+    // movimento brasileiro pela igualdade racial.
     static $r = [
         [1,  'Erradicação da pobreza',            '#E5243B'],
         [2,  'Fome zero',                          '#DDA63A'],
@@ -2732,6 +2743,7 @@ function ods_registro(): array {
         [15, 'Vida terrestre',                     '#56C02B'],
         [16, 'Paz, justiça e instituições eficazes', '#00689D'],
         [17, 'Parcerias e meios de implementação', '#19486A'],
+        [18, 'Igualdade étnico-racial',           '#2D6A4F'],
     ];
     return $r;
 }
@@ -2753,7 +2765,7 @@ function ods(PDO $pdo, string $n): void {
 
     if ($n !== '') {
         $num = (int)$n;
-        if ($num < 1 || $num > 17) responder_json(['erro' => 'ODS inválida (1–17).'], 404);
+        if ($num < 1 || $num > 18) responder_json(['erro' => 'ODS inválido (1–18).'], 404);
         $st = $pdo->prepare("
             SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa, a.status,
                    o.sigla, b.url_pdf AS link,

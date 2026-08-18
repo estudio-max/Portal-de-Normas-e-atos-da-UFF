@@ -290,9 +290,9 @@ export default function HelpGuide() {
           A aba <strong>ODS</strong> agrupa os atos normativos pelos <strong>17 Objetivos de
           Desenvolvimento Sustentável</strong> da ONU — o formato que rankings internacionais
           (como o <strong>THE Impact Rankings</strong>) e órgãos de controle usam para avaliar
-          a gestão universitária. Clique numa ODS para ver os atos que a sustentam.
+          a gestão universitária. Clique num ODS para ver os atos que o sustentam.
         </p>
-        <p>Cada ato ligado a uma ODS recebe um <strong>tipo de vínculo</strong>, e a diferença entre eles é o ponto principal da aba:</p>
+        <p>Cada ato ligado a um ODS recebe um <strong>tipo de vínculo</strong>, e a diferença entre eles é o ponto principal da aba:</p>
         <ul className="space-y-1.5 mt-1">
           <li><Badge cor="bg-emerald-100 text-emerald-700 border-emerald-200">Proposta</Badge> — o ato <strong>fundador</strong>: institui uma política, programa, plano ou estrutura. <em>É a evidência que interessa.</em></li>
           <li><Badge cor="bg-slate-100 text-slate-600 border-slate-200">Execução</Badge> — opera uma política que já existe (designa membros de comissão, ratifica um convênio). É contexto, não evidência nova.</li>

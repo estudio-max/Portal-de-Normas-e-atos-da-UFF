@@ -2,9 +2,22 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Target, Loader2, Info, ExternalLink, ChevronRight, ArrowLeft, AlertTriangle } from 'lucide-react';
 import * as ds from '../../dataSource';
 
-// Aba "ODS": os atos normativos da UFF lidos pela lente dos 17 Objetivos de
-// Desenvolvimento Sustentável (Agenda 2030/ONU) — o formato de evidência que
-// rankings internacionais (THE Impact Rankings) e órgãos de controle pedem.
+// Aba "ODS": os atos normativos da UFF lidos pela lente dos Objetivos de
+// Desenvolvimento Sustentável — o formato de evidência que rankings
+// internacionais (THE Impact Rankings) e órgãos de controle pedem.
+//
+// ⚠️ SÃO 17 DA ONU + 1 BRASILEIRO, e o texto da tela nunca some com essa
+// diferença. Os ODS 1–17 são da Agenda 2030; o ODS 18 — Igualdade
+// Étnico-Racial é iniciativa brasileira construída no contexto da Agenda
+// (adotado aqui em 18/08/2026, por indicação da área de documentação).
+// Por isso a frase de abertura NÃO traz número: "cada Objetivo de
+// Desenvolvimento Sustentável" continua verdadeiro se entrar um 19, e não
+// afirma que a ONU tem 18. A ficha do ODS 18 declara a origem em primeiro
+// lugar — ver ODS_18 mais abaixo.
+//
+// ⚠️ "ODS" É MASCULINO: Objetivo. Escreve-se "os ODS", "cada um dos ODS",
+// "o ODS 18" — nunca "as ODS" nem "cada uma das". A tela trazia a forma
+// feminina até 18/08/2026.
 //
 // A classificação NÃO acontece aqui: vive na tabela-fato ato_ods, preenchida
 // offline por método híbrido (IA lê o dispositivo do ato + curadoria humana),
@@ -50,7 +63,7 @@ function ConfiancaDot({ c }: { c: string }) {
   );
 }
 
-// ---- detalhe de uma ODS: seus atos, propostas primeiro ---------------------
+// ---- detalhe de um ODS: seus atos, propostas primeiro ----------------------
 function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
   const [d, setD] = useState<ds.OdsDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -74,7 +87,7 @@ function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
     <div>
       <button onClick={onVoltar}
         className="flex items-center gap-1 text-xs font-bold text-blue-700 hover:underline mb-3">
-        <ArrowLeft className="w-3.5 h-3.5" /> Todas as ODS
+        <ArrowLeft className="w-3.5 h-3.5" /> Todos os ODS
       </button>
       {carregando && (
         <div className="flex items-center gap-2 text-slate-400 text-sm py-8 justify-center">
@@ -89,11 +102,33 @@ function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
               <h3 className="text-base font-bold">{d.ods.nome}</h3>
             </div>
             <p className="text-[12px] mt-1 opacity-90">
-              {d.atos.length} ato(s) normativos ligados a esta ODS —{' '}
+              {d.atos.length} ato(s) normativos ligados a este ODS —{' '}
               {porVinculo.proposta} proposta(s), {porVinculo.execucao} de execução,{' '}
               {porVinculo.pesquisa} de pesquisa, {porVinculo.ensino} de ensino.
             </p>
           </div>
+
+          {/* A ORIGEM VEM ANTES DA EVIDÊNCIA, e só no 18. Deixar o card do 18
+              idêntico aos outros faria a tela afirmar, por omissão, que a ONU
+              tem 18 objetivos — e essa é exatamente a imprecisão que motivou a
+              adoção cuidadosa. Nos ODS 1–17 este bloco não aparece: repetir
+              "é da Agenda 2030" dezessete vezes é ruído. */}
+          {d.ods.n === 18 && (
+            <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-[12px] font-bold uppercase tracking-wider text-emerald-800">
+                Sobre este objetivo
+              </p>
+              <p className="text-[13px] text-slate-700 leading-relaxed mt-1">
+                O <strong>ODS 18 — Igualdade Étnico-Racial</strong> é uma{' '}
+                <strong>iniciativa brasileira</strong> desenvolvida no contexto da Agenda 2030,
+                voltada à promoção da igualdade étnico-racial e ao enfrentamento das
+                desigualdades e discriminações que atingem especialmente a população negra e os
+                povos indígenas. Não integra os 17 objetivos da ONU: o Portal o adota como eixo
+                adicional de agrupamento de evidência documental, com a mesma taxonomia de
+                vínculos usada nos demais.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {([['', `Todos (${d.atos.length})`],
@@ -137,7 +172,7 @@ function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
             ))}
             {atos.length === 0 && (
               <div className="text-center text-slate-400 text-sm py-8">
-                Nenhum ato com este vínculo nesta ODS.
+                Nenhum ato com este vínculo neste ODS.
               </div>
             )}
           </div>
@@ -147,7 +182,7 @@ function Detalhe({ n, onVoltar }: { n: number; onVoltar: () => void }) {
   );
 }
 
-// ---- lista: as 17 ODS, com contagens por vínculo ---------------------------
+// ---- lista: os ODS, com contagens por vínculo ------------------------------
 export default function OdsApi() {
   const apiMode = ds.modo() === 'api';
   const [r, setR] = useState<ds.OdsResp | null>(null);
@@ -194,8 +229,9 @@ export default function OdsApi() {
         </h2>
         <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
           Dossiê de evidência: os atos normativos que documentam o que a UFF{' '}
-          <strong>propôs e institucionalizou</strong> em cada uma das 17 ODS da Agenda 2030.{' '}
-          {r.atosDistintos} atos, {r.linhas} ligações, {comEvidencia} ODS com evidência.
+          <strong>propôs e institucionalizou</strong> em cada Objetivo de Desenvolvimento
+          Sustentável.{' '}
+          {r.atosDistintos} atos, {r.linhas} ligações, {comEvidencia} objetivos com evidência.
         </p>
       </div>
 
@@ -227,7 +263,7 @@ export default function OdsApi() {
           do <strong>IPEA/ODS-Brasil</strong> — cada ligação carrega justificativa e meta.
           O número forte é o de <strong>propostas</strong> (atos fundadores); execução, pesquisa
           e ensino aparecem separados, de propósito. A distribuição é desigual porque a
-          produção normativa real é desigual — ODS sem evidência ficam visivelmente vazias,
+          produção normativa real é desigual — ODS sem evidência ficam visivelmente vazios,
           não infladas. Não é um relatório oficial da UFF.
         </span>
       </div>

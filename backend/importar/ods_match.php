@@ -88,6 +88,30 @@ function ods_termos(): array {
      15 => ['bem-estar animal', '\bceua\b', 'biodiversidade', 'manejo (sustentavel|da fauna|da flora)'],
      16 => ['governanca', 'integridade', 'gestao de riscos', 'corrupcao', '\betica\b', 'ouvidoria', 'transparencia', '\blgpd\b', 'seguranca da informacao', 'protecao de dados', 'plano de integridade', 'resolucao pacifica de conflitos'],
      17 => ['cooperacao internacional', 'acordo de cooperacao', 'internacionalizacao', '\bcotutela\b', 'relatorio .{0,10}ods'],
+    // ODS 18 - Alcancar a Igualdade Etnico-Racial (adotado em 18/08/2026).
+    //
+    // ATENCAO: NAO E "QUALQUER ATO SOBRE POPULACAO NEGRA OU INDIGENA". Este e o
+    // risco que a propria proposta de adocao nomeou, e ele e real: o termo
+    // aparece em ata, em nome de evento e em citacao de lei sem que o ato FACA
+    // nada. Por isso o 18 tem, alem destes termos, uma trava de verbo em
+    // ods_recorte() que os outros ODS nao tem - so entra ato que institui,
+    // regulamenta ou executa algo. Mencao solta nao vira evidencia.
+    //
+    // O vocabulario e o do glossario oficial (ONU Brasil / Ministerio da
+    // Igualdade Racial, 2026): "afrodescendentes", "povos indigenas",
+    // "quilombolas". Os termos coloquiais entram porque e assim que o Boletim
+    // escreve - o glossario rege o texto da tela, nao o que a fonte ja
+    // publicou.
+    //
+    // SOBREPOSICAO COM O ODS 10 E CORRETA, nao defeito. Cota racial e reducao
+    // de desigualdade (10) E igualdade etnico-racial (18); ato_ods e tabela de
+    // fato, aceita as duas linhas. O que o 18 NAO herda do 10 sao os termos
+    // gerais - acessibilidade e pessoa com deficiencia seguem so no 10.
+     18 => ['etnico-?racial', 'racismo', 'discriminacao racial', 'antirracis',
+            'afrodescendente', 'afro-?brasileir', 'quilombola', 'heteroidentificacao',
+            '\bneabi\b', 'relacoes etnico', 'populacao negra', '\bnegras?\b', '\bnegros\b',
+            'cotas? racia', 'reserva de vagas .{0,40}(negr|indigen|quilombola)',
+            'povos? indigenas?', 'comunidades tradicionais', 'lei 12\.?711'],
     ];
     return $t;
 }
@@ -135,6 +159,17 @@ function ods_recorte(string $ementa, string $corpo): ?array {
         if ($n === 4 && preg_match(ODS_RE_CURRIC, $disp)
             && !preg_match('/permanencia|acesso|inclusao|evasao|assistencia estudantil|vulnerab/', $full)) continue;
         $ods[] = $n;
+    }
+    // TRAVA DE VERBO, SO PARA O 18. Nos demais ODS, termo sem verbo vira
+    // 'execucao' (linha abaixo) - tolerancia que existe porque o tema ja e raro
+    // o bastante para o termo sozinho significar algo. No 18 nao e: os termos
+    // aparecem em citacao de lei, em nome de evento e em ata de colegiado sem
+    // que o ato institua ou execute coisa nenhuma. Sem esta trava, "qualquer
+    // ato que menciona populacao negra" viraria evidencia - exatamente o que a
+    // proposta de adocao pediu para evitar.
+    if ($vinc === 'nenhuma') {
+        $k = array_search(18, $ods, true);
+        if ($k !== false) { unset($ods[$k]); $ods = array_values($ods); }
     }
     if (!$ods) return null;
     if ($vinc === 'nenhuma') $vinc = 'execucao';
@@ -213,6 +248,24 @@ function ods_clusters(): array {
      ['proaes-alimentacao', '/(programa|diretrizes|edital)[^.]{0,80}(auxilio alimentacao|complementacao de alimenta)|(auxilio alimentacao|complementacao de alimenta)[^.]{0,80}(programa|diretrizes)|restaurante universitario/', [2, 10], 'proposta', 'alta', 'IPEA 2.1 / THE 2.x', 'Programa de alimentacao estudantil — acesso a alimento'],
      ['proaes-moradia', '/auxilio moradia|moradia universitaria|apoio .{0,15}moradia|acolhimento para estudantes/', [1, 4, 10], 'proposta', 'alta', 'IPEA 1.4/4.5', 'Programa de moradia/acolhimento estudantil — permanencia de vulneraveis'],
      ['proaes-emergencial', '/auxilio emergencial|emprestimo emergencial|inclusao digital|acesso a internet/', [1, 4, 10], 'proposta', 'alta', 'IPEA 1.4/4.5', 'Auxilio emergencial/inclusao digital — permanencia de vulneraveis'],
+     // --- ODS 18: Alcancar a Igualdade Etnico-Racial -----------------------
+     // Metas do glossario oficial (ONU Brasil / Ministerio da Igualdade
+     // Racial, 2026). Para uma universidade federal, as que se aplicam de fato
+     // sao a 18.7 (educacao de qualidade e nao discriminatoria a
+     // afrodescendentes, quilombolas e povos indigenas) e a 18.1 (racismo e
+     // discriminacao no ambiente de trabalho).
+     //
+     // ATENCAO A ORDEM: estes clusters vem ANTES de 'proaes-afirmativas' e
+     // 'heteroident' de proposito, porque o laco PARA no primeiro que casar.
+     // Cada um repete o ODS que o cluster generico ja dava e ACRESCENTA o 18 —
+     // se eu so acrescentasse o 18 aqui, o ato perderia o 10, que continua
+     // certo: cota racial e reducao de desigualdade E igualdade etnico-racial,
+     // as duas coisas ao mesmo tempo.
+     ['etnico-racial-politica', '/(politica|programa|plano|comissao|nucleo|comite)[^.]{0,60}(etnico-?racial|igualdade racial|antirracis)|(etnico-?racial|igualdade racial|antirracis)[^.]{0,60}(politica|programa|plano)/', [10, 18], 'proposta', 'alta', 'ODS 18.1/18.7 (ONU Brasil)', 'Politica ou estrutura permanente de igualdade etnico-racial'],
+     ['neabi-estudos', '/\bneabi\b|estudos afro-?brasileiros|relacoes etnico-?raciais|historia e cultura afro/', [4, 18], 'proposta', 'alta', 'ODS 18.7 (ONU Brasil)', 'Ensino e estudos de relacoes etnico-raciais (Leis 10.639/2003 e 11.645/2008)'],
+     ['afirmativas-etnicas', '/indigenas e quilombolas|estudantes indigenas|estudantes quilombolas|povos indigenas/', [10, 5, 4, 18], 'proposta', 'alta', 'ODS 18.7 (ONU Brasil) / IPEA 10.2', 'Programa afirmativo para estudantes indigenas e quilombolas'],
+     ['cotas-raciais', '/heteroidentificacao|verificacao .{0,20}(etnico|quilombola)|cotas? racia|reserva de vagas .{0,40}(negr|indigen|quilombola)/', [10, 18], 'execucao', 'media', 'ODS 18.7 (ONU Brasil) / IPEA 10.3', 'Operacao da politica de cotas etnico-raciais (bancas de verificacao)'],
+
      ['proaes-afirmativas', '/politicas afirmativas|pessoas trans|indigenas e quilombolas|estudantes indigenas|refugiad/', [10, 5, 4], 'proposta', 'alta', 'IPEA 10.2/10.3 / THE 10.6.4', 'Programa de politicas afirmativas — reducao de desigualdades'],
      ['proaes-deficiencia', '/estudante com deficiencia/', [10, 4], 'proposta', 'alta', 'IPEA 10.2 / THE 10.6.4', 'Apoio a estudantes com deficiencia — inclusao'],
      ['proaes-outros', '/assistencia estudantil|permanencia estudantil|material didatico|educacao infantil|gestantes/', [4, 10], 'proposta', 'alta', 'IPEA 4.3/4.5', 'Programa de assistencia estudantil — acesso e permanencia'],

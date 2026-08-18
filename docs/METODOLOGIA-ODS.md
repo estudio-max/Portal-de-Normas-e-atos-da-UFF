@@ -425,6 +425,97 @@ O que a separação de vínculo garante é que ela apareça como `execucao`
 (instrumento individual), e não inflando as propostas: ali a ODS 17 tem só 3.
 É esse contraste que precisa sobreviver à nova passada.
 
+## 7-B. ODS 18 — Alcançar a Igualdade Étnico-Racial (18/08/2026)
+
+**O ODS 18 não é da ONU, e o Portal nunca finge que é.** Os objetivos 1 a 17
+são da Agenda 2030; o ODS 18 é uma **iniciativa brasileira** construída no
+contexto da Agenda, com Câmara Temática coordenada pelo Ministério da Igualdade
+Racial. Foi adotado aqui por indicação da área de documentação da UFF.
+
+A consequência prática está no texto da tela: ela diz *"cada Objetivo de
+Desenvolvimento Sustentável"*, **sem número**. A frase antiga — "cada uma das
+17 ODS da Agenda 2030" — tinha dois defeitos de uma vez: prendia a contagem
+(quebraria com o 18) e usava o feminino. **"ODS" é masculino**: Objetivo. Diz-se
+*os ODS*, *cada um dos ODS*, *o ODS 18*. A ficha do 18 abre declarando a origem;
+as dos outros não repetem "é da Agenda 2030", que seria ruído dezessete vezes.
+
+**Fonte terminológica:** *Glossário de termos do Objetivo de Desenvolvimento
+Sustentável 18: Alcançar a Igualdade Étnico-Racial* — ONU Brasil, Grupo Temático
+de Gênero, Raça e Etnia, no âmbito do Marco de Cooperação das Nações Unidas
+2023–2027, com colaboração do Ministério da Igualdade Racial e do Observatório
+do ODS 18 (2026, 58 p.).
+
+> ⚠️ O PDF **não** está versionado aqui: são 20 MB, e este repositório não
+> versiona binário desse porte — entraria no histórico do Git para sempre. Ele
+> vive fora do repo, junto da pasta-mãe. As metas 18.1 a 18.9 citadas abaixo e
+> o vocabulário oficial foram extraídos dele e estão reproduzidos neste
+> documento, que é o que o código precisa consultar. O vocabulário oficial é **afrodescendentes**,
+**povos indígenas**, **quilombolas**, **comunidades tradicionais**. O glossário
+rege o texto da interface; os padrões de extração aceitam também as formas
+coloquiais, porque é assim que o Boletim escreve — regra de sempre neste
+projeto: o padrão casa o texto **como ele é**, não como deveria ser.
+
+### Metas aplicáveis a uma universidade federal
+
+Das metas oficiais (18.1 a 18.9), as que uma IFES de fato evidencia:
+
+| Meta | Do que trata | Como aparece na UFF |
+|---|---|---|
+| **18.7** | Educação de qualidade e não discriminatória a afrodescendentes, quilombolas e povos indígenas | Cotas, bancas de heteroidentificação, NEABI, políticas afirmativas — **a mais frequente** |
+| **18.1** | Racismo e discriminação racial no ambiente de trabalho | Heteroidentificação em concurso público para servidor |
+| 18.5 | Patrimônio cultural, artístico e religioso | Acervo, extensão cultural |
+| 18.8 | Diversidade linguística e línguas indígenas | Ensino/pesquisa em línguas |
+| 18.9 | Conhecimento tradicional e patrimônio genético | Pesquisa com comunidades |
+
+### A regra, e por que ela é mais estrita que as outras
+
+**O maior risco do ODS 18 é virar "qualquer ato que menciona população negra ou
+indígena".** Isso não seria classificação, seria busca textual com outro nome —
+e destruiria a propriedade que dá valor a esta aba: *cada ligação carrega
+justificativa e meta*.
+
+Por isso o 18 tem **duas travas que os demais ODS não têm**:
+
+1. **Trava de verbo** (`ods_recorte`). Nos outros ODS, termo sem verbo decisório
+   vira `execucao` — tolerância que existe porque o tema já é raro o bastante.
+   No 18 não é: os termos aparecem em citação de lei, em nome de evento e em ata
+   de colegiado sem que o ato institua ou execute nada. Sem verbo, o 18 sai da
+   lista; se era o único, o ato é descartado.
+2. **Cluster específico, não termo solto.** O rótulo final sai de
+   `ods_clusters()`, e os quatro clusters do 18 exigem linguagem de política
+   (`política/programa/plano/comissão … étnico-racial`, `NEABI`,
+   `heteroidentificação`, `cotas raciais`), não a mera presença da palavra.
+
+### Sobreposição com o ODS 10 é correta, não defeito
+
+Cota racial **é** redução de desigualdade (10) **e** igualdade étnico-racial
+(18). `ato_ods` é tabela de fato: aceita as duas linhas, e as duas são
+verdadeiras. Por isso os clusters do 18 **repetem o ODS que o cluster genérico
+já dava e acrescentam o 18** — e por isso vêm **antes** de `proaes-afirmativas`
+e `heteroident` na lista, já que o laço para no primeiro que casa. Trocar a
+ordem sem repetir o 10 faria o ato *perder* uma classificação correta.
+
+O que o 18 **não** herda do 10: acessibilidade, pessoa com deficiência,
+verificação de renda e de ensino médio público. São redução de desigualdade,
+não recorte étnico-racial.
+
+### Primeira medição (18/08/2026)
+
+Contra o acervo reprocessado 2001–2026: **25 atos**, de 2020 a 2026 — nenhum
+antes de 2020, o que é coerente, já que a política de heteroidentificação é
+recente. Conferidos à mão os três casos que pareciam suspeitos, os três estavam
+certos (o que parecia "Verificação de Ensino Médio" era, na ementa completa,
+"…de **Heteroidentificação Étnico-Racial**, de Verificação da Condição de
+**Quilombola**").
+
+⚠️ **Começar conservador é decisão, não limitação.** 25 é pouco para 25 anos de
+acervo, e provavelmente há evidência que a regra ainda não vê — extensão
+cultural, pesquisa com quilombolas, ensino de história africana. O caminho é a
+curadoria acrescentar, com justificativa, e não a regra afrouxar até pegar tudo.
+Vínculo errado num tema como este custa mais caro que vínculo ausente.
+
+---
+
 ## 8. Governança da classificação
 
 - **Confiança** (alta/média/baixa) em cada linha; o painel filtra por ela e o controle

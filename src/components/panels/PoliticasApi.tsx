@@ -11,7 +11,7 @@ import { PainelFiltros, rotuloFiltro, campoFiltro, ajudaFiltro } from '../ui/Pai
 // O que esta aba tem e as outras não é o PAPEL: o que o ato FAZ pela política
 // (institui, regulamenta, dá governança, executa, monitora). Sem isso,
 // "designa comissão" contaria como execução, e política com muitas designações
-// pareceria em andamento. É a mesma separação que o `vinculo` faz nas ODS.
+// pareceria em andamento. É a mesma separação que o `vinculo` faz nos ODS.
 //
 // O catálogo é CURADO (tools/gerar_seed_politicas.py) e nasce em rascunho. O
 // selo de curadoria fica visível: o portal já mostra método e confiança em toda
