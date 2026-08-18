@@ -258,7 +258,7 @@ export default function Sobre() {
           Do Boletim de Serviço à informação pesquisável
         </h2>
         <p className="text-[13px] text-blue-100 mt-1.5 leading-relaxed">
-          O Inteligência UFF organiza os atos publicados desde 2001 para que servidores, gestores e
+          O Inteligência UFF organiza os atos publicados desde 1996 para que servidores, gestores e
           pesquisadores encontrem normas, relações e evidências sem percorrer milhares de PDFs.
         </p>
         <p className="text-[12px] text-blue-200 mt-2.5 leading-relaxed">
@@ -295,33 +295,73 @@ export default function Sobre() {
           Cores: vermelho só no estado ruim, verde no resolvido, ambos em
           tonalidade clara já usada na base. */}
       <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Publicar é importante. Encontrar também.">
+        {/* ⚠️ "público desde 2001" era ERRADO, e o erro é de conceito, não de
+            data — corrigido em 18/08/2026 a pedido da gestora da área de
+            documentação (biblioteconomia/arquivologia). O Boletim de Serviço
+            SEMPRE foi público: publicidade é requisito do ato administrativo,
+            não uma política que começou num ano. O que tem data é a
+            DISPONIBILIZAÇÃO ON-LINE (2002, quando passou a sair em PDF; de
+            1996 a 2001 os boletins foram digitalizados depois).
+            Confundir as duas coisas sugere que antes de 2001 havia sigilo,
+            que é o oposto do que aconteceu. */}
         <p>
-          O Boletim de Serviço é público desde 2001. O que faltava era o outro lado: consultar
+          O Boletim de Serviço sempre foi público — publicidade é requisito do ato
+          administrativo, não uma política que começou em algum ano. On-line, ele está
+          disponível desde 2002. O que faltava era o outro lado: consultar
           {n?.boletins ? <> {fmt(n.boletins)} </> : ' milhares de '}arquivos sem índice entre eles
           transforma uma pergunta simples em trabalho manual.
         </p>
-        <div className="grid sm:grid-cols-2 gap-3 pt-1">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-[12px] font-bold uppercase tracking-wider text-red-700">Antes</p>
-            <ul className="mt-1.5 space-y-1 text-[13px] text-slate-700 list-disc pl-4">
-              <li>Um PDF por edição, sem busca entre arquivos</li>
-              <li>É preciso saber <strong>em qual boletim</strong> o ato saiu</li>
-              <li>As relações entre atos ficam invisíveis</li>
-              <li>Consulta manual, documento a documento</li>
-            </ul>
-          </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-            <p className="text-[12px] font-bold uppercase tracking-wider text-emerald-700">
-              Com o portal
-            </p>
-            <ul className="mt-1.5 space-y-1 text-[13px] text-slate-700 list-disc pl-4">
-              <li>Um acervo só, pesquisável</li>
-              <li>A busca parte do que você <strong>já sabe</strong>: nome, órgão, ementa, processo</li>
-              <li>Alterações e revogações aparecem ligadas ao ato</li>
-              <li>Exportação em planilha e consulta por API</li>
-            </ul>
+        {/* ⚠️ DUAS REESCRITAS EM UM DIA, E A SEGUNDA É A QUE IMPORTA.
+            (1) O bloco era "Antes × Com o portal" e envelheceu em uma semana:
+            em agosto de 2026 o Boletim de Serviço ganhou busca em texto
+            completo, e duas das quatro linhas da coluna "Antes" deixaram de
+            ser verdade.
+            (2) A primeira correção virou DUAS COLUNAS LADO A LADO — e isso,
+            por si só, é formato de disputa, por mais neutro que seja o texto
+            dentro delas. Pior: as frases descreviam a ferramenta oficial pela
+            dificuldade que ela impõe ("o ato se acha dentro dele", "centenas
+            de edições") e uma delas chegou a dizer que ela "não sabe o que é
+            um ato". Isso é depreciativo, não descritivo, e não é o que este
+            projeto tem a dizer sobre a casa que publica a fonte.
+            ⚠️ REGRA PARA QUEM EDITAR ISTO DEPOIS: este portal LÊ o Boletim de
+            Serviço. Sem ele, não existe acervo aqui. O texto descreve as duas
+            ferramentas pela PERGUNTA que cada uma responde — nunca pelo que a
+            outra deixa de fazer — e manda o leitor para a busca oficial de
+            verdade, com link. Comparação de recursos não entra. */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 mt-1">
+          <p className="text-[13px] text-slate-700 leading-relaxed">
+            <strong>O Boletim de Serviço é a fonte deste portal.</strong> Todo ato aqui foi lido
+            de um PDF publicado por ele, e cada registro traz o link para o boletim de origem.
+            Em agosto de 2026 a busca oficial ganhou <strong>busca em texto completo</strong>,
+            com frase exata, operadores e ordenação por relevância — um ganho real para quem
+            consulta o acervo.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2 mt-3">
+            <div>
+              <p className="text-[12px] font-bold text-slate-700">Para achar um documento</p>
+              <p className="text-[12px] text-slate-600 leading-snug mt-0.5">
+                Comece pela{' '}
+                <a href="https://buscar.boletimdeservico.uff.br/" target="_blank" rel="noopener noreferrer"
+                  className="text-blue-700 underline font-semibold">busca do Boletim de Serviço</a>:
+                é a fonte oficial, e é dela que sai o documento que vale para citar.
+              </p>
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-700">Para perguntar sobre o conjunto</p>
+              <p className="text-[12px] text-slate-600 leading-snug mt-0.5">
+                Use este índice: aqui cada ato é um registro, com espécie, órgão, situação de
+                vigência e as ligações com os atos que o alteraram.
+              </p>
+            </div>
           </div>
         </div>
+        <p className="text-slate-600 text-xs leading-relaxed">
+          São perguntas de naturezas diferentes, e por isso as duas ferramentas convivem.
+          “Onde isto aparece?” é pergunta de busca em texto. “Isto ainda vale?”, “o que foi
+          revogado?” ou “quantos pedidos foram deferidos em 2025?” são perguntas sobre o ato
+          como registro — e é para elas que este portal organiza o acervo, sempre devolvendo o
+          link do boletim de origem para quem precisar do documento oficial.
+        </p>
         <p className="text-slate-500 text-xs">
           O portal não substitui o Boletim de Serviço: ele ajuda a chegar até o que já foi
           publicado. Para citar ou confirmar um ato, a fonte continua sendo o documento oficial.
@@ -329,10 +369,20 @@ export default function Sobre() {
       </Secao>
 
       <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Por que este portal existe">
+        {/* A data certa é 2002 para o PDF, e ela não é a data em que o Boletim
+            passou a existir nem a em que passou a ser público — ver a nota na
+            seção "Publicar é importante. Encontrar também.". As edições de
+            1996 a 2001 no acervo são digitalizações, e é por isso que o OCR
+            delas é pior: são papel escaneado, não PDF de origem. */}
         <p>
-          O Boletim de Serviço da UFF é publicado desde 2001 em PDF, um arquivo por edição, sem
-          versão estruturada. Consultar esse acervo significava abrir boletim por boletim
-          {n?.boletins ? <> — {fmt(n.boletins)} arquivos — </> : ' '}e procurar à mão.
+          O Boletim de Serviço da UFF sai em PDF desde 2002, um arquivo por edição, sem
+          versão estruturada; as edições de 1996 a 2001 foram digitalizadas depois.
+          Quando este portal nasceu, consultar esse acervo significava abrir boletim por boletim
+          {n?.boletins ? <> — {fmt(n.boletins)} arquivos — </> : ' '}e procurar à mão; desde
+          agosto de 2026 a busca oficial faz busca em texto completo, e essa parte do problema
+          deixou de existir. O que continua sem resposta ali é o que exige o ato como{' '}
+          <strong>registro</strong>, e não como página de PDF: se ainda vale, o que o alterou,
+          e quantos são.
         </p>
         <p>
           A necessidade ficou concreta com o RSC (Reconhecimento de Saberes e Competências, Decreto
@@ -735,6 +785,21 @@ export default function Sobre() {
           outros <strong>5.205</strong>. É diferença entre <em>não foi publicado</em> e{' '}
           <em>não está acessível</em>, e as duas coisas não podem virar a mesma no relatório de
           ninguém. Medido em 17/08/2026; link quebrado na origem pode voltar.
+        </p>
+        {/* Informação da própria área de documentação (18/08/2026): há boletim
+            até 2001 que não está disponível on-line, e existe caminho para
+            consultar presencialmente. Isto não é limite DO PORTAL — é da
+            origem — e por isso vem com o endereço de quem resolve, não com um
+            pedido de desculpas nosso. */}
+        <p>
+          <strong>Antes de 2002 o acervo é mais fino, e há lacuna na origem.</strong> As edições
+          de 1996 a 2001 foram digitalizadas depois, e{' '}
+          <strong>alguns boletins publicados até 2001 não estão disponíveis</strong> on-line. Se
+          o boletim que você procura for desse período e não aparecer aqui nem no site oficial,
+          a consulta presencial pode ser possível: escreva para{' '}
+          <a href="mailto:atendimento.car.sdc@id.uff.br"
+            className="text-blue-700 underline font-semibold">atendimento.car.sdc@id.uff.br</a>{' '}
+          (Coordenação de Arquivos / Superintendência de Documentação da UFF).
         </p>
         <Figura
           arquivo="4-teia-de-relacoes.svg"
