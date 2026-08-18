@@ -1,9 +1,10 @@
 import React from 'react';
-import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare, Scale } from 'lucide-react';
+import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare, Scale, Workflow } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { linksEmail } from '../ui/linksEmail';
 import { ANO_INICIO_ACERVO } from '../../config';
 import { AJUDA } from '../help/ajudaConteudo';
+import CicloDaExtracao from './CicloDaExtracao';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
 
 const ANO_ATUAL = new Date().getFullYear();
@@ -593,6 +594,14 @@ export default function Sobre() {
           afirmação é a MEDIÇÃO: cada exemplo abaixo é um número que existe
           porque alguém conferiu contra o acervo, e vários deles REPROVARAM a
           ideia que os motivou. É esse o esforço, e é ele que dá para provar. */}
+      {/* O CICLO, COMO INFOGRÁFICO VIVO — o desafio que o Boletim entrega e o
+          que o portal consegue fazer com ele. Substitui infográfico gerado como
+          imagem: imagem tem os números digitados, e foi assim que a figura da
+          grade de abas ficou mostrando doze painéis num portal de quinze. */}
+      <Secao icon={<Workflow className="w-4 h-4" />} titulo="Do PDF ao dado: o ciclo">
+        <CicloDaExtracao />
+      </Secao>
+
       <Secao icon={<Scale className="w-4 h-4" />} titulo="O que custou chegar a estes números">
         <p>
           A parte cara deste projeto não é ler os boletins — a máquina faz isso em minutos. É
