@@ -1,4 +1,5 @@
 import React from 'react';
+import { EMAIL_ARQUIVO } from '../ui/AvisoAcervoAntigo';
 
 // Ajuda contextual: uma entrada por aba, aberta pelo "?" do cabeçalho.
 //
@@ -104,7 +105,11 @@ export const AJUDA: Record<string, AjudaAba> = {
       tente só o sobrenome.</>,
     cuidado: <>A lista mostra os primeiros resultados para a tela não travar — se o seu ato não
       apareceu, refine a busca em vez de rolar. E o documento oficial é sempre o <B>PDF do
-      Boletim</B>, cujo link está em cada ato.</>,
+      Boletim</B>, cujo link está em cada ato. <B>Procurando algo até 2001?</B> Alguns boletins
+      desse período não estão disponíveis on-line — é lacuna na origem, não deste portal. Para
+      verificar a possibilidade de consulta presencial, escreva para{' '}
+      <a href={`mailto:${EMAIL_ARQUIVO}`} className="text-blue-700 underline font-semibold">
+        {EMAIL_ARQUIVO}</a> (Coordenação de Arquivos da UFF).</>,
   },
 
   relacoes: {

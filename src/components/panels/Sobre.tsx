@@ -6,6 +6,7 @@ import { ANO_INICIO_ACERVO } from '../../config';
 import { AJUDA } from '../help/ajudaConteudo';
 import CicloDaExtracao from './CicloDaExtracao';
 import { RecordCard, RecordCardList, DesktopTable } from '../ui/RecordCard';
+import { AvisoAcervoAntigo } from '../ui/AvisoAcervoAntigo';
 
 const ANO_ATUAL = new Date().getFullYear();
 
@@ -299,15 +300,15 @@ export default function Sobre() {
             data — corrigido em 18/08/2026 a pedido da gestora da área de
             documentação (biblioteconomia/arquivologia). O Boletim de Serviço
             SEMPRE foi público: publicidade é requisito do ato administrativo,
-            não uma política que começou num ano. O que tem data é a
-            DISPONIBILIZAÇÃO ON-LINE (2002, quando passou a sair em PDF; de
-            1996 a 2001 os boletins foram digitalizados depois).
-            Confundir as duas coisas sugere que antes de 2001 havia sigilo,
-            que é o oposto do que aconteceu. */}
+            não uma política que começou num ano. Confundir isso com a data em
+            que ele entrou na internet sugere que antes havia sigilo, que é o
+            oposto do que aconteceu.
+            Aqui fica só a menção; formato, datas e o contato para boletim não
+            localizado vivem na seção "O acervo: o que está disponível, e desde
+            quando", logo abaixo. Não repita os números nesta seção. */}
         <p>
-          O Boletim de Serviço sempre foi público — publicidade é requisito do ato
-          administrativo, não uma política que começou em algum ano. On-line, ele está
-          disponível desde 2002. O que faltava era o outro lado: consultar
+          O Boletim de Serviço sempre foi público, e está on-line desde 2002 (detalhe na
+          seção seguinte). O que faltava era o outro lado: consultar
           {n?.boletins ? <> {fmt(n.boletins)} </> : ' milhares de '}arquivos sem índice entre eles
           transforma uma pergunta simples em trabalho manual.
         </p>
@@ -368,6 +369,44 @@ export default function Sobre() {
         </p>
       </Secao>
 
+      {/* ⚠️ ESTE BLOCO REÚNE, EM UM LUGAR SÓ, O QUE A ÁREA DE DOCUMENTAÇÃO
+          (biblioteconomia/arquivologia) informou em 18/08/2026 sobre a
+          disponibilidade do acervo. Antes os quatro fatos estavam corretos,
+          mas espalhados por três seções — cada um colado à frase que ele
+          corrigia. O custo era prático: quem não achava um boletim de 1999 só
+          encontrava o e-mail de consulta presencial se descesse até a terceira
+          seção, e é justamente essa pessoa que precisa dele.
+          Regra para quem editar: fato sobre DISPONIBILIDADE (desde quando,
+          em que formato, o que falta, a quem recorrer) mora aqui. As outras
+          seções podem citar, não repetir. */}
+      <Secao icon={<BookMarked className="w-4 h-4" />} titulo="O acervo: o que está disponível, e desde quando">
+        <p>
+          <strong>O Boletim de Serviço sempre foi público.</strong> Publicidade é requisito do
+          ato administrativo — não é uma política que começou em algum ano. O que tem data é a
+          <strong> disponibilização on-line</strong>, e ela vem de <strong>2002</strong>.
+        </p>
+        <dl className="grid sm:grid-cols-2 gap-2.5 pt-0.5">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <dt className="text-[13px] font-bold text-slate-700">De 2002 em diante</dt>
+            <dd className="text-[12px] text-slate-600 leading-snug mt-0.5">
+              Os boletins passaram a ser publicados em <strong>PDF</strong>, um arquivo por
+              edição.
+            </dd>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <dt className="text-[13px] font-bold text-slate-700">De 1996 a 2001</dt>
+            <dd className="text-[12px] text-slate-600 leading-snug mt-0.5">
+              As edições foram <strong>digitalizadas</strong> depois — por isso o texto desse
+              período é reconhecido com menos precisão.
+            </dd>
+          </div>
+        </dl>
+        <AvisoAcervoAntigo />
+        <p className="text-slate-500 text-xs">
+          Informação da área de documentação da UFF, 18/08/2026.
+        </p>
+      </Secao>
+
       <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Por que este portal existe">
         {/* A data certa é 2002 para o PDF, e ela não é a data em que o Boletim
             passou a existir nem a em que passou a ser público — ver a nota na
@@ -375,8 +414,7 @@ export default function Sobre() {
             1996 a 2001 no acervo são digitalizações, e é por isso que o OCR
             delas é pior: são papel escaneado, não PDF de origem. */}
         <p>
-          O Boletim de Serviço da UFF sai em PDF desde 2002, um arquivo por edição, sem
-          versão estruturada; as edições de 1996 a 2001 foram digitalizadas depois.
+          O Boletim de Serviço não tem versão estruturada: é um arquivo por edição.
           Quando este portal nasceu, consultar esse acervo significava abrir boletim por boletim
           {n?.boletins ? <> — {fmt(n.boletins)} arquivos — </> : ' '}e procurar à mão; desde
           agosto de 2026 a busca oficial faz busca em texto completo, e essa parte do problema
@@ -785,21 +823,6 @@ export default function Sobre() {
           outros <strong>5.205</strong>. É diferença entre <em>não foi publicado</em> e{' '}
           <em>não está acessível</em>, e as duas coisas não podem virar a mesma no relatório de
           ninguém. Medido em 17/08/2026; link quebrado na origem pode voltar.
-        </p>
-        {/* Informação da própria área de documentação (18/08/2026): há boletim
-            até 2001 que não está disponível on-line, e existe caminho para
-            consultar presencialmente. Isto não é limite DO PORTAL — é da
-            origem — e por isso vem com o endereço de quem resolve, não com um
-            pedido de desculpas nosso. */}
-        <p>
-          <strong>Antes de 2002 o acervo é mais fino, e há lacuna na origem.</strong> As edições
-          de 1996 a 2001 foram digitalizadas depois, e{' '}
-          <strong>alguns boletins publicados até 2001 não estão disponíveis</strong> on-line. Se
-          o boletim que você procura for desse período e não aparecer aqui nem no site oficial,
-          a consulta presencial pode ser possível: escreva para{' '}
-          <a href="mailto:atendimento.car.sdc@id.uff.br"
-            className="text-blue-700 underline font-semibold">atendimento.car.sdc@id.uff.br</a>{' '}
-          (Coordenação de Arquivos / Superintendência de Documentação da UFF).
         </p>
         <Figura
           arquivo="4-teia-de-relacoes.svg"

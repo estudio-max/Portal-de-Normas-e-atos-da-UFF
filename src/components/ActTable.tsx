@@ -9,6 +9,7 @@ import { ActListCard } from './acts/ActListCard';
 import { PageHeader } from './ui/PageHeader';
 import { FiltrosAvancados, type CampoAvancado } from './acts/FiltrosAvancados';
 import { agrupaPorClasse, especie, ROTULO_CLASSE } from '../lib/especies';
+import { AvisoAcervoAntigo } from './ui/AvisoAcervoAntigo';
 
 const ORDENACOES = [
   { valor: 'data_ato', rotulo: 'Data' },
@@ -277,7 +278,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
           {semResultadoAinda ? (
             <p className="py-10 text-center text-[13px] text-[#4A5568]">Buscando atos…</p>
           ) : vazio ? (
-            <EstadoVazio temFiltro={chips.length > 0} onLimpar={limpar} />
+            <EstadoVazio temFiltro={chips.length > 0} onLimpar={limpar} anoFiltrado={ano} />
           ) : (
             resp?.atos.map(a => <ActListCard key={a.id} act={a} onOpen={abrir} />)
           )}
@@ -306,7 +307,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
                   Buscando atos…
                 </td></tr>
               ) : vazio ? (
-                <tr><td colSpan={7} className="py-4"><EstadoVazio temFiltro={chips.length > 0} onLimpar={limpar} /></td></tr>
+                <tr><td colSpan={7} className="py-4"><EstadoVazio temFiltro={chips.length > 0} onLimpar={limpar} anoFiltrado={ano} /></td></tr>
               ) : resp?.atos.map(a => (
                 <tr key={a.id} className="hover:bg-[#F0F7F0]/50">
                   <td className="px-4 py-3.5 align-top">
@@ -397,7 +398,15 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
 /** Estado vazio: explica o que aconteceu e oferece a saída. Um "Nenhum
  *  resultado" seco deixa a pessoa sem saber se errou o termo ou se o acervo
  *  não tem aquilo. */
-function EstadoVazio({ temFiltro, onLimpar }: { temFiltro: boolean; onLimpar: () => void }) {
+function EstadoVazio({ temFiltro, onLimpar, anoFiltrado }: {
+  temFiltro: boolean; onLimpar: () => void; anoFiltrado?: string;
+}) {
+  // O aviso do arquivo aparece SEMPRE que a busca não achou nada — é aqui que
+  // a pessoa está quando precisa dele, e não na aba Sobre. Quando o filtro de
+  // ano é anterior a 2002, ele deixa de ser lembrete e passa a ser a resposta
+  // mais provável: nesse período há boletim que não está on-line em lugar
+  // nenhum, e insistir na busca não resolve.
+  const periodoAntigo = !!anoFiltrado && anoFiltrado !== 'todos' && Number(anoFiltrado) <= 2001;
   return (
     <div className="px-4 py-12 text-center">
       <AlertCircle className="mx-auto mb-3 h-7 w-7 text-[#64748B]" />
@@ -407,6 +416,12 @@ function EstadoVazio({ temFiltro, onLimpar }: { temFiltro: boolean; onLimpar: ()
           ? 'Tente remover um dos filtros ativos, ampliar o intervalo de anos ou usar menos palavras na busca.'
           : 'Tente usar menos palavras, ou buscar pelo número do ato em vez da ementa.'}
       </p>
+      {periodoAntigo && (
+        <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-amber-800">
+          Você filtrou por <strong>{anoFiltrado}</strong>: parte do acervo desse período foi
+          digitalizada depois, e alguns boletins não estão disponíveis on-line.
+        </p>
+      )}
       {temFiltro && (
         <button
           onClick={onLimpar}
@@ -415,6 +430,7 @@ function EstadoVazio({ temFiltro, onLimpar }: { temFiltro: boolean; onLimpar: ()
           Limpar filtros
         </button>
       )}
+      <AvisoAcervoAntigo />
     </div>
   );
 }
