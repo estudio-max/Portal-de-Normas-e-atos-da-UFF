@@ -8,10 +8,11 @@ import { UffAct } from '../types';
 import { ActListCard } from './acts/ActListCard';
 import { PageHeader } from './ui/PageHeader';
 import { FiltrosAvancados, type CampoAvancado } from './acts/FiltrosAvancados';
+import { agrupaPorClasse, especie, ROTULO_CLASSE } from '../lib/especies';
 
 const ORDENACOES = [
   { valor: 'data_ato', rotulo: 'Data' },
-  { valor: 'tipo', rotulo: 'Tipo e número' },
+  { valor: 'tipo', rotulo: 'Espécie e número' },
   { valor: 'sigla', rotulo: 'Órgão emissor' },
   { valor: 'status', rotulo: 'Status' },
 ];
@@ -74,7 +75,7 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
   const chips = useMemo(() => {
     const lista: { chave: string; rotulo: string; limpar: () => void }[] = [];
     if (busca) lista.push({ chave: 'busca', rotulo: `Busca: ${busca}`, limpar: () => setBusca('') });
-    if (tipo !== 'todos') lista.push({ chave: 'tipo', rotulo: `Tipo: ${tipo}`, limpar: () => setTipo('todos') });
+    if (tipo !== 'todos') lista.push({ chave: 'tipo', rotulo: `Espécie: ${tipo}`, limpar: () => setTipo('todos') });
     if (ano !== 'todos') lista.push({ chave: 'ano', rotulo: `Ano: ${ano}`, limpar: () => setAno('todos') });
     if (status !== 'todos') lista.push({
       chave: 'status',
@@ -158,10 +159,22 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className={rotuloCampo} htmlFor="filtro-tipo">Tipo</label>
+            {/* "Espécie", não "tipo": é o termo do Manual de Atos e
+                Comunicações Oficiais da UFF, e o <optgroup> mostra a distinção
+                que o Manual faz entre ato normativo e ato ordinário — antes as
+                duas classes vinham na mesma lista corrida. Ver src/lib/especies.ts. */}
+            <label className={rotuloCampo} htmlFor="filtro-tipo">Espécie</label>
             <select id="filtro-tipo" value={tipo} onChange={e => setTipo(e.target.value)} className={selectCampo}>
-              <option value="todos">Todos</option>
-              {filtros.tipos.map(x => <option key={x} value={x}>{x}</option>)}
+              <option value="todos">Todas</option>
+              {agrupaPorClasse<string>(filtros.tipos, x => x).map(({ classe, itens }) => (
+                <optgroup key={classe} label={ROTULO_CLASSE[classe]}>
+                  {itens.map(x => (
+                    <option key={x} value={x}>
+                      {x}{especie(x).descontinuadaEm ? ' (até ' + especie(x).descontinuadaEm + ')' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
           </div>
           <div>
@@ -273,11 +286,11 @@ export default function ActTable({ buscaGlobal = '' }: { buscaGlobal?: string })
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[900px] border-collapse text-left">
             <caption className="sr-only">
-              Atos e normas encontrados, com tipo, ementa, órgão emissor, data e situação de vigência.
+              Atos e normas encontrados, com espécie, ementa, órgão emissor, data e situação de vigência.
             </caption>
             <thead>
               <tr className="border-b border-[#E2E8F0] bg-[#F7FAFC] text-[12px] font-semibold uppercase tracking-wide text-[#4A5568]">
-                <th scope="col" className="px-4 py-3">Tipo e número</th>
+                <th scope="col" className="px-4 py-3">Espécie e número</th>
                 <th scope="col" className="px-4 py-3">Ementa</th>
                 <th scope="col" className="w-28 px-4 py-3">Órgão</th>
                 <th scope="col" className="w-28 px-4 py-3">Data</th>

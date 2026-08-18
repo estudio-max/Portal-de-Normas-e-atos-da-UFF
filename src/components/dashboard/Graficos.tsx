@@ -281,7 +281,7 @@ export function ComposicaoDoBoletim({ atos }: { atos: UffAct[] }) {
         </div>
       </div>
 
-      <TabelaDados titulo="a composição deste boletim" colunas={['Tipo de ato', 'Atos']}
+      <TabelaDados titulo="a composição deste boletim" colunas={['Espécie', 'Atos']}
         linhas={tipos.sort((a, b) => b[1] - a[1])} />
     </div>
   );

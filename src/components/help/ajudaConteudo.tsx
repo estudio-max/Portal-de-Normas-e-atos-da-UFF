@@ -87,7 +87,11 @@ export const AJUDA: Record<string, AjudaAba> = {
     passos: [
       <>Digite na busca o que você tem em mãos: o número da portaria, uma palavra da ementa, o
         número do processo SEI ou o nome de alguém.</>,
-      <>Estreite com <B>Tipo</B>, <B>Ano</B> e <B>Status</B>, que ficam logo abaixo da busca.</>,
+      <>Estreite com <B>Espécie</B>, <B>Ano</B> e <B>Status</B>, que ficam logo abaixo da busca.
+        A lista de espécies vem separada em <B>atos normativos</B> (portaria, resolução,
+        instrução normativa — os que estabelecem norma) e <B>atos ordinários</B> (determinação
+        de serviço, decisão, edital — os que dão execução, registram ou comunicam), como
+        classifica o Manual de Atos e Comunicações Oficiais da UFF.</>,
       <>Órgão emissor, nome, matrícula, processo e os dois recortes (“só com relações”, “só com
         processo”) estão em <B>Mais filtros</B>, no painel que abre à direita.</>,
       <>Cada filtro que você aplica vira uma <B>etiqueta</B> abaixo dos campos. Clique nela para
@@ -144,7 +148,7 @@ export const AJUDA: Record<string, AjudaAba> = {
     passos: [
       <>Comece pelo calendário de publicação: ele mostra os picos do ano (concurso, início de
         semestre, fim de exercício).</>,
-      <>Veja os órgãos que mais publicam e a composição do acervo por tipo de ato.</>,
+      <>Veja os órgãos que mais publicam e a composição do acervo por espécie documental.</>,
       <>Desça até a rotatividade de chefias para ver quais cadeiras mais trocam de titular.</>,
     ],
     cuidado: <>É um panorama do que está <B>indexado</B>, não um relatório oficial de gestão.
@@ -468,7 +472,7 @@ export const AJUDA: Record<string, AjudaAba> = {
         vez de afirmar que a UFF atua num tema, apontar em que documento isso está escrito.</>,
     ],
     passos: [
-      <>Clique numa ODS para ver os atos que a sustentam.</>,
+      <>Clique num ODS para ver os atos que o sustentam.</>,
       <>Use os botões de <B>vínculo</B> dentro dela. O que responde “o que a UFF de fato
         institucionalizou aqui?” é <B>Proposta</B> — o ato fundador.</>,
       <>Cada linha traz a meta em que se ancora e a justificativa da classificação.</>,
@@ -477,7 +481,7 @@ export const AJUDA: Record<string, AjudaAba> = {
       hídricos não é a política hídrica da universidade, e ratificar um convênio não é propor
       uma política de cooperação. Somar tudo num número só inflaria o resultado.</>,
     cuidado: <>A classificação é <B>assistida por computador, com curadoria humana</B>, e não é
-      um relatório oficial da UFF. ODS sem evidência aparecem <B>vazias de propósito</B>: a
+      um relatório oficial da UFF. ODS sem evidência aparecem <B>vazios de propósito</B>: a
       produção normativa real é desigual, e forçar equilíbrio seria fabricar evidência.</>,
   },
 

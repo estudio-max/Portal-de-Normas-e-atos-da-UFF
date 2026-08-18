@@ -3,6 +3,7 @@ import { BarChart3, Loader2, Info, TrendingUp, Sparkles, Building2, CalendarDays
 import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 import { EstruturaGovernanca } from '../insights/EstruturaGovernanca';
+import { agrupaPorClasse, especie, ROTULO_CLASSE } from '../../lib/especies';
 
 // Aba "Insights": painéis analíticos sobre o acervo indexado do Boletim de
 // Serviço. Tudo é agregação do que já está no banco (nada inventado): ritmo de
@@ -168,10 +169,16 @@ export default function InsightsApi() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 [&>*]:min-w-0">
-            {/* Composição por tipo */}
-            <Card titulo="Composição por tipo de ato" icone={<BarChart3 className="w-4 h-4 text-yellow-500" />}
-              sub="Que instrumentos normativos a UFF mais usa.">
-              <BarrasSimples dados={data.porTipo.slice(0, 8).map(t => ({ rotulo: t.tipo, n: t.n }))} cor={P.tipo} total={k.total} />
+            {/* ⚠️ ESTE CARD DIZIA "instrumentos normativos", E O ITEM DO TOPO
+                NÃO É UM. Determinação de Serviço (50.025 no acervo) é ato
+                ORDINÁRIO pelo Manual, não normativo — a lista corrida punha as
+                duas classes lado a lado e sugeria que o acervo é, na maior
+                parte, norma. Ele não é: a maior fatia é ato ordinário, e essa
+                é uma leitura diferente do que a UFF publica. Corrigido em
+                18/08/2026 com a taxonomia de src/lib/especies.ts. */}
+            <Card titulo="Composição por espécie" icone={<BarChart3 className="w-4 h-4 text-yellow-500" />}
+              sub="As espécies documentais que a UFF mais publica, separadas como o Manual as separa: normativas explicitam norma; ordinárias dão execução, registram ou comunicam.">
+              <BarrasPorClasse dados={data.porTipo} cor={P.tipo} total={k.total} />
             </Card>
 
             {/* Vigência */}
@@ -485,6 +492,61 @@ function BarrasSimples({ dados, cor, total }: { dados: { rotulo: string; n: numb
           <span className="w-9 text-right font-bold text-slate-700 shrink-0">{fmtN(d.n)}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---- Composição por espécie, agrupada como o Manual agrupa -----------------
+// Mostra TODAS as espécies, não as 8 primeiras: com o agrupamento, cortar a
+// lista escondia classe inteira — as normativas menores caíam fora e o card
+// passava a impressão de que só existem atos ordinários.
+function BarrasPorClasse({ dados, cor, total }:
+  { dados: { tipo: string; n: number }[]; cor: string; total: number }) {
+  const grupos = agrupaPorClasse(dados, d => d.tipo);
+  const max = Math.max(1, ...dados.map(d => d.n));
+  return (
+    <div className="space-y-3">
+      {grupos.map(({ classe, itens }) => {
+        const soma = itens.reduce((s, d) => s + d.n, 0);
+        return (
+          <div key={classe}>
+            <div className="flex items-baseline justify-between gap-2 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                {ROTULO_CLASSE[classe]}
+              </span>
+              <span className="text-[11px] text-slate-400 tabular-nums">
+                {fmtN(soma)} · {pct(soma, total)}%
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {itens.map(d => {
+                const e = especie(d.tipo);
+                return (
+                  <div key={d.tipo} className="flex items-center gap-2 text-[12px]"
+                    title={`${d.tipo}: ${fmtN(d.n)} (${pct(d.n, total)}%)`
+                      + (e.descontinuadaEm ? ` — descontinuada; último ato em ${e.descontinuadaEm}` : '')
+                      + (e.nota ? ` — ${e.nota}` : '')}>
+                    <span className="w-32 text-right text-slate-600 font-semibold truncate shrink-0">
+                      {d.tipo}
+                    </span>
+                    <div className="flex-1 h-3.5 rounded-sm">
+                      <div className="h-full rounded-sm"
+                        style={{ width: `${(d.n / max) * 100}%`, background: cor, opacity: e.descontinuadaEm ? 0.45 : 1 }} />
+                    </div>
+                    {/* A espécie descontinuada continua no gráfico, esmaecida e
+                        datada: ela É parte do acervo histórico, e sumir com ela
+                        faria o total não fechar. */}
+                    {e.descontinuadaEm && (
+                      <span className="text-[10px] text-slate-400 shrink-0">até {e.descontinuadaEm}</span>
+                    )}
+                    <span className="w-9 text-right font-bold text-slate-700 shrink-0 tabular-nums">{fmtN(d.n)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
