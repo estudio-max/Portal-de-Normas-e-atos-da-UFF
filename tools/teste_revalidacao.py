@@ -318,6 +318,27 @@ CASOS += [
       "instituicao": "Kth - Kungliga Tekniska Högskolan", "pais": "Suécia"}),
 ]
 
+# 18/08/2026: reportado que a aba listava "École de Hautes Études En Sciences
+# Sociales" (sem o "s") ao lado da grafia correta, como se fossem duas
+# instituicoes. Sao a EHESS, e o nome oficial leva "des". Tabela CURADA, nao
+# fusao por similaridade -- o ultimo caso trava justamente isso: nome parecido
+# que NAO esta na tabela tem de passar intacto.
+EHESS_SEM_S = """Art. 1º - Deferir a solicitação de Revalidação do Diploma, nível
+Graduação de Sociologia, obtido por Fulano de Tal, junto a Ecole de Hautes
+Études en Sciences Sociales, França, nos termos da Resolução 3.790/2024."""
+
+# Nome PARECIDO com um da tabela, mas ausente dela: tem de sair como veio.
+OUTRA_INSTITUICAO = """Art. 1º - Deferir a solicitação de Revalidação do Diploma, nível
+Graduação de Sociologia, obtido por Fulano de Tal, junto a Universidad de
+Aquino, Bolívia, nos termos da Resolução 3.790/2024."""
+
+CASOS += [
+    ("EHESS sem o 's' vira a grafia oficial", EHESS_SEM_S,
+     {"instituicao": "École des Hautes Études en Sciences Sociales", "pais": "França"}),
+    ("instituicao fora da tabela passa INTACTA (nao e fusao por similaridade)",
+     OUTRA_INSTITUICAO, {"instituicao": "Universidad de Aquino"}),
+]
+
 falhas = 0
 for rotulo, texto, esperado in CASOS:
     obtido = extrai_revalidacao(texto)

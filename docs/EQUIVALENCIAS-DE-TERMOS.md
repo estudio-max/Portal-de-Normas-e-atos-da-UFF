@@ -160,20 +160,22 @@ Corrigido nos dois lados: `_reval_extrai_pais_parenteses()` em
 casamento da lista legada em `revalidacao_lista_legada.php`) — a extração
 roda ANTES do split por vírgula normal, para o parêntese nunca ser partido.
 
-⚠️ **Pendência aberta, ainda não corrigida:** o nome da instituição às vezes
-sai errado NA FONTE, não na extração — `"École des Hautes Études en Sciences
-Sociales"` (grafia correta) e `"École de Hautes Études en Sciences Sociales"`
-(sem o segundo "s", achado em pelo menos 6 atos reais de anos diferentes)
-convivem no acervo como duas instituições diferentes no painel, quando são a
-mesma. **Isto NÃO é resolução de entidade por similaridade** — a
-`revalidacao_campos.php` já documenta por que isso é perigoso (90% de
-similaridade funde "universidad de aquino" com "universidad del quindío", que
-são instituições diferentes). É canonização de UM erro de digitação
-confirmado e específico, no mesmo espírito de `_REVAL_PAIS_CANON` para país
-("Aústria" -> "Áustria"), não um dicionário de fusão automática. Falta:
-achar todas as instituições com essa mesma classe de variação (grafia com/sem
-uma letra, mesma raiz) e decidir, uma por uma, se é erro de digitação da
-fonte (canoniza) ou nome real diferente (não mexe).
+⚠️ **Corrigido em 18/08/2026 — grafia de instituição.** A aba listava
+`École de Hautes Études en Sciences Sociales` (sem o segundo "s") ao lado da
+grafia correta, como se fossem duas instituições. São a **EHESS**, e o nome
+oficial leva `des`. Medido no acervo: 34 ocorrências com o "s", 8 sem.
+
+A correção é **tabela curada**, uma entrada por erro confirmado — nunca fusão
+por similaridade. O motivo está no cabeçalho de `revalidacao_campos.php`: no
+corte de 90% de similaridade, `universidad de aquino` (Bolívia, 82 pedidos)
+casa com `universidad del quindío` (Colômbia, 1), que são instituições
+diferentes. Fundir por parecença num dado que vai a órgão de controle inventa
+história. Na dúvida, não entra: instituição repetida no painel é ruído
+visível; instituição fundida por engano é registro falso — e os testes dos
+dois lados travam exatamente isso, com um nome parecido que **não** está na
+tabela e tem de passar intacto.
+
+Mesmo espírito de `_REVAL_PAIS_CANON` para `Aústria` → `Áustria`.
 
 ## Aposentadoria
 

@@ -163,7 +163,48 @@ function revalidacao_limpa_instituicao(string $bruto, array $mapa): string {
     foreach (REVALIDACAO_NAO_INSTITUICAO as $palavra) {
         if (strpos(revalidacao_dobra($s), $palavra) !== false) return '';
     }
-    return $s;
+    return revalidacao_instituicao_canon($s);
+}
+
+/**
+ * Correção de grafia de INSTITUIÇÃO — tabela curada, não fusão automática.
+ *
+ * Espelha `_REVAL_INST_CANON` de tools/extrair_boletim.py. Reportado em
+ * 18/08/2026: a aba mostrava "École de Hautes Études En Sciences Sociales" ao
+ * lado de "École Des Hautes Études En Sciences Sociales" como se fossem duas
+ * instituições. São a mesma — a EHESS, cujo nome oficial leva "des". Medido no
+ * acervo: 34 ocorrências com o "s", 8 sem.
+ *
+ * ⚠️ NÃO CONFUNDIR COM RESOLUÇÃO DE ENTIDADE. O cabeçalho deste arquivo já
+ * explica por que fundir por similaridade não pode ser automático (no corte de
+ * 90%, "universidad de aquino" casa com "universidad del quindío", que são
+ * instituições diferentes). Aqui entra erro de grafia CONFIRMADO, um a um, com
+ * o nome oficial conhecido — mesmo espírito de `revalidacao_paises_canon()`
+ * para "Aústria". Na dúvida, não entra: instituição repetida é ruído visível;
+ * instituição fundida por engano é registro falso.
+ */
+function revalidacao_instituicoes_canon(): array {
+    static $i = [
+        'ecole de hautes etudes en sciences sociales'  => 'École des Hautes Études en Sciences Sociales',
+        'ecole des hautes etudes en sciences sociales' => 'École des Hautes Études en Sciences Sociales',
+        'ecole de hautes etudes em sciences sociais'   => 'École des Hautes Études en Sciences Sociales',
+        'ecole des hautes etudes em sciences sociais'  => 'École des Hautes Études en Sciences Sociales',
+        'ecole de hautes etudes em sciences sociales'  => 'École des Hautes Études en Sciences Sociales',
+        'ecole des hautes etudes em sciences sociales' => 'École des Hautes Études en Sciences Sociales',
+        'ecole de hautes etudes de sciences sociales'  => 'École des Hautes Études en Sciences Sociales',
+        'ehess'                                        => 'École des Hautes Études en Sciences Sociales',
+    ];
+    return $i;
+}
+
+/** Aplica a correção de grafia confirmada; devolve o nome como veio quando
+ *  não há entrada para ele. */
+function revalidacao_instituicao_canon(string $nome): string {
+    $n = trim($nome);
+    if ($n === '') return '';
+    $mapa = revalidacao_instituicoes_canon();
+    $k = revalidacao_dobra($n);
+    return $mapa[$k] ?? $n;
 }
 
 /**

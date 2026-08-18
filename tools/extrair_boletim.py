@@ -1997,6 +1997,54 @@ def _reval_extrai_pais_parenteses(bruto):
     return m.group("resto").strip(" .,;"), pais
 
 
+# ⚠️ CORREÇÃO DE GRAFIA DE INSTITUIÇÃO — TABELA CURADA, NÃO FUSÃO AUTOMÁTICA.
+#
+# Reportado em 18/08/2026: a aba mostrava "École de Hautes Études En Sciences
+# Sociales" ao lado de "École Des Hautes Études En Sciences Sociales" como se
+# fossem duas instituições. São a mesma — a EHESS, cujo nome oficial leva
+# "des". Medido no acervo: 34 ocorrências com o "s", 8 sem.
+#
+# ⚠️ ISTO NÃO É RESOLUÇÃO DE ENTIDADE POR SIMILARIDADE, e a diferença é a razão
+# de existir esta tabela em vez de um algoritmo. A medição de 17/08/2026 já
+# mostrou por que o automático não serve aqui: no corte de 90% de similaridade,
+# "universidad de aquino" (Bolívia, 82 pedidos) casa com "universidad del
+# quindío" (Colômbia, 1) — instituições diferentes. Fundir por parecença num
+# dado que vai a órgão de controle inventa história.
+#
+# O que entra aqui: erro de grafia CONFIRMADO, um a um, com o nome oficial
+# conhecido. Mesmo espírito de `_REVAL_PAIS_CANON` para "Aústria" -> "Áustria".
+# Na dúvida sobre se são a mesma instituição, NÃO entra: instituição repetida
+# no painel é ruído visível; instituição fundida por engano é registro falso.
+#
+# A chave é dobrada (minúscula, sem acento) para casar as variantes de acento
+# que a fonte também produz ("Ecole"/"École", "Etudes"/"Études").
+_REVAL_INST_CANON = {
+    "ecole de hautes etudes en sciences sociales":
+        "École des Hautes Études en Sciences Sociales",
+    "ecole des hautes etudes en sciences sociales":
+        "École des Hautes Études en Sciences Sociales",
+    "ecole de hautes etudes em sciences sociais":
+        "École des Hautes Études en Sciences Sociales",
+    "ecole des hautes etudes em sciences sociais":
+        "École des Hautes Études en Sciences Sociales",
+    "ecole de hautes etudes em sciences sociales":
+        "École des Hautes Études en Sciences Sociales",
+    "ecole des hautes etudes em sciences sociales":
+        "École des Hautes Études en Sciences Sociales",
+    "ecole de hautes etudes de sciences sociales":
+        "École des Hautes Études en Sciences Sociales",
+    "ehess": "École des Hautes Études en Sciences Sociales",
+}
+
+
+def _reval_instituicao(bruto):
+    """Nome da instituição, com erro de grafia confirmado corrigido."""
+    nome = limpar(bruto or "").strip(" .,;")
+    if not nome:
+        return ""
+    return _REVAL_INST_CANON.get(_fold(nome).strip(), nome)
+
+
 def _reval_origem(bruto):
     # ⚠️ SEM GUARDA EXTRA além de "existem ≥2 partes separadas por vírgula" —
     # corrigido em 18/08/2026. A versão anterior só confiava no país quando a
@@ -2042,7 +2090,7 @@ def _revalidacao_grad(match):
         "decisao": "Deferido" if match.group("decisao").lower().startswith("defer") else "Indeferido",
         "nivel": nivel,
         "curso": limpar(match.group("curso")).strip(" .,;")[:180],
-        "instituicao": limpar(inst).strip(" .,;")[:180],
+        "instituicao": _reval_instituicao(inst)[:180],
         "pais": pais,
     }
 
@@ -2058,7 +2106,7 @@ def _revalidacao_pos(match):
         "decisao": "Deferido" if match.group("decisao").lower().startswith("defer") else "Indeferido",
         "nivel": nivel,
         "curso": limpar(match.group("curso")).strip(" .,;")[:180],
-        "instituicao": limpar(match.group("inst")).strip(" .,;")[:180],
+        "instituicao": _reval_instituicao(match.group("inst"))[:180],
         "pais": pais,
     }
 
@@ -2076,7 +2124,7 @@ def _revalidacao_parecer(match, decisao):
         "decisao": decisao,
         "nivel": nivel,
         "curso": limpar(match.group("curso")).strip(" .,;")[:180],
-        "instituicao": inst[:180],
+        "instituicao": _reval_instituicao(inst)[:180],
         "pais": pais,
     }
 
@@ -2089,7 +2137,7 @@ def _revalidacao_titulo_legado(match):
         "decisao": "Deferido",
         "nivel": nivel,
         "curso": limpar(match.group("curso")).strip(" “”\"'.,;")[:180],
-        "instituicao": inst[:180],
+        "instituicao": _reval_instituicao(inst)[:180],
         "pais": pais,
     }
 
@@ -2102,7 +2150,7 @@ def _revalidacao_de_item_lista(match):
         "decisao": "Deferido",
         "nivel": nivel,
         "curso": limpar(match.group("curso")).strip(" “”\"'.,;")[:180],
-        "instituicao": inst[:180],
+        "instituicao": _reval_instituicao(inst)[:180],
         "pais": pais,
     }
 

@@ -120,5 +120,24 @@ foreach (['pais', 'curso', 'instituicao'] as $campo) {
     }
 }
 
+// --- grafia de instituicao: tabela CURADA, nao fusao por similaridade ---
+echo "
+-- grafia de instituicao (tabela curada) --
+";
+$OFICIAL = "École des Hautes Études en Sciences Sociales";
+foreach ([
+    ["Ecole de Hautes Etudes en Sciences Sociales", $OFICIAL],
+    ["École de Hautes Études de Sciences Sociales", $OFICIAL],
+    [$OFICIAL, $OFICIAL],
+    // Parecidas com nomes da tabela, mas AUSENTES dela: saem como vieram.
+    // Trava o risco do cabecalho deste arquivo -- no corte de 90% de
+    // similaridade estas duas casam entre si, e sao de paises diferentes.
+    ["Universidad de Aquino", "Universidad de Aquino"],
+    ["Universidad del Quindío", "Universidad del Quindío"],
+] as [$entrada, $esperado]) {
+    $checa("inst-canon: " . mb_substr($entrada, 0, 40),
+           revalidacao_instituicao_canon($entrada), $esperado);
+}
+
 echo "\n", $falhas ? "$falhas FALHA(S)\n" : "TODOS OK\n";
 exit($falhas ? 1 : 0);
