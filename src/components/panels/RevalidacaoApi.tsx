@@ -357,7 +357,31 @@ function ColunasEixo({ serie, rotulo }: {
  *  acaba publicando o símbolo errado de um país. Faixa de cor eu sei conferir;
  *  brasão, não. País fora desta tabela não ganha desenho nenhum — melhor sem
  *  bandeira do que com a bandeira de outro. */
-const BANDEIRAS: Record<string, { cores: string[]; vertical?: boolean; pesos?: number[] }> = {
+type Bandeira = {
+  cores: string[];
+  vertical?: boolean;
+  pesos?: number[];
+  /** Elemento sobre as faixas, para as bandeiras que não são só faixas. */
+  extra?: 'cantaoEstrela' | 'trianguloEstrela' | 'cruzNordica' | 'cruzCentral' | 'uniao';
+  extraCor?: string;
+};
+
+/** BANDEIRAS DESENHADAS, e não emoji.
+ *
+ *  Emoji de bandeira não tem glifo no Windows — sairia "BO", "CU", "PE" no
+ *  lugar do desenho, e é o sistema da máquina de quem mantém o portal.
+ *
+ *  São as bandeiras CIVIS, sem os elementos que eu não sei reproduzir de
+ *  memória com segurança: brasão, sol, folha, águia, roda. Reproduzir um
+ *  brasão de cabeça é como o portal de uma universidade federal acaba
+ *  publicando o símbolo errado de um país. Faixa, cruz, cantão e estrela eu
+ *  sei conferir; brasão, não.
+ *
+ *  A cauda é longa — 51 países no acervo — e não vai fechar. Quem não está
+ *  aqui recebe uma MARCA NEUTRA, não um buraco: espaço vazio na coluna se lê
+ *  como ícone que falhou em carregar, e manda o visitante procurar defeito
+ *  onde há decisão. */
+const BANDEIRAS: Record<string, Bandeira> = {
   'Bolívia': { cores: ['#D52B1E', '#F9E300', '#007934'] },
   'Peru': { cores: ['#D91023', '#FFFFFF', '#D91023'], vertical: true },
   'Colômbia': { cores: ['#FCD116', '#003893', '#CE1126'], pesos: [2, 1, 1] },
@@ -377,19 +401,70 @@ const BANDEIRAS: Record<string, { cores: string[]; vertical?: boolean; pesos?: n
   'Nigéria': { cores: ['#008751', '#FFFFFF', '#008751'], vertical: true },
   'Rússia': { cores: ['#FFFFFF', '#0039A6', '#D52B1E'] },
   'Países Baixos': { cores: ['#AE1C28', '#FFFFFF', '#21468B'] },
+  'Holanda': { cores: ['#AE1C28', '#FFFFFF', '#21468B'] },
   'Áustria': { cores: ['#ED2939', '#FFFFFF', '#ED2939'] },
   'Polônia': { cores: ['#FFFFFF', '#DC143C'] },
   'Indonésia': { cores: ['#CE1126', '#FFFFFF'] },
   'Ucrânia': { cores: ['#0057B7', '#FFD700'] },
+  'Bulgária': { cores: ['#FFFFFF', '#00966E', '#D62612'] },
+  'Iêmen': { cores: ['#CE1126', '#FFFFFF', '#000000'] },
+  'Haiti': { cores: ['#00209F', '#D21034'] },
+  // Faixas corretas; sem a águia (Egito) e sem as estrelas (Síria), pela mesma
+  // regra que deixa de fora os brasões.
+  'Egito': { cores: ['#CE1126', '#FFFFFF', '#000000'] },
+  'Síria': { cores: ['#CE1126', '#FFFFFF', '#000000'] },
+  // Cinco faixas e o triângulo vermelho com a estrela branca no mastro.
+  'Cuba': {
+    cores: ['#002A8F', '#FFFFFF', '#002A8F', '#FFFFFF', '#002A8F'],
+    extra: 'trianguloEstrela', extraCor: '#CF142B',
+  },
+  'Porto Rico': {
+    cores: ['#EF3340', '#FFFFFF', '#EF3340', '#FFFFFF', '#EF3340'],
+    extra: 'trianguloEstrela', extraCor: '#0050F0',
+  },
+  // Treze faixas e o cantão azul. As cinquenta estrelas ficam de fora: em
+  // 20x14 elas não seriam desenho, seriam sujeira — e omitir segue a mesma
+  // regra dos brasões.
+  'Estados Unidos': {
+    cores: ['#B31942', '#FFFFFF', '#B31942', '#FFFFFF', '#B31942', '#FFFFFF',
+            '#B31942', '#FFFFFF', '#B31942', '#FFFFFF', '#B31942', '#FFFFFF', '#B31942'],
+    extra: 'cantaoEstrela', extraCor: '#0A3161',
+  },
+  'Chile': { cores: ['#FFFFFF', '#D52B1E'], extra: 'cantaoEstrela', extraCor: '#0039A6' },
+  'Reino Unido': { cores: ['#012169'], extra: 'uniao' },
+  'Suécia': { cores: ['#006AA7'], extra: 'cruzNordica', extraCor: '#FECC00' },
+  'Finlândia': { cores: ['#FFFFFF'], extra: 'cruzNordica', extraCor: '#003580' },
+  'Noruega': { cores: ['#BA0C2F'], extra: 'cruzNordica', extraCor: '#FFFFFF' },
+  'Dinamarca': { cores: ['#C8102E'], extra: 'cruzNordica', extraCor: '#FFFFFF' },
+  'Suíça': { cores: ['#D52B1E'], extra: 'cruzCentral', extraCor: '#FFFFFF' },
 };
+
+/** Estrela de cinco pontas, em torno de (cx, cy). */
+function estrela(cx: number, cy: number, r: number) {
+  const p: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const raio = i % 2 === 0 ? r : r * 0.382;
+    const a = (Math.PI / 5) * i - Math.PI / 2;
+    p.push(`${(cx + raio * Math.cos(a)).toFixed(2)},${(cy + raio * Math.sin(a)).toFixed(2)}`);
+  }
+  return p.join(' ');
+}
 
 function Bandeira({ pais }: { pais: string }) {
   const b = BANDEIRAS[pais];
-  if (!b) return <span className="inline-block w-5 shrink-0" aria-hidden="true" />;
+  // MARCA NEUTRA para quem não está na tabela — ver o comentário de BANDEIRAS.
+  if (!b) {
+    return (
+      <svg width={20} height={14} viewBox="0 0 20 14" className="shrink-0" aria-hidden="true">
+        <rect x={0.5} y={0.5} width={19} height={13} rx={1.5} fill="none"
+          stroke="var(--chart-grid)" strokeWidth={1} strokeDasharray="2 2" />
+      </svg>
+    );
+  }
   const pesos = b.pesos ?? b.cores.map(() => 1);
   const soma = pesos.reduce((a, x) => a + x, 0);
-  let acc = 0;
   const eixo = b.vertical ? 20 : 14;
+  let acc = 0;
   return (
     <svg width={20} height={14} viewBox="0 0 20 14" className="shrink-0 rounded-[2px]"
       role="img" aria-label={`Bandeira do país: ${pais}`}>
@@ -401,6 +476,40 @@ function Bandeira({ pais }: { pais: string }) {
           ? <rect key={i} x={pos} y={0} width={tam} height={14} fill={c} />
           : <rect key={i} x={0} y={pos} width={20} height={tam} fill={c} />;
       })}
+      {b.extra === 'trianguloEstrela' && (
+        <>
+          <polygon points="0,0 8,7 0,14" fill={b.extraCor} />
+          <polygon points={estrela(2.9, 7, 2.4)} fill="#FFFFFF" />
+        </>
+      )}
+      {b.extra === 'cantaoEstrela' && (
+        <>
+          <rect x={0} y={0} width={8} height={7} fill={b.extraCor} />
+          {pais === 'Chile' && <polygon points={estrela(4, 3.5, 2.2)} fill="#FFFFFF" />}
+        </>
+      )}
+      {b.extra === 'cruzNordica' && (
+        <>
+          <rect x={0} y={5.6} width={20} height={2.8} fill={b.extraCor} />
+          <rect x={6} y={0} width={2.8} height={14} fill={b.extraCor} />
+        </>
+      )}
+      {b.extra === 'cruzCentral' && (
+        <>
+          <rect x={8.4} y={3} width={3.2} height={8} fill={b.extraCor} />
+          <rect x={6} y={5.4} width={8} height={3.2} fill={b.extraCor} />
+        </>
+      )}
+      {b.extra === 'uniao' && (
+        <>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" strokeWidth={3} />
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#C8102E" strokeWidth={1.4} />
+          <rect x={0} y={4.5} width={20} height={5} fill="#FFFFFF" />
+          <rect x={7.5} y={0} width={5} height={14} fill="#FFFFFF" />
+          <rect x={0} y={5.6} width={20} height={2.8} fill="#C8102E" />
+          <rect x={8.6} y={0} width={2.8} height={14} fill="#C8102E" />
+        </>
+      )}
       <rect x={0.25} y={0.25} width={19.5} height={13.5} fill="none"
         stroke="#00000022" strokeWidth={0.5} rx={1} />
     </svg>
