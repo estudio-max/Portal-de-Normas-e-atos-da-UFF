@@ -215,7 +215,7 @@ export default function CooperacaoApi() {
                 detalhe: `${p.pais} — ${p.n} acordo(s)`,
               }))}
               selecionado={pais} aoSelecionar={setPais}
-              cor="#f59e0b" corSelecionada="#b45309" unidade="acordo(s)"
+              cor="#f59e0b" corSelecionada="#b45309" unidade="acordo"
               rotulo={`Mapa-múndi com ${paisesFiltrados.length} países parceiros da UFF.`} />
             <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">
               A silhueta dos continentes é <strong>esquemática</strong> (serve para orientar o olho);

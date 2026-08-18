@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '../../lib/utils';
 import {
   LayoutDashboard,
@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   ChevronDown,
   GraduationCap,
+  X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -85,19 +86,47 @@ const FOOTER_ITEMS: NavItem[] = [
 
 const ITENS_MAIS: NavItem[] = NAV_MAIS.flatMap(grupo => grupo.items);
 
-// A trilha compacta (rail de 64 px) NÃO esconde nada atrás de disclosure: ali
-// não há rótulo para ler, então um "Mais" fechado seria um beco sem saída. Ela
-// lista TODO destino — as primárias, as de "Mais" e as do rodapé —, que é o que
-// a trava de integridade exige e o motivo pelo qual ela existe.
-const compactItems: NavItem[] = [...NAV_PRIMARIO, ...ITENS_MAIS, ...FOOTER_ITEMS];
+// O MENU DO CELULAR. Todo destino aparece, com o NOME ESCRITO, e nenhum fica
+// atrás de disclosure — a versão anterior era uma trilha de 64 px com 18 ícones
+// e nada mais: o nome existia só no `title`, que é dica de mouse e nunca
+// aparece no toque, e no `aria-label`, que só o leitor de tela fala. Quem
+// enxerga e usa o dedo não tinha onde ler o nome de lugar nenhum — descobria
+// tocando e vendo onde caía. Somados, os 18 botões passavam da altura da tela,
+// então os últimos ainda exigiam rolar a barrinha.
+//
+// A completude é ESTRUTURAL, e não uma lista mantida em paralelo: os grupos são
+// espalhados das mesmas três coleções que a coluna do desktop usa, então aba
+// nova entra aqui sozinha. É o que a trava de integridade confere.
+const GRUPOS_MENU: { title: string | null; items: NavItem[] }[] = [
+  { title: null, items: NAV_PRIMARIO },
+  ...NAV_MAIS,
+  { title: 'O portal', items: FOOTER_ITEMS },
+];
+
+/** O nome da aba aberta, para o cabeçalho do celular dizer onde se está.
+ *  Sem ele o visitante só descobre a página pelo conteúdo — e as abas de dados
+ *  se parecem entre si na primeira dobra. */
+export function rotuloDaAba(path: string): string {
+  const todos = [...NAV_PRIMARIO, ...ITENS_MAIS, ...FOOTER_ITEMS];
+  if (path === '') return 'Dashboard';
+  const achado = todos
+    .filter(i => i.id !== '' && path.startsWith(i.id))
+    .sort((a, b) => b.id.length - a.id.length)[0];
+  return achado ? achado.label : 'Inteligência UFF';
+}
 
 interface SidebarProps {
   activePath: string;
   onNavigate: (path: string) => void;
   collapsed?: boolean;
+  /** Só no modo compacto: a gaveta está aberta? */
+  aberto?: boolean;
+  onFechar?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collapsed = false }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activePath, onNavigate, collapsed = false, aberto = false, onFechar,
+}) => {
   const isActive = (id: string) => {
     if (id === '' && activePath === '') return true;
     return activePath.startsWith(id) && id !== '';
@@ -113,6 +142,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
   useEffect(() => {
     if (ativaEmMais) setMaisAberto(true);
   }, [ativaEmMais]);
+
+  // A gaveta é DIÁLOGO: enquanto está aberta, Esc fecha e o fundo não rola.
+  // Sem travar a rolagem do corpo, arrastar na gaveta arrasta a página atrás
+  // dela, e quem fecha volta num ponto que não escolheu.
+  useEffect(() => {
+    if (!collapsed || !aberto) return;
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar?.(); };
+    document.addEventListener('keydown', tecla);
+    const antes = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', tecla);
+      document.body.style.overflow = antes;
+    };
+  }, [collapsed, aberto, onFechar]);
+
+  // O foco entra na gaveta ao abrir. Sem isso, quem navega por teclado ou
+  // leitor de tela continua no botão do cabeçalho e tabula por trás do painel.
+  const gavetaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (collapsed && aberto) gavetaRef.current?.focus();
+  }, [collapsed, aberto]);
 
   // Classe do item de navegação. O item em `destaque` continua sendo um item da
   // lista — não vira botão de ação: ele ganha peso (fundo, borda e ícone na cor
@@ -135,33 +186,60 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePath, onNavigate, collap
     'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-colors text-left';
 
   if (collapsed) {
+    if (!aberto) return null;
+    const irPara = (id: string) => { onNavigate(id); onFechar?.(); };
     return (
-      <aside className="w-16 h-screen bg-white border-r border-[#E2E8F0] flex flex-col items-center py-4 fixed left-0 top-0 z-40 overflow-y-auto">
-        <div className="w-10 h-10 bg-[#006400] rounded-lg flex items-center justify-center mb-6 shrink-0">
-          <span className="text-white font-bold text-sm">U</span>
-        </div>
-        <nav className="flex-1 flex flex-col gap-1 w-full px-2" aria-label="Navegação principal">
-          {compactItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              aria-current={isActive(item.id) ? 'page' : undefined}
-              className={cn(
-                'w-10 h-10 shrink-0 rounded-lg flex items-center justify-center transition-colors',
-                isActive(item.id)
-                  ? 'bg-[#F0F7F0] text-[#1A3A1A]'
-                  : item.destaque
-                    ? 'nav-destaque'
-                    : 'text-[#64748B] hover:bg-gray-50 hover:text-[#4A5568]'
-              )}
-              title={item.label}
-              aria-label={item.label}
-            >
-              {item.icon}
+      <div className="fixed inset-0 z-50 lg:hidden">
+        {/* O fundo escurece e fecha ao toque: é como se sai de um painel destes
+            sem procurar o X. */}
+        <button type="button" aria-label="Fechar o menu"
+          onClick={onFechar}
+          className="absolute inset-0 bg-black/40" />
+        <div ref={gavetaRef} tabIndex={-1} role="dialog" aria-modal="true"
+          aria-label="Navegação do portal"
+          className="absolute inset-y-0 left-0 flex w-[min(20rem,85vw)] flex-col overflow-y-auto bg-white shadow-xl outline-none">
+          <div className="flex items-center gap-3 border-b border-[#E2E8F0] px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#006400]">
+              <span className="text-sm font-bold text-white">U</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold leading-tight text-[#1A202C]">Inteligência UFF</p>
+              <p className="truncate text-[12px] leading-tight text-[#64748B]">Universidade Federal Fluminense</p>
+            </div>
+            <button type="button" onClick={onFechar} aria-label="Fechar o menu"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[#64748B] hover:bg-gray-50">
+              <X size={20} />
             </button>
-          ))}
-        </nav>
-      </aside>
+          </div>
+          <nav className="flex-1 px-3 py-3" aria-label="Navegação principal">
+            {GRUPOS_MENU.map((grupo, gi) => (
+              <div key={grupo.title ?? 'principal'} className={gi === 0 ? '' : 'mt-4'}>
+                {grupo.title && (
+                  <p className="px-3 pb-1 text-[12px] font-bold uppercase tracking-wide text-[#94A3B8]">
+                    {grupo.title}
+                  </p>
+                )}
+                <div className="space-y-0.5">
+                  {grupo.items.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => irPara(item.id)}
+                      aria-current={isActive(item.id) ? 'page' : undefined}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-3 rounded-lg text-[14px] text-left transition-colors',
+                        itemClasse(item),
+                      )}
+                    >
+                      {item.icon}
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
+      </div>
     );
   }
 

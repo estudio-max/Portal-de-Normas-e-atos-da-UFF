@@ -183,5 +183,11 @@ jobs:
       - name: Regressão da revalidação de diplomas
         run: python tools/teste_revalidacao.py
 
+      # Aposentadoria: o Boletim escreve o mesmo fato de quatro jeitos, e um
+      # deles ("Aposentar por invalidez") não tinha padrão — a série publicava
+      # invalidez = 0 em todos os anos. Ver docs/EQUIVALENCIAS-DE-TERMOS.md.
+      - name: Regressão da aposentadoria
+        run: python tools/teste_aposentadoria.py
+
       - name: Regressão do contrato de dados do portal
         run: python tools/teste_dados_portal.py

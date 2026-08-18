@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Wifi, WifiOff, Moon, Sun, ExternalLink, FileText, HelpCircle } from 'lucide-react';
+import { Search, X, Wifi, WifiOff, Moon, Sun, ExternalLink, FileText, HelpCircle, Menu } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { cn } from '../../lib/utils';
 import { ajudaDaAba } from '../help/ajudaConteudo';
+import { rotuloDaAba } from './Sidebar';
 import { AjudaModal } from '../help/AjudaModal';
 import type { Stats } from '../../dataSource';
 
@@ -15,9 +16,12 @@ interface TopBarProps {
   /** A aba aberta agora — a ajuda do "?" é a dela. */
   activePath: string;
   onNavigate: (path: string) => void;
+  /** Só no celular: abre a gaveta de navegação. Ausente no desktop, onde a
+   *  coluna com os nomes já está permanentemente à vista. */
+  aoAbrirMenu?: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle, fotofobia, portalStats, activePath, onNavigate }) => {
+export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle, fotofobia, portalStats, activePath, onNavigate, aoAbrirMenu }) => {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [ajudaAberta, setAjudaAberta] = useState(false);
@@ -59,6 +63,22 @@ export const TopBar: React.FC<TopBarProps> = ({ apiMode, onSearch, onThemeToggle
     // 371 px numa caixa de 256 px e o botão de modo escuro simplesmente ficava
     // fora da tela, sem rolagem que o alcançasse.
     <header className="sticky top-0 z-30 bg-white border-b border-[#E2E8F0] px-4 py-2">
+      {/* ONDE VOCÊ ESTÁ, escrito. No celular a coluna de navegação não fica à
+          vista, então o nome da aba precisa estar no cabeçalho: sem ele, as
+          abas de dados se parecem entre si na primeira dobra e a pessoa só
+          descobre onde caiu depois de ler o conteúdo. */}
+      {aoAbrirMenu && (
+        <div className="mb-2 flex items-center gap-2">
+          <button type="button" onClick={aoAbrirMenu}
+            aria-label="Abrir o menu de navegação" aria-haspopup="dialog"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] text-[#4A5568]">
+            <Menu size={20} />
+          </button>
+          <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-[#1A202C]">
+            {rotuloDaAba(activePath)}
+          </p>
+        </div>
+      )}
       <div className="flex items-center gap-2 sm:gap-3">
       <div className="flex-1 min-w-0 max-w-xl relative">
         <div

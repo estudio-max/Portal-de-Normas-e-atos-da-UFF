@@ -194,6 +194,29 @@ for (const chave of chaves) {
 assert.match(blocoAjuda[1], /Preencha os <B>dois<\/B> campos/,
   'The Meu SIAPE help must tell the user to fill in both SIAPE and name.');
 
+// ---------------------------------------------------------------------------
+// A aba Sobre agrupa TODAS as abas de conteúdo por pergunta. A versão anterior
+// desse bloco era uma FIGURA com a lista escrita à mão, e ela ficou três abas
+// atrás do portal — mostrava doze painéis quando já eram quinze, sem Revalidação
+// nem "O que mudou". Ninguém percebeu até o mantenedor abrir a página.
+//
+// Agora os cartões são montados em tempo de execução, mas o AGRUPAMENTO ainda é
+// uma decisão humana: aba nova precisa entrar num grupo. Esta trava é o que
+// obriga essa decisão a acontecer, em vez de a aba simplesmente sumir da vista.
+// ---------------------------------------------------------------------------
+const sobreTsx = await read('src/components/panels/Sobre.tsx');
+const blocoGrupos = sobreTsx.match(/const GRUPOS[\s\S]*?\n\];/);
+assert.ok(blocoGrupos, 'A aba Sobre deve manter GRUPOS como literal para poder ser conferido.');
+const agrupadas = new Set([...blocoGrupos[0].matchAll(/'([^']*)'/g)]
+  .map(m => m[1])
+  .filter(v => v === '' || abas.includes(v)));
+const semGrupo = abas.filter(a => !['ajuda', 'privacidade', 'sobre'].includes(a)
+  && !agrupadas.has(a));
+assert.deepEqual(semGrupo, [],
+  `Aba de conteúdo fora dos GRUPOS da aba Sobre: ${semGrupo.join(', ')}. ` +
+  'Toda aba precisa aparecer em "O que você pode descobrir" — foi assim que a ' +
+  'Revalidação ficou invisível na página por um dia.');
+
 const ajudaModal = await read('src/components/help/AjudaModal.tsx');
 // showModal() é o que dá armadilha de foco, Esc e camada superior. Abrir pelo
 // atributo `open` renderiza a mesma caixa SEM nada disso — e parece funcionar.
@@ -278,8 +301,12 @@ assert.match(actListCard, /md:hidden/, 'Act list card must be mobile-only.');
 // classe marcadora: a versão anterior procurava `mobile-stack-table`, string que
 // não existia em CSS nenhum, então bastava colá-la num arquivo para o teste
 // passar sem que nada ficasse responsivo.
+// `Sobre.tsx` entrou na lista depois que o painel de decisoes nasceu como
+// tabela crua: no celular as tres colunas ficavam com 75px cada e as linhas
+// com 300px de altura -- texto de duas palavras por linha. A tabela cabia na
+// tela, entao nada acusou; so medindo a linha e que aparece.
 for (const file of ['ChefiasApi.tsx', 'JornadaApi.tsx', 'ComissoesApi.tsx', 'CooperacaoApi.tsx',
-                    'DossieApi.tsx', 'RevalidacaoApi.tsx']) {
+                    'DossieApi.tsx', 'RevalidacaoApi.tsx', 'Sobre.tsx']) {
   const source = await read(`src/components/panels/${file}`);
   assert.match(source, /<RecordCardList/,
     `${file} must render one card per row on mobile.`);
@@ -385,12 +412,31 @@ assert.doesNotMatch(dashboard, /onNavigate\(`atos\/\$\{act\.id\}`\)/, 'Dashboard
 
 const sidebar = await read('src/components/layout/Sidebar.tsx');
 // A navegação foi reduzida às rotas frequentes em 13/08/2026, com o resto sob
-// "Mais". A trilha COMPACTA (rail de 64 px) continua tendo que listar TUDO: ali
-// não há rótulo para ler, então um disclosure fechado seria um beco sem saída —
-// e o destino que mais sumia era o rodapé (Ajuda, Privacidade, Sobre).
-assert.match(sidebar, /const compactItems: NavItem\[\] = \[\.\.\.NAV_PRIMARIO, \.\.\.ITENS_MAIS, \.\.\.FOOTER_ITEMS\];/,
-  'The compact navigation must include the primary, the "Mais" and the footer destinations.');
-assert.match(sidebar, /\{compactItems\.map\(item => \(/, 'The compact navigation must render every compact destination.');
+// "Mais". O MENU DO CELULAR continua tendo que listar TUDO — o destino que mais
+// sumia era o rodapé (Ajuda, Privacidade, Sobre).
+//
+// A trilha de 64px que ele substituiu em 17/08/2026 listava tudo e mesmo assim
+// não servia: eram 18 ícones SEM NOME NENHUM na tela, porque o `title` é dica
+// de mouse e não aparece no toque. Listar não basta; tem de dar para LER.
+// Por isso a asserção agora é sobre os grupos, que carregam o rótulo escrito, e
+// exige que eles venham das MESMAS três coleções da coluna do desktop — assim
+// aba nova entra no menu sozinha, em vez de depender de alguém lembrar.
+assert.match(sidebar, /const GRUPOS_MENU: \{ title: string \| null; items: NavItem\[\] \}\[\] = \[\s*\{ title: null, items: NAV_PRIMARIO \},\s*\.\.\.NAV_MAIS,\s*\{ title: '[^']*', items: FOOTER_ITEMS \},\s*\];/,
+  'The mobile menu must be built from the primary, the "Mais" and the footer destinations.');
+assert.match(sidebar, /\{GRUPOS_MENU\.map\(\(grupo, gi\) => \(/, 'The mobile menu must render every group.');
+// A asserção do NOME tem de olhar só para a gaveta. Escrita contra o arquivo
+// inteiro ela passava sem provar nada: a coluna do desktop tem a mesma
+// marcação, e era ela que satisfazia o teste enquanto a gaveta podia não ter
+// rótulo nenhum. Conferido nas duas pontas depois do recorte.
+const gaveta = sidebar.slice(sidebar.indexOf('if (collapsed) {'),
+                             sidebar.indexOf('<aside className="w-56'));
+assert.ok(gaveta.length > 200, 'The mobile menu block must be findable for inspection.');
+assert.match(gaveta, /<span className="truncate">\{item\.label\}<\/span>/,
+  'The mobile menu must write each destination name on screen, not only in a title attribute.');
+// Menu é diálogo: sem Esc e sem foco entrando nele, quem usa teclado ou leitor
+// de tela fica tabulando por trás do painel aberto.
+assert.match(sidebar, /role="dialog" aria-modal="true"/, 'The mobile menu must be a real dialog.');
+assert.match(sidebar, /if \(e\.key === 'Escape'\) onFechar\?\.\(\);/, 'Escape must close the mobile menu.');
 // Chegar numa aba que mora sob "Mais" — por link colado, pelo cartão de tarefa
 // ou pelo botão "voltar" — e ver a navegação sem NADA selecionado é perder a
 // própria posição. O disclosure abre sozinho nesse caso.

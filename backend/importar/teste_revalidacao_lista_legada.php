@@ -137,10 +137,24 @@ if ($backfill !== false) {
         'insert do backfill inclui ordem',
         preg_match('/INSERT INTO ato_revalidacao\s*\(ato_id,ordem,via,decisao,nivel,curso,instituicao,pais\)/s', $backfill) === 1
     );
+    // A asserção original exigia ADJACÊNCIA literal — `extrair_..._legada($txt);`
+    // colado no `if (!$achados) {`. Isso não é o invariante: o invariante é a
+    // ORDEM. Ela reprovou quando entrou entre os dois o padrão de parecer das
+    // redações de 2011-2017, que também precisa vir antes do singular, e nada
+    // de errado havia acontecido. Agora testa por posição, que é o que importa.
+    $posColetivo = strpos($backfill, 'extrair_revalidacoes_lista_legada($txt)');
+    $posSingular = strpos($backfill, "foreach ([['Graduação', \$RE_GRAD]");
     checa_legada(
         'backfill tenta coletivo antes do fallback singular',
-        preg_match('/\$achados\s*=\s*extrair_revalidacoes_lista_legada\(\$txt\);\s*'
-                 . 'if\s*\(!\$achados\)\s*\{/s', $backfill) === 1
+        $posColetivo !== false && $posSingular !== false && $posColetivo < $posSingular
+    );
+    // O parecer também vem antes do singular: a redação dele contém
+    // "revalidação do diploma de <curso>", que o $RE_GRAD casaria pela metade,
+    // lendo o nome da pessoa como curso.
+    $posParecer = strpos($backfill, '$RE_PARECER, $txt');
+    checa_legada(
+        'backfill tenta o parecer de 2011-2017 antes do fallback singular',
+        $posParecer !== false && $posSingular !== false && $posParecer < $posSingular
     );
     $posDelete = strpos($backfill, '$remove = $pdo->prepare');
     $posLoop = strpos($backfill, 'while ($row = $st->fetch');
