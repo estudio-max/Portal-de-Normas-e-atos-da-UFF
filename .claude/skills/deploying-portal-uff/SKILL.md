@@ -104,16 +104,28 @@ o JSON estático do GitHub).
   primeiro e as de `information_schema` no fim** — é o que
   `backend/db/verificar_inteligencia.sql` faz e por quê.
 
-  Com SSH, as duas armadilhas acima somem: rode a mesma consulta pelo cliente
-  `mysql` (padrão de invocação sem expor a senha em CLAUDE.md § "Acesso SSH")
-  e nem o `SELECT` descartado nem a troca de banco acontecem.
+  Com SSH, as duas armadilhas acima somem: `backend/importar/consulta_cli.php`
+  roda a mesma consulta sem expor a senha (detalhe em CLAUDE.md § "Acesso SSH"),
+  e nem o `SELECT` descartado nem a troca de banco acontecem. Só leitura —
+  recusa qualquer coisa que não seja SELECT/SHOW/DESCRIBE/EXPLAIN.
 
-- **`pacote_delta.py` compara por HTTP porque foi escrito sem SSH**, e isso lhe
-  dá um ponto cego que o próprio script admite: não cobre o `.htaccess`
-  (Apache responde 403 à comparação HTTP nele). Com SSH, um `ssh ... ls -1
-  assets/` faz a mesma comparação sem round-trip HTTP por arquivo e alcança o
-  `.htaccess` também — mas isso é uma reescrita não feita ainda; o script
-  atual continua a fonte de verdade até alguém trocar por ela.
+- **`pacote_delta.py` ganhou modo SSH em 18/08/2026** (`--modo ssh`, o padrão
+  agora — `--modo http` continua existindo, para quando não houver chave ou
+  depois da migração). Um `find | sha256sum` só no servidor, uma conexão,
+  cobre o `.htaccess` (a comparação por HTTP não alcançava — 403 no próprio
+  arquivo) e **lista o que está no servidor e não está no `dist/` local**, que
+  antes só se descobria baixando a pasta inteira à mão. Rodando contra a
+  produção real achou 3 órfãos de verdade (`LEIA-ME.md`, `server.cjs`,
+  `server.cjs.map` — resíduo do dev server antigo). Não apaga sozinho —
+  lista, e quem opera decide mover para quarentena.
+
+  Dois bugs só apareceram testando contra o servidor real, não em teoria:
+  `.lstrip('./')` remove QUALQUER combinação dos caracteres dados, não o
+  prefixo literal — `'./.htaccess'.lstrip('./')` devolvia `'htaccess'`,
+  comendo o ponto do nome; e `sys.exit(str)` escreve em `stderr`, que não
+  estava envolvido em UTF-8 como o `stdout` — mensagem de erro com acento
+  saía corrompida no console do Windows. Os dois só se veem correndo o
+  caminho de falha de propósito, não só o caminho feliz.
 
 ## Empacotando um deploy de dados (padrão a repetir)
 

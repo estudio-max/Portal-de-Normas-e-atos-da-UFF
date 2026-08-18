@@ -258,26 +258,37 @@ vez de uma conexão por comando. `ControlMaster`/`ControlPersist` no
 "Connection reset by peer" e não reconecta sozinha; teste sem eles primeiro
 (confirmado no dia em que este acesso foi criado).
 
-**Consulta ao banco sem tocar em segredo:** o `mysql` client lê a senha da
-variável `MYSQL_PWD`, preenchida por um PHP que lê o `config.php` do próprio
-servidor — a senha nunca aparece em comando, log ou saída de terminal:
+**Consulta ao banco sem tocar em segredo:** `backend/importar/consulta_cli.php`
+(deploy: `scp` para `importar/` no servidor, igual aos outros `.php` de
+manutenção). Ele lê o `config.php` do próprio servidor e conecta — a senha
+nunca aparece em comando, log ou saída de terminal:
 
 ```bash
-ssh hostgator-fanara 'cd ~/inteligencia.fanara.com.br/api && php -r "
-\$c = require \"config.php\";
-\$d = \$c[\"db\"];
-putenv(\"MYSQL_PWD=\" . \$d[\"senha\"]);
-system(sprintf(\"mysql -u %s -h %s %s -e %s\",
-  escapeshellarg(\$d[\"usuario\"]), escapeshellarg(\$d[\"host\"]), escapeshellarg(\$d[\"nome\"]),
-  escapeshellarg(\"SELECT COUNT(*) FROM ato;\")));
-"'
+ssh hostgator-fanara 'php ~/inteligencia.fanara.com.br/importar/consulta_cli.php "SELECT COUNT(*) FROM ato;"'
 ```
+
+**Só SELECT/SHOW/DESCRIBE/EXPLAIN — recusa qualquer outra coisa**, de propósito:
+é ferramenta de verificação, não um segundo caminho de escrita sem os cuidados
+que os scripts de import já têm (idempotência, `&recomecar=1`, invalidação de
+cache). E é **inalcançável por HTTP em qualquer circunstância** — a guarda
+`php_sapi_name() !== 'cli'` é a primeira linha executável do arquivo, sem
+exceção nem bypass por token. Os dois foram testados contra a produção real em
+18/08/2026: leitura devolve dado (`134557` atos), `DELETE` é recusado com
+`exit(1)` sem tocar no banco, e a URL correspondente devolve `403`.
 
 Isso torna as duas armadilhas do phpMyAdmin documentadas neste arquivo —
 a aba Importar que descarta `SELECT`, e `information_schema` que troca o banco
-corrente das consultas seguintes — **evitáveis por completo**: rode a mesma
-consulta pelo `mysql` client e nenhuma das duas se aplica. O phpMyAdmin continua
-válido para quem não tem a chave.
+corrente das consultas seguintes — **evitáveis por completo**. O phpMyAdmin
+continua válido para quem não tem a chave.
+
+**`tools/pacote_delta.py` ganhou modo SSH** (`--modo ssh`, padrão; `--modo http`
+como antes, para quando faltar a chave). Um `find | sha256sum` só no servidor
+cobre o `.htaccess` — a comparação por HTTP não alcançava, 403 no próprio
+arquivo — e **lista o que está no servidor e não está no `dist/` local**, sem
+precisar baixar a pasta inteira à mão como em 17/08/2026. Não apaga sozinho: só
+lista, quem opera decide mover para quarentena. Achou 3 órfãos reais na
+primeira vez que rodou contra produção (`LEIA-ME.md`, `server.cjs`,
+`server.cjs.map`).
 
 **Limpeza de arquivo em produção: quarentena, nunca apagar direto.** Antes de
 excluir algo do servidor, mova para `~/quarentena-<contexto>-<data>/` (fora da
