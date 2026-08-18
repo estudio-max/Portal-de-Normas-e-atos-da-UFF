@@ -37,6 +37,18 @@
   --chart-axis: #64748B;
   --chart-hover: rgba(27, 107, 58, .08);
 
+  /* SEGUNDA COR DE SÉRIE. O portal desenhava tudo em verde, e duas perguntas
+     diferentes no mesmo painel — "quanto tempo leva" e "quanto acontece por
+     ano" — saíam com a mesma cor, como se fossem a mesma leitura. O azul
+     separa as duas e é também a cor da bolha do mapa, deixando o VERDE livre
+     para significar uma coisa só: deferimento.
+     Medido com o validador: contra o verde da marca, ΔE 26,8 sob deuteranopia
+     e 28,5 na visão normal — bem acima do piso de 8. No escuro o azul teve de
+     descer para #5A8FE0 para caber na banda de luminosidade do tema (L
+     0,48–0,67); #6699E8 dava 0,681 e reprovava. */
+  --serie-azul: #2563EB;
+  --serie-azul-fraco: rgba(37, 99, 235, .10);
+
   /* Mapa-múndi (aba Cooperação e aba Revalidação). Tokens PRÓPRIOS, e não
      reaproveitamento de `--chart-grid`: a grade de um gráfico é recessiva de
      propósito, e o continente NÃO é recessivo — ele é a referência que permite
@@ -82,6 +94,8 @@ html.fotofobia {
   --chart-grid: #2C3A31;
   --chart-axis: #9BB0A2;
   --chart-hover: rgba(79, 164, 110, .12);
+  --serie-azul: #5A8FE0;
+  --serie-azul-fraco: rgba(90, 143, 224, .16);
 
   /* No escuro a lógica se inverte: o oceano é o fundo profundo e a terra é
      mais CLARA que ele, senão o mapa some no cartão. */
