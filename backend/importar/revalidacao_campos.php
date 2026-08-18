@@ -215,6 +215,32 @@ function revalidacao_pais_canon(string $bruto, array $mapa): string {
 }
 
 /**
+ * País colado ao nome da instituição entre parênteses: '(País)' ou
+ * '(Cidade, País)'. Sem isto os dois viravam pais=NULL -- achados reais em
+ * produção: "Universidad de la Empresa (Uruguai)", "Universidad Complutense
+ * de Madrid (Espanha)". Quando a cidade acompanha o país, a vírgula DENTRO
+ * do parêntese confundia o split por vírgula que separa instituição de
+ * país: "Kth - Kungliga Tekniska Högskolan (Estocolmo, Suécia)" partia o
+ * parêntese ao meio e o país saía como "Suécia)", com o parêntese aberto
+ * sobrando na instituição.
+ *
+ * Espelha _reval_extrai_pais_parenteses() em tools/extrair_boletim.py --
+ * mesma função, duas linguagens; padrão novo entra nas duas.
+ *
+ * Devolve [resto_sem_parenteses, pais]; pais === '' quando não achou nada
+ * dentro dos parênteses (o parêntese pode não ser país nenhum).
+ */
+function revalidacao_extrai_pais_parenteses(string $bruto, array $mapa): array {
+    if (!preg_match('/^(?P<resto>.*?)\s*\((?P<dentro>[^()]{2,80})\)\s*$/su', trim($bruto), $m)) {
+        return [$bruto, ''];
+    }
+    $partes = array_values(array_filter(array_map('trim', explode(',', $m['dentro'])), 'strlen'));
+    $pais = $partes ? revalidacao_pais_canon(end($partes), $mapa) : '';
+    if ($pais === '') return [$bruto, ''];
+    return [trim($m['resto'], " .,;"), $pais];
+}
+
+/**
  * Canonização de país. Chave = nome sem acento e em minúsculas, para casar
  * tanto o texto do banco quanto as variantes e o erro de digitação da fonte
  * ("Aústria"). O VALOR é o nome próprio canônico, igual ao de `coop_paises()`

@@ -83,6 +83,31 @@ $checa('"Universidade Mayor de San Simon" NAO vira "Universidad …"',
 // (Python, publica o JSON) — e foi a assimetria entre eles que deixou
 // `"…Fakultät", Tübingen, Na Alemanha` chegar à tela DEPOIS de a limpeza do
 // PHP já estar no ar. Os dois conferem esta mesma lista.
+echo "\n-- pais entre parenteses colado ao nome (achado real, via='Pós-graduação' com pais=NULL) --\n";
+// 18/08/2026: SELECT curso, instituicao, pais FROM ato_revalidacao WHERE
+// via='Pós-graduação' mostrou pais=NULL para instituicao com o pais colado
+// entre parenteses, em vez de separado por virgula. O quarto caso -- cidade
+// e pais juntos no mesmo parenteses -- partia o parenteses ao meio quando o
+// split por virgula ainda nao sabia que estava dentro de um parenteses.
+$checa('"Universidad de la Empresa (Uruguai)" -- so pais, sem cidade',
+    revalidacao_extrai_pais_parenteses('Universidad de la Empresa (Uruguai)', $PAIS_CANON),
+    ['Universidad de la Empresa', 'Uruguai']);
+$checa('"Universidad Complutense de Madrid (Espanha)"',
+    revalidacao_extrai_pais_parenteses('Universidad Complutense de Madrid (Espanha)', $PAIS_CANON),
+    ['Universidad Complutense de Madrid', 'Espanha']);
+$checa('"Universidad de Buenos Aires (Argentina)"',
+    revalidacao_extrai_pais_parenteses('Universidad de Buenos Aires (Argentina)', $PAIS_CANON),
+    ['Universidad de Buenos Aires', 'Argentina']);
+$checa('"Kth - Kungliga Tekniska Högskolan (Estocolmo, Suécia)" -- parenteses NAO parte ao meio',
+    revalidacao_extrai_pais_parenteses('Kth - Kungliga Tekniska Högskolan (Estocolmo, Suécia)', $PAIS_CANON),
+    ['Kth - Kungliga Tekniska Högskolan', 'Suécia']);
+$checa('sem parenteses: devolve o bruto intacto e pais vazio',
+    revalidacao_extrai_pais_parenteses('Universidad de los Andes, Venezuela', $PAIS_CANON),
+    ['Universidad de los Andes, Venezuela', '']);
+$checa('parenteses que e claramente clausula (bate REVALIDACAO_NAO_PAIS): nao inventa pais',
+    revalidacao_extrai_pais_parenteses('Universidade Federal Fluminense (Comissão de Avaliação)', $PAIS_CANON),
+    ['Universidade Federal Fluminense (Comissão de Avaliação)', '']);
+
 echo "\n-- amostra compartilhada (a mesma que o teste Python confere) --\n";
 $amostra = json_decode((string)file_get_contents(
     __DIR__ . '/../../tools/dados_referencia/revalidacao-campos.json'), true);

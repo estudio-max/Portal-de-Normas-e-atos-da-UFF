@@ -274,6 +274,50 @@ CASOS += [
       "instituicao": "Eberhard Karls Universität Tübingen", "pais": ""}),
 ]
 
+# 18/08/2026: pais=NULL em producao quando ele vem entre parenteses COLADO ao
+# nome da instituicao ("(Pais)"), em vez de separado por virgula. Achado via
+# consulta direta em `ato_revalidacao` (via='Pos-graduacao'): "Universidad de
+# la Empresa (Uruguai)", "Universidad Complutense de Madrid (Espanha)",
+# "Universidad de Buenos Aires (Argentina)" -- todos com pais=NULL. Um quarto
+# caso partia o parenteses ao meio quando cidade e pais vinham juntos:
+# "Kth - Kungliga Tekniska Högskolan (Estocolmo" virava instituicao (com
+# parenteses aberto sobrando) e "Suécia)" virava pais (com parenteses
+# fechando sobrando).
+PARENTESES_URUGUAI = """DECIDE: 1- Aprovar a revalidação do Diploma, nível de
+Graduação em Administração, obtido por FULANO DE TAL, junto a Universidad de
+la Empresa (Uruguai), nos termos do processo."""
+
+PARENTESES_ESPANHA = """DECIDE: 1- Aprovar a revalidação do Diploma, nível de
+Mestrado em Direito, obtido por FULANA DE TAL, junto a Universidad
+Complutense de Madrid (Espanha), nos termos do processo."""
+
+PARENTESES_ARGENTINA = """DECIDE: 1- Aprovar a revalidação do Diploma, nível de
+Doutorado em Economia, obtido por CICRANO DE TAL, junto a Universidad de
+Buenos Aires (Argentina), nos termos do processo."""
+
+PARENTESES_CIDADE_PAIS = """DECIDE: 1- Aprovar a revalidação do Diploma, nível
+de Mestrado em Engenharia, obtido por BELTRANO DE TAL, junto a Kth -
+Kungliga Tekniska Högskolan (Estocolmo, Suécia), nos termos do processo."""
+
+CASOS += [
+    ("pais entre parenteses colado ao nome, sem cidade", PARENTESES_URUGUAI,
+     {"via": "Graduação", "decisao": "Deferido",
+      "instituicao": "Universidad de la Empresa", "pais": "Uruguai"}),
+
+    ("pais entre parenteses, mestrado", PARENTESES_ESPANHA,
+     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Mestrado",
+      "instituicao": "Universidad Complutense de Madrid", "pais": "Espanha"}),
+
+    ("pais entre parenteses, doutorado", PARENTESES_ARGENTINA,
+     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+      "instituicao": "Universidad de Buenos Aires", "pais": "Argentina"}),
+
+    ("cidade e pais juntos entre parenteses: parenteses NAO pode partir ao meio",
+     PARENTESES_CIDADE_PAIS,
+     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Mestrado",
+      "instituicao": "Kth - Kungliga Tekniska Högskolan", "pais": "Suécia"}),
+]
+
 falhas = 0
 for rotulo, texto, esperado in CASOS:
     obtido = extrai_revalidacao(texto)

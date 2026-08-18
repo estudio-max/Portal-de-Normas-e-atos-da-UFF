@@ -1973,6 +1973,30 @@ def _reval_pais(bruto):
     return _REVAL_PAIS_CANON.get(_fold(p).strip(), p)
 
 
+_REVAL_PARENTESES_FIM_RE = re.compile(r"^(?P<resto>.*?)\s*\((?P<dentro>[^()]{2,80})\)\s*$", re.S)
+
+
+def _reval_extrai_pais_parenteses(bruto):
+    """País colado ao nome da instituição entre parênteses: '(País)' ou
+    '(Cidade, País)'. Sem isto os dois viravam pais=NULL -- achados reais em
+    produção: 'Universidad de la Empresa (Uruguai)', 'Universidad Complutense
+    de Madrid (Espanha)'. Quando a cidade acompanha o país, a vírgula DENTRO
+    do parêntese confundia o split por vírgula que separa instituição de
+    país: 'Kth - Kungliga Tekniska Högskolan (Estocolmo, Suécia)' partia o
+    parêntese ao meio e o país saía como 'Suécia)', com o parêntese aberto
+    sobrando na instituição.
+    Devolve (resto_sem_parenteses, pais); pais == '' quando não achou nada
+    dentro dos parênteses (o parêntese pode não ser país nenhum)."""
+    m = _REVAL_PARENTESES_FIM_RE.match(limpar(bruto or "").strip())
+    if not m:
+        return bruto, ""
+    dentro = [x.strip() for x in m.group("dentro").split(",") if x.strip()]
+    pais = _reval_pais(dentro[-1]) if dentro else ""
+    if not pais:
+        return bruto, ""
+    return m.group("resto").strip(" .,;"), pais
+
+
 def _reval_origem(bruto):
     # ⚠️ SEM GUARDA EXTRA além de "existem ≥2 partes separadas por vírgula" —
     # corrigido em 18/08/2026. A versão anterior só confiava no país quando a
@@ -1984,6 +2008,10 @@ def _reval_origem(bruto):
     # falso e o país inteiro era jogado fora. `_revalidacao_grad()`, alguns
     # metros abaixo, nunca teve essa guarda e é o caminho que já produz os 63
     # países reais em produção — esta função passa a fazer o mesmo.
+    resto, pais_paren = _reval_extrai_pais_parenteses(bruto)
+    if pais_paren:
+        partes = [x.strip() for x in limpar(resto).split(",") if x.strip()]
+        return (", ".join(partes) if partes else resto), pais_paren
     partes = [x.strip() for x in limpar(bruto).split(",") if x.strip()]
     if len(partes) >= 2:
         return ", ".join(partes[:-1]), _reval_pais(partes[-1])
@@ -2004,9 +2032,9 @@ def _reval_citado(texto, inicio):
 
 
 def _revalidacao_grad(match):
-    partes = [x.strip() for x in match.group("origem").split(",") if x.strip()]
-    pais = _reval_pais(partes[-1]) if len(partes) >= 2 else ""
-    inst = ", ".join(partes[:-1]) if len(partes) >= 2 else match.group("origem")
+    # Delega a _reval_origem() -- é o que reconhece o país entre parênteses
+    # colado ao nome da instituição, além do país separado por vírgula.
+    inst, pais = _reval_origem(match.group("origem"))
     nivel = "Graduação" if match.group("nivel").lower().startswith("gradua") \
         else match.group("nivel").title()
     return {

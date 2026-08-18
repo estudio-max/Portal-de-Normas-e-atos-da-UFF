@@ -218,11 +218,20 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
     if (!$achados && preg_match($RE_PARECER, $txt, $mp, PREG_OFFSET_CAPTURE)) {
         if (!preg_match($RE_QUE, mb_substr($txt, max(0, $mp[0][1] - 10), 10))) {
             $gp = fn($k) => isset($mp[$k]) ? trim($mp[$k][0]) : '';
-            $partes = array_values(array_filter(array_map('trim', explode(',', $gp('origem'))), 'strlen'));
-            $paisP = revalidacao_pais_canon(end($partes), $PAIS_CANON);
-            $instP = count($partes) >= 2
-                ? revalidacao_limpa_instituicao(implode(', ', array_slice($partes, 0, -1)), $PAIS_CANON)
-                : revalidacao_limpa_instituicao($gp('origem'), $PAIS_CANON);
+            // País entre parênteses colado ao nome ("(País)"/"(Cidade, País)")
+            // vem ANTES do split por vírgula normal -- senão a vírgula dentro
+            // do parêntese quebra o nome da instituição ao meio.
+            [$restoP, $paisParenP] = revalidacao_extrai_pais_parenteses($gp('origem'), $PAIS_CANON);
+            if ($paisParenP !== '') {
+                $paisP = $paisParenP;
+                $instP = revalidacao_limpa_instituicao($restoP, $PAIS_CANON);
+            } else {
+                $partes = array_values(array_filter(array_map('trim', explode(',', $gp('origem'))), 'strlen'));
+                $paisP = revalidacao_pais_canon(end($partes), $PAIS_CANON);
+                $instP = count($partes) >= 2
+                    ? revalidacao_limpa_instituicao(implode(', ', array_slice($partes, 0, -1)), $PAIS_CANON)
+                    : revalidacao_limpa_instituicao($gp('origem'), $PAIS_CANON);
+            }
             $nivelP = mb_convert_case($gp('nivel'), MB_CASE_TITLE, 'UTF-8');
             $achados = [[
                 'via' => preg_match('/^(Doutorado|Mestrado)$/u', $nivelP) ? 'Pós-graduação' : 'Graduação',
@@ -244,14 +253,23 @@ while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
 
             $g = fn($k) => isset($m[$k]) ? trim($m[$k][0]) : '';
             if ($via === 'Graduação') {
-                $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
-                // Origem SEM vírgula pode ser o próprio país ("…obtido por
-                // Fulano, na Argentina"): antes isso virava instituição
-                // "Argentina", que é erro, e não lacuna.
-                $pais = revalidacao_pais_canon(end($partes), $PAIS_CANON);
-                $inst = count($partes) >= 2
-                    ? revalidacao_limpa_instituicao(implode(', ', array_slice($partes, 0, -1)), $PAIS_CANON)
-                    : revalidacao_limpa_instituicao($g('origem'), $PAIS_CANON);
+                // País entre parênteses colado ao nome ("(País)"/"(Cidade,
+                // País)") vem ANTES do split por vírgula normal -- senão a
+                // vírgula dentro do parêntese quebra o nome ao meio.
+                [$restoG, $paisParenG] = revalidacao_extrai_pais_parenteses($g('origem'), $PAIS_CANON);
+                if ($paisParenG !== '') {
+                    $pais = $paisParenG;
+                    $inst = revalidacao_limpa_instituicao($restoG, $PAIS_CANON);
+                } else {
+                    $partes = array_values(array_filter(array_map('trim', explode(',', $g('origem'))), 'strlen'));
+                    // Origem SEM vírgula pode ser o próprio país ("…obtido por
+                    // Fulano, na Argentina"): antes isso virava instituição
+                    // "Argentina", que é erro, e não lacuna.
+                    $pais = revalidacao_pais_canon(end($partes), $PAIS_CANON);
+                    $inst = count($partes) >= 2
+                        ? revalidacao_limpa_instituicao(implode(', ', array_slice($partes, 0, -1)), $PAIS_CANON)
+                        : revalidacao_limpa_instituicao($g('origem'), $PAIS_CANON);
+                }
                 $nivel = mb_convert_case($g('nivel'), MB_CASE_TITLE, 'UTF-8');
 
                 // A EQUIVALÊNCIA MANDA MAIS QUE A PALAVRA "DIPLOMA".

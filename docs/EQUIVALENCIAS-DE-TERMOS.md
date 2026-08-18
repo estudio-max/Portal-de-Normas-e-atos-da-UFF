@@ -143,10 +143,37 @@ foram graduação). Em produção, `backfill_ato_revalidacao.php` (que recupera 
 histórico fora do cache de ~1 ano do extrator diário) fechou em Graduação
 1.461 / Pós-graduação 555.
 
-⚠️ **Pendência aberta:** país fica vazio quando vem entre parênteses colado à
-instituição — `"Universidad de Buenos Aires (Argentina)"` grava `pais=NULL` em
-vez de separar `instituicao="Universidad de Buenos Aires"`,
-`pais="Argentina"`. Achado no spot-check pós-gravação; ainda não corrigido.
+⚠️ **Corrigido em 18/08/2026:** país entre parênteses colado à instituição —
+`"Universidad de Buenos Aires (Argentina)"` gravava `pais=NULL` em vez de
+separar `instituicao="Universidad de Buenos Aires"`, `pais="Argentina"`.
+Achado por consulta direta em `ato_revalidacao` (`WHERE via='Pós-graduação'`),
+não só spot-check: `Universidad de la Empresa (Uruguai)`, `Universidad
+Complutense de Madrid (Espanha)` e `Universidad de Buenos Aires (Argentina)`
+tinham `pais=NULL`. Um quarto caso partia o parêntese AO MEIO quando cidade e
+país vêm juntos — `Kth - Kungliga Tekniska Högskolan (Estocolmo, Suécia)`
+virava `instituicao="…Högskolan (Estocolmo"` (parêntese aberto sobrando) e
+`pais="Suécia)"` (parêntese fechando sobrando), porque o split por vírgula que
+separa instituição de país não sabia que estava dentro de um parêntese.
+Corrigido nos dois lados: `_reval_extrai_pais_parenteses()` em
+`tools/extrair_boletim.py` e `revalidacao_extrai_pais_parenteses()` em
+`backend/importar/revalidacao_campos.php` (usada tanto no backfill quanto no
+casamento da lista legada em `revalidacao_lista_legada.php`) — a extração
+roda ANTES do split por vírgula normal, para o parêntese nunca ser partido.
+
+⚠️ **Pendência aberta, ainda não corrigida:** o nome da instituição às vezes
+sai errado NA FONTE, não na extração — `"École des Hautes Études en Sciences
+Sociales"` (grafia correta) e `"École de Hautes Études en Sciences Sociales"`
+(sem o segundo "s", achado em pelo menos 6 atos reais de anos diferentes)
+convivem no acervo como duas instituições diferentes no painel, quando são a
+mesma. **Isto NÃO é resolução de entidade por similaridade** — a
+`revalidacao_campos.php` já documenta por que isso é perigoso (90% de
+similaridade funde "universidad de aquino" com "universidad del quindío", que
+são instituições diferentes). É canonização de UM erro de digitação
+confirmado e específico, no mesmo espírito de `_REVAL_PAIS_CANON` para país
+("Aústria" -> "Áustria"), não um dicionário de fusão automática. Falta:
+achar todas as instituições com essa mesma classe de variação (grafia com/sem
+uma letra, mesma raiz) e decidir, uma por uma, se é erro de digitação da
+fonte (canoniza) ou nome real diferente (não mexe).
 
 ## Aposentadoria
 

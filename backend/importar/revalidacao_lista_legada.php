@@ -68,6 +68,21 @@ function separar_origem_revalidacao(string $origem): array {
     ];
 
     $origem = limpar_revalidacao($origem);
+
+    // País entre parênteses colado ao nome ("(País)"/"(Cidade, País)") vem
+    // ANTES do casamento por sufixo -- senão "(Uruguai)" nunca bate
+    // "uruguai$" (o parêntese de fechamento sobra no fim), e quando o
+    // parêntese traz cidade+país juntos ("(Estocolmo, Suécia)") o país nem
+    // é a última palavra do texto inteiro, só a última DENTRO do parêntese.
+    if (preg_match('/^(?<resto>.*?)\s*\((?<dentro>[^()]{2,80})\)\s*$/su', $origem, $mp)) {
+        $partes = array_values(array_filter(array_map('trim', explode(',', $mp['dentro'])), 'strlen'));
+        $ultimo = $partes ? end($partes) : '';
+        $chave = normalizar_revalidacao($ultimo);
+        if (isset($paises[$chave])) {
+            return [limpar_revalidacao($mp['resto']), $paises[$chave]];
+        }
+    }
+
     foreach ($paises as $sufixo => $canonico) {
         if (!preg_match('/(?:^|,\s*)' . preg_quote($sufixo, '/') . '$/iu', normalizar_revalidacao($origem), $m, PREG_OFFSET_CAPTURE)) {
             continue;
