@@ -7,11 +7,16 @@
 //  Usa INSERT IGNORE → idempotente: pode rodar mais de uma vez sem duplicar.
 //
 //  Uso (CLI — recomendado):
-//    /usr/local/bin/ea-php83 /home2/fanara87/uff.fanara.com.br/importar/corrigir_siapes.php
+//    /usr/local/bin/ea-php83 /home1/fanara87/inteligencia.fanara.com.br/importar/corrigir_siapes.php
 //    ... corrigir_siapes.php --dry-run    (lista o que seria inserido, sem alterar)
 //
 //  Uso (web, com token do config.php):
-//    https://uff.fanara.com.br/importar/corrigir_siapes.php?token=SEU_SEGREDO
+//    https://inteligencia.fanara.com.br/importar/corrigir_siapes.php?token=SEU_SEGREDO
+//
+//  ⚠️ uff.fanara.com.br é domínio ANTIGO — o CLAUDE.md marca "não use como
+//  referência". Caminho e domínio corrigidos em 18/08/2026, conferidos por
+//  SSH contra a produção real. Após a migração para os servidores da UFF,
+//  atualize os dois de novo (ver docs/MIGRACAO-UFF.md).
 //
 //  Após confirmar que os números fazem sentido, delete este arquivo do servidor.
 // ============================================================================

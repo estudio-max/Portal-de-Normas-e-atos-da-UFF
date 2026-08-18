@@ -13,18 +13,25 @@ description: Use when preparing or executing a deploy of the Portal de Normas e 
 
 ## Overview
 
-Deploy aqui é **manual, sem SSH, sem CI/CD**: upload por Gerenciador de
-Arquivos + SQL por phpMyAdmin. O erro mais caro nunca foi técnico — foi
-subir metade do que devia, ou subir na ordem errada.
+Deploy aqui é **sem CI/CD** — nada dispara sozinho a partir de um push. Mas
+desde 18/08/2026 há **acesso SSH por chave** (`ssh hostgator-fanara`; detalhes
+em `repo/CLAUDE.md` § "Acesso SSH ao servidor de produção"), então "upload pelo
+Gerenciador de Arquivos + SQL pelo phpMyAdmin" deixou de ser o único caminho —
+é o que continua funcionando para quem não tem a chave, mas com SSH prefira
+`scp`/`ssh` e o cliente `mysql`. O erro mais caro nunca foi técnico — foi
+subir metade do que devia, ou subir na ordem errada, e isso não muda com SSH:
+ele troca *como* o arquivo chega no servidor, não *o que* precisa chegar.
 
 ## Ambiente atual
 
-- **Hoje: HostGator**, cPanel, sem SSH. Mapa de arquivos e schema em
-  `repo/CLAUDE.md` § "Como fazer deploy" / "Schema v2".
+- **Hoje: HostGator**, cPanel, com SSH (chave, porta 2222, ver CLAUDE.md).
+  Mapa de arquivos e schema em `repo/CLAUDE.md` § "Como fazer deploy" /
+  "Schema v2".
 - **Migração para UFF prevista.** Sinal rápido: se a URL de produção já for
   `*.uff.br` (não mais `inteligencia.fanara.com.br`), a migração aconteceu —
   pare e confira `CLAUDE.md`/`docs/MIGRACAO-UFF.md` antes de seguir os passos
-  abaixo (upload/SQL/cron mudam; pode haver SSH, outro `config.php`). Este
+  abaixo (upload/SQL/cron mudam; provavelmente outro `config.php` e outro
+  acesso SSH — a chave de hoje é da conta HostGator, não serve na UFF). Este
   skill assume HostGator até o corte acontecer.
 
 ## O que mudou → o que fazer
@@ -34,7 +41,7 @@ subir metade do que devia, ou subir na ordem errada.
 | Só `src/`/`public/` (frontend) | `npm run build` → subir **todo o `dist/`, inclusive o `.htaccess`** (dotfile — ative "mostrar arquivos ocultos" no Gerenciador) |
 | Nova rota ou contrato de resposta da API | build do frontend **+** `backend/api/index_v2.php` → **renomear para `api/index.php`** ao subir. Bump em `api_versao()`. Os dois sobem **juntos, mesma janela** — nunca só um. Regra prática de ordem: **API primeiro, frontend depois** (rota nova não quebra front velho); só inverta se for mudança de **contrato** numa rota já existente. |
 | Nova tabela-fato / novo tipo de backfill | 1) SQL idempotente (`CREATE TABLE IF NOT EXISTS`) no phpMyAdmin. 2) Subir o `.php` de backfill (recebe `?arquivo=` — é genérico, reaproveite o mesmo script em recargas futuras da mesma tabela, não crie um novo por correção) + o(s) `.json` de carga em `importar/`. 3) Rodar via URL: `?token=<import_token do config.php>&arquivo=nome.json`. |
-| Correção de uma carga já rodada | **Sempre `&recomecar=1` na carga principal.** É um `DELETE` restrito às linhas `metodo='ia'` daquela tabela — não trunca, nunca toca em linha de curadoria, e é seguro repetir se o PHP cair no meio (sem SSH para retomar). Sem esse parâmetro, upsert não apaga linha que saiu do JSON novo — nenhum erro aparece, o painel só mistura dado velho com o novo. Rodar a carga "ia" primeiro, a de "curadoria" depois. |
+| Correção de uma carga já rodada | **Sempre `&recomecar=1` na carga principal.** É um `DELETE` restrito às linhas `metodo='ia'` daquela tabela — não trunca, nunca toca em linha de curadoria, e é seguro repetir se o PHP cair no meio (idempotente por desenho, independente de ter SSH para relançar o processo). Sem esse parâmetro, upsert não apaga linha que saiu do JSON novo — nenhum erro aparece, o painel só mistura dado velho com o novo. Rodar a carga "ia" primeiro, a de "curadoria" depois. |
 
 ## Checklist pós-deploy (sempre)
 
@@ -96,6 +103,17 @@ o JSON estático do GitHub).
   arquivo que mistura os dois, **ponha as consultas às tabelas do projeto
   primeiro e as de `information_schema` no fim** — é o que
   `backend/db/verificar_inteligencia.sql` faz e por quê.
+
+  Com SSH, as duas armadilhas acima somem: rode a mesma consulta pelo cliente
+  `mysql` (padrão de invocação sem expor a senha em CLAUDE.md § "Acesso SSH")
+  e nem o `SELECT` descartado nem a troca de banco acontecem.
+
+- **`pacote_delta.py` compara por HTTP porque foi escrito sem SSH**, e isso lhe
+  dá um ponto cego que o próprio script admite: não cobre o `.htaccess`
+  (Apache responde 403 à comparação HTTP nele). Com SSH, um `ssh ... ls -1
+  assets/` faz a mesma comparação sem round-trip HTTP por arquivo e alcança o
+  `.htaccess` também — mas isso é uma reescrita não feita ainda; o script
+  atual continua a fonte de verdade até alguém trocar por ela.
 
 ## Empacotando um deploy de dados (padrão a repetir)
 

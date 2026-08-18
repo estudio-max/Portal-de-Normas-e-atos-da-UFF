@@ -12,8 +12,13 @@ mudou.
 
 - **Site:** https://inteligencia.fanara.com.br/ (`uff.fanara.com.br` redireciona
   para lá — é um domínio antigo, não use como referência).
-- **Host:** HostGator (cPanel). **Sem acesso SSH** — todo deploy é upload manual
-  pelo Gerenciador de Arquivos, e todo SQL roda pelo phpMyAdmin.
+- **Host:** HostGator (cPanel). **Acesso SSH por chave**, desde 18/08/2026 (ver
+  seção própria abaixo). O upload manual pelo Gerenciador de Arquivos e o SQL
+  pelo phpMyAdmin continuam funcionando e são o caminho para quem não tem a
+  chave — mas com SSH, prefira `scp`/`ssh` e o cliente `mysql`: mais rápido, e
+  livre das duas armadilhas do phpMyAdmin documentadas mais abaixo (a aba
+  Importar descarta o resultado de `SELECT`; `information_schema` troca o
+  banco corrente das consultas seguintes no mesmo arquivo).
 - **Banco:** `fanara87_governanca`, schema **v2 normalizado**. **Percona Server
   5.7** (não MySQL 8) — sem `REGEXP_SUBSTR`, `REGEXP_REPLACE`, CTE recursiva nem
   funções de janela. Confirme a versão em `/api/health` (campo `mysql`) antes de
@@ -219,6 +224,72 @@ errado — era assim no v1 e foi justamente o que se abandonou.
 
 Racional completo: `docs/ARQUITETURA-BASE-DADOS.md`.
 
+## Acesso SSH ao servidor de produção
+
+Desde 18/08/2026. cPanel → Segurança → Acesso SSH → Gerenciar chaves — a chave
+pública é **importada e autorizada ali**, nunca gerada no servidor: o par foi
+criado localmente, só a metade pública subiu, e a privada nunca esteve na
+HostGator nem passou pelo chat.
+
+```
+Host: br972.hostgator.com.br
+Porta: 2222   (não é a 22 padrão)
+Usuário: fanara87
+```
+
+`~/.ssh/config` (na máquina de quem opera) tem uma entrada `hostgator-fanara`
+com host, porta, usuário e `IdentityFile` já resolvidos — conectar é só
+`ssh hostgator-fanara`. A chave **não tem senha**: é a decisão certa aqui
+porque o cliente que conecta roda sem terminal interativo (não há como
+responder a um prompt de senha), e a chave nunca sai do disco de quem a gerou.
+
+⚠️ **Nunca reutilize o `import_token`/`token` da API como senha de chave SSH.**
+Esse token viaja em texto puro na URL do cron do cPanel — qualquer um com
+acesso ao painel o vê. Uma chave que dá shell na conta pede senha própria, ou
+nenhuma com o disco protegido; misturar os dois transforma um segredo fraco
+(o token) em porta para um segredo forte (a conta inteira).
+
+**A HostGator estrangula reconexão rápida** (proteção `cphulkd` contra força
+bruta): abrir várias sessões SSH em sequência derruba com
+`Connection refused` por um a dois minutos. Reaproveite uma sessão para vários
+comandos (`&&`, heredoc, ou um script enviado por `scp` e executado uma vez) em
+vez de uma conexão por comando. `ControlMaster`/`ControlPersist` no
+`~/.ssh/config` **pioram** isso na prática — a sessão multiplexada quebra com
+"Connection reset by peer" e não reconecta sozinha; teste sem eles primeiro
+(confirmado no dia em que este acesso foi criado).
+
+**Consulta ao banco sem tocar em segredo:** o `mysql` client lê a senha da
+variável `MYSQL_PWD`, preenchida por um PHP que lê o `config.php` do próprio
+servidor — a senha nunca aparece em comando, log ou saída de terminal:
+
+```bash
+ssh hostgator-fanara 'cd ~/inteligencia.fanara.com.br/api && php -r "
+\$c = require \"config.php\";
+\$d = \$c[\"db\"];
+putenv(\"MYSQL_PWD=\" . \$d[\"senha\"]);
+system(sprintf(\"mysql -u %s -h %s %s -e %s\",
+  escapeshellarg(\$d[\"usuario\"]), escapeshellarg(\$d[\"host\"]), escapeshellarg(\$d[\"nome\"]),
+  escapeshellarg(\"SELECT COUNT(*) FROM ato;\")));
+"'
+```
+
+Isso torna as duas armadilhas do phpMyAdmin documentadas neste arquivo —
+a aba Importar que descarta `SELECT`, e `information_schema` que troca o banco
+corrente das consultas seguintes — **evitáveis por completo**: rode a mesma
+consulta pelo `mysql` client e nenhuma das duas se aplica. O phpMyAdmin continua
+válido para quem não tem a chave.
+
+**Limpeza de arquivo em produção: quarentena, nunca apagar direto.** Antes de
+excluir algo do servidor, mova para `~/quarentena-<contexto>-<data>/` (fora da
+raiz servida pelo site), confira a saúde do portal depois (`/api/health`, e os
+endpoints que dependiam do que foi movido), e só apague a quarentena depois de
+alguns dias — ou deixe o mantenedor decidir. Praticado em 18/08/2026: 339
+`assets/*.js` órfãos de deploys antigos (367→28, batendo com o hash do build
+atual) e 6 arquivos de importação em massa já consumidos (478 MB→336 KB em
+`importar/`) foram movidos, não apagados, depois de confirmar por grep cruzado
+que nenhum arquivo do build atual referenciava os órfãos, e que a soma de atos
+dos JSONs batia com o total do banco.
+
 ## Como fazer deploy
 
 ```bash
@@ -242,12 +313,17 @@ health/versão da API, rotas principais, o roteamento `/api/atos/{id}` e que o
 `backend/api/config.php` mora só no servidor (está no `.gitignore` e contém as
 credenciais do banco). Não versione, não imprima o conteúdo.
 
-**Reimportar um lote grande sem SSH.** O cron diário só processa boletins novos;
-para reprocessar anos inteiros (ex.: depois de consertar o extrator), o caminho é
-o modo navegador do importador. Suba o JSON gerado por `gerar_dados_portal.py`
-para a pasta `importar/` do servidor e visite
-`importar/importar_v2.php?token=<import_token>&arquivo=<nome>.json`. O
-`basename()` obriga o arquivo a estar naquela pasta — não aceita caminho nem URL.
+**Reimportar um lote grande.** O cron diário só processa boletins novos; para
+reprocessar anos inteiros (ex.: depois de consertar o extrator), suba o JSON
+gerado por `gerar_dados_portal.py` para a pasta `importar/` do servidor — por
+`scp` com a chave SSH, se disponível; por upload do Gerenciador de Arquivos,
+senão — e visite `importar/importar_v2.php?token=<import_token>&arquivo=<nome>.json`.
+O método é o mesmo dos dois jeitos: é o **script** que faz a importação, SSH só
+troca como o arquivo chega até a pasta. O `basename()` obriga o arquivo a estar
+naquela pasta — não aceita caminho nem URL. Depois de o import terminar, mova o
+JSON usado para uma pasta de quarentena em vez de deixá-lo acumulando em
+`importar/` — foi isso que levou a pasta a 478 MB antes da limpeza de
+18/08/2026.
 É seguro repetir: o upsert casa por chave natural
 `(boletim_id, tipo_id, sigla_orig, numero_norm, ano)` e nunca duplica. Ao fim ele
 chama o `resolver_relacoes_v2.php` sozinho. Confira que **os SETE** arquivos de
