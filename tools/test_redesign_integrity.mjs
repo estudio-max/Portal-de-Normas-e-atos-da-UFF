@@ -412,12 +412,31 @@ assert.doesNotMatch(dashboard, /onNavigate\(`atos\/\$\{act\.id\}`\)/, 'Dashboard
 
 const sidebar = await read('src/components/layout/Sidebar.tsx');
 // A navegação foi reduzida às rotas frequentes em 13/08/2026, com o resto sob
-// "Mais". A trilha COMPACTA (rail de 64 px) continua tendo que listar TUDO: ali
-// não há rótulo para ler, então um disclosure fechado seria um beco sem saída —
-// e o destino que mais sumia era o rodapé (Ajuda, Privacidade, Sobre).
-assert.match(sidebar, /const compactItems: NavItem\[\] = \[\.\.\.NAV_PRIMARIO, \.\.\.ITENS_MAIS, \.\.\.FOOTER_ITEMS\];/,
-  'The compact navigation must include the primary, the "Mais" and the footer destinations.');
-assert.match(sidebar, /\{compactItems\.map\(item => \(/, 'The compact navigation must render every compact destination.');
+// "Mais". O MENU DO CELULAR continua tendo que listar TUDO — o destino que mais
+// sumia era o rodapé (Ajuda, Privacidade, Sobre).
+//
+// A trilha de 64px que ele substituiu em 17/08/2026 listava tudo e mesmo assim
+// não servia: eram 18 ícones SEM NOME NENHUM na tela, porque o `title` é dica
+// de mouse e não aparece no toque. Listar não basta; tem de dar para LER.
+// Por isso a asserção agora é sobre os grupos, que carregam o rótulo escrito, e
+// exige que eles venham das MESMAS três coleções da coluna do desktop — assim
+// aba nova entra no menu sozinha, em vez de depender de alguém lembrar.
+assert.match(sidebar, /const GRUPOS_MENU: \{ title: string \| null; items: NavItem\[\] \}\[\] = \[\s*\{ title: null, items: NAV_PRIMARIO \},\s*\.\.\.NAV_MAIS,\s*\{ title: '[^']*', items: FOOTER_ITEMS \},\s*\];/,
+  'The mobile menu must be built from the primary, the "Mais" and the footer destinations.');
+assert.match(sidebar, /\{GRUPOS_MENU\.map\(\(grupo, gi\) => \(/, 'The mobile menu must render every group.');
+// A asserção do NOME tem de olhar só para a gaveta. Escrita contra o arquivo
+// inteiro ela passava sem provar nada: a coluna do desktop tem a mesma
+// marcação, e era ela que satisfazia o teste enquanto a gaveta podia não ter
+// rótulo nenhum. Conferido nas duas pontas depois do recorte.
+const gaveta = sidebar.slice(sidebar.indexOf('if (collapsed) {'),
+                             sidebar.indexOf('<aside className="w-56'));
+assert.ok(gaveta.length > 200, 'The mobile menu block must be findable for inspection.');
+assert.match(gaveta, /<span className="truncate">\{item\.label\}<\/span>/,
+  'The mobile menu must write each destination name on screen, not only in a title attribute.');
+// Menu é diálogo: sem Esc e sem foco entrando nele, quem usa teclado ou leitor
+// de tela fica tabulando por trás do painel aberto.
+assert.match(sidebar, /role="dialog" aria-modal="true"/, 'The mobile menu must be a real dialog.');
+assert.match(sidebar, /if \(e\.key === 'Escape'\) onFechar\?\.\(\);/, 'Escape must close the mobile menu.');
 // Chegar numa aba que mora sob "Mais" — por link colado, pelo cartão de tarefa
 // ou pelo botão "voltar" — e ver a navegação sem NADA selecionado é perder a
 // própria posição. O disclosure abre sozinho nesse caso.
