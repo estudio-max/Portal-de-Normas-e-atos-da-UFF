@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { RotulosEixoPosicionado } from '../ui/RotulosEixo';
 import { CalendarClock, Printer, Search, Loader2, Info, AlertTriangle, ExternalLink, Clock, Users, Scale, GitBranch, ChevronDown, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
@@ -295,7 +296,6 @@ function Linha({ filtrada, janela }: { filtrada: ds.Prazo[]; janela: string }) {
         {ticks.map((d, i) => (
           <g key={i}>
             <line x1={x(d)} y1={base - 3} x2={x(d)} y2={base + 3} stroke={eixo} strokeWidth="1" />
-            <text x={x(d)} y={base + 16} fontSize="11" textAnchor="middle" fill={txt}>{d === 0 ? 'hoje' : `+${d}d`}</text>
           </g>
         ))}
         {futuros.map((p, i) => {
@@ -309,6 +309,12 @@ function Linha({ filtrada, janela }: { filtrada: ds.Prazo[]; janela: string }) {
           );
         })}
       </svg>
+      {/* Eixo em HTML: as marcas ficam a distâncias irregulares, então cada
+          rótulo é posicionado pela própria coordenada x do viewBox — ver
+          src/components/ui/RotulosEixo.tsx. */}
+      <RotulosEixoPosicionado
+        marcas={ticks.map(d => ({ x: x(d), texto: d === 0 ? 'hoje' : `+${d}d` }))}
+        largura={W} />
     </div>
   );
 }

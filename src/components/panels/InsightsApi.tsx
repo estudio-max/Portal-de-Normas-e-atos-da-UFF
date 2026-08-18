@@ -4,6 +4,7 @@ import { PageHeader } from '../ui/PageHeader';
 import * as ds from '../../dataSource';
 import { EstruturaGovernanca } from '../insights/EstruturaGovernanca';
 import { agrupaPorClasse, especie, ROTULO_CLASSE } from '../../lib/especies';
+import { RotulosEixo } from '../ui/RotulosEixo';
 
 // Aba "Insights": painéis analíticos sobre o acervo indexado do Boletim de
 // Serviço. Tudo é agregação do que já está no banco (nada inventado): ritmo de
@@ -453,27 +454,28 @@ function RankingOrgaos({ dados, P }: { dados: ds.OrgaoStat[]; P: ReturnType<type
 function Colunas({ porMes, P }: { porMes: { ym: string; n: number }[]; P: ReturnType<typeof paleta> }) {
   if (!porMes.length) return <p className="text-xs text-slate-400 italic">Sem dados de data.</p>;
   const max = Math.max(1, ...porMes.map(m => m.n));
-  const W = 320, H = 150, PADB = 22, PADL = 4, PADT = 8;
+  const W = 320, H = 150, PADB = 6, PADL = 4, PADT = 8;
+  const ALT_PX = 170;
   const bw = (W - PADL) / porMes.length;
   return (
     <div className="overflow-x-auto">
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
+      <svg width="100%" height={ALT_PX} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img"
         aria-label="Colunas de volume de atos por mês.">
         <line x1={PADL} y1={H - PADB} x2={W} y2={H - PADB} stroke={P.grid} strokeWidth="1" />
         {porMes.map((m, i) => {
           const h = ((H - PADB - PADT) * m.n) / max;
           const x = PADL + i * bw;
-          const mn = Number(m.ym.split('-')[1]) - 1;
           return (
             <g key={i}>
-              <rect x={x + bw * 0.15} y={H - PADB - h} width={bw * 0.7} height={h} rx={2} fill={P.col}>
+              <rect x={x + bw * 0.15} y={H - PADB - h} width={bw * 0.7} height={h} fill={P.col}>
                 <title>{`${nomeMes(m.ym)}: ${m.n} atos`}</title>
               </rect>
-              <text x={x + bw / 2} y={H - PADB + 12} fontSize="11" textAnchor="middle" fill={P.axis}>{MESES[mn]}</text>
             </g>
           );
         })}
       </svg>
+      <RotulosEixo itens={porMes.map(m => MESES[Number(m.ym.split('-')[1]) - 1])}
+        padL={PADL} largura={W} />
     </div>
   );
 }
@@ -657,7 +659,8 @@ function SerieAnual({ dados, corA, corB, corC, rotuloA, rotuloB, rotuloC, P }: {
   }
   const n = corC != null ? 3 : corB != null ? 2 : 1;
   const max = Math.max(1, ...uteis.map(d => Math.max(d.a, d.b || 0, d.c || 0)));
-  const W = 340, H = 160, PADB = 24, PADL = 6, PADT = 14;
+  const W = 340, H = 160, PADB = 8, PADL = 6, PADT = 14;
+  const ALT_PX = 210;   // altura RENDERIZADA, em pixels de tela
   const gw = (W - PADL) / uteis.length;                    // largura do grupo/ano
   const bw = n === 3 ? gw * 0.26 : n === 2 ? gw * 0.36 : gw * 0.62;  // largura de cada coluna
   const offs = n === 3 ? [gw * 0.06, gw * 0.37, gw * 0.68] : n === 2 ? [gw * 0.10, gw * 0.52] : [gw * 0.19];
@@ -667,32 +670,43 @@ function SerieAnual({ dados, corA, corB, corC, rotuloA, rotuloB, rotuloC, P }: {
   return (
     <div>
       <div className="overflow-x-auto">
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
+        {/* ⚠️ ALTURA FIXA + preserveAspectRatio="none" (18/08/2026).
+            Com `xMidYMid meet` o SVG mantinha a proporção do viewBox: num card
+            de ~1.550px contra um viewBox de 340x160, ele era desenhado com
+            ~730px de ALTURA. O gráfico ficava gigante, e qualquer rótulo de
+            tamanho normal parecia minúsculo ao lado dele — o desequilíbrio que
+            o mantenedor viu duas vezes, primeiro como "anos gigantes" (quando
+            o texto ainda escalava junto) e depois como "muito pequeno".
+            Agora a altura é fixa em px e só a largura é elástica. Para gráfico
+            de BARRA isso é seguro: esticar na horizontal deixa as colunas mais
+            largas, e continuam retângulos. O `rx` some porque canto arredondado
+            é a única coisa que a distorção horizontal deformaria. */}
+        <svg width="100%" height={ALT_PX} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img"
           aria-label={`Série anual: ${rotuloTotal}, máximo ${max} num ano.`}>
           <line x1={PADL} y1={H - PADB} x2={W} y2={H - PADB} stroke={P.grid} strokeWidth="1" />
           {uteis.map((d, i) => {
             const x0 = PADL + i * gw;
-            const rot = uteis.length > 14 ? String(d.ano).slice(2) : String(d.ano);
             return (
               <g key={d.ano}>
-                <rect x={x0 + offs[0]} y={H - PADB - alt(d.a)} width={bw} height={alt(d.a)} rx={1.5} fill={corA}>
+                <rect x={x0 + offs[0]} y={H - PADB - alt(d.a)} width={bw} height={alt(d.a)} fill={corA}>
                   <title>{`${d.ano}: ${fmtN(d.a)} ${rotuloA}`}</title>
                 </rect>
                 {n >= 2 && (
-                  <rect x={x0 + offs[1]} y={H - PADB - alt(d.b || 0)} width={bw} height={alt(d.b || 0)} rx={1.5} fill={corB}>
+                  <rect x={x0 + offs[1]} y={H - PADB - alt(d.b || 0)} width={bw} height={alt(d.b || 0)} fill={corB}>
                     <title>{`${d.ano}: ${fmtN(d.b || 0)} ${rotuloB || ''}`}</title>
                   </rect>
                 )}
                 {n >= 3 && (
-                  <rect x={x0 + offs[2]} y={H - PADB - alt(d.c || 0)} width={bw} height={alt(d.c || 0)} rx={1.5} fill={corC}>
+                  <rect x={x0 + offs[2]} y={H - PADB - alt(d.c || 0)} width={bw} height={alt(d.c || 0)} fill={corC}>
                     <title>{`${d.ano}: ${fmtN(d.c || 0)} ${rotuloC || ''}`}</title>
                   </rect>
                 )}
-                <text x={x0 + gw / 2} y={H - PADB + 12} fontSize="11" textAnchor="middle" fill={P.axis}>{rot}</text>
               </g>
             );
           })}
         </svg>
+        <RotulosEixo itens={uteis.map(d => (uteis.length > 14 ? String(d.ano).slice(2) : String(d.ano)))}
+          padL={PADL} largura={W} />
       </div>
       <p className="text-[12px] text-slate-500 mt-1.5">
         Total no período indexado: <strong className="text-slate-700">{fmtN(total('a'))}</strong> {rotuloA}
