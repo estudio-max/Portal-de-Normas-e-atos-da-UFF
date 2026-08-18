@@ -70,6 +70,15 @@ const COR: Record<string, string> = {
   recente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
+/** Leva para a aba Comissões já com o colegiado aberto. O roteador por hash só
+ *  conhece a aba inteira (`#/institucional/comissoes`), não um colegiado
+ *  dentro dela — o slug viaja por sessionStorage e o painel de Comissões o
+ *  consome uma vez ao montar (ver ComissoesApi.tsx). */
+function irParaComissao(slug: string) {
+  try { sessionStorage.setItem('comissao-deep-link', slug); } catch { /* sem storage disponível */ }
+  window.location.hash = '#/institucional/comissoes';
+}
+
 function selo(corpo: ds.ComissaoCorpo): string {
   const a = ano(corpo.ultimaData);
   if (!a) return 'sem ato localizado';
@@ -132,7 +141,14 @@ export function EstruturaGovernanca() {
             <li key={l.nome}
               className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
               <div className="min-w-0">
-                <p className="text-[13px] font-medium text-slate-700 leading-snug">{l.nome}</p>
+                {l.slug ? (
+                  <button type="button" onClick={() => irParaComissao(l.slug!)}
+                    className="text-[13px] font-medium text-[#003366] leading-snug hover:underline text-left">
+                    {l.nome}
+                  </button>
+                ) : (
+                  <p className="text-[13px] font-medium text-slate-700 leading-snug">{l.nome}</p>
+                )}
                 <p className="text-[12px] text-slate-500 mt-0.5">
                   {l.corpo
                     ? <>{l.corpo.atos} ato(s) no acervo{data && <> · último em <strong className="text-slate-600">{data}</strong></>}</>

@@ -224,7 +224,18 @@ export default function ComissoesApi() {
   const [obrigF, setObrigF] = useState('');   // '' | 'lei' | 'controle'
   const [estadoF, setEstadoF] = useState('');
   const [janela, setJanela] = useState(24);   // 12 | 24 | 36 meses
-  const [sel, setSel] = useState<string | null>(null);
+  // Deep link vindo de outra aba (ex.: Insights > Estrutura de governança):
+  // grava o slug em sessionStorage antes de navegar para cá, porque o roteador
+  // por hash só conhece a aba inteira (`#/institucional/comissoes`), não um
+  // colegiado dentro dela. Consome uma vez só — senão a próxima visita normal
+  // a esta aba reabriria sempre o mesmo colegiado.
+  const [sel, setSel] = useState<string | null>(() => {
+    try {
+      const s = sessionStorage.getItem('comissao-deep-link');
+      if (s) sessionStorage.removeItem('comissao-deep-link');
+      return s;
+    } catch { return null; }
+  });
   const [painelAberto, setPainelAberto] = useState(false);
   const avancadosAtivos = [obrigF !== '', janela !== 24].filter(Boolean).length;
 
