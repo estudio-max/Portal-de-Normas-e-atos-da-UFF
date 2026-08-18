@@ -111,7 +111,11 @@ $pdo = conectar($cfg);
 // como "revalidação do diploma". Foi o caso do "doctor of philosophy ... como
 // equivalente ao de doutor em letras", que a leitura ingênua classificaria
 // como graduação.
-$RE_GRAD = '/(?P<decisao>defer|indefer|homolog)\w*\s+'
+// `aprov` entrou em 17/08/2026: o CEPEx DEFERE escrevendo "Aprovar a
+// revalidacao do Diploma", e nenhum dos dois caminhos de escrita tinha esse
+// verbo. Medido no acervo local: 511 deferimentos invisiveis entre 2010 e
+// 2022, contra 696 vistos. O painel publicava 0% em anos inteiros.
+$RE_GRAD = '/(?P<decisao>aprov|defer|indefer|homolog)\w*\s+'
          . '(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|a\s+)?'
          // "do diploma" OU "do título": o Conselho escreve das duas formas, e
          // exigir só "diploma" deixava fora ato real — caso #324/2005,

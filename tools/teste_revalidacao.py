@@ -201,6 +201,26 @@ CASOS = [
 CASOS += [(f"legado citado por oracao relativa: {rotulo}", texto, None)
           for rotulo, texto in LEGADOS_CITADOS]
 
+
+# A redacao do DEFERIMENTO que faltava por completo. O acervo tem 511 atos
+# assim entre 2010 e 2022, e nenhum padrao os via -- o painel publicava 0% de
+# deferimento em anos inteiros por causa disto.
+APROVAR = """DECIDE: 1- Aprovar a revalidacao do Diploma, nivel de Graduacao em
+Antropologia, obtido por LUCRECIA RAQUEL GRECO, junto a Universidad de Buenos
+Aires, Argentina, nos termos do processo."""
+
+# Sem "nivel": o curso vem direto depois de "Diploma de".
+SEM_NIVEL_INDEFERIDO = """DECIDE: 1- Indeferir o pedido de revalidacao do Diploma
+de Licenciado em Informatica de Gestao, obtido por EVANDRO SILVA GUIMARAES,
+junto ao Instituto Politecnico de Coimbra, Portugal, nos termos do processo."""
+
+CASOS += [
+    ("aprovar a revalidacao (deferimento do CEPEx)", APROVAR,
+     {"via": "Graduação", "decisao": "Deferido"}),
+    ("indeferimento sem nivel declarado", SEM_NIVEL_INDEFERIDO,
+     {"via": "Graduação", "decisao": "Indeferido"}),
+]
+
 falhas = 0
 for rotulo, texto, esperado in CASOS:
     obtido = extrai_revalidacao(texto)

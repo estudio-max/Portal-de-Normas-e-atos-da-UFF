@@ -2031,12 +2031,56 @@ def _revalidacao_de_item_lista(match):
     }
 
 
+# ⚠️ "APROVAR A REVALIDAÇÃO" — a redação do deferimento que faltava, e que
+# custou caro. Todos os padrões acima exigem "deferir/indeferir/homologar", e o
+# CEPEx defere escrevendo APROVAR:
+#
+#   "DECIDE: 1- Aprovar a revalidação do Diploma, nível de Graduação em
+#    Antropologia, obtido por FULANA, junto a <instituição>, <país>"
+#
+# É a MESMA frase do indeferimento, trocando só o verbo — e o indeferimento
+# tinha padrão, o deferimento não. Medido no acervo local, 2010-2022: 510
+# aprovações invisíveis contra 717 indeferimentos vistos. O painel publicava
+# 0% de deferimento em anos inteiros, e 2019 e 2020 não apareciam de todo.
+#
+# Descoberto em 17/08/2026 indo ao TEXTO BRUTO depois que o mantenedor
+# perguntou se os 21% estavam confirmados. Antes disso eu havia encontrado um
+# outro defeito real (dois padrões com a decisão escrita dentro do regex) e
+# atribuído os zeros a ele — o texto mostrou que não era essa a causa. A lição
+# fica no teste: contar VERBO no corpo dos atos e comparar com o que o extrator
+# devolve é o que separa "o padrão não pega" de "o ato não existe".
+#
+# `homologar` cai aqui como deferimento porque "homologar A REVALIDAÇÃO" é
+# aprovação. Não colide com "homologar O PARECER …, indeferindo", que exige
+# "parecer" e é tratado pelo padrão do gerúndio.
+_REVAL_APROVACAO_RE = re.compile(
+    r"(?P<decisao>aprovar|deferir|indeferir|homologar)\s+"
+    r"(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|a\s+)?"
+    r"revalida[çc][ãa]o\s+d[oe]\s+(?:diploma|t[íi]tulo)\s*"
+    # O NÍVEL É OPCIONAL, como já era no backfill em PHP. A redação antiga
+    # escreve o curso direto — "revalidação do Diploma DE Licenciado em
+    # Informática de Gestão, obtido por …" — e exigir "nível" deixava esses
+    # atos de fora. Sem nível declarado, é graduação (ver `_reval_nivel`).
+    r"(?:,?\s*n[íi]vel\s+(?:de\s+)?(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s*(?:em|de)?\s*)?"
+    r"(?:de\s+)?(?P<curso>[^,]{0,180}?)\s*,\s*obtid[oa]\s+por\s+.+?,\s*"
+    r"(?:junto\s+[aà]o?s?|n[ao]s?)\s+(?P<origem>.+?)"
+    r"(?:,\s*nos\s+termos|\.\s|$)",
+    re.I | re.S)
+
+
+def _revalidacao_aprovacao(match):
+    verbo = (match.group("decisao") or "").lower()
+    decisao = "Indeferido" if verbo.startswith("indefer") else "Deferido"
+    return _revalidacao_parecer(match, decisao)
+
+
 _REVALIDACAO_MATCHERS = (
     (_REVAL_GRAD_RE, _revalidacao_grad),
     (_REVAL_POS_RE, _revalidacao_pos),
     (_REVAL_INDEFERIMENTO_RE, _revalidacao_do_parecer),
     (_REVAL_GERUNDIO_RE, _revalidacao_do_parecer),
     (_REVAL_TITULO_LEGADO_RE, _revalidacao_titulo_legado),
+    (_REVAL_APROVACAO_RE, _revalidacao_aprovacao),
 )
 
 
