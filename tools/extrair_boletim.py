@@ -1857,9 +1857,13 @@ _REVAL_GRAD_RE = re.compile(
     r"junto\s+[aà]o?\s*(?P<origem>.+?)"
     r"(?:,\s*nos\s+termos|\.\s|$)", re.I | re.S)
 
+# "o pedido de" aceito ao lado de "a solicitacao de" desde 18/08/2026 -- a
+# mesma frase da redacao moderna, so trocando o substantivo. Achado real de
+# 2020: "indeferir O PEDIDO DE reconhecimento do Titulo de Doutor obtido por
+# ..., na Universidad Columbia del Paraguay (Paraguai)".
 _REVAL_POS_RE = re.compile(
-    r"(?P<decisao>Deferir|Indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+"
-    r"Reconhecimento\s+do\s+T[íi]tulo\s+de\s+(?P<curso>.+?),\s*"
+    r"(?P<decisao>Deferir|Indeferir)\s+(?:a\s+solicita[çc][ãa]o|o\s+pedido)\s+de\s+"
+    r"Reconhecimento\s+do\s+T[íi]tulo\s+de\s+(?P<curso>.+?),?\s*"  # vírgula opcional
     r"obtid[oa]\s+por\s+.+?,\s*"
     r"n[ao]s?\s+(?P<inst>.+?)\s*\((?P<local>[^)]{3,60})\)\s*,?\s*"
     r"(?:como\s+equivalente\s+ao\s+de\s+(?P<equiv>.+?))?[,.]", re.I | re.S)
@@ -1895,10 +1899,27 @@ _REVAL_GERUNDIO_RE = re.compile(
     r"(?P<curso>.+?),\s*realizad[oa]\s+n[ao]\s+(?P<origem>.+?)\.\s*",
     re.I | re.S)
 
+# ⚠️ VERBO E SUBSTANTIVO AMPLIADOS em 18/08/2026 -- o mesmo dia da restricao
+# acima. Media 445 ocorrencias de "aprovar" perto de titulo/reconhecimento em
+# 2009-2022, no acervo local, contra so "homologar" que este padrao cobria.
+# "Reconhecimento" e substantivo MASCULINO ("o reconhecimento"), "revalidacao"
+# e FEMININO ("a revalidacao") -- o Boletim usa o artigo certo para cada um,
+# entao o padrao precisa aceitar os dois ("[ao]", nao so "a"). Faltava --
+# achado ao testar um caso real de 2013 ("Aprovar o reconhecimento do
+# Titulo...") que dava zero match.
 _REVAL_TITULO_LEGADO_RE = re.compile(
-    r"homologar\s+a\s+revalida[çc][ãa]o\s+do\s+t[íi]tulo\s+de\s+[“\"']?"
+    r"(?:homologar|aprovar)\s+[ao]\s+(?:revalida[çc][ãa]o|reconhecimento)\s+"
+    r"d[oe]\s+t[íi]tulo\s+de\s+[“\"']?"
     r"(?P<curso>.+?)[”\"']?,\s*obtid[oa]\s+por\s+.+?,\s*"
     r"junto\s+[aà]o?\s+(?P<origem>.+?),\s*como\s+"
+    # "equivalente ao [Titulo] de" e OPCIONAL: a redacao mais comum no acervo
+    # real tem essa frase entre "como" e o titulo (achado testando contra
+    # texto real, nao so contra o fixture do teste, que usava "como Doutor em
+    # X" direto -- por isso a lacuna nunca apareceu antes). A palavra "Titulo"
+    # dentro da frase tambem e opcional: BS 065/2013 tem "como equivalente ao
+    # TITULO de Mestre em X" (decisoes 275 e 276/2013) -- sem essa opcao o
+    # padrao inteiro dava zero match, nao so perdia o pais.
+    r"(?:equivalente\s+ao\s+(?:t[íi]tulo\s+)?de\s+)?"
     r"(?P<equiv>doutor(?:ado)?|mestre|mestrado)\s+em\s+.+?"
     r"(?:,\s*nos\s+termos|\.\s|$)",
     re.I | re.S)
@@ -1939,6 +1960,11 @@ _REVAL_PAIS_CANON = {
 def _reval_pais(bruto):
     """Canoniza o nome do país; devolve '' quando não dá para afirmar."""
     p = limpar(bruto or "").strip(" .,;")
+    # Preposição solta na frente: quando o país vem depois de uma SEGUNDA
+    # vírgula ("...Stony Brook, NOS Estados Unidos da América"), a preposição
+    # reaparece colada ao início do que sobrou. Achado real em 18/08/2026:
+    # sem isto, o país saía como "nos Estados Unidos da América".
+    p = re.sub(r"^(?:nos?|nas?|em)\s+", "", p, flags=re.I)
     if not p or len(p) > 40:
         return ""
     # _fold() = minúsculas sem acento. É o que faz "Aústria" (erro da fonte) e
@@ -1948,11 +1974,19 @@ def _reval_pais(bruto):
 
 
 def _reval_origem(bruto):
+    # ⚠️ SEM GUARDA EXTRA além de "existem ≥2 partes separadas por vírgula" —
+    # corrigido em 18/08/2026. A versão anterior só confiava no país quando a
+    # canonização MUDAVA o texto (grafia alternativa corrigida, tipo "estados
+    # unidos da america"->"Estados Unidos"), e descartava país já escrito
+    # certo: "Universidad Complutense de Madrid, Espanha" perdia "Espanha"
+    # porque _reval_pais("Espanha") devolve "Espanha" sem alteração (não está
+    # na tabela de grafias alternativas), então `pais != partes[-1]` dava
+    # falso e o país inteiro era jogado fora. `_revalidacao_grad()`, alguns
+    # metros abaixo, nunca teve essa guarda e é o caminho que já produz os 63
+    # países reais em produção — esta função passa a fazer o mesmo.
     partes = [x.strip() for x in limpar(bruto).split(",") if x.strip()]
     if len(partes) >= 2:
-        pais = _reval_pais(partes[-1])
-        if pais != partes[-1] or _fold(partes[-1]) in _REVAL_PAIS_CANON:
-            return ", ".join(partes[:-1]), pais
+        return ", ".join(partes[:-1]), _reval_pais(partes[-1])
     return limpar(bruto).strip(" .,;"), ""
 
 
@@ -2067,10 +2101,20 @@ def _revalidacao_de_item_lista(match):
 # `homologar` cai aqui como deferimento porque "homologar A REVALIDAÇÃO" é
 # aprovação. Não colide com "homologar O PARECER …, indeferindo", que exige
 # "parecer" e é tratado pelo padrão do gerúndio.
+# ⚠️ SÓ "DIPLOMA" AQUI, NUNCA "TÍTULO" — restrição corrigida em 18/08/2026.
+# "Título" tinha entrado ontem como sinônimo de "Diploma", e pareceu inofensivo:
+# o padrão continuou casando. O que ele não fazia era ler a cláusula "como
+# equivalente ao de Doutor/Mestre", que é a ÚNICA forma de saber o nível numa
+# redação de título — sem ela, a regra "sem nível declarado é graduação" (linha
+# acima) classificava mestrado/doutorado como GRADUAÇÃO. Descoberto porque o
+# mantenedor achou 146 pedidos de pós-graduação pouco — um mestrado real da
+# Espanha saía com via='Graduação' e pais='' (a cláusula carrega o país
+# também, e este padrão não a lê). Título tem padrão próprio logo abaixo
+# (_REVAL_TITULO_LEGADO_RE), que já lê "como equivalente" corretamente.
 _REVAL_APROVACAO_RE = re.compile(
     r"(?P<decisao>aprovar|deferir|indeferir|homologar)\s+"
     r"(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|a\s+)?"
-    r"revalida[çc][ãa]o\s+d[oe]\s+(?:diploma|t[íi]tulo)\s*"
+    r"revalida[çc][ãa]o\s+d[oe]\s+diploma\s*"
     # O NÍVEL É OPCIONAL, como já era no backfill em PHP. A redação antiga
     # escreve o curso direto — "revalidação do Diploma DE Licenciado em
     # Informática de Gestão, obtido por …" — e exigir "nível" deixava esses

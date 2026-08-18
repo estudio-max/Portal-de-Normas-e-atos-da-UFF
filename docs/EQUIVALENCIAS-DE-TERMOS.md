@@ -101,6 +101,53 @@ deferimento; `homologar O PARECER …, indeferindo` é indeferimento. Quem decid
 o que vem depois do verbo, nunca o verbo sozinho. As duas formas estão lado a
 lado nos exemplos acima.
 
+⚠️ **18/08/2026 — "146 pedidos de pós-graduação é impossível", disse o
+mantenedor, e tinha razão.** Três lacunas, achadas com atos reais que ele foi
+colando de buscas no próprio Boletim, empurravam pós-graduação para dentro (ou
+para fora) da conta errada:
+
+```
+[2010] Homologar a revalidação do Título de "Doutor em Filosofia", obtido por
+       FULANO DE TAL, junto à State University of New York at Stony Brook, nos
+       Estados Unidos da América, como equivalente ao de Doutor em Comunicação
+```
+↑ `Título` (não `Diploma`) sem nível declarado caía no fallback de
+Graduação e perdia o país — 69 atos, medidos ato a ato contra a versão
+anterior do extrator.
+
+```
+[2013] Aprovar o reconhecimento do Título de Doutorado em Matemática, obtido
+       por FULANA DE TAL, junto a Universidad de Granada, Espanha, como
+       equivalente ao de Doutor em Matemática
+```
+↑ **substantivo `reconhecimento`** (não só `revalidação`) — gramaticalmente
+correto, "reconhecimento" é masculino ("**o** reconhecimento"), mas o padrão só
+prendia o artigo feminino de "a revalidação". Sem essa alternativa, o ato
+inteiro dava zero match, não só perdia um campo.
+
+```
+[2013] Aprovar o reconhecimento do Título de Mestre em Linguistica Germânica,
+       obtido por FULANA DE TAL, junto a Eberhard Karls Universität Tübingen,
+       como equivalente ao TÍTULO DE Mestre em Estudos de Linguagem
+```
+↑ a palavra `Título` repetida entre "ao" e "de" (variante real do mesmo
+boletim, decisões 275 e 276/2013) também dava zero match — sem ela, o texto
+seguia até o fim da frase e a instituição virava a cláusula inteira, ainda
+classificada (errado) como Graduação.
+
+Corrigido nos dois lados (`tools/extrair_boletim.py` e
+`backend/importar/backfill_ato_revalidacao.php`, mantidos espelhados). No
+acervo local reprocessado, Pós-graduação subiu de 146 para 297 (Graduação caiu
+de 1.503 para 1.432 — exatamente os 69 atos do primeiro achado, que nunca
+foram graduação). Em produção, `backfill_ato_revalidacao.php` (que recupera o
+histórico fora do cache de ~1 ano do extrator diário) fechou em Graduação
+1.461 / Pós-graduação 555.
+
+⚠️ **Pendência aberta:** país fica vazio quando vem entre parênteses colado à
+instituição — `"Universidad de Buenos Aires (Argentina)"` grava `pais=NULL` em
+vez de separar `instituicao="Universidad de Buenos Aires"`,
+`pais="Argentina"`. Achado no spot-check pós-gravação; ainda não corrigido.
+
 ## Aposentadoria
 
 Extrator: `tools/extrair_boletim.py` · Teste: `tools/teste_aposentadoria.py`

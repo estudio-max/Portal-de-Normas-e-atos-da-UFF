@@ -115,8 +115,23 @@ $pdo = conectar($cfg);
 // revalidacao do Diploma", e nenhum dos dois caminhos de escrita tinha esse
 // verbo. Medido no acervo local: 511 deferimentos invisiveis entre 2010 e
 // 2022, contra 696 vistos. O painel publicava 0% em anos inteiros.
+// ⚠️ TRÊS LACUNAS ACHADAS EM 18/08/2026, espelhando o mesmo dia de correções
+// em tools/extrair_boletim.py (usuário achou "pós-graduação muito baixa" —
+// 146 pedidos — e trouxe atos reais do Boletim que provaram cada uma):
+//   1. "revalidação" era o ÚNICO substantivo aceito -- "RECONHECIMENTO do
+//      Título" (BS 065/2013, decisões 137, 226/2013) dava zero match.
+//   2. O prefixo opcional antes do substantivo só tinha "a " como artigo
+//      solto -- "Aprovar O reconhecimento" (substantivo masculino, gramática
+//      correta) não casava, porque não sobrava alternativa para o "o " da
+//      fonte.
+//   3. "como equivalente AO DE Doutor" era a única forma aceita -- "como
+//      equivalente AO TÍTULO DE Mestre" (BS 065/2013, decisões 275, 276/2013)
+//      não era um miss limpo: sem terminador, o `origem` engolia a frase
+//      inteira (inclusive "como equivalente...") como se fosse instituição, e
+//      o ato ainda saía classificado (errado) como Graduação pelo fallback do
+//      $nivel vazio.
 $RE_GRAD = '/(?P<decisao>aprov|defer|indefer|homolog)\w*\s+'
-         . '(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|a\s+)?'
+         . '(?:a\s+solicita[çc][ãa]o\s+de\s+|o\s+pedido\s+de\s+|[ao]\s+)?'
          // "do diploma" OU "do título": o Conselho escreve das duas formas, e
          // exigir só "diploma" deixava fora ato real — caso #324/2005,
          // "homologar a revalidação do Título de Máster Degree obtido pela
@@ -124,11 +139,11 @@ $RE_GRAD = '/(?P<decisao>aprov|defer|indefer|homolog)\w*\s+'
          // o texto ARMAZENADO, não contra o trecho limpo do relatório: foi
          // testando com o trecho limpo que eu concluí, antes, que o extrator
          // já cobria este caso — e não cobria.
-         . 'revalida[çc][ãa]o\s+d[oe]\s+(?:diploma|t[íi]tulo)\s*'
+         . '(?:revalida[çc][ãa]o|reconhecimento)\s+d[oe]\s+(?:diploma|t[íi]tulo)\s*'
          . '(?:,?\s*n[íi]vel\s+(?:de\s+)?(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s*(?:em|de)?\s*)?'
          . '(?:de\s+)?(?P<curso>[^,]{0,180}?)\s*,\s*obtid[oa]\s+por\s+.+?,\s*'
          . '(?:junto\s+[aà]o?s?|n[ao]s?)\s+(?P<origem>.+?)'
-         . '(?:,\s*nos\s+termos|,\s*como\s+equivalente\s+ao\s+de\s+(?P<equiv>[^,.]{0,80})|\.\s|$)/iu';
+         . '(?:,\s*nos\s+termos|,\s*como\s+equivalente\s+ao\s+(?:t[íi]tulo\s+)?de\s+(?P<equiv>[^,.]{0,80})|\.\s|$)/iu';
 
 $RE_POS  = '/(?P<decisao>deferir|indeferir)\s+a\s+solicita[çc][ãa]o\s+de\s+'
          . 'reconhecimento\s+do\s+t[íi]tulo\s+de\s+(?P<curso>.+?),\s*'

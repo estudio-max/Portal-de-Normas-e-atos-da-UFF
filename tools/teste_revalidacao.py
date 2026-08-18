@@ -221,6 +221,59 @@ CASOS += [
      {"via": "Graduação", "decisao": "Indeferido"}),
 ]
 
+# 18/08/2026: usuario reportou pos-graduacao "muito baixa" no painel (146
+# pedidos). Achado: "revalidacao do TITULO" (nao "diploma") estava caindo no
+# padrao de graduacao (_REVAL_APROVACAO_RE aceitava "titulo" tambem) e perdia
+# o pais por completo -- 71 atos reclassificados incorretamente como
+# Graduacao no acervo real, medidos diretamente. Caso abaixo e ato real
+# (BS 148/2010, decisao 247/10).
+TITULO_HOMOLOGAR_EQUIVALENTE = """DECIDE: Homologar a revalidação do Título de
+“Doutor em Filosofia”, obtido por FULANO DE TAL, junto à State University of
+New York at Stony Brook, nos Estados Unidos da América, como equivalente ao
+de Doutor em Comunicação, nos termos estabelecidos na Resolução 97/1996,
+deste Conselho."""
+
+# Mesma investigacao: "Aprovar O reconhecimento" (substantivo masculino) nao
+# batia porque o padrao so aceitava o artigo feminino "a" (para "revalidacao").
+# Ato real (BS 065/2013, decisao 137/2013).
+APROVAR_O_RECONHECIMENTO = """DECIDE 1- Aprovar o reconhecimento do Título de
+Doutorado em Matemática, obtido por FULANA DE TAL, junto a Universidad de
+Granada, Espanha, como equivalente ao de Doutor em Matemática, nos termos
+estabelecidos na Resolução 188/2012, deste Conselho."""
+
+CASOS += [
+    ("titulo (nao diploma) homologado como equivalente: pos-graduacao, nao graduacao",
+     TITULO_HOMOLOGAR_EQUIVALENTE,
+     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+      "curso": "Doutor em Filosofia",
+      "instituicao": "State University of New York at Stony Brook",
+      "pais": "Estados Unidos"}),
+    ("'aprovar O reconhecimento' (artigo masculino) tambem bate o padrao",
+     APROVAR_O_RECONHECIMENTO,
+     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Doutorado",
+      "curso": "Doutorado em Matemática",
+      "instituicao": "Universidad de Granada", "pais": "Espanha"}),
+]
+
+# 18/08/2026, mesma investigacao: "como equivalente AO TÍTULO DE Mestre em X"
+# (com a palavra "Título" repetida no meio) dava ZERO match -- nao so perdia
+# o pais, o ato inteiro sumia. Achado com atos reais do mesmo boletim
+# (BS 065/2013, decisoes 275 e 276/2013). Pais vazio aqui e correto: a fonte
+# nao menciona o pais da instituicao nesses dois atos.
+EQUIVALENTE_AO_TITULO_DE = """DECIDE 1- Aprovar o reconhecimento do Título de
+Mestre em Linguistica Germânica, obtido por FULANA DE TAL, junto a Eberhard
+Karls Universität Tübingen, como equivalente ao Título de Mestre em Estudos
+de Linguagem (Letras/Linguistica), nos termos estabelecidos na Resolução
+188/2012, deste Conselho."""
+
+CASOS += [
+    ("'equivalente ao TÍTULO DE Mestre' (nao so 'equivalente ao de')",
+     EQUIVALENTE_AO_TITULO_DE,
+     {"via": "Pós-graduação", "decisao": "Deferido", "nivel": "Mestrado",
+      "curso": "Mestre em Linguistica Germânica",
+      "instituicao": "Eberhard Karls Universität Tübingen", "pais": ""}),
+]
+
 falhas = 0
 for rotulo, texto, esperado in CASOS:
     obtido = extrai_revalidacao(texto)
