@@ -573,12 +573,12 @@ export default function Sobre() {
             guia de extração do Boletim de Serviço
           </a>.
         </p>
-        <Figura
-          arquivo="2-jornada-do-ato.svg"
-          w={1000} h={420}
-          alt="Fluxo em cinco etapas: a UFF publica o Boletim em PDF, um robô baixa todo dia às 19h10, o texto é recortado em atos, os atos vão para a base, e o usuário pesquisa por palavra, número, órgão, ano ou nome."
-          legenda="A etapa do meio é a difícil: o PDF não marca onde um ato termina e o outro começa."
-        />
+        {/* A figura "2-jornada-do-ato.svg" SAIU daqui. Ela desenhava o mesmo
+            fluxo que o infográfico vivo da seção "Do PDF ao dado: o ciclo",
+            logo abaixo — e desenhava com os números por dentro, que é
+            exatamente a peça que envelhece em silêncio. Figura estática só
+            continua quando o que ela mostra NÃO tem número: a anatomia do ato
+            e a teia de relações são desenhos de conceito, não de dado. */}
         <Figura
           arquivo="3-anatomia-do-ato.svg"
           w={940} h={520}

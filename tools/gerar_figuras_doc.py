@@ -44,19 +44,6 @@ def carrega_terras():
             for poly in re.findall(r'\[(\[[^\]]*\](?:,\[[^\]]*\])*)\]', corpo)]
 
 
-def carrega_stats(arquivo=None):
-    """Total de atos, para a figura do fluxo. Mesma razao das outras: '133 mil'
-    escrito a mao envelheceu sem avisar."""
-    if arquivo:
-        return json.load(io.open(arquivo, encoding='utf-8'))
-    req = urllib.request.Request(
-        'https://inteligencia.fanara.com.br/api/stats',
-        headers={'User-Agent': 'UFF-Indexador/1.0 (figuras da doc; '
-                               'contato estudio@fanara.com.br)'})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.load(r)
-
-
 def carrega_cooperacao(arquivo=None):
     """Numeros da aba Cooperação: da API, ou de um arquivo salvo."""
     if arquivo:
@@ -92,89 +79,6 @@ def texto(x, y, s, tam=13, cor='#0f172a', peso='400', anchor='start', extra=''):
 def quebra(x, y, linhas, tam=11, cor=CINZA, dy=14, anchor='middle'):
     return ''.join(texto(x, y + i * dy, l, tam, cor, '400', anchor)
                    for i, l in enumerate(linhas))
-
-
-# ---------------------------------------------------------------- PECA 2
-def peca2(total_atos):
-    W, H = 1000, 420
-    p = []
-    p.append(texto(40, 42, 'Como um ato do Boletim vira um registro pesquisável',
-                   19, AZUL, '700'))
-    p.append(texto(40, 66, 'Do PDF publicado pela UFF até a busca no portal', 12.5, CINZA))
-
-    etapas = [
-        ('A UFF publica',   ['Boletim de Serviço em PDF,', 'quase todo dia útil']),
-        ('Um robô baixa',   ['Todo dia às 19h10,', 'sem ninguém apertar botão']),
-        ('O texto é recortado', ['Cada ato vira um registro:', 'tipo, número, órgão, data, ementa']),
-        ('Vai para a base', [f'{total_atos // 1000} mil atos,', 'de 2001 a hoje']),
-        ('Você pesquisa',   ['Por palavra, número, órgão,', 'ano ou nome de pessoa']),
-    ]
-    x0, larg, alt, y = 40, 168, 118, 110
-    vao = (W - 80 - larg * 5) / 4
-
-    icones = [
-        # 1 predio
-        "<path d='M-16 12 h32 M-13 12 v-20 h26 v20 M-8 -4 h4 M0 -4 h4 M-8 3 h4 M0 3 h4 "
-        "M-13 -8 l13 -9 l13 9' fill='none' stroke='%s' stroke-width='2' "
-        "stroke-linecap='round' stroke-linejoin='round'/>",
-        # 2 robo
-        "<rect x='-13' y='-8' width='26' height='20' rx='4' fill='none' stroke='%s' "
-        "stroke-width='2'/><circle cx='-5' cy='0' r='2.4' fill='%s'/>"
-        "<circle cx='5' cy='0' r='2.4' fill='%s'/><path d='M-6 7 h12 M0 -8 v-7 "
-        "M-18 2 h5 M18 2 h-5' stroke='%s' stroke-width='2' stroke-linecap='round' "
-        "fill='none'/><circle cx='0' cy='-16' r='2.5' fill='%s'/>",
-        # 3 documento recortado
-        "<path d='M-11 -14 h16 l7 7 v21 h-23 z' fill='none' stroke='%s' stroke-width='2' "
-        "stroke-linejoin='round'/><path d='M-6 -6 h12 M-6 -1 h12' stroke='%s' "
-        "stroke-width='2' stroke-linecap='round'/><path d='M-9 5 h18' stroke='%s' "
-        "stroke-width='2' stroke-dasharray='3 3' stroke-linecap='round'/>"
-        "<path d='M-6 10 h12' stroke='%s' stroke-width='2' stroke-linecap='round'/>",
-        # 4 banco de dados
-        "<ellipse cx='0' cy='-10' rx='15' ry='5.5' fill='none' stroke='%s' stroke-width='2'/>"
-        "<path d='M-15 -10 v20 a15 5.5 0 0 0 30 0 v-20' fill='none' stroke='%s' "
-        "stroke-width='2'/><path d='M-15 0 a15 5.5 0 0 0 30 0' fill='none' stroke='%s' "
-        "stroke-width='2'/>",
-        # 5 lupa sobre tela
-        "<rect x='-16' y='-13' width='32' height='23' rx='3' fill='none' stroke='%s' "
-        "stroke-width='2'/><path d='M-6 14 h12' stroke='%s' stroke-width='2' "
-        "stroke-linecap='round'/><circle cx='1' cy='-3' r='6' fill='none' stroke='%s' "
-        "stroke-width='2'/><path d='M5.5 1.5 l6 6' stroke='%s' stroke-width='2' "
-        "stroke-linecap='round'/>",
-    ]
-    conta_cor = [1, 5, 4, 3, 4]
-
-    for i, (tit, sub) in enumerate(etapas):
-        x = x0 + i * (larg + vao)
-        cx = x + larg / 2
-        p.append(f"<rect x='{x}' y='{y}' width='{larg}' height='{alt}' rx='9' "
-                 f"fill='#ffffff' stroke='{AZUL}' stroke-width='1.6'/>")
-        p.append(f"<g transform='translate({cx},{y + 34})'>"
-                 + (icones[i] % tuple([AZUL] * conta_cor[i])) + "</g>")
-        p.append(texto(cx, y + 68, tit, 13.5, AZUL, '700', 'middle'))
-        p.append(quebra(cx, y + 87, sub, 10.5, CINZA, 13))
-        if i < 4:
-            xa = x + larg + 8
-            p.append(f"<path d='M{xa} {y + alt/2} h{vao - 16}' stroke='{CINZA}' "
-                     f"stroke-width='1.8' marker-end='url(#seta)'/>")
-
-    # caixa de alerta sob a etapa 3
-    cx3 = x0 + 2 * (larg + vao) + larg / 2
-    ytop = y + alt + 46
-    p.append(f"<path d='M{cx3} {y + alt} v{46 - 8}' stroke={chr(39)}{AMAR}{chr(39)} "
-             f"stroke-width='1.6' stroke-dasharray='4 4'/>")
-    bw, bh = 470, 62
-    p.append(f"<rect x='{cx3 - bw/2}' y='{ytop}' width='{bw}' height='{bh}' rx='8' "
-             f"fill='#FEFCE8' stroke='{AMAR}' stroke-width='1.6' stroke-dasharray='6 4'/>")
-    p.append(texto(cx3, ytop + 25, 'É aqui que mora a dificuldade.', 13, '#854D0E', '700', 'middle'))
-    p.append(texto(cx3, ytop + 44, 'O PDF não diz onde um ato termina e o outro começa.',
-                   12.5, '#854D0E', '400', 'middle'))
-
-    defs = (f"<defs><marker id='seta' viewBox='0 0 10 10' refX='9' refY='5' "
-            f"markerWidth='6' markerHeight='6' orient='auto-start-reverse'>"
-            f"<path d='M0 0 L10 5 L0 10 z' fill='{CINZA}'/></marker></defs>")
-    salvar('2-jornada-do-ato.svg', defs + ''.join(p), W, H,
-           'Fluxo em cinco etapas: a UFF publica o PDF, um robô baixa, o texto é '
-           'recortado em atos, os atos vão para a base e o usuário pesquisa.')
 
 
 # ---------------------------------------------------------------- PECA 3
@@ -378,8 +282,15 @@ def peca5(coop):
 print('Gerando SVGs em public/figuras/ (e copia em docs/figuras/)')
 ap = argparse.ArgumentParser()
 ap.add_argument('--coop', help='JSON de /api/cooperacao salvo, para rodar sem rede')
-ap.add_argument('--stats', help='JSON de /api/stats salvo, para rodar sem rede')
 args = ap.parse_args()
 coop = carrega_cooperacao(args.coop)
-stats = carrega_stats(args.stats)
-peca2(stats['total']); peca3(); peca4(); peca5(coop)
+# ⚠️ A PEÇA 2 SAIU, e com ela o último uso de `stats`. Ela desenhava o fluxo
+# "PDF → robô → recorte → base → busca" COM O TOTAL DE ATOS DENTRO DO DESENHO,
+# e esse fluxo virou componente vivo (`CicloDaExtracao.tsx`) em 18/08/2026.
+#
+# O critério que ficou: figura estática só serve para o que NÃO tem número.
+# `3-anatomia-do-ato` e `4-teia-de-relacoes` são desenhos de CONCEITO e seguem
+# aqui; a peça 2 e a `5-mapa-cooperacao` carregam dado — e dado desenhado
+# envelhece sem avisar, que foi o defeito da grade de abas (doze painéis num
+# portal de quinze) e o do próprio mapa (1.467 acordos quando já eram 1.524).
+peca3(); peca4(); peca5(coop)
