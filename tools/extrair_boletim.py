@@ -1850,8 +1850,24 @@ _REVAL_POS_RE = re.compile(
     r"n[ao]s?\s+(?P<inst>.+?)\s*\((?P<local>[^)]{3,60})\)\s*,?\s*"
     r"(?:como\s+equivalente\s+ao\s+de\s+(?P<equiv>.+?))?[,.]", re.I | re.S)
 
+# ⚠️ ESTES DOIS PADRÕES JÁ TIVERAM A DECISÃO EMBUTIDA no texto do regex —
+# "indeferimento" e "indeferindo" escritos como literal, sem alternativa para o
+# deferimento. O efeito não foi perder alguns casos: foi produzir uma TAXA DE
+# DEFERIMENTO FALSA. Onde o Conselho usou estas duas redações, só os
+# indeferimentos eram vistos, e o painel publicou 0% de deferimento em 614
+# decisões de 2011 a 2017 — sete anos seguidos de zero absoluto, entre 100% em
+# 2006-2009 e 83% em 2025. Zero absoluto não é política; é o padrão dizendo o
+# que ele mesmo procurou.
+#
+# Descoberto em 17/08/2026 porque o mantenedor perguntou se os 21% estavam
+# confirmados. Nenhum teste podia pegar isso: o extrator acertava tudo o que
+# via, e o que ele não via não deixava rastro. O que denuncia é a SIMETRIA —
+# a mesma frase com o verbo trocado tem de produzir a decisão trocada, nunca
+# nada. É o que `testa_simetria_revalidacao` passou a exigir.
+#
+# O prefixo "in" é opcional e CAPTURADO. Não escreva a decisão no padrão.
 _REVAL_INDEFERIMENTO_RE = re.compile(
-    r"manifestar-se\s+pelo\s+indeferimento\s+do\s+pedido\s+de\s+"
+    r"manifestar-se\s+pelo\s+(?P<neg>in)?deferimento\s+do\s+pedido\s+de\s+"
     r"revalida[çc][ãa]o\s+do\s+diploma\s+de\s+.+?,\s*"
     r"em\s+n[íi]vel\s+de\s+(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s+em\s+"
     r"(?P<curso>.+?),\s*realizad[oa]\s+n[ao]\s+(?P<origem>.+?)\.\s*",
@@ -1859,7 +1875,7 @@ _REVAL_INDEFERIMENTO_RE = re.compile(
 
 _REVAL_GERUNDIO_RE = re.compile(
     r"homologar\s+o\s+parecer\s+da\s+comiss[ãa]o.+?,\s*"
-    r"indeferindo\s+a\s+solicita[çc][ãa]o\s+de\s+revalida[çc][ãa]o\s+de\s+"
+    r"(?P<neg>in)?deferindo\s+a\s+solicita[çc][ãa]o\s+de\s+revalida[çc][ãa]o\s+de\s+"
     r"diploma\s+de\s+.+?,\s*em\s+n[íi]vel\s+de\s+"
     r"(?P<nivel>gradua[çc][ãa]o|mestrado|doutorado)\s+em\s+"
     r"(?P<curso>.+?),\s*realizad[oa]\s+n[ao]\s+(?P<origem>.+?)\.\s*",
@@ -1971,7 +1987,12 @@ def _revalidacao_pos(match):
     }
 
 
-def _revalidacao_indeferida(match, decisao):
+def _revalidacao_do_parecer(match):
+    """A decisão sai do grupo `neg`, não de um argumento fixo na chamada."""
+    return _revalidacao_parecer(match, 'Indeferido' if match.group('neg') else 'Deferido')
+
+
+def _revalidacao_parecer(match, decisao):
     inst, pais = _reval_origem(match.group("origem"))
     via, nivel = _reval_nivel(match.group("nivel"))
     return {
@@ -2013,8 +2034,8 @@ def _revalidacao_de_item_lista(match):
 _REVALIDACAO_MATCHERS = (
     (_REVAL_GRAD_RE, _revalidacao_grad),
     (_REVAL_POS_RE, _revalidacao_pos),
-    (_REVAL_INDEFERIMENTO_RE, lambda match: _revalidacao_indeferida(match, "Indeferido")),
-    (_REVAL_GERUNDIO_RE, lambda match: _revalidacao_indeferida(match, "Indeferido")),
+    (_REVAL_INDEFERIMENTO_RE, _revalidacao_do_parecer),
+    (_REVAL_GERUNDIO_RE, _revalidacao_do_parecer),
     (_REVAL_TITULO_LEGADO_RE, _revalidacao_titulo_legado),
 )
 

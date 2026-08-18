@@ -240,8 +240,21 @@ function ondas(serie: { ano: number; total: number }[]) {
 /** Colunas verticais COM EIXO. Série temporal longa: o eixo Y dá a ordem de
  *  grandeza sem precisar de um número em cima de cada coluna, e o X mostra um
  *  ano sim, outro não, que é o que cabe. */
+/** Colunas por ano COM A FATIA DEFERIDA dentro.
+ *
+ *  A coluna mostrava só o total, e foi por isso que ninguém viu: entre 2011 e
+ *  2017 o painel publicou 614 decisões com ZERO deferimentos — sete anos
+ *  seguidos de zero absoluto, entre 100% em 2006-2009 e 83% em 2025 — e a
+ *  série parecia perfeitamente normal, porque só o volume estava desenhado.
+ *  Era falha do extrator (dois padrões tinham a palavra "indeferimento"
+ *  escrita dentro do regex, sem alternativa para o deferimento), mas o painel
+ *  não dava como notar.
+ *
+ *  Com a fatia dentro da coluna, um trecho inteiro sem verde salta aos olhos
+ *  de quem olha o gráfico — inclusive de quem mantém o portal. É a diferença
+ *  entre um número errado que passa despercebido e um que se denuncia. */
 function ColunasEixo({ serie, rotulo }: {
-  serie: { ano: number; total: number }[]; rotulo: string;
+  serie: { ano: number; total: number; deferidos: number }[]; rotulo: string;
 }) {
   const max = Math.max(1, ...serie.map(x => x.total));
   const { teto, ticks } = escala(max);
@@ -270,10 +283,16 @@ function ColunasEixo({ serie, rotulo }: {
               }} />
           ))}
           <div className="absolute inset-0 flex items-end gap-0.5" role="img"
-            aria-label={`${rotulo}. ${serie.map(x => `${x.ano}: ${x.total}`).join('; ')}.`}>
+            aria-label={`${rotulo}. ${serie.map(x => `${x.ano}: ${x.total}, ${x.deferidos} deferidos`).join('; ')}.`}>
             {serie.map(x => (
-              <span key={x.ano} className="block flex-1 min-w-0 rounded-t"
-                style={{ height: `${(x.total / teto) * 100}%`, minHeight: 2, background: 'var(--serie-azul)' }} />
+              <span key={x.ano} className="relative block flex-1 min-w-0 rounded-t"
+                style={{ height: `${(x.total / teto) * 100}%`, minHeight: 2, background: 'var(--serie-azul)' }}>
+                {/* A fatia deferida cresce do pé da coluna, que é de onde se
+                    lê uma parte do todo. Verde porque nesta aba verde
+                    significa deferimento, e só isso. */}
+                <span className="absolute bottom-0 left-0 right-0 rounded-t" aria-hidden="true"
+                  style={{ height: `${(x.deferidos / Math.max(1, x.total)) * 100}%`, background: 'var(--chart-mark)' }} />
+              </span>
             ))}
           </div>
         </div>
@@ -300,8 +319,20 @@ function ColunasEixo({ serie, rotulo }: {
           <span>{serie[serie.length - 1].ano}</span>
         </div>
       </div>
+      <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-4 rounded-sm" aria-hidden="true"
+            style={{ background: 'var(--serie-azul)' }} />
+          decididos
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-4 rounded-sm" aria-hidden="true"
+            style={{ background: 'var(--chart-mark)' }} />
+          deferidos
+        </span>
+      </p>
       {faixas.length > 0 && (
-        <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
+        <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
           {faixas.map(f => (
             <span key={f.de} className="inline-flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-4 rounded-sm" aria-hidden="true"
@@ -510,11 +541,24 @@ export default function RevalidacaoApi() {
           verificado. Sai quando a etapa 8 do plano de reprocessamento fechar. */}
       <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[12px] leading-relaxed text-amber-700">
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+        {/* ⚠️ CONTAGEM E TAXA NÃO TÊM A MESMA GARANTIA, e o aviso dizia que
+            sim. "Mínimo verificado" vale para uma CONTAGEM, que só pode
+            crescer quando o acervo terminar de ser processado. Uma
+            PORCENTAGEM não é mínimo de nada: calculada sobre um subconjunto
+            enviesado, ela se move para qualquer lado. Em 17/08/2026
+            descobriu-se que era exatamente o caso — dois padrões do extrator
+            enxergavam o indeferimento e eram cegos ao deferimento escrito do
+            mesmo jeito, e a taxa saiu falsa. Escrever "mínimo verificado" ao
+            lado de um percentual foi meu erro; ele emprestava ao número uma
+            garantia que a contagem tem e ele não. */}
         <span>
-          <strong>Série em consolidação.</strong> Os números representam os
-          atos já processados, e não o total histórico — o acervo mais antigo
-          ainda está sendo incorporado. Para citar em relatório ou resposta
-          oficial, trate-os como <strong>mínimo verificado</strong>.
+          <strong>Série em consolidação.</strong> As <strong>contagens</strong> representam
+          os atos já processados, e não o total histórico — o acervo mais antigo ainda
+          está sendo incorporado, então trate-as como <strong>mínimo verificado</strong>.
+          Já as <strong>taxas de deferimento</strong> não são mínimo de coisa alguma:
+          são proporções sobre o que foi lido até aqui, e podem subir ou descer
+          conforme o acervo fecha. Para citar em relatório ou resposta oficial, use as
+          contagens e confira a taxa no ato.
         </span>
       </p>
 
@@ -678,7 +722,7 @@ export default function RevalidacaoApi() {
             <h3 className="text-[13px] font-bold text-slate-900">Decisões por ano</h3>
             <div className="mt-3">
               <ColunasEixo rotulo={`Decisões por ano, ${via}`}
-                serie={serie.map(x => ({ ano: x.ano, total: x.total }))} />
+                serie={serie.map(x => ({ ano: x.ano, total: x.total, deferidos: x.deferidos }))} />
             </div>
             <TabelaEquivalente titulo="as decisões por ano"
               colunas={['Ano', 'Decididos', 'Deferidos']}

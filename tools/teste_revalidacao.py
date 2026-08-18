@@ -24,6 +24,7 @@ Existe por tres motivos, nesta ordem de gravidade:
 Casos extraidos de boletins reais (BS 130/2025, 26/2026, 72/2026).
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -267,6 +268,65 @@ if not any(p.lower() in " ".join(
         for valor in resultado.values()).lower()
            for texto, pedacos in NOMES for p in pedacos):
     print("ok   : nenhum nome de pessoa aparece na saida (invariante de privacidade)")
+
+
+# ---------------------------------------------------------------------------
+# SIMETRIA DA DECISÃO — a trava que faltava.
+#
+# Dois padrões nasceram com a decisão ESCRITA DENTRO do regex ("indeferimento",
+# "indeferindo"), sem alternativa para o deferimento. O extrator acertava tudo
+# o que via, e o que ele não via não deixava rastro: os testes passavam, o CI
+# ficava verde, e o painel publicava 0% de deferimento em 614 decisões de 2011
+# a 2017 — sete anos seguidos de zero absoluto, entre 100% em 2006-2009 e 83%
+# em 2025.
+#
+# Um caso de teste por redação não pega isso, porque o caso é escrito a partir
+# do padrão: escreve-se o indeferimento porque foi o indeferimento que se
+# programou. O que pega é a SIMETRIA — trocar o verbo tem de trocar a decisão,
+# nunca fazer o ato sumir.
+#
+# Por isso o teste NÃO lista pares à mão: ele vira o verbo de cada caso real do
+# arquivo e exige que o extrator continue enxergando. Redação nova entra na
+# conferência sozinha.
+VERBOS = [
+    ('indeferimento', 'deferimento'),
+    ('indeferindo', 'deferindo'),
+    ('indeferir', 'deferir'),
+]
+
+
+def _vira_verbo(texto):
+    """Troca indeferir->deferir (e volta). Devolve None se não houver verbo."""
+    baixo = texto.lower()
+    for neg, pos in VERBOS:
+        if neg in baixo:
+            return re.sub(neg, pos, texto, flags=re.I), 'Deferido'
+        # `pos` sem o `neg` antes: evita casar o miolo de "indeferimento"
+        if re.search(r'(?<!in)' + pos, baixo):
+            return re.sub(r'(?<!in)' + pos, 'in' + pos, texto, flags=re.I), 'Indeferido'
+    return None
+
+
+simetria = 0
+for rotulo, texto, esperado in CASOS:
+    if esperado is None:
+        continue  # caso de rejeição (ato citado): não tem espelho
+    virado = _vira_verbo(texto)
+    if not virado:
+        continue
+    texto_espelho, decisao_esperada = virado
+    vistos = extrai_revalidacoes(texto_espelho)
+    simetria += 1
+    if not vistos:
+        falhas += 1
+        print(f"FALHA (simetria): '{rotulo}' some quando o verbo e trocado.\n"
+              f"   -> o padrao tem a decisao embutida; capture o verbo em vez de escreve-lo")
+    elif vistos[0]['decisao'] != decisao_esperada:
+        falhas += 1
+        print(f"FALHA (simetria): '{rotulo}' virado deveria dar {decisao_esperada}, "
+              f"deu {vistos[0]['decisao']}")
+if simetria:
+    print(f"ok   : {simetria} redacao(oes) enxergam as DUAS decisoes (simetria)")
 
 print(f"\n{len(CASOS)} caso(s), {falhas} falha(s).")
 sys.exit(1 if falhas else 0)
