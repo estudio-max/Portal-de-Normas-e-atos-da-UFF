@@ -194,6 +194,29 @@ for (const chave of chaves) {
 assert.match(blocoAjuda[1], /Preencha os <B>dois<\/B> campos/,
   'The Meu SIAPE help must tell the user to fill in both SIAPE and name.');
 
+// ---------------------------------------------------------------------------
+// A aba Sobre agrupa TODAS as abas de conteúdo por pergunta. A versão anterior
+// desse bloco era uma FIGURA com a lista escrita à mão, e ela ficou três abas
+// atrás do portal — mostrava doze painéis quando já eram quinze, sem Revalidação
+// nem "O que mudou". Ninguém percebeu até o mantenedor abrir a página.
+//
+// Agora os cartões são montados em tempo de execução, mas o AGRUPAMENTO ainda é
+// uma decisão humana: aba nova precisa entrar num grupo. Esta trava é o que
+// obriga essa decisão a acontecer, em vez de a aba simplesmente sumir da vista.
+// ---------------------------------------------------------------------------
+const sobreTsx = await read('src/components/panels/Sobre.tsx');
+const blocoGrupos = sobreTsx.match(/const GRUPOS[\s\S]*?\n\];/);
+assert.ok(blocoGrupos, 'A aba Sobre deve manter GRUPOS como literal para poder ser conferido.');
+const agrupadas = new Set([...blocoGrupos[0].matchAll(/'([^']*)'/g)]
+  .map(m => m[1])
+  .filter(v => v === '' || abas.includes(v)));
+const semGrupo = abas.filter(a => !['ajuda', 'privacidade', 'sobre'].includes(a)
+  && !agrupadas.has(a));
+assert.deepEqual(semGrupo, [],
+  `Aba de conteúdo fora dos GRUPOS da aba Sobre: ${semGrupo.join(', ')}. ` +
+  'Toda aba precisa aparecer em "O que você pode descobrir" — foi assim que a ' +
+  'Revalidação ficou invisível na página por um dia.');
+
 const ajudaModal = await read('src/components/help/AjudaModal.tsx');
 // showModal() é o que dá armadilha de foco, Esc e camada superior. Abrir pelo
 // atributo `open` renderiza a mesma caixa SEM nada disso — e parece funcionar.

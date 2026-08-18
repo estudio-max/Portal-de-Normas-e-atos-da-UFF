@@ -2,6 +2,10 @@ import React from 'react';
 import { Sparkles, Lightbulb, Code2, Info, Github, BarChart3, Eye, Target, BookMarked, MessageSquare, Scale } from 'lucide-react';
 import * as ds from '../../dataSource';
 import { linksEmail } from '../ui/linksEmail';
+import { ANO_INICIO_ACERVO } from '../../config';
+import { AJUDA } from '../help/ajudaConteudo';
+
+const ANO_ATUAL = new Date().getFullYear();
 
 // Relato do que a pessoa NÃO conseguiu fazer. O assunto sai fixo para que essas
 // mensagens se separem sozinhas das dúvidas gerais na caixa de entrada, e o
@@ -99,6 +103,7 @@ const fmt = (v: number) => v.toLocaleString('pt-BR');
 interface Numeros {
   atos: number;          // atos indexados (era escrito à mão, e envelheceu)
   boletins: number;      // boletins lidos (idem)
+  paisesCoop: number;    // países com acordo de cooperação
   vinculos: number;      // linhas em ato_ods
   propostas: number;     // as que são ato fundador de política
   politicas: number;     // políticas no catálogo
@@ -110,12 +115,14 @@ function useNumeros(): Numeros | null {
   const [n, setN] = React.useState<Numeros | null>(null);
   React.useEffect(() => {
     let vivo = true;
-    Promise.all([ds.getOds(), ds.getPoliticas(), ds.getStats()]).then(([ods, pol, st]) => {
+    Promise.all([ds.getOds(), ds.getPoliticas(), ds.getStats(), ds.getCooperacao()])
+      .then(([ods, pol, st, coop]) => {
       if (!vivo || !ods || !pol?.politicas) return;
       const assedio = pol.politicas.find(p => p.slug === 'assedio');
       setN({
         atos: st?.total ?? 0,
         boletins: st?.boletins ?? 0,
+        paisesCoop: coop?.paises?.length ?? 0,
         vinculos: ods.linhas,
         propostas: ods.lista.reduce((s, o) => s + o.proposta, 0),
         politicas: pol.politicas.length,
@@ -128,20 +135,180 @@ function useNumeros(): Numeros | null {
   return n;
 }
 
+
+/** As abas agrupadas por PERGUNTA, e não por seção do menu.
+ *
+ *  A ordem das perguntas segue o percurso de quem chega: primeiro achar o
+ *  documento, depois entender como ele se liga a outros, depois acompanhar a
+ *  gestão, e por fim olhar o conjunto. "O que mudou" fecha porque é a pergunta
+ *  de quem já conhece o portal e volta.
+ *
+ *  ⚠️ TODA aba de conteúdo precisa estar aqui. `tools/test_redesign_integrity.mjs`
+ *  reprova o que faltar — foi assim que a figura antiga ficou mostrando doze
+ *  painéis num portal de quinze, sem nada acusar. */
+const GRUPOS: { titulo: string; pergunta: string; abas: string[] }[] = [
+  {
+    titulo: 'Encontrar um ato',
+    pergunta: 'Qual documento eu estou procurando?',
+    abas: ['atos', 'pessoal/siape', 'pessoal/prazos'],
+  },
+  {
+    titulo: 'Entender as ligações',
+    pergunta: 'Este ato ainda vale, e quem se relaciona com quem?',
+    abas: ['relacoes', 'pessoal/chefias', 'institucional/comissoes'],
+  },
+  {
+    titulo: 'Acompanhar a gestão',
+    pergunta: 'Como a universidade se organiza ao longo do tempo?',
+    abas: ['pessoal/mandatos', 'pessoal/jornada', 'institucional/politicas'],
+  },
+  {
+    titulo: 'Ver o conjunto',
+    pergunta: 'O que aparece quando se olha o acervo inteiro?',
+    abas: ['insights', 'institucional/cooperacao', 'institucional/revalidacao', 'institucional/ods'],
+  },
+  {
+    titulo: 'Voltar e ver o que mudou',
+    pergunta: 'O que entrou no acervo desde a última vez?',
+    abas: ['mudancas', ''],
+  },
+];
+
+/** Uma linha por aba — o `resumo` da ajuda é longo demais para cartão.
+ *  Escrito como AÇÃO ("Encontre…"), que a crítica de copy pediu com razão:
+ *  "Encontre atos que citam sua matrícula" é mais concreto que "Os atos que
+ *  citam a sua matrícula". */
+const RESUMO_CURTO: Record<string, string> = {
+  '': 'O que saiu no boletim mais recente',
+  atos: 'Busque em todo o acervo, com filtros',
+  relacoes: 'Veja quem altera e quem revoga cada ato',
+  insights: 'Padrões do acervo, ano a ano',
+  'pessoal/siape': 'Encontre os atos que citam a sua matrícula',
+  'pessoal/chefias': 'Quem ocupa cada função, e desde quando',
+  'pessoal/mandatos': 'Mandatos em curso e os que venceram',
+  'pessoal/prazos': 'O que tem data para acabar',
+  'pessoal/jornada': 'Setores em jornada flexibilizada ou PGD',
+  'institucional/comissoes': 'Os colegiados permanentes da UFF',
+  'institucional/politicas': 'A sequência de atos que construiu cada política',
+  'institucional/cooperacao': 'Acordos com instituições de outros países',
+  'institucional/revalidacao': 'Diplomas do exterior: origem e decisão',
+  'institucional/ods': 'O que a UFF propôs em cada Objetivo da Agenda 2030',
+  mudancas: 'O que mudou no acervo nos últimos meses',
+};
+
+
+
+/** Os experimentos que sustentam a secao de qualidade.
+ *
+ *  Vive fora do JSX porque a tabela e dado, nao marcacao: assim da para
+ *  acrescentar um caso sem mexer na estrutura, e a leitura do componente nao
+ *  se perde no meio das linhas.
+ *
+ *  A coluna DECISAO e o ponto da secao. "Descartada" aparece com o mesmo peso
+ *  das outras de proposito: uma regra reprovada e resultado tanto quanto uma
+ *  aprovada, e e o que separa medir de enfeitar. */
+const REGRAS_TESTADAS: [string, string, string][] = [
+  ['Guardar só o primeiro número de processo de cada ato',
+   'Descartava 44% das menções — justamente as que ligam um ato ao processo de outro',
+   'corrigida'],
+  ['Ligar ato e comissão procurando o nome do colegiado',
+   'Acertava 60%: cada unidade tem a sua comissão com o mesmo nome. Com as regras de exclusão, '
+   + '71 atos e nenhum falso positivo',
+   'refinada'],
+  ['Classificar ODS lendo o corpo inteiro do ato, e não só a ementa',
+   '37 vínculos novos com ~3% de precisão — o termo estava no nome da vaga, na unidade do anexo',
+   'descartada'],
+  ['Deduzir o fim da jornada flexibilizada pelo grafo de relações',
+   '37 setores ficavam "ativo" para sempre: a portaria que os encerrou é de 2019 e nem está no acervo',
+   'corrigida'],
+];
+
+
 export default function Sobre() {
   const n = useNumeros();
   return (
     <div className="space-y-3 max-w-4xl mx-auto">
+      {/* ABERTURA: promessa + escala, nesta ordem.
+          A página abria explicando quem mantém o projeto — informação
+          necessária, mas que não responde "o que é isto e por que me
+          interessa". A crítica de 17/08/2026 apontou o ponto: o benefício
+          antes da metodologia. A autoria desce para o rodapé da abertura,
+          onde continua visível. */}
       <div className="bg-[#003366] text-white rounded-lg p-5">
         <h2 className="text-lg font-bold flex items-center gap-2">
-          <Info className="w-5 h-5 text-yellow-400" /> Sobre este projeto
+          <Info className="w-5 h-5 text-yellow-400" aria-hidden="true" />
+          Do Boletim de Serviço à informação pesquisável
         </h2>
-        <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
-          O Inteligência UFF foi idealizado por João Fanara e é mantido pelo Nidi
-          (Núcleo Institucional de Dados Integrados), vinculado ao Gabinete do Reitor da UFF. Esta
-          página conta a motivação e como o projeto foi feito.
+        <p className="text-[13px] text-blue-100 mt-1.5 leading-relaxed">
+          O Inteligência UFF organiza os atos publicados desde 2001 para que servidores, gestores e
+          pesquisadores encontrem normas, relações e evidências sem percorrer milhares de PDFs.
+        </p>
+        <p className="text-[12px] text-blue-200 mt-2.5 leading-relaxed">
+          Idealizado por João Fanara e mantido pelo Nidi (Núcleo Institucional de Dados
+          Integrados), vinculado ao Gabinete do Reitor da UFF.
         </p>
       </div>
+
+      {/* FAIXA DE ESCALA. Os números já vinham da API; o que muda é a posição —
+          estavam enterrados numa seção lá embaixo, depois de três parágrafos.
+          `dl/dt/dd` e não `div`: é uma lista de termo e definição, e leitor de
+          tela anuncia como tal. Sem API, o valor sai como "—" e o rótulo
+          permanece, em vez de a faixa sumir e a página mudar de forma. */}
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          [n ? String(ANO_ATUAL - ANO_INICIO_ACERVO + 1) : '—', 'anos de cobertura',
+           `${ANO_INICIO_ACERVO}–${ANO_ATUAL}`],
+          [n?.boletins ? fmt(n.boletins) : '—', 'boletins lidos', 'edições em PDF'],
+          [n?.atos ? fmt(n.atos) : '—', 'atos indexados', 'registros pesquisáveis'],
+          [n?.paisesCoop ? String(n.paisesCoop) : '—', 'países com acordos', 'cooperação internacional'],
+        ].map(([valor, rotulo, apoio]) => (
+          <div key={rotulo} className="bg-white rounded-lg border border-slate-200 shadow-xs p-3">
+            <dd className="text-2xl font-bold tabular-nums text-[#003366] leading-tight">{valor}</dd>
+            <dt className="text-[13px] font-semibold text-slate-700 mt-0.5">{rotulo}</dt>
+            <p className="text-[12px] text-slate-500 leading-snug">{apoio}</p>
+          </div>
+        ))}
+      </dl>
+
+      {/* O PROBLEMA, COMO COMPARAÇÃO.
+          Antes era um parágrafo abstrato; a comparação lado a lado torna
+          visível a diferença entre publicar e permitir encontrar — que é a
+          tese da seção seguinte, sobre transparência ativa.
+          Cores: vermelho só no estado ruim, verde no resolvido, ambos em
+          tonalidade clara já usada na base. */}
+      <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Publicar é importante. Encontrar também.">
+        <p>
+          O Boletim de Serviço é público desde 2001. O que faltava era o outro lado: consultar
+          {n?.boletins ? <> {fmt(n.boletins)} </> : ' milhares de '}arquivos sem índice entre eles
+          transforma uma pergunta simples em trabalho manual.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3 pt-1">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-[12px] font-bold uppercase tracking-wider text-red-700">Antes</p>
+            <ul className="mt-1.5 space-y-1 text-[13px] text-slate-700 list-disc pl-4">
+              <li>Um PDF por edição, sem busca entre arquivos</li>
+              <li>É preciso saber <strong>em qual boletim</strong> o ato saiu</li>
+              <li>As relações entre atos ficam invisíveis</li>
+              <li>Consulta manual, documento a documento</li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-[12px] font-bold uppercase tracking-wider text-emerald-700">
+              Com o portal
+            </p>
+            <ul className="mt-1.5 space-y-1 text-[13px] text-slate-700 list-disc pl-4">
+              <li>Um acervo só, pesquisável</li>
+              <li>A busca parte do que você <strong>já sabe</strong>: nome, órgão, ementa, processo</li>
+              <li>Alterações e revogações aparecem ligadas ao ato</li>
+              <li>Exportação em planilha e consulta por API</li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-slate-500 text-xs">
+          O portal não substitui o Boletim de Serviço: ele ajuda a chegar até o que já foi
+          publicado. Para citar ou confirmar um ato, a fonte continua sendo o documento oficial.
+        </p>
+      </Secao>
 
       <Secao icon={<Lightbulb className="w-4 h-4" />} titulo="Por que este portal existe">
         <p>
@@ -155,17 +322,6 @@ export default function Sobre() {
           no Boletim — designações, participações em comissões, portarias antigas. Folhear décadas
           de PDF atrás disso não é razoável, e o portal ajuda exatamente nesse ponto.
         </p>
-        {/* w/h = o viewBox do SVG, e a altura acompanha o número de abas: com 15
-            painéis são 5 fileiras. O valor antigo (606, de quando eram 12)
-            reservava uma caixa menor que a imagem. Regerar a figura sem ajustar
-            aqui volta a desalinhar — `tools/gerar_figuras_doc.py` imprime o
-            tamanho de cada uma ao gerar. */}
-        <Figura
-          arquivo="7-abas-do-portal.svg"
-          w={960} h={658}
-          alt="Grade com um cartão por painel do portal — Dashboard, Atos e Normas, Mapa de Relações, Insights, Meu SIAPE, Chefias, Mandatos, Prazos, Jornada, Comissões, Políticas, Cooperação, Revalidação, ODS e O que mudou — cada um com uma linha explicando a que pergunta ele responde."
-          legenda="Cada aba responde uma pergunta diferente sobre o mesmo acervo."
-        />
         <p>
           A ideia em si é antiga: nasceu da experiência de João Fanara com a primeira versão do
           Portal de Normas do BNDES, lá no começo dos anos 2000. A diferença é que o BNDES tinha
@@ -175,6 +331,50 @@ export default function Sobre() {
           deles fruto de digitalização e OCR de qualidade irregular) com precisão aceitável para
           virar uma ferramenta de consulta.
         </p>
+      </Secao>
+
+      {/* O QUE DÁ PARA DESCOBRIR — cartões VIVOS, não figura.
+          Aqui havia uma imagem com a grade de painéis. Ela ficou três abas
+          atrás do portal sem nada acusar, e foi o mantenedor quem viu. Cartão
+          montado a partir do `AJUDA` — a mesma fonte que o teste de
+          integridade já obriga a cobrir TODA aba de `ABAS_VALIDAS` — não tem
+          como ficar para trás: aba nova aparece aqui sozinha.
+          E, de quebra, cada cartão LEVA à aba, o que a figura nunca fez.
+
+          O agrupamento por PERGUNTA veio da crítica de 17/08/2026: doze
+          cartões de peso igual não se memorizam; quatro perguntas, sim.
+          `SEM_GRUPO` abaixo é a rede: aba que ninguém classificou aparece em
+          "Outras" em vez de sumir — e `test_redesign_integrity.mjs` reprova
+          antes disso acontecer. */}
+      <Secao icon={<Sparkles className="w-4 h-4" />} titulo="O que você pode descobrir">
+        <p>
+          Cada aba responde uma pergunta diferente sobre o mesmo acervo. Comece pela pergunta:
+        </p>
+        <div className="space-y-3 pt-1">
+          {GRUPOS.map(g => (
+            <div key={g.titulo} className="rounded-lg border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 px-3 py-2 border-b border-slate-200">
+                <p className="text-[13px] font-bold text-[#003366]">{g.titulo}</p>
+                <p className="text-[12px] text-slate-600">{g.pergunta}</p>
+              </div>
+              <ul className="grid sm:grid-cols-3 gap-px bg-slate-200">
+                {g.abas.map(chave => (
+                  <li key={chave} className="bg-white">
+                    <a href={`#/${chave}`}
+                      className="block h-full p-2.5 hover:bg-slate-50 focus:bg-slate-50 focus:outline-2">
+                      <span className="block text-[13px] font-semibold text-blue-700 underline decoration-dotted underline-offset-2">
+                        {AJUDA[chave]?.titulo ?? chave}
+                      </span>
+                      <span className="block text-[12px] text-slate-600 leading-snug mt-0.5">
+                        {RESUMO_CURTO[chave] ?? ''}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </Secao>
 
       <Secao icon={<Eye className="w-4 h-4" />} titulo="Transparência ativa: publicar não é o mesmo que dar acesso">
@@ -384,32 +584,44 @@ export default function Sobre() {
           virar número na tela.
         </p>
         <p>
-          Isso significa que boa parte do trabalho foi <em>descartar</em>. Alguns exemplos, com o
-          que a medição mostrou:
+          Isso significa que boa parte do trabalho foi <em>descartar</em>. Cada regra virou um
+          experimento com três partes — o que se supôs, o que a medição mostrou, e o que se
+          decidiu:
         </p>
-        <ul className="list-disc pl-5 space-y-1.5">
-          <li>
-            Guardar só o <strong>primeiro</strong> número de processo de cada ato parecia
-            suficiente. Medido: descartava <strong>44%</strong> das menções — justamente as que
-            ligam um ato ao processo de outro.
-          </li>
-          <li>
-            Para ligar um ato a uma comissão, bastaria procurar o nome dela. Medido no acervo
-            inteiro: o nome solto acertava <strong>60%</strong> das vezes, porque cada unidade tem
-            a sua comissão com o mesmo nome. Com as regras de exclusão, o mesmo colegiado fecha em{' '}
-            <strong>71 atos e nenhum falso positivo</strong>.
-          </li>
-          <li>
-            Classificar os atos por ODS lendo o <em>corpo</em> inteiro, e não só a ementa, renderia
-            mais vínculos. Medido: 37 vínculos novos com <strong>~3% de precisão</strong> — o termo
-            estava no nome da vaga, na unidade do anexo. A ideia foi reprovada e não entrou.
-          </li>
-          <li>
-            37 setores apareciam como jornada flexibilizada <strong>ativa</strong> para sempre,
-            porque a portaria que os encerrou é de 2019 e nem está no acervo. Hoje o encerramento é
-            lido do próprio ato de revogação.
-          </li>
-        </ul>
+        <div className="overflow-x-auto pt-1">
+          <table className="w-full text-[12px] border-collapse">
+            <caption className="sr-only">
+              Regras testadas contra o acervo, com o resultado medido e a decisão tomada.
+            </caption>
+            <thead>
+              <tr className="text-left text-slate-600 border-b border-slate-300">
+                <th scope="col" className="py-1.5 pr-3 font-semibold">A regra que parecia certa</th>
+                <th scope="col" className="py-1.5 pr-3 font-semibold">O que a medição mostrou</th>
+                <th scope="col" className="py-1.5 font-semibold w-24">Decisão</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-700 align-top">
+              {REGRAS_TESTADAS.map(([regra, medida, decisao]) => (
+                <tr key={regra} className="border-b border-slate-200">
+                  <td className="py-2 pr-3">{regra}</td>
+                  <td className="py-2 pr-3">{medida}</td>
+                  <td className="py-2">
+                    <span
+                      className={
+                        'inline-block rounded px-1.5 py-0.5 text-[11px] font-bold border ' +
+                        (decisao === 'descartada'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+                      }
+                    >
+                      {decisao}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p>
           O acervo também não é confiável só por ser oficial. O OCR de 2001 troca letras; o mesmo
           órgão aparece grafado de três formas; um boletim publica ato de dezembro do ano anterior.
