@@ -76,10 +76,6 @@ def texto(x, y, s, tam=13, cor='#0f172a', peso='400', anchor='start', extra=''):
             f"font-weight='{peso}' text-anchor='{anchor}' {extra}>{s}</text>")
 
 
-def quebra(x, y, linhas, tam=11, cor=CINZA, dy=14, anchor='middle'):
-    return ''.join(texto(x, y + i * dy, l, tam, cor, '400', anchor)
-                   for i, l in enumerate(linhas))
-
 
 # ---------------------------------------------------------------- PECA 3
 def peca3():
