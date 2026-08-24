@@ -16,7 +16,7 @@ const ANO_ATUAL = new Date().getFullYear();
 // que não decide nada. Dois caminhos de envio pelo motivo explicado em
 // `linksEmail.ts`: o e-mail institucional daqui é lido pelo Gmail.
 const LINK_RELATO = linksEmail(
-  'Inteligência UFF — não consegui fazer',
+  'Consulta UFF — não consegui fazer',
   [
     'O QUE EU VIM PROCURAR:',
     '',
@@ -259,7 +259,7 @@ export default function Sobre() {
           Do Boletim de Serviço à informação pesquisável
         </h2>
         <p className="text-[13px] text-blue-100 mt-1.5 leading-relaxed">
-          O Inteligência UFF organiza os atos publicados desde 1996 para que servidores, gestores e
+          O Consulta UFF organiza os atos publicados desde 1996 para que servidores, gestores e
           pesquisadores encontrem normas, relações e evidências sem percorrer milhares de PDFs.
         </p>
         <p className="text-[12px] text-blue-200 mt-2.5 leading-relaxed">
@@ -788,7 +788,7 @@ export default function Sobre() {
 
       <Secao icon={<Sparkles className="w-4 h-4" />} titulo="O que este portal é (e o que não é)">
         <p>
-          O Inteligência UFF é uma camada de consulta sobre um acervo público: os
+          O Consulta UFF é uma camada de consulta sobre um acervo público: os
           Boletins de Serviço que a própria universidade já publica oficialmente. Ele não substitui
           o boletim nem cria informação nova. É mantido pelo Nidi, vinculado ao Gabinete do Reitor,
           para facilitar o acesso a algo que já era público, mas difícil de encontrar.

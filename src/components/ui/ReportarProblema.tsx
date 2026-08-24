@@ -35,9 +35,9 @@ export function ReportarProblema({ activePath }: { activePath: string }) {
   if (SEM_CONVITE.has(activePath)) return null;
 
   const aba = AJUDA[activePath]?.titulo ?? activePath;
-  const assunto = `Inteligência UFF — correção na aba ${aba}`;
+  const assunto = `Consulta UFF — correção na aba ${aba}`;
   const corpo = [
-    `Encontrei um problema no Inteligência UFF.`,
+    `Encontrei um problema no Consulta UFF.`,
     ``,
     `Aba: ${aba}`,
     `Data: ${new Date().toLocaleDateString('pt-BR')}`,

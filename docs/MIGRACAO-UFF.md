@@ -11,6 +11,15 @@ corte terminar, o que virou presente vai para o `CLAUDE.md` e o resto sai daqui.
 > `/api` relativo), então trocar de domínio **não exige rebuild**. Os dois
 > maiores riscos de migração já estão neutralizados.
 
+> **Nome e domínio definitivos, confirmados em 24/08/2026:** o app se chama
+> **Consulta UFF**, e o endereço será **`consulta.uff.br`**. Este documento já
+> usa esse domínio nos lugares onde antes havia `NOVA-URL.uff.br` como
+> placeholder — não é mais hipotético, é o alvo real. O nome de exibição já foi
+> trocado no código (era "Inteligência UFF"); o domínio só entra em produção
+> quando esta migração de fato acontecer — até lá, o site continua em
+> `inteligencia.fanara.com.br`, e é para lá que os scripts de deploy e smoke
+> test ainda apontam.
+
 ---
 
 ## 0. O que levantar com a TI da UFF (antes de marcar o dia)
@@ -29,7 +38,8 @@ Sem estas respostas o plano não fecha:
 - [ ] Quem faz **backup** e com que frequência.
 - [ ] O **repositório** GitHub continua em `estudio-max` ou vai para uma org da
       UFF? (afeta o fallback estático e a Action de indexação — seção 7).
-- [ ] Qual será a **URL nova** e quem controla o **DNS**.
+- [x] **URL nova**: `consulta.uff.br` (confirmado em 24/08/2026).
+- [ ] Quem controla o **DNS** desse domínio, e o prazo para apontá-lo.
 
 **Privacidade e perímetro (infactíveis na HostGator, obrigatórios na UFF):**
 
@@ -226,14 +236,15 @@ Se o repo **continuar** em `estudio-max`, nada disso muda.
 
 ## 8. DNS e redirect do domínio antigo
 
-- [ ] Apontar a URL nova (`*.uff.br`) para o servidor novo.
-- [ ] Manter `inteligencia.fanara.com.br` no ar com um **301** para a URL nova,
-      pra não quebrar links, favoritos e o histórico do Google:
+- [ ] Apontar `consulta.uff.br` para o servidor novo.
+- [ ] Manter `inteligencia.fanara.com.br` no ar com um **301** para
+      `consulta.uff.br`, pra não quebrar links, favoritos e o histórico do
+      Google:
 
   ```apache
   # no .htaccess do domínio ANTIGO, depois que o novo estiver validado
   RewriteEngine On
-  RewriteRule ^(.*)$ https://NOVA-URL.uff.br/$1 [R=301,L]
+  RewriteRule ^(.*)$ https://consulta.uff.br/$1 [R=301,L]
   ```
 
 - [ ] Atualizar o **Search Console** (propriedade nova + "mudança de endereço").
@@ -247,7 +258,7 @@ Se o repo **continuar** em `estudio-max`, nada disso muda.
 Rode contra a URL nova. Todos têm que responder **200 + JSON** (menos o último):
 
 ```bash
-BASE=https://NOVA-URL.uff.br
+BASE=https://consulta.uff.br
 curl -s $BASE/api/stats            | head -c 200   # totais gerais
 curl -s "$BASE/api/atos?por_pagina=3"               # listagem
 curl -s $BASE/api/atos/ALGUM-UID   | head -c 200   # ficha (exercita PATH_INFO)

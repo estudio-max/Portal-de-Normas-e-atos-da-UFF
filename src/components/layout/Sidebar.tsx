@@ -112,7 +112,7 @@ export function rotuloDaAba(path: string): string {
   const achado = todos
     .filter(i => i.id !== '' && path.startsWith(i.id))
     .sort((a, b) => b.id.length - a.id.length)[0];
-  return achado ? achado.label : 'Inteligência UFF';
+  return achado ? achado.label : 'Consulta UFF';
 }
 
 interface SidebarProps {
@@ -203,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-sm font-bold text-white">U</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold leading-tight text-[#1A202C]">Inteligência UFF</p>
+              <p className="truncate text-[13px] font-semibold leading-tight text-[#1A202C]">Consulta UFF</p>
               <p className="truncate text-[12px] leading-tight text-[#64748B]">Universidade Federal Fluminense</p>
             </div>
             <button type="button" onClick={onFechar} aria-label="Fechar o menu"
@@ -251,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-white font-bold text-sm">U</span>
         </div>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-[#1A202C] leading-tight truncate">Inteligência UFF</p>
+          <p className="text-[13px] font-semibold text-[#1A202C] leading-tight truncate">Consulta UFF</p>
           <p className="text-[12px] text-[#64748B] leading-tight truncate">Universidade Federal Fluminense</p>
         </div>
       </div>

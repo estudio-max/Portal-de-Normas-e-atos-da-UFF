@@ -28,7 +28,7 @@ export default function HelpGuide() {
       {/* Capa */}
       <div className="bg-[#003366] text-white rounded-lg p-5">
         <h2 className="text-lg font-bold flex items-center gap-2">
-          <Info className="w-5 h-5 text-yellow-400" /> Como usar o Inteligência UFF
+          <Info className="w-5 h-5 text-yellow-400" /> Como usar o Consulta UFF
         </h2>
         <p className="text-[13px] text-blue-100 mt-1 leading-relaxed">
           Este portal é uma <strong>camada de consulta</strong> construída sobre um acervo de
