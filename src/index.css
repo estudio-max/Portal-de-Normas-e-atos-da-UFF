@@ -171,7 +171,7 @@ html.fotofobia {
 .card-tarefa:hover .selo-marca { background-color: var(--marca-fundo-hover); }
 
 /* Chip de filtro ativo (aba Atos e Normas). Carrega o rótulo do filtro POR
-   EXTENSO — "Tipo: Portaria", não só "Portaria" —, senão o chip sozinho não
+   EXTENSO — "Espécie: Portaria", não só "Portaria" —, senão o chip sozinho não
    diz de qual campo ele saiu. */
 .chip-filtro {
   background-color: var(--marca-fundo);

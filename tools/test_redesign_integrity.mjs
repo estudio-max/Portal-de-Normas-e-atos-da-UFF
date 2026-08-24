@@ -460,7 +460,13 @@ assert.match(actTable, /Buscando atos…/, 'The first load must say it is loadin
 // O chip carrega o NOME DO CAMPO junto do valor: "PROGEPE" solto não diz de
 // qual filtro ele saiu, e sem o chip a única forma de desfazer um filtro
 // avançado era achá-lo de volta dentro do painel.
-for (const campo of ['Tipo: ', 'Ano: ', 'Órgão: ', 'Processo: ']) {
+//
+// "Espécie", não "Tipo": terminologia do Manual de Atos e Documentos da UFF
+// (commit d5ae246). Esta lista tinha ficado com o rótulo antigo depois da
+// troca no componente — achado ao rodar o portão local depois de um trabalho
+// não relacionado (renomeação do app), o que mostra por que vale rodar os
+// testes mesmo numa mudança que parece não tocar nisso.
+for (const campo of ['Espécie: ', 'Ano: ', 'Órgão: ', 'Processo: ']) {
   assert.ok(actTable.includes(`\`${campo}`),
     `Active filter chips must name the field they came from (${campo.trim()}).`);
 }

@@ -539,7 +539,7 @@ function BarrasPorClasse({ dados, cor, total }:
                         datada: ela É parte do acervo histórico, e sumir com ela
                         faria o total não fechar. */}
                     {e.descontinuadaEm && (
-                      <span className="text-[10px] text-slate-400 shrink-0">até {e.descontinuadaEm}</span>
+                      <span className="text-[11px] text-slate-400 shrink-0">até {e.descontinuadaEm}</span>
                     )}
                     <span className="w-9 text-right font-bold text-slate-700 shrink-0 tabular-nums">{fmtN(d.n)}</span>
                   </div>
