@@ -111,6 +111,58 @@ geral do bloco 3 (§4) já avisa que a busca por nome pode trazer homônimo.
 Regressão: 18 casos cobrindo os dois lados, incluindo o caso em que quem está
 sujo é o **registro** (nome capturado errado por OCR), não o campo digitado.
 
+## 3b. Um servidor pode ter MAIS DE UMA matrícula
+
+**Achado pelo mantenedor em 02/09/2026.** Os §1 e §2 tratam de *grafias* do
+mesmo número. Este é outro fato: a mesma pessoa pode ter **dois números**. Quem
+foi concursado antes em outro órgão, quem se aposentou e voltou, quem mudou de
+carreira dentro da UFF — cada vínculo traz a sua matrícula. Denise, de novo o
+caso-prova, é `139693` **e** `7139693` (e `6139693`).
+
+A segunda matrícula é a de 6 dígitos com **um dígito novo na frente**. Medido no
+acervo: **534 pares** em que uma matrícula de 7 dígitos é outra de 6 precedida de
+um dígito; em **327 o nome é o mesmo**, e nos 207 restantes são pessoas
+diferentes — o árbitro de nome as recusa.
+
+**Não há lista de prefixos válidos, de propósito.** `6` (224 pares) e `7` (35)
+dominam, mas `1`, `2`, `3`, `8` e `9` também aparecem com nome idêntico, e parte
+deles é o caso INVERSO: o OCR comeu o primeiro dígito de uma matrícula de 7. Nos
+dois sentidos é a mesma pessoa. Filtrar por prefixo perderia caso legítimo sem
+ganhar precisão — quem dá precisão é o nome, não o dígito.
+
+**O árbitro de nome teve de afrouxar, e isso inverteu o risco.** A comparação era
+igualdade exata da grafia sem acento, e ela derrubava justamente o caso que
+revelou o problema: o ato repetiu o sobrenome e gravou *"Denise Rosas Aparecida
+de Miranda Rosas"*. Agora compara por **tokens**, como o frontend já fazia no §3
+— com uma guarda a mais. No frontend o teste decide se **acusa** divergência, e
+ser tolerante custa um aviso a menos; aqui ele decide se **une** dois registros,
+e tolerância demais junta o dossiê de duas pessoas, o pior defeito desta aba.
+Daí a exigência de **dois tokens significativos no lado menor**: com um só,
+"Marcelo" ⊂ "Marcelo Badaró Mattos" uniria qualquer homônimo de primeiro nome.
+Medido: a contenção acrescenta 212 uniões, e nas 45 de menor margem (lado curto
+com 2 tokens) todas são a mesma pessoa com o nome truncado pelo OCR.
+
+**O portal NÃO elege um nome canônico**, e a razão é o próprio caso: uma das
+grafias é a errada. Qualquer regra de escolha (a mais longa, a mais recente)
+é uma aposta em qual é a certa sem ter como saber — e quando erra, o nome errado
+vira o cabeçalho do dossiê e do PDF. Todas as grafias são mostradas; a ordem
+apenas sugere, pondo primeiro a que aparece em mais linhas. **Ordenar é sugerir;
+escolher seria afirmar.**
+
+E `nomesDistintos` passou a contar nomes **irreconciliáveis**, não grafias: sem
+isso o aviso âmbar de "matrícula com mais de um nome" pisca nas 212 uniões novas,
+que são uma pessoa só. O aviso existe para o caso real do fim deste arquivo
+(`'3369546'` = Bárbara Sena E Simone Lemos).
+
+⚠️ **Armadilha de plataforma achada aqui:** `nome_ascii()` é
+`iconv('ASCII//TRANSLIT')`, e o resultado **depende do iconv linkado**. No glibc
+(servidor) "Antônio" vira "Antonio"; no libiconv (Windows, onde os testes rodam)
+vira "Ant^onio" — o acento vira caractere no MEIO da palavra, o filtro de
+pontuação o toma por separador e o token parte em dois. `nome_tokens()` por isso
+**não usa `nome_ascii()`**: dobra o acento por tabela explícita mais `\p{M}`, e
+dá o mesmo resultado nas duas máquinas. Regressão em
+`tools/teste_siape_variantes.php`.
+
 ## 4. Só 30–70% dos atos registram SIAPE
 
 O extrator só cria `pessoa`/`ato_pessoa` quando encontra uma matrícula no

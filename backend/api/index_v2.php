@@ -219,6 +219,55 @@ function nome_ascii(string $s): string {
     return $r === false ? $s : $r;
 }
 
+// ---- Nome como CONJUNTO DE TOKENS, para decidir "é a mesma pessoa?" --------
+// Espelha tokensNome()/nomeConfere() de src/components/panels/DossieApi.tsx —
+// o frontend já compara assim o nome digitado com o nome da matrícula, e as
+// duas pontas precisam concordar. Partículas fora; token de 1–2 letras fora
+// (inicial abreviada); acento removido.
+//
+// ⚠️ O MESMO teste, aqui, corre RISCO INVERTIDO. No frontend ele decide se
+// ACUSA divergência, e ser tolerante só custa um aviso a menos. Aqui ele
+// decide se UNE dois registros — tolerância demais junta o dossiê de duas
+// pessoas, que é o pior defeito desta aba (ver docs/PROBLEMA-MATRICULA-SIAPE.md
+// §2). Daí a única diferença: exige DOIS tokens significativos do lado menor.
+// Com um só, "Marcelo" ⊂ "Marcelo Badaró Mattos" uniria qualquer homônimo de
+// primeiro nome. Medido no acervo: o lado menor de todo par que a contenção
+// acrescenta já tem 2+ tokens, então a guarda não custa nenhum caso real.
+//
+// NÃO usa nome_ascii() aqui, e o motivo é uma armadilha de plataforma: ele é
+// iconv('ASCII//TRANSLIT'), cujo resultado DEPENDE do iconv linkado. No glibc
+// (servidor) "Antônio" vira "Antonio"; no libiconv (Windows, onde os testes
+// rodam) vira "Ant^onio" — o acento vira um caractere no MEIO da palavra, o
+// filtro de pontuação o trata como separador e o token parte em dois. O mesmo
+// defeito que o frontend documenta em tokensNome(). Aqui a dobra é explícita:
+// remove marca combinante (NFD) e traduz a letra acentuada (NFC) por tabela,
+// então dá o MESMO resultado nas duas máquinas, com ou sem a extensão intl.
+function nome_tokens(string $s): array {
+    $s = mb_strtolower($s, 'UTF-8');
+    $s = preg_replace('/\p{M}+/u', '', $s);      // alcança o nome em NFD
+    $de = ['á','à','â','ã','ä','é','è','ê','ë','í','ì','î','ï','ó','ò','ô','õ','ö','ú','ù','û','ü','ç','ñ'];
+    $pa = ['a','a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','o','u','u','u','u','c','n'];
+    $s = str_replace($de, $pa, $s);               // alcança o nome em NFC
+    $s = preg_replace('/[^a-z0-9]+/', ' ', $s);
+    $fora = ['de' => 1, 'da' => 1, 'do' => 1, 'dos' => 1, 'das' => 1, 'e' => 1];
+    $out = [];
+    foreach (preg_split('/\s+/', trim($s)) ?: [] as $t) {
+        if ($t === '' || strlen($t) < 3 || isset($fora[$t])) continue;
+        $out[$t] = true;
+    }
+    return array_keys($out);
+}
+
+/** Os dois nomes são a mesma pessoa? Igualdade normalizada, ou um contido no
+ *  outro (nome abreviado, nome de casada, sobrenome comido pelo OCR). */
+function nomes_mesma_pessoa(string $a, string $b): bool {
+    $ta = nome_tokens($a);
+    $tb = nome_tokens($b);
+    if (!$ta || !$tb) return false;
+    if (min(count($ta), count($tb)) < 2) return false;   // ver a guarda acima
+    return !array_diff($ta, $tb) || !array_diff($tb, $ta);
+}
+
 // Links deterministicos (ver cabecalho) — replicam link_sei_processo() /
 // link_sei_documento() de repo/tools/extrair_boletim.py.
 function link_sei_processo(string $proc): string {
@@ -436,7 +485,7 @@ function ficha(PDO $pdo, string $id): void {
 // qual versão está rodando). FUNÇÃO, não const de arquivo — const não é
 // hoisted e o switch de rotas despacha antes desta linha (bug real da 1ª
 // versão da rota cooperacao).
-function api_versao(): string { return '2026-08-18.1'; }
+function api_versao(): string { return '2026-09-02.1'; }
 
 // Quantas horas sem importar já significam CADEIA QUEBRADA (não "atraso").
 // O cron do cPanel roda 12h e 20h, então o intervalo normal entre execuções
@@ -3174,18 +3223,51 @@ function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
     //
     // Sem nome em comum, NÃO une. Nos 35 casos do acervo, 24 unem com
     // segurança; os demais são pessoas distintas e continuam separadas.
+    //
+    // 1c) O SEGUNDO VÍNCULO — a mesma pessoa com DUAS matrículas.
+    //
+    // Um servidor pode ter mais de um SIAPE: concursado antes em outro órgão,
+    // aposentado que voltou, docente que virou técnico. A segunda matrícula não
+    // é uma grafia da primeira — é outro número, formado por um DÍGITO NOVO NA
+    // FRENTE da matrícula de 6 dígitos. Denise Aparecida de Miranda Rosas, o
+    // caso que revelou isto, é `139693` e também `7139693`.
+    //
+    // Fica no MESMO mecanismo do DV porque o problema é o mesmo (pessoa.siape é
+    // UNIQUE, cada grafia é uma linha) e a defesa é a mesma: o nome arbitra.
+    // A diferença é o lado do número que muda — o DV entra no fim, o vínculo no
+    // começo. Medido no acervo: 534 pares em que uma matrícula de 7 dígitos é
+    // outra de 6 com um dígito na frente; em 327 o nome é o MESMO, e nos 207
+    // restantes são pessoas diferentes e o gate as recusa.
+    //
+    // NÃO há lista de prefixos válidos, de propósito. `6` (224 pares) e `7`
+    // (35) dominam, mas `1`, `2`, `3`, `8` e `9` também aparecem com nome
+    // idêntico, e uma parte deles é o caso inverso — o OCR comeu o primeiro
+    // dígito de uma matrícula de 7. Nos dois sentidos é a mesma pessoa, e
+    // filtrar por prefixo perderia os casos legítimos sem ganhar precisão: quem
+    // dá a precisão é o nome, não o dígito.
     $variantes = [];
     if (strlen($chave) === 7) {
-        $variantes[] = substr($chave, 0, 6);          // tira o DV
+        $variantes[] = substr($chave, 0, 6);          // tira o DV (fim)
+        $variantes[] = substr($chave, 1);             // tira o dígito de vínculo (início)
     } elseif (strlen($chave) === 6) {
         for ($d = 0; $d <= 9; $d++) $variantes[] = $chave . $d;   // tenta cada DV
+        // Prefixo começa em 1: o `0` é zero à esquerda, que TRIM(LEADING '0')
+        // já colapsou na chave — gerá-lo aqui seria consultar a própria chave.
+        for ($d = 1; $d <= 9; $d++) $variantes[] = $d . $chave;   // tenta cada vínculo
     }
     if ($variantes && $rows) {
-        $chaveNome = fn(string $n) => preg_replace('/\s+/', ' ',
-            trim(mb_strtolower(nome_ascii($n), 'UTF-8')));
+        // O árbitro era igualdade exata da grafia sem acento, e isso derrubava o
+        // próprio caso que trouxe o segundo vínculo à tona: o acervo grafa
+        // Denise como "Denise Aparecida de Miranda Rosas" numa linha e
+        // "Denise Rosas Aparecida de Miranda Rosas" na outra (sobrenome
+        // duplicado na captura). Comparar por TOKENS resolve — e é o mesmo
+        // teste que o frontend já aplica ao nome digitado, com uma guarda a
+        // mais; ver nomes_mesma_pessoa(). Medido: acrescenta 212 uniões ao
+        // acervo, e nas 45 de menor margem (lado curto com 2 tokens) todas são
+        // a mesma pessoa com o nome truncado pelo OCR.
         $nomesConhecidos = [];
         foreach ($rows as $r) {
-            if (trim((string)$r['nome']) !== '') $nomesConhecidos[$chaveNome($r['nome'])] = true;
+            if (trim((string)$r['nome']) !== '') $nomesConhecidos[] = (string)$r['nome'];
         }
         if ($nomesConhecidos) {
             $ph = implode(',', array_fill(0, count($variantes), '?'));
@@ -3198,7 +3280,12 @@ function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
             foreach ($sv->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 if (isset($jaTem[(int)$r['id']])) continue;
                 $n = trim((string)$r['nome']);
-                if ($n === '' || !isset($nomesConhecidos[$chaveNome($n)])) continue;
+                if ($n === '') continue;
+                $bate = false;
+                foreach ($nomesConhecidos as $conhecido) {
+                    if (nomes_mesma_pessoa($n, $conhecido)) { $bate = true; break; }
+                }
+                if (!$bate) continue;
                 $rows[] = $r;
             }
         }
@@ -3220,7 +3307,44 @@ function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
         $k = preg_replace('/\s+/', ' ', trim(mb_strtolower(nome_ascii($n), 'UTF-8')));
         if (!isset($porChave[$k]) || strlen($n) > strlen(nome_ascii($n))) $porChave[$k] = $n;
     }
+    // ORDEM, e por que NÃO se elege um nome canônico.
+    //
+    // Uma das grafias pode ser a ERRADA — é o caso de Denise: o ato repetiu o
+    // sobrenome e gravou "Denise Rosas Aparecida de Miranda Rosas". Eleger uma
+    // (a mais longa, a mais nova, qualquer regra) é apostar em qual é a certa
+    // sem ter como saber, e a aposta erra exatamente onde dói: o nome errado
+    // vira o cabeçalho do dossiê e do PDF. Então o portal MOSTRA TODAS as
+    // grafias — o front já as imprime unidas por '·' —, e só ordena: a que
+    // aparece em mais linhas de pessoa vem primeiro, porque a grafia repetida
+    // no acervo é mais provável de ser a corrente que a variação isolada.
+    // Ordenar é sugerir; escolher seria afirmar.
+    $freq = [];
+    foreach ($pessoas as $pp) {
+        $n = trim($pp['nome']);
+        if ($n === '') continue;
+        $k = preg_replace('/\s+/', ' ', trim(mb_strtolower(nome_ascii($n), 'UTF-8')));
+        $freq[$k] = ($freq[$k] ?? 0) + 1;
+    }
     $nomes = array_values($porChave);
+    usort($nomes, function ($a, $b) use ($freq) {
+        $ka = preg_replace('/\s+/', ' ', trim(mb_strtolower(nome_ascii($a), 'UTF-8')));
+        $kb = preg_replace('/\s+/', ' ', trim(mb_strtolower(nome_ascii($b), 'UTF-8')));
+        return ($freq[$kb] ?? 0) <=> ($freq[$ka] ?? 0);
+    });
+
+    // Quantos nomes IRRECONCILIÁVEIS — não quantas grafias. É o que decide o
+    // aviso âmbar "esta matrícula tem mais de um nome", que existe para o caso
+    // real de dois servidores na mesma matrícula ('3369546' = Bárbara Sena E
+    // Simone Lemos). Grafias compatíveis entre si (sobrenome duplicado,
+    // abreviação, nome de casada) são UMA pessoa e contam como uma: sem isto o
+    // aviso passaria a piscar nas 212 uniões que a comparação por tokens
+    // acrescenta, e aviso que pisca à toa é aviso que ninguém lê.
+    $grupos = [];
+    foreach ($nomes as $n) {
+        foreach ($grupos as $g) if (nomes_mesma_pessoa($n, $g)) continue 2;
+        $grupos[] = $n;
+    }
+    $nomesDistintos = count($grupos);
 
     $funcoes = [];
     $atos = [];
@@ -3314,7 +3438,7 @@ function dossie(PDO $pdo, array $cfg, string $siape, string $nome): void {
         'chave' => $chave,
         'pessoas' => $pessoas,
         'nomes' => $nomes,
-        'nomesDistintos' => count($nomes),
+        'nomesDistintos' => $nomesDistintos,
         'linhasPessoa' => count($pessoas),
         'totalAtos' => count($atos),
         'funcoes' => $funcoes,
