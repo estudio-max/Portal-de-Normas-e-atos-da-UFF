@@ -77,7 +77,7 @@ if (!function_exists('comissoes_termos')) {
             //     qualificador positivo que sirva: as retificações do corpo
             //     central terminam em "…da Comissão Permanente de
             //     Flexibilização" e param aí. Daí '!do hospital'.
-            // (2) As três frases '+' pegam o que a comissão PRODUZ: as ~54
+            // (2) As quatro frases '+' pegam o que a comissão PRODUZ: as ~54
             //     portarias que aprovam ou mantêm o plano de uma UORG, os
             //     atos normativos do rito (Portaria 57.302/2016, Portaria
             //     62.111/2018 e a NS 672/2019, que fixa as competências da
@@ -92,6 +92,15 @@ if (!function_exists('comissoes_termos')) {
             //     "jornada de t r a b a l h o"), e da alternância
             //     "da jornada"/"de jornada": cada uma alcança o que as outras
             //     perdem.
+            //     A quarta, 'jornada flexibilizada', é a SAÍDA do setor — a
+            //     portaria que revoga o plano de uma UORG ("Revogar a Portaria
+            //     X - Jornada Flexibilizada de …"). Ela inverte a ordem das
+            //     palavras e por isso escapava das outras três: 38 atos de
+            //     2022 a 2026 ficavam de fora, e com eles o único movimento
+            //     recente do card — a CPFJ parecia parada em 2025 com m12=0
+            //     enquanto encerrava flexibilização em 2026 (Portaria
+            //     68.930/2026). Medido: 38 ementas no acervo contêm a frase e
+            //     as 38 são desta família, zero falso positivo.
             // Medido no acervo cheio (128.426 atos do dump v2): 71 atos, ZERO
             // falso positivo na conferência à mão. As duas exclusões são
             // corpos de UNIDADE do mesmo tema — o do HUAP e a "Comissão de
@@ -105,6 +114,7 @@ if (!function_exists('comissoes_termos')) {
                              . '|+plano de flexibilização da jornada'
                              . '|+flexibilização da jornada de trabalho'
                              . '|+flexibilização de jornada'
+                             . '|+jornada flexibilizada'
                              . '|!do hospital|!comissão de implantação',
             'pgd'           => 'permanente do programa de gestão',
             'doc-sig'       => 'documentos públicos de natureza sigilosa',

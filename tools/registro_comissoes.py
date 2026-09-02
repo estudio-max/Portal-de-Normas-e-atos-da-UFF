@@ -79,12 +79,14 @@ REGISTRO = [
     # 68.403/2022. A ementa desses nomeia o INSTRUMENTO e e o preambulo que
     # registra a CPFJ, entao a guarda de colegiado derrubava todos. Sao tres por
     # causa do OCR ("d o p l ano d e", "t r a b a l h o") e da alternancia
-    # "da jornada"/"de jornada". Medido no acervo cheio (128.426 atos): 71
-    # atos, zero falso positivo. Racional completo em comissoes_match.php.
+    # "da jornada"/"de jornada". A quarta, 'jornada flexibilizada', e a SAIDA
+    # do setor ("Revogar a Portaria X - Jornada Flexibilizada de ..."): inverte
+    # a ordem das palavras e escapava das outras tres -- 38 atos de 2022 a 2026,
+    # zero falso positivo. Racional completo em comissoes_match.php.
     # A tupla fica numa LINHA SO, por mais longa que seja: o
     # tools/teste_schema_inteligencia.mjs le este arquivo com um regex de linha
     # unica, e tupla quebrada some da contagem sem dar erro nenhum aqui.
-    ('cpfj',      'CPFJ',  'Comissão Permanente de Flexibilização da Jornada',   'Comissão', 'permanente de flexibilização|+plano de flexibilização da jornada|+flexibilização da jornada de trabalho|+flexibilização de jornada|!do hospital|!comissão de implantação', ''),
+    ('cpfj',      'CPFJ',  'Comissão Permanente de Flexibilização da Jornada',   'Comissão', 'permanente de flexibilização|+plano de flexibilização da jornada|+flexibilização da jornada de trabalho|+flexibilização de jornada|+jornada flexibilizada|!do hospital|!comissão de implantação', ''),
     ('pgd',       '',      'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', 'permanente do programa de gestão', ''),
     ('doc-sig',   '',      'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', 'documentos públicos de natureza sigilosa', ''),
     ('rsc',       'RSC',   'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', 'reconhecimento de saberes', ''),

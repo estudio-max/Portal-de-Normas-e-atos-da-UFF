@@ -484,10 +484,18 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   inteira — a constituição (62.325/2018), as retificações de composição
   (62.902/2019 a 68.810/2025), a NS 672/2019 que fixa as competências, e a
   68.403/2022 que suspende o prazo da avaliação anual.
-  **São TRÊS frases `+` por causa do OCR e da alternância de preposição** — o
-  Boletim escreve "d o p l ano d e flexibilização", "jornada de t r a b a l h o"
-  e alterna "da jornada"/"de jornada"; cada frase alcança o que as outras
-  perdem. Uma só teria custado 3 dos 71.
+  **São QUATRO frases `+`.** Três por causa do OCR e da alternância de
+  preposição — o Boletim escreve "d o p l ano d e flexibilização", "jornada de
+  t r a b a l h o" e alterna "da jornada"/"de jornada"; cada frase alcança o que
+  as outras perdem, e uma só teria custado 3 dos 71. A quarta,
+  `+jornada flexibilizada`, é a **SAÍDA** do setor: a portaria que revoga o
+  plano de uma UORG abre com "Revogar a Portaria X - Jornada Flexibilizada
+  de …" e **inverte a ordem das palavras**, escapando das outras três. Eram 38
+  atos de 2022 a 2026 fora do card — e com eles todo o movimento recente: a
+  CPFJ aparecia parada em 2025, `m12=0`, enquanto encerrava flexibilização em
+  2026 (Portaria 68.930/2026, o caso que denunciou a falta). Medido: 38 ementas
+  no acervo contêm a frase, as 38 são desta família, zero falso positivo. Com
+  ela o corpo vai de 71 para **109 atos** (02/09/2026).
   ⚠️ **As Portarias 57.301, 57.303, 57.529 e 57.655/2016 ficam FORA de
   propósito.** São a história da POLÍTICA de flexibilização — o rito anterior,
   a jornada de 30h reconhecida e revogada sob pressão do TCU —, não atos do
