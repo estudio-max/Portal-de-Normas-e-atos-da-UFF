@@ -2069,6 +2069,7 @@ function comissoes_registro(): array {
         ['cpt', 'CPT', 'Comissão Permanente de Telefonia', 'Comissão', ''],
         ['cpfj', 'CPFJ', 'Comissão Permanente de Flexibilização da Jornada', 'Comissão', ''],
         ['pgd', '', 'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', ''],
+        ['cnpgd', 'CNPGD', 'Comissão de Acompanhamento do Novo Programa de Gestão e Desempenho (CNPGD-UFF)', 'Comissão', ''],
         ['doc-sig', '', 'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', ''],
         ['rsc', 'RSC', 'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', ''],
     ];

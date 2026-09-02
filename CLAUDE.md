@@ -442,7 +442,7 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   `ato_processo`. O `ato.processo_sei` guarda só o primeiro número do texto; a
   tabela guarda todos (medido: a coluna única descartava 44% das menções).
   Backfill em `importar/backfill_ato_processo.php`.
-- **Comissões** (`/api/comissoes`): os 27 colegiados PERMANENTES centrais da
+- **Comissões** (`/api/comissoes`): os 28 colegiados PERMANENTES centrais da
   UFF (CPA, CPPD, CEUA, Governança…). A lista é **curada** em
   `comissoes_registro()` (index) + `comissoes_termos()`
   (`importar/comissoes_match.php`) — os dois nascem de
@@ -460,7 +460,7 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   **classificação legal** (`obrig` ∈ `lei` | `controle` | vazio): obrigatória por
   lei, exigida por órgão de controle, ou nenhuma. É curadoria do mantenedor, não
   inferência do texto — a aba mostra o selo e filtra por ele. 7 por lei, 6 por
-  controle, 14 sem.
+  controle, 15 sem.
   **Duas marcas no `termos` mudam o casamento, e as duas nasceram do CPFJ**
   (16/08/2026). `!frase` EXCLUI: se a frase aparecer, o ato não casa aquele
   corpo, por mais que uma variante positiva tenha batido — é o recurso para o
@@ -502,6 +502,24 @@ e no backfill, e a rota só lê o índice pronto (não casa texto ao vivo).
   colegiado: a CPFJ só nasce em outubro de 2018. Pendurá-las no card diria que
   uma comissão inexistente agiu. Essa narrativa pede a aba **Políticas**, que
   tem `papel` por ato e âncora no PDI; a de Comissões tem vínculo chapado.
+  **CNPGD × CPPG: dois corpos, não um** (02/09/2026). A Comissão de
+  Acompanhamento do **Novo** Programa de Gestão e Desempenho (`cnpgd`, DTS
+  5/2025 que a constitui, 26/2025 e 14/2026 que a atualizam, todas da PROGEPE)
+  acompanha o NPGD-UFF da IN 113/2024; a Comissão Permanente do Programa de
+  Gestão (`pgd`, CPPG, Portaria 68.352/2022) é do programa ANTERIOR. Nenhuma
+  ementa do acervo cita as duas — conferido nos dois sentidos.
+  **O termo do CNPGD é a SIGLA, e é o caso FÁCIL que o CPFJ não teve.** Cada
+  unidade constituiu a sua comissão de acompanhamento com o mesmo nome por
+  extenso (CMN/Veterinária nas DTS 2, 10 e 14/2025; CMF/Farmácia na DTS
+  20/2024) — só a central escreve `(CNPGD-UFF)`. Aqui EXISTE o qualificador
+  positivo que separa central de homônima de unidade, então não precisa de
+  `!` nem de `+`: `cnpgd` casa 3 ementas, as 3 da PROGEPE, as 3 passam a guarda
+  de colegiado, e nenhum nome de órgão contém a sigla.
+  ⚠️ **Somar um corpo à aba Comissões NÃO mexe na aba Jornada** — conferido
+  comparando `/api/jornada` antes e depois: resposta idêntica. `jornada()` não
+  lê `ato_comissao`; o lado PGD é FULLTEXT (`+"programa de gestão" +desempenho`)
+  sobre `ato_texto`, e as 3 DTS do CNPGD já entravam nessa conta desde sempre.
+  As duas abas olham o mesmo assunto por vias independentes.
   **Dois sinais ligam ato↔corpo** (`comissoes_do_texto` + `comissoes_do_orgao`,
   unidos no import e no backfill): (1) a **ementa** cita o colegiado — com a
   guarda de colegiado; (2) o **órgão emissor** É o colegiado, para o ato que ele
@@ -1264,7 +1282,7 @@ resumo operacional.
   chaveada pelo slug, e por que **não** há FK de `obrigacao` para `prazo` (o
   importador recicla `prazo.id` a cada import).
   **Os catálogos foram semeados em 03/08/2026** e conferidos em produção:
-  `comissao` 26, `politica` 7, `politica_alias` 40, `ato_politica` 93; as demais
+  `comissao` 28, `politica` 7, `politica_alias` 40, `ato_politica` 93; as demais
   seguem vazias. **O CPFJ entrou depois (16/08/2026) e leva o catálogo a 27** —
   o seed é idempotente, então reaplicá-lo basta; o `ato_comissao` dele só
   aparece depois de rodar o `backfill_ato_comissao.php`. Os seeds são

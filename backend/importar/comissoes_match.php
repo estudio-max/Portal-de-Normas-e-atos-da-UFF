@@ -117,6 +117,21 @@ if (!function_exists('comissoes_termos')) {
                              . '|+jornada flexibilizada'
                              . '|!do hospital|!comissão de implantação',
             'pgd'           => 'permanente do programa de gestão',
+            // CNPGD — acompanha o NOVO PGD (NPGD-UFF, instituído pela IN
+            // 113/2024). É corpo DISTINTO do 'pgd' logo acima, que é a CPPG do
+            // programa anterior (Portaria 68.352/2022): nenhuma ementa do
+            // acervo cita os dois, medido nos dois sentidos.
+            // O termo é a SIGLA, e não o nome por extenso, porque cada unidade
+            // constituiu a SUA comissão de acompanhamento com o mesmo nome —
+            // CMN (Veterinária, DTS 2, 10 e 14/2025) e CMF (Farmácia, DTS
+            // 20/2024) escrevem "Comissão de Acompanhamento do Novo Programa de
+            // Gestão e Desempenho" igualzinho. Só a central, da PROGEPE, assina
+            // "(CNPGD-UFF)". Aqui, ao contrário do CPFJ, EXISTE o qualificador
+            // positivo que separa — é o caso fácil, e a sigla é ele.
+            // Medido: 'cnpgd' casa 3 ementas (DTS 5 e 26/2025, DTS 14/2026), as
+            // 3 da PROGEPE, as 3 passam a guarda de colegiado, e nenhum nome de
+            // órgão contém a sigla (o 2º sinal não acrescenta nem arrisca).
+            'cnpgd'         => 'cnpgd',
             'doc-sig'       => 'documentos públicos de natureza sigilosa',
             'rsc'           => 'reconhecimento de saberes',
         ];

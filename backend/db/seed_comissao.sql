@@ -3,9 +3,9 @@
 --
 --  Regenerar:  python tools/registro_comissoes.py --sql
 --
---  Popular a `comissao` com os 27 colegiados permanentes centrais do
+--  Popular a `comissao` com os 28 colegiados permanentes centrais do
 --  registro curado. Depois disto, o bloco 7 do verificar_inteligencia.sql tem
---  que devolver 27 no catalogo e ZERO slugs sem catalogo -- e esse zero e a
+--  que devolver 28 no catalogo e ZERO slugs sem catalogo -- e esse zero e a
 --  prova de que os slugs batem com os que a `ato_comissao` ja usa.
 --
 --  Idempotente: reaplicar refresca nome/sigla/obrigatoriedade a partir do
@@ -41,6 +41,7 @@ VALUES
   ('cpt', 'Comissão Permanente de Telefonia', 'CPT', 'nao_classificada', 'central', 1),
   ('cpfj', 'Comissão Permanente de Flexibilização da Jornada', 'CPFJ', 'nao_classificada', 'central', 1),
   ('pgd', 'Comissão Permanente do Programa de Gestão e Desempenho', NULL, 'nao_classificada', 'central', 1),
+  ('cnpgd', 'Comissão de Acompanhamento do Novo Programa de Gestão e Desempenho (CNPGD-UFF)', 'CNPGD', 'nao_classificada', 'central', 1),
   ('doc-sig', 'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', NULL, 'nao_classificada', 'central', 1),
   ('rsc', 'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'RSC', 'nao_classificada', 'central', 1)
 

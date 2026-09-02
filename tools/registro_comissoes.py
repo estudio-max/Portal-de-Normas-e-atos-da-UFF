@@ -88,6 +88,14 @@ REGISTRO = [
     # unica, e tupla quebrada some da contagem sem dar erro nenhum aqui.
     ('cpfj',      'CPFJ',  'Comissão Permanente de Flexibilização da Jornada',   'Comissão', 'permanente de flexibilização|+plano de flexibilização da jornada|+flexibilização da jornada de trabalho|+flexibilização de jornada|+jornada flexibilizada|!do hospital|!comissão de implantação', ''),
     ('pgd',       '',      'Comissão Permanente do Programa de Gestão e Desempenho', 'Comissão', 'permanente do programa de gestão', ''),
+    # CNPGD: acompanha o NOVO PGD (NPGD-UFF, IN 113/2024) -- corpo distinto do
+    # CPPG acima, que e do programa anterior; nenhuma ementa cita os dois.
+    # O termo e a SIGLA porque cada unidade tem a sua comissao de acompanhamento
+    # com o mesmo nome por extenso (CMN/Veterinaria, CMF/Farmacia): so a central
+    # da PROGEPE escreve '(CNPGD-UFF)'. Medido: 'cnpgd' casa 3 ementas, as 3 da
+    # PROGEPE, e nenhum nome de orgao -- ao contrario do CPFJ, aqui EXISTE
+    # qualificador positivo que separa a central da homonima de unidade.
+    ('cnpgd',     'CNPGD', 'Comissão de Acompanhamento do Novo Programa de Gestão e Desempenho (CNPGD-UFF)', 'Comissão', 'cnpgd', ''),
     ('doc-sig',   '',      'Comissão Permanente de Acesso aos Documentos Públicos de Natureza Sigilosa', 'Comissão', 'documentos públicos de natureza sigilosa', ''),
     ('rsc',       'RSC',   'Comissão Especial de Reconhecimento de Saberes e Competências (RSC)', 'Comissão', 'reconhecimento de saberes', ''),
 ]
