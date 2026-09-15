@@ -191,3 +191,11 @@ jobs:
 
       - name: Regressão do contrato de dados do portal
         run: python tools/teste_dados_portal.py
+
+      # A ementa é o que o cidadão lê na ficha do ato. Um enumerador órfão ("1.")
+      # sobrevivendo à limpeza não parece defeito — parece ementa curta, e foi
+      # assim que 67 resoluções ad referendum ficaram em produção exibindo "1."
+      # como se fosse o texto do boletim. O lado NEGATIVO importa igual: a mesma
+      # limpeza não pode mutilar ementa que legitimamente começa com algarismo.
+      - name: Regressão do enumerador órfão na ementa
+        run: python tools/teste_ementa_enumerador.py
