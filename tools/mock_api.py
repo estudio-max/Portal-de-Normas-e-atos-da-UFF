@@ -785,10 +785,12 @@ def convenios_estagio_payload():
         k = ("vencidos" if d < 0 else "d30" if d <= 30 else
              "d60" if d <= 60 else "d90" if d <= 90 else "adiante")
         janelas[k] += 1
-        ano = int(c["fim"][:4])
-        por_ano[ano] = por_ano.get(ano, 0) + 1
+        # Os DOIS indicadores no mesmo ano: firmados (inicio da vigencia) e
+        # vencimentos (fim). Um ano pode ter so um dos dois.
+        for chave, ano in (("firmados", int(c["inicio"][:4])), ("vencem", int(c["fim"][:4]))):
+            por_ano.setdefault(ano, {"firmados": 0, "vencem": 0})[chave] += 1
     return {"total": len(convenios), "janelas": janelas,
-            "serie": [{"ano": a, "n": por_ano[a]} for a in sorted(por_ano)],
+            "serie": [{"ano": a, **por_ano[a]} for a in sorted(por_ano)],
             "convenios": convenios}
 
 

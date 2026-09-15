@@ -1048,7 +1048,11 @@ export interface ConveniosEstagioResp {
   /** Faixas EXCLUDENTES (d60 é de 31 a 60 dias), para os quatro números do
    *  topo somarem o total sem contar o mesmo convênio duas vezes. */
   janelas: { vencidos: number; d30: number; d60: number; d90: number; adiante: number };
-  serie: { ano: number; n: number }[];
+  /** Os DOIS indicadores no mesmo ano: quantos convênios começaram a valer
+   *  (`firmados`, pelo início da vigência — não pelo ano do ato, que a
+   *  ratificação atrasa) e quantos vencem (`vencem`). Lidos juntos, um explica
+   *  o outro: o pico de vencimento é o pico de assinatura cinco anos depois. */
+  serie: { ano: number; firmados: number; vencem: number }[];
   convenios: ConvenioEstagio[];
 }
 

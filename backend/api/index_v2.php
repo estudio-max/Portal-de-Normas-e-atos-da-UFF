@@ -3336,17 +3336,39 @@ function convenios_estagio(PDO $pdo): void {
     // 60), para os quatro números do topo somarem o total sem contar duas
     // vezes o mesmo convênio.
     $janelas = ['vencidos' => 0, 'd30' => 0, 'd60' => 0, 'd90' => 0, 'adiante' => 0];
-    $porAnoFim = [];
+    // A SÉRIE é por ano de ASSINATURA (o início da vigência), não de vencimento.
+    // Por vencimento ela fica esmagada — com prazo de 5 anos e a maioria dos
+    // convênios assinada de 2023 em diante, 2027 e 2028 sozinhos levam metade do
+    // acervo e os outros anos viram traço. Por assinatura, o gráfico responde
+    // uma pergunta que a tela ainda não respondia: quantos convênios a UFF
+    // firmou em cada ano. O lado do vencimento já está nos quatro números do
+    // topo e na linha do tempo de 90 dias.
+    //
+    // ⚠️ É o INÍCIO DA VIGÊNCIA, não o ano do ato: o convênio do TRT/RJ vale
+    // desde 20/10/2021 e só foi ratificado pela Resolução 3.199/2024. Quem
+    // assinou, assinou em 2021 — usar o ano do ato jogaria três anos de atraso
+    // de ratificação para cima do número de um ano que não os viveu.
+    // A série traz os DOIS indicadores no mesmo ano, para serem lidos juntos:
+    // quantos foram firmados e quantos vencem. Um explica o outro — o pico de
+    // vencimento de 2027/2028 É o pico de assinatura de 2022/2023 cinco anos
+    // depois, e essa relação só aparece quando as duas barras dividem o eixo.
+    $porAno = [];
     foreach ($convenios as $c) {
         $d = $c['diasRestantes'];
         $k = $d < 0 ? 'vencidos' : ($d <= 30 ? 'd30' : ($d <= 60 ? 'd60' : ($d <= 90 ? 'd90' : 'adiante')));
         $janelas[$k]++;
-        $ano = (int)substr($c['fim'], 0, 4);
-        $porAnoFim[$ano] = ($porAnoFim[$ano] ?? 0) + 1;
+        $ai = (int)substr($c['inicio'], 0, 4);
+        $af = (int)substr($c['fim'], 0, 4);
+        if (!isset($porAno[$ai])) $porAno[$ai] = ['firmados' => 0, 'vencem' => 0];
+        if (!isset($porAno[$af])) $porAno[$af] = ['firmados' => 0, 'vencem' => 0];
+        $porAno[$ai]['firmados']++;
+        $porAno[$af]['vencem']++;
     }
-    ksort($porAnoFim);
+    ksort($porAno);
     $serie = [];
-    foreach ($porAnoFim as $ano => $n) $serie[] = ['ano' => $ano, 'n' => $n];
+    foreach ($porAno as $ano => $v) {
+        $serie[] = ['ano' => $ano, 'firmados' => $v['firmados'], 'vencem' => $v['vencem']];
+    }
 
     responder_json([
         'total'      => count($convenios),

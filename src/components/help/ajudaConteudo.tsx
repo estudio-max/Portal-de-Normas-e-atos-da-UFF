@@ -477,8 +477,11 @@ export const AJUDA: Record<string, AjudaAba> = {
     passos: [
       <>Comece pelos quatro números do topo: vencidos, e os que vencem em 30, 60 e 90 dias. Eles
         não se repetem entre si — um convênio conta num número só.</>,
-      <>O gráfico de barras mostra o volume de renovação de cada ano; a linha do tempo mostra
-        só os próximos 90 dias.</>,
+      <>O gráfico de barras põe os dois lados no mesmo ano: quantos convênios a UFF <B>firmou</B> e
+        quantos <B>vencem</B>. “Firmados” conta pelo início da vigência, não pelo ano do ato — um
+        convênio pode valer desde 2021 e só ter sido ratificado anos depois. Como o prazo costuma
+        ser de cinco anos, o pico de vencimento é o pico de assinatura cinco anos adiante. A linha
+        do tempo, logo abaixo, mostra o que vence nos próximos 90 dias.</>,
       <>Use as faixas (<B>Vencidos</B>, <B>30 dias</B>, <B>60 dias</B>, <B>90 dias</B>,
         <B>Todos</B>) e a busca por nome de empresa para chegar a um convênio. Aqui a faixa é
         acumulada: <B>60 dias</B> mostra também o que vence antes disso.</>,

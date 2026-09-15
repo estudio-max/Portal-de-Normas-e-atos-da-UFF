@@ -99,6 +99,25 @@ export default function EstagiosApi() {
     });
   }, [dados, janela, modalidade, busca]);
 
+  // ORDEM DE LEITURA, que não é a ordem do banco. A rota devolve por data de
+  // fim crescente, e isso põe no topo o convênio que venceu há QUATRO ANOS —
+  // inútil para os dois públicos: o aluno não vai estagiar num acordo morto em
+  // 2022, e a Divisão não renova o que já virou arquivo. O que precisa de ação
+  // é o que está perto de HOJE, dos dois lados da data.
+  //
+  // Vigente antes de vencido; entre vigentes, o mais próximo de vencer
+  // primeiro; entre vencidos, o que venceu POR ÚLTIMO primeiro — esse ainda
+  // pode estar em renovação, o de 2022 não.
+  const ordenada = useMemo(() => {
+    const l = [...filtrada];
+    l.sort((a, b) => {
+      const av = a.diasRestantes < 0, bv = b.diasRestantes < 0;
+      if (av !== bv) return av ? 1 : -1;
+      return av ? b.fim.localeCompare(a.fim) : a.fim.localeCompare(b.fim);
+    });
+    return l;
+  }, [filtrada]);
+
   if (carregando) {
     return (
       <div className="flex items-center gap-2 text-[13px] text-slate-600 p-6">
@@ -169,7 +188,7 @@ export default function EstagiosApi() {
         </div>
       </div>
 
-      <BarrasPorAno serie={dados.serie} />
+      <BarrasPorAno serie={dados.serie} convenios={dados.convenios} />
       <LinhaDoTempo convenios={dados.convenios} />
 
       {/* Filtros */}
@@ -219,7 +238,7 @@ export default function EstagiosApi() {
               type-check reprova. Embrulhar num <div> como a aba Prazos faz
               resolveria o tipo e quebraria a lista — item de <ul> tem que ser
               <li> para leitor de tela anunciar "lista com N itens". */}
-          {filtrada.map(c => (
+          {ordenada.map(c => (
             <li key={c.id}
               className={`bg-white rounded-lg border border-slate-200 border-l-4 ${URG[urgDe(c.diasRestantes)].card} p-3 shadow-xs`}>
               <Cartao c={c} />
@@ -248,34 +267,132 @@ function Kpi({ rotulo, valor, classe, texto }: { rotulo: string; valor: number; 
   );
 }
 
-// ---- Barras: quantos convênios vencem em cada ano -------------------------
-// O horizonte inteiro numa olhada. É o gráfico que responde "qual vai ser o
-// volume de renovação do ano que vem" — pergunta de planejamento, não de
-// urgência, e por isso separada da linha do tempo.
-function BarrasPorAno({ serie }: { serie: { ano: number; n: number }[] }) {
+// ---- Barras: quantos convênios a UFF FIRMOU em cada ano -------------------
+// O ritmo de assinatura, que é a pergunta que o resto da tela não responde — o
+// lado do vencimento já está nos quatro números do topo e na linha do tempo.
+//
+// Por vencimento este gráfico ficava ilegível: com prazo de 5 anos e a maioria
+// assinada de 2023 em diante, 2027 e 2028 sozinhos levavam metade do acervo e
+// os demais anos viravam um traço de 2px.
+//
+// UMA MATIZ SÓ, e sai de token. As barras medem uma coisa só ao longo de um
+// eixo — a posição já codifica o valor, então pintar cada ano de uma cor
+// codificaria nada e ainda criaria um problema de daltonismo. E `--chart-mark`
+// está definida nos DOIS temas: hex literal aqui atravessaria a fotofobia
+// intacto e ficaria escuro sobre escuro, sem erro nenhum no console.
+function BarrasPorAno({ serie, convenios }: {
+  serie: ds.ConveniosEstagioResp['serie']; convenios: ds.ConvenioEstagio[];
+}) {
+  // Tudo que a dica de cada ano mostra é DERIVADO da lista que a aba já
+  // recebeu — nenhuma chamada nova à API, e nenhum número que o payload não
+  // sustente. O `<title>` do SVG é dica nativa: quebra linha, aparece no
+  // teclado e no leitor de tela, e não depende de posicionamento em JS que
+  // some no toque. Um tooltip próprio em HTML daria mais estilo e menos
+  // alcance.
+  const porAno = useMemo(() => {
+    const m = new Map<number, {
+      firmados: number; vencem: number; jaVenceram: number;
+      mods: Map<string, number>; prazos: number[];
+    }>();
+    const pega = (a: number) => {
+      if (!m.has(a)) m.set(a, { firmados: 0, vencem: 0, jaVenceram: 0, mods: new Map(), prazos: [] });
+      return m.get(a)!;
+    };
+    for (const c of convenios) {
+      const ai = +c.inicio.slice(0, 4), af = +c.fim.slice(0, 4);
+      const fi = pega(ai);
+      fi.firmados++;
+      const mod = c.modalidade || 'não declarada';
+      fi.mods.set(mod, (fi.mods.get(mod) ?? 0) + 1);
+      // Prazo em anos, arredondado — serve para dizer "o prazo típico daquele
+      // ano", que é o que explica onde o vencimento vai cair.
+      fi.prazos.push(Math.max(1, Math.round((+new Date(c.fim) - +new Date(c.inicio)) / 31557600000)));
+      const ve = pega(af);
+      ve.vencem++;
+      if (c.diasRestantes < 0) ve.jaVenceram++;
+    }
+    return m;
+  }, [convenios]);
+
+  const dica = (ano: number, s: { firmados: number; vencem: number }) => {
+    const d = porAno.get(ano);
+    const l = [`${ano}`, `Firmados: ${s.firmados}`];
+    if (d && d.prazos.length) {
+      const moda = [...d.prazos.reduce((mm, p) => mm.set(p, (mm.get(p) ?? 0) + 1), new Map<number, number>())]
+        .sort((a, b) => b[1] - a[1])[0];
+      l.push(`  prazo mais comum: ${moda[0]} ano${moda[0] === 1 ? '' : 's'} (${moda[1]} de ${s.firmados})`);
+      const mods = [...(d.mods ?? [])].sort((a, b) => b[1] - a[1]).slice(0, 3);
+      for (const [nome, n] of mods) l.push(`  ${nome}: ${n}`);
+    }
+    l.push(`Vencem: ${s.vencem}`);
+    if (d && d.vencem) {
+      if (d.jaVenceram) l.push(`  já vencidos: ${d.jaVenceram}`);
+      if (d.vencem - d.jaVenceram) l.push(`  ainda a vencer: ${d.vencem - d.jaVenceram}`);
+    }
+    const saldo = s.firmados - s.vencem;
+    l.push(`Saldo no ano: ${saldo > 0 ? '+' : ''}${saldo}`);
+    return l.join('\n');
+  };
+
   if (!serie.length) return null;
-  const anoAtual = new Date().getFullYear();
-  const max = Math.max(...serie.map(s => s.n), 1);
+  const max = Math.max(...serie.flatMap(s => [s.firmados, s.vencem]), 1);
   const W = 720, H = 150, base = H - 8, topo = 8;
   const larg = W / serie.length;
+  // Duas barras por ano, lado a lado. A cor SOZINHA não distingue as séries —
+  // a de vencimento leva contorno próprio, e a legenda abaixo é escrita. É a
+  // mesma regra dos prazos: cor é reforço, nunca o único portador do sentido.
+  const bw = larg * 0.32;
   return (
     <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs overflow-x-auto">
-      <div className="text-[13px] text-slate-600 font-semibold mb-1 px-1">Convênios por ano de vencimento</div>
+      <div className="text-[13px] text-slate-600 font-semibold mb-1 px-1">Convênios firmados e vencimentos, por ano</div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
-        aria-label={`Barras: ${serie.map(s => `${s.n} vencem em ${s.ano}`).join('; ')}.`}>
+        aria-label={`Barras pareadas por ano: ${serie.map(s => `${s.ano}, ${s.firmados} firmados e ${s.vencem} vencendo`).join('; ')}.`}>
         {serie.map((s, i) => {
-          const h = Math.max(2, ((H - topo - 8) * s.n) / max);
-          // Ano passado ou corrente = o que já venceu ou vence agora.
-          const cor = s.ano < anoAtual ? URG.vencido.ponto : s.ano === anoAtual ? URG.d30.ponto : URG.adiante.ponto;
+          const x0 = i * larg + larg * 0.14;
+          const hf = s.firmados ? Math.max(2, ((H - topo - 8) * s.firmados) / max) : 0;
+          const hv = s.vencem ? Math.max(2, ((H - topo - 8) * s.vencem) / max) : 0;
+          const texto = dica(s.ano, s);
           return (
-            <rect key={s.ano} x={i * larg + larg * 0.18} y={base - h}
-              width={larg * 0.64} height={h} fill={cor} rx="2">
-              <title>{`${s.n} convênio(s) vencem em ${s.ano}`}</title>
-            </rect>
+            <g key={s.ano} style={{ cursor: 'help' }}>
+              {/* Alvo de hover do ANO INTEIRO, atrás das barras: sem ele só a
+                  coluna pintada responde, e o ano de barra baixa vira um alvo
+                  de 2px que ninguém acerta com o mouse. Invisível, mas é o que
+                  torna a dica alcançável em todo ano do eixo. */}
+              <rect x={i * larg} y={topo} width={larg} height={base - topo} fill="transparent">
+                <title>{texto}</title>
+              </rect>
+              {hf > 0 && (
+                <rect x={x0} y={base - hf} width={bw} height={hf} fill="var(--chart-mark)" rx="2">
+                  <title>{texto}</title>
+                </rect>
+              )}
+              {hv > 0 && (
+                <rect x={x0 + bw + larg * 0.06} y={base - hv} width={bw} height={hv}
+                  fill="var(--chart-fill)" stroke="var(--chart-mark-2)" strokeWidth="1.5" rx="2">
+                  <title>{texto}</title>
+                </rect>
+              )}
+            </g>
           );
         })}
       </svg>
       <RotulosEixo itens={serie.map(s => String(s.ano))} largura={W} />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 pt-2 text-[12px] text-slate-600">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-[2px]" style={{ background: 'var(--chart-mark)' }} />
+          Firmados
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-[2px]"
+            style={{ background: 'var(--chart-fill)', border: '1.5px solid var(--chart-mark-2)' }} />
+          Vencem
+        </span>
+      </div>
+      <p className="text-[12px] text-slate-500 px-1 pt-1 leading-relaxed">
+        “Firmados” conta pelo <strong>início da vigência</strong>, não pelo ano do ato: um convênio pode
+        valer desde 2021 e só ter sido ratificado anos depois. Como o prazo costuma ser de cinco anos,
+        o pico de vencimento é o pico de assinatura cinco anos adiante.
+      </p>
     </div>
   );
 }
@@ -306,7 +423,13 @@ function LinhaDoTempo({ convenios }: { convenios: ds.ConvenioEstagio[] }) {
         {proximos.map((c, i) => (
           <circle key={c.id} cx={x(c.diasRestantes)} cy={base - 8 - (i % 3) * 7} r={4.5}
             fill={URG[urgDe(c.diasRestantes)].ponto} stroke="#fff" strokeWidth="1.5">
-            <title>{`${fmtBR(c.fim)} · ${c.empresa} (${contagem(c.diasRestantes)})`}</title>
+            <title>{[
+              c.empresa,
+              `Vence em ${fmtBR(c.fim)} — ${contagem(c.diasRestantes)}`,
+              `Vigência: ${fmtBR(c.inicio)} a ${fmtBR(c.fim)}`,
+              `Modalidade: ${c.modalidade || 'não declarada no ato'}`,
+              `${c.tipo} nº ${c.numero}/${c.ano}${c.processoSei ? ` · SEI ${c.processoSei}` : ''}`,
+            ].join('\n')}</title>
           </circle>
         ))}
       </svg>
