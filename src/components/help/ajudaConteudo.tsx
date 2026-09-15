@@ -461,6 +461,42 @@ export const AJUDA: Record<string, AjudaAba> = {
       declarado.</>,
   },
 
+  'estagios': {
+    titulo: 'Convênios de Estágio',
+    resumo: <>Os convênios que a UFF mantém com empresas para receber estagiários, com a data em
+      que cada um vence.</>,
+    porQue: [
+      <>A UFF só pode encaminhar estagiário a uma empresa com <B>convênio vigente</B>, e cada
+        convênio é ratificado por uma Resolução do CEPEx publicada isoladamente no Boletim. O
+        prazo de validade está escrito no <B>Art. 2º</B> de cada uma delas — mil e oitocentos
+        atos, cada um com a sua data, e nenhuma soma entre eles.</>,
+      <>Para o aluno, a pergunta é se a empresa tem convênio. Para a Divisão de Estágio, é
+        quantos vencem nos próximos meses e quais já venceram — porque renovar passa por
+        processo, parecer e sessão do conselho, e isso não se faz na semana do vencimento.</>,
+    ],
+    passos: [
+      <>Comece pelos quatro números do topo: vencidos, e os que vencem em 30, 60 e 90 dias. Eles
+        não se repetem entre si — um convênio conta num número só.</>,
+      <>O gráfico de barras põe os dois lados no mesmo ano: quantos convênios a UFF <B>firmou</B> e
+        quantos <B>vencem</B>. “Firmados” conta pelo início da vigência, não pelo ano do ato — um
+        convênio pode valer desde 2021 e só ter sido ratificado anos depois. Como o prazo costuma
+        ser de cinco anos, o pico de vencimento é o pico de assinatura cinco anos adiante. A linha
+        do tempo, logo abaixo, mostra o que vence nos próximos 90 dias.</>,
+      <>Use as faixas (<B>Vencidos</B>, <B>30 dias</B>, <B>60 dias</B>, <B>90 dias</B>,
+        <B>Todos</B>) e a busca por nome de empresa para chegar a um convênio. Aqui a faixa é
+        acumulada: <B>60 dias</B> mostra também o que vence antes disso.</>,
+      <>Cada cartão leva ao <B>Boletim</B> em que o ato foi publicado — é lá que se confere.</>,
+    ],
+    cuidado: <>Esta <B>não é a lista oficial</B> de convênios de estágio da UFF: a lista completa,
+      com CNPJ e cidade, é a da Divisão de Estágio, em <B>estagio.uff.br</B>, e o link está na
+      tela. Aqui só entram os convênios cuja ratificação saiu no Boletim <B>com as duas datas no
+      texto</B>, o que começa em 2022 — antes disso as resoluções não declaram vigência. Não
+      encontrar uma empresa aqui <B>não</B> significa que ela não tenha convênio. A modalidade é
+      a <B>redação literal</B> do ato: o portal não traduz “curricular profissional” para
+      “obrigatório”. E um convênio pode ter sido prorrogado ou rescindido por ato posterior que
+      este radar não relacione.</>,
+  },
+
   'institucional/ods': {
     titulo: 'ODS',
     resumo: <>Os atos normativos agrupados pelos <B>17 Objetivos de Desenvolvimento

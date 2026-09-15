@@ -44,6 +44,11 @@ const NAV_PRIMARIO: NavItem[] = [
   // `itemClasse` para o tratamento visual.
   { id: 'pessoal/siape', label: 'Meu SIAPE', icon: <IdCard size={18} />, destaque: true },
   { id: 'pessoal/prazos', label: 'Prazos', icon: <Timer size={18} /> },
+  // Quinto item, e a exceção é deliberada: é a única aba do portal cujo
+  // público principal é o ALUNO, e enterrá-la sob "Mais" a entregaria só a
+  // quem já sabe que ela existe. A Divisão de Estágio chega por link direto;
+  // o aluno, não.
+  { id: 'estagios', label: 'Convênios de Estágio', icon: <GraduationCap size={18} /> },
 ];
 
 // O que fica sob "Mais", agrupado. Os grupos sobreviveram à redução porque doze

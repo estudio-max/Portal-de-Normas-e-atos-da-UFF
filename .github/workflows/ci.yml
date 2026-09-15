@@ -149,6 +149,24 @@ jobs:
       - name: Variável usada e nunca atribuída em importar/
         run: php backend/importar/teste_variaveis_importador.php
 
+      # A aba Convênios de Estágio afirma para a Divisão de Estágio QUANDO um
+      # convênio vence, e para o aluno SE a empresa tem convênio. Data errada
+      # aqui não é imprecisão de contagem: é a empresa certa no dia errado.
+      # Dois achados já custaram medição e viraram caso: a razão social que
+      # contém "ESTÁGIO" roubava a janela do classificador de modalidade, e
+      # "não obrigatórios" contém "obrigatórios".
+      - name: Regressão dos convênios de estágio
+        run: php tools/teste_convenios_estagio.php
+
+      # Estes dois já existiam no repositório e NUNCA rodaram em lugar nenhum:
+      # foram escritos, passaram, e ficaram fora do CI — que é o mesmo que não
+      # existir, já que o portão local não roda PHP por padrão.
+      - name: Regressão das variantes de matrícula (Meu SIAPE)
+        run: php tools/teste_siape_variantes.php
+
+      - name: Regressão do vínculo ato↔CPFJ
+        run: php tools/teste_comissoes_cpfj.php
+
   # O extrator é o arquivo mais sensível do projeto: um padrão que deixa de
   # casar não quebra nada visivelmente — o dado simplesmente para de existir,
   # e ninguém percebe até alguém procurar por ele meses depois.

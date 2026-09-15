@@ -13,6 +13,7 @@ Endpoints (iguais aos do PHP):
     /chefias  /mandatos  /prazos  /pad_cadeia?processo=...
     /insights?ano=...  /analitico
     /jornada  /cooperacao  /comissoes  /politicas  /ods  /dossie
+    /convenios_estagio
 
 O que o mock NÃO reproduz, por desenho: o cache em disco da API PHP e o
 `X-Cache`. Tudo aqui é calculado a cada requisição sobre o JSON em memória.
@@ -737,6 +738,60 @@ def cooperacao_payload():
         "paises": sorted(paises.values(), key=lambda x: -x["n"]),
         "acordos": acordos,
     }
+
+
+def convenios_estagio_payload():
+    """Espelha a FORMA da rota /convenios_estagio (aba Convênios de Estágio).
+
+    Amostra escrita a mao, como a da cooperacao -- e de proposito: a regra real
+    le o CORPO do ato (Art. 2o) e o portal-data.json local so cobre a safra
+    recente, entao derivar aqui daria um recorte que nao e nem o de producao
+    nem um caso de teste. A verdade da classificacao mora no PHP
+    (conv_estagio_vigencia / _modalidade / _empresa em backend/api/index_v2.php)
+    e e coberta por tools/teste_convenios_estagio.php no CI. Aqui so se exercita
+    a TELA: uma linha em cada faixa de urgencia e em cada redacao de modalidade.
+    """
+    hoje = datetime.date.today()
+    def cv(dias_ate_fim, empresa, modalidade, numero, ano, anos=5):
+        fim = hoje + datetime.timedelta(days=dias_ate_fim)
+        ini = fim - datetime.timedelta(days=365 * anos)
+        return {"id": f"res-cepex-{numero}-{ano}", "numero": numero, "ano": ano,
+                "tipo": "Resolução", "sigla": "CEPEx", "dataAto": ini.isoformat(),
+                "link": None, "processoSei": f"23069.{100000 + int(numero.replace('.', ''))}/{ano}-86",
+                "empresa": empresa, "modalidade": modalidade,
+                "inicio": ini.isoformat(), "fim": fim.isoformat(),
+                "diasRestantes": dias_ate_fim, "statusAto": "Ativo",
+                "ementa": "Dispõe sobre a ratificação do Convênio celebrado entre a "
+                          f"UFF - UFF e a {empresa}."}
+    convenios = [
+        cv(-420, "LIVE CAPITAL CONSULTORIA EM INFORMÁTICA LTDA", "curricular profissional", "1.264", 2021),
+        cv(-15,  "ODEBRECHT REALIZAÇÕES RJ01 EMPREENDIMENTO IMOBILIÁRIO LTDA", "obrigatório", "1.263", 2021),
+        cv(12,   "ASSOCIAÇÃO FLUMINENSE DE REABILITAÇÃO - AFR", "obrigatório", "4.185", 2022),
+        cv(28,   "SYS MANAGER INFORMATICA LTDA", "curricular profissional", "4.201", 2022),
+        cv(52,   "MPR GESTAO E ASSESSORIA CONTABIL LTDA", "curricular profissional", "4.311", 2022),
+        cv(83,   "DEFENSORIA PÚBLICA DO ESTADO DO RIO DE JANEIRO", "não obrigatório", "4.402", 2022),
+        cv(250,  "CENTRO DE TREINAMENTO PADOCA DO ALEX LTDA", "curricular profissional", "4.577", 2022),
+        cv(330,  "MUNICÍPIO DE JUIZ DE FORA - MG", "obrigatório e não obrigatório", "5.010", 2023),
+        cv(700,  "PWC STRATEGY& DO BRASIL CONSULTORIA EMPRESARIAL LTDA", "curricular profissional", "5.801", 2026),
+        cv(1100, "PROGECON ENGENHARIA LTDA", "obrigatório", "5.560", 2026),
+        cv(1500, "REDE CIDADÃ", "curricular", "5.612", 2026),
+        cv(1700, "SECRETARIA MUNICIPAL DE SAÚDE DE DUQUE DE CAXIAS", "", "5.700", 2026),
+    ]
+    convenios.sort(key=lambda c: c["fim"])
+    janelas = {"vencidos": 0, "d30": 0, "d60": 0, "d90": 0, "adiante": 0}
+    por_ano = {}
+    for c in convenios:
+        d = c["diasRestantes"]
+        k = ("vencidos" if d < 0 else "d30" if d <= 30 else
+             "d60" if d <= 60 else "d90" if d <= 90 else "adiante")
+        janelas[k] += 1
+        # Os DOIS indicadores no mesmo ano: firmados (inicio da vigencia) e
+        # vencimentos (fim). Um ano pode ter so um dos dois.
+        for chave, ano in (("firmados", int(c["inicio"][:4])), ("vencem", int(c["fim"][:4]))):
+            por_ano.setdefault(ano, {"firmados": 0, "vencem": 0})[chave] += 1
+    return {"total": len(convenios), "janelas": janelas,
+            "serie": [{"ano": a, **por_ano[a]} for a in sorted(por_ano)],
+            "convenios": convenios}
 
 
 # Espelha /comissoes: registro curado + contagens (números medidos no acervo).
@@ -1626,6 +1681,8 @@ class H(BaseHTTPRequestHandler):
             self._send(jornada_payload())
         elif recurso == "cooperacao":
             self._send(cooperacao_payload())
+        elif recurso == "convenios_estagio":
+            self._send(convenios_estagio_payload())
         elif recurso == "revalidacao":
             self._send(revalidacao_payload())
         elif recurso == "comissoes":
