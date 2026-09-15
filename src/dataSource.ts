@@ -1021,6 +1021,50 @@ export async function getRevalidacao(): Promise<RevalResp | null> {
   } catch { return null; }
 }
 
+// --- Convênios de estágio (radar de vencimento) ----------------------------
+// Uma linha por convênio cuja RATIFICAÇÃO saiu no Boletim com as duas datas no
+// corpo do ato. NÃO é o registro oficial da UFF — esse é o da Divisão de
+// Estágio, em https://estagio.uff.br/convenios-ativos, e a aba diz isso na
+// tela. Detalhe do recorte e do porquê: comentário da rota `convenios_estagio`
+// em backend/api/index_v2.php.
+export interface ConvenioEstagio {
+  id: string; numero: string; ano: number; tipo: string; sigla: string;
+  dataAto: string; link: string | null; processoSei: string;
+  empresa: string;
+  /** Redação LITERAL do ato: 'obrigatório', 'não obrigatório', 'obrigatório e
+   *  não obrigatório', 'curricular profissional', 'curricular' — ou '' quando
+   *  o ato não declara. Vazio é vazio: a tela escreve "não declarado" e não
+   *  supõe a modalidade dominante. */
+  modalidade: string;
+  inicio: string; fim: string;
+  /** Negativo = já venceu. Contado contra a data do servidor, não a do
+   *  navegador: relógio do visitante atrasado mudaria o alarme de lugar. */
+  diasRestantes: number;
+  statusAto: string;
+  ementa: string;
+}
+export interface ConveniosEstagioResp {
+  total: number;
+  /** Faixas EXCLUDENTES (d60 é de 31 a 60 dias), para os quatro números do
+   *  topo somarem o total sem contar o mesmo convênio duas vezes. */
+  janelas: { vencidos: number; d30: number; d60: number; d90: number; adiante: number };
+  serie: { ano: number; n: number }[];
+  convenios: ConvenioEstagio[];
+}
+
+export async function getConveniosEstagio(): Promise<ConveniosEstagioResp | null> {
+  if (MODO !== 'api') return null;
+  try {
+    const r = await fetch(`${API_BASE}/convenios_estagio`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    // API antiga não conhece a rota e cai no listar(), que devolve `atos` —
+    // valida a shape antes de deixar a tela desenhar em cima de lixo.
+    if (!j || !Array.isArray(j.convenios) || !Array.isArray(j.serie) || !j.janelas) return null;
+    return j as ConveniosEstagioResp;
+  } catch { return null; }
+}
+
 export async function getCooperacao(): Promise<CoopResp | null> {
   if (MODO !== 'api') return null;
   try {

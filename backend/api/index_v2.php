@@ -99,6 +99,7 @@ switch ($recurso) {
     case 'prazos':   prazos($pdo); break;
     case 'jornada':  jornada($pdo); break;
     case 'cooperacao': cooperacao($pdo); break;
+    case 'convenios_estagio': convenios_estagio($pdo); break;
     case 'revalidacao': revalidacao($pdo); break;
     case 'comissoes': comissoes($pdo, $_GET['corpo'] ?? '', $_GET['janela'] ?? ''); break;
     case 'politicas': politicas($pdo, $_GET['slug'] ?? ''); break;
@@ -138,7 +139,7 @@ function cache_rotas(): array {
     // pessoal (fica de fora); `atos`/`ato` variam demais e já são rápidas.
     static $r = ['stats', 'filtros', 'jornada', 'cooperacao', 'comissoes',
                  'insights', 'analitico', 'prazos', 'pad_cadeia', 'ods',
-                 'politicas', 'mudancas', 'revalidacao'];
+                 'politicas', 'mudancas', 'revalidacao', 'convenios_estagio'];
     return $r;
 }
 function cache_cacheavel(string $recurso): bool {
@@ -3145,6 +3146,213 @@ function cooperacao(PDO $pdo): void {
                                   array_keys($cats), array_values($cats)),
         'paises'     => $paises,
         'acordos'    => $acordos,
+    ]);
+}
+
+// ---- CONVÊNIOS DE ESTÁGIO: radar de vencimento ----------------------------
+// A UFF formaliza estágio por CONVÊNIO com a empresa, e o CEPEx ratifica o
+// acordo por Resolução. O Art. 2º dessas resoluções declara a vigência com as
+// DUAS datas ("A vigência do convênio é de 09/11/2025 a 08/11/2030"), e é daí
+// — não de tabela-fato — que este painel sai, pela mesma razão de `jornada` e
+// `cooperacao`: enquanto a regra ainda está sendo descoberta, mexer num regex
+// é mais barato que migrar dado.
+//
+// ⚠️ ESTE PAINEL NÃO É O REGISTRO OFICIAL, e a aba precisa dizer isso na tela.
+// A lista completa é a da Divisão de Estágio, em
+// https://estagio.uff.br/convenios-ativos (~4.160 linhas em 14/09/2026). Aqui
+// só entra convênio cuja RATIFICAÇÃO saiu no Boletim COM as duas datas no
+// corpo: 1.835 atos, todos de 2022 em diante. De 2008 a 2021 a resolução não
+// traz vigência em lugar nenhum do texto (medido ano a ano: zero em todos),
+// então o radar não alcança aquele período — e isso é limite de FONTE, não de
+// implementação.
+//
+// O que o registro oficial não faz — e é a razão desta aba existir: ele lista
+// como "ativo" convênio vencido em 2018 e traz linhas sem data nenhuma, com o
+// status escrito dentro do nome da empresa ("[EM PROCESSO DE PRORROGAÇÃO]").
+// Aqui cada linha tem data apurada do ato, e aponta para o ato.
+// As três funções abaixo são PURAS de propósito: o PHP não roda na máquina do
+// mantenedor, então a única cobertura possível é a do CI, e ela só alcança o
+// que não precisa de banco. `tools/teste_convenios_estagio.php` extrai estas
+// funções do arquivo por regex e as executa — mesmo mecanismo de
+// `teste_siape_variantes.php`. Lógica nova aqui dentro nasce com caso de teste.
+
+// Vigência declarada no Art. 2º. Devolve ['AAAA-MM-DD','AAAA-MM-DD'] ou ['',''].
+//
+// A frase é ancorada em "vigência do convênio é de", não num par de datas
+// solto: o corpo tem outras datas (assinatura eletrônica, sessão do conselho,
+// data do boletim) e casar "de X a Y" em qualquer lugar traria prazo de coisa
+// nenhuma. As duas pontuações do corpus entram na mesma expressão: "Art. 2º -
+// A vigência…" e "Art. 2º A vigência…".
+function conv_estagio_vigencia(string $corpo): array {
+    if (!preg_match('/vig[êe]ncia\s+do\s+conv[êe]nio\s+[ée]\s+de\s+'
+                  . '(\d{2})\/(\d{2})\/(\d{4})\s+a\s+(\d{2})\/(\d{2})\/(\d{4})/iu',
+                    $corpo, $m)) return ['', ''];
+    // Data impossível existe no corpus (o OCR troca dígito). Descartar é o
+    // certo: data errada num radar de vencimento é pior que linha ausente —
+    // ela não parece defeito, e é por isso que contamina o painel inteiro.
+    if (!checkdate((int)$m[2], (int)$m[1], (int)$m[3])) return ['', ''];
+    if (!checkdate((int)$m[5], (int)$m[4], (int)$m[6])) return ['', ''];
+    $ini = sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+    $fim = sprintf('%04d-%02d-%02d', $m[6], $m[5], $m[4]);
+    return $fim > $ini ? [$ini, $fim] : ['', ''];
+}
+
+// Modalidade pela LETRA do ato, sem tradução: "curricular profissional" NÃO é
+// reescrito como "obrigatório" por mais que se pareçam. Dizer que uma redação
+// equivale à outra é competência da Divisão de Estágio, não do portal.
+//
+// A primeira versão testava três frases fixas e deixava 14 de 181 em branco —
+// e o branco não era silêncio do ato: "Estágios Curriculares OBRIGATÓRIOS",
+// "estágio curricular obrigatório" e "de interesse curricular, obrigatório ou
+// não" DECLARAM a modalidade, só não na ordem de palavras prevista. Rotular
+// isso de "não declarado" seria apagar o que o ato diz. Medido em 14/09/2026
+// sobre os 181 convênios da fatia local; a lição é a de sempre nesta base,
+// vazio numa série é falta de redação prevista, não ausência de fato.
+//
+// Por isso os dois sinais são apurados SEPARADAMENTE, numa janela a partir da
+// primeira menção a estágio (o dispositivo do Art. 1º), e não por uma cascata
+// de frases inteiras:
+//   - negativo: "não obrigatório", "extracurricular", "obrigatório ou não"
+//   - positivo: "obrigatório" que sobre depois de apagar a locução negativa
+// Apagar a locução antes de procurar o positivo é o que impede o clássico
+// "não obrigatórios" CONTÉM "obrigatórios" de rotular ao contrário — erro que
+// diria ao aluno que o curso exige um estágio que não exige.
+//
+// Os DOIS sinais juntos são resultado legítimo, não empate a desempatar: há
+// convênio que abre as duas modalidades na mesma frase, e escolher uma
+// esconderia metade do que foi acordado.
+function conv_estagio_modalidade(string $corpo): string {
+    // ⚠️ A JANELA COMEÇA NO DISPOSITIVO, e isto é a armadilha-mãe desta base
+    // outra vez: o termo mora no NOME da parte, não no que o ato determina.
+    // O corpo abre com o título e a ementa, então a primeira ocorrência de
+    // "estági" pode ser a razão social — "CENTRO EDUCACIONAL DE TRABALHO E
+    // ESTAGIO REMUNERADO", "ESTÁGIOS.APP TECNOLOGIA DA INFORMAÇÃO LTDA",
+    // "ESTAGIAR INTEGRADOR EMPRESA ESCOLA LTDA". Ancorando no começo do texto,
+    // esses três liam a janela errada e saíam sem modalidade nenhuma.
+    $disp = $corpo;
+    if (preg_match('/\bR\s*E\s*S\s*O\s*L\s*V\s*E\b|\bArt\.?\s*1\s*[ºo°]?/iu',
+                   $corpo, $mm, PREG_OFFSET_CAPTURE)) {
+        $disp = substr($corpo, $mm[0][1]);
+    }
+    // E o nome da parte aparece DE NOVO dentro do próprio Art. 1º ("Ratificar
+    // … entre a UFF e a ESTÁGIOS.APP TECNOLOGIA DA INFORMAÇÃO LTDA, para
+    // formalizar, nos termos da Lei nº 11.788…"), à frente da redação que
+    // interessa. Por isso a varredura é de TODAS as menções do dispositivo, e
+    // vale a primeira que classifica: janela presa à primeira ocorrência ficava
+    // parada na razão social e devolvia vazio.
+    // Lookahead para as janelas poderem SE SOBREPOR. Sem ele, a janela da
+    // razão social ("ESTÁGIOS.APP…") consome os 200 caracteres seguintes e
+    // engole a menção que interessa ("…a concessão de estágios curriculares
+    // profissionais"), que cai dentro dela — preg_match_all não devolve match
+    // que começa dentro do anterior.
+    if (!preg_match_all('/(?=(est[áa]gi.{0,200}))/iu', $disp, $ms)) return '';
+    foreach ($ms[1] as $j) {
+        $nao = (bool)preg_match('/n[ãa]o[\s-]*obrigat|extracurricular|obrigat\w*\s+ou\s+n[ãa]o/iu', $j);
+        $semNeg = preg_replace('/n[ãa]o[\s-]*obrigat\w*/iu', ' ', $j);
+        $sim = (bool)preg_match('/obrigat/iu', $semNeg);
+        if ($sim && $nao) return 'obrigatório e não obrigatório';
+        if ($nao)         return 'não obrigatório';
+        if ($sim)         return 'obrigatório';
+        // Sem obrigatoriedade declarada, fica o que o ato escreveu sobre o
+        // vínculo curricular — "curriculares profissionais" é a redação
+        // dominante, e "curriculares" seco existe à parte.
+        if (preg_match('/curricular(?:es)?\s+profission/iu', $j)) return 'curricular profissional';
+        if (preg_match('/curricular/iu', $j))                     return 'curricular';
+    }
+    return '';
+}
+
+// Nome da empresa. Sai do MESMO extrator da aba Cooperação: a ementa tem forma
+// idêntica ("…celebrado entre a UFF - UFF e a X"), e aquele código já pagou o
+// preço dos 12% de casos sem artigo, com vírgula ou com typo. Reescrever um
+// segundo extrator para a mesma frase só criaria duas verdades divergentes.
+//
+// "Concedente" é o único acréscimo, e vem da redação de 2024: "…e a Concedente
+// HELP REFORMA E CONSTRUÇÃO LTDA". É o PAPEL da parte na Lei 11.788, não parte
+// do nome — deixá-lo entra na busca por empresa e ordena errado por nome.
+function conv_estagio_empresa(string $ementa): string {
+    return trim(preg_replace('/^Concedente\s+/iu', '', coop_instituicao($ementa)));
+}
+
+function convenios_estagio(PDO $pdo): void {
+    // As DUAS redações da ementa, e a segunda não é preciosismo: em 2021 o
+    // CEPEx escreveu "ratificação DE Convênio", e só de 2022 em diante "DO
+    // Convênio". Procurar só a forma nova devolve ZERO para 2021 inteiro — o
+    // tipo de buraco que se confunde com ausência de fato. Sem "+" as frases
+    // são alternativas (basta uma casar).
+    $ft = '"ratificacao do convenio" "ratificacao de convenio"';
+    // Segundo filtro, no CORPO: é ele que separa o convênio de estágio do de
+    // PD&I/Finep (que cita convênio na ementa igualzinho e não tem vigência
+    // declarada). Escrito SEM acento de propósito — o índice FULLTEXT dobra
+    // acento, então a forma sem acento casa as duas grafias, e a com acento
+    // dependeria de como o `texto_busca` foi normalizado na importação.
+    $fv = '"a vigencia do convenio"';
+    $st = $pdo->prepare("
+        SELECT a.uid AS id, a.numero, a.ano, a.data_ato, a.ementa, a.status,
+               a.processo_sei, o.sigla, t.nome AS tipo, b.url_pdf AS link,
+               SUBSTRING(tx.texto_original, 1, 3000) AS corpo
+          FROM ato a
+          JOIN orgao o        ON o.id = a.orgao_id
+          JOIN tipo_ato t     ON t.id = a.tipo_id
+          JOIN ato_texto tx   ON tx.ato_id = a.id
+          LEFT JOIN boletim b ON b.id = a.boletim_id
+         WHERE MATCH(a.ementa)      AGAINST(:ft IN BOOLEAN MODE)
+           AND MATCH(tx.texto_busca) AGAINST(:fv IN BOOLEAN MODE)
+         ORDER BY a.ano DESC, a.numero_norm DESC
+         LIMIT 4000");
+    $st->execute([':ft' => $ft, ':fv' => $fv]);
+
+    $hoje = new DateTimeImmutable(date('Y-m-d'));
+    $convenios = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $corpo = preg_replace('/\s+/u', ' ', $r['corpo'] ?? '');
+        // Guarda de assunto. O corte pelo corpo já derruba quase tudo, mas
+        // convênio que não fala em estágio não entra numa aba de estágio por
+        // mais bem-formada que esteja a vigência.
+        if (!preg_match('/est[áa]gi/iu', $corpo)) continue;
+        [$ini, $fim] = conv_estagio_vigencia($corpo);
+        if ($ini === '') continue;
+        $mod     = conv_estagio_modalidade($corpo);
+        $empresa = conv_estagio_empresa($r['ementa'] ?? '');
+
+        $dias = (int)$hoje->diff(new DateTimeImmutable($fim))->format('%r%a');
+        $convenios[] = [
+            'id' => $r['id'], 'numero' => $r['numero'], 'ano' => (int)$r['ano'],
+            'tipo' => $r['tipo'], 'sigla' => $r['sigla'], 'dataAto' => $r['data_ato'],
+            'link' => $r['link'], 'processoSei' => $r['processo_sei'] ?? '',
+            'empresa' => $empresa, 'modalidade' => $mod,
+            'inicio' => $ini, 'fim' => $fim, 'diasRestantes' => $dias,
+            'statusAto' => $r['status'],
+            'ementa' => mb_substr(preg_replace('/\s+/u', ' ', $r['ementa'] ?? ''), 0, 260),
+        ];
+    }
+
+    // Vencimento mais próximo primeiro: é a ordem de trabalho de quem cuida
+    // dos prazos, não a ordem de publicação.
+    usort($convenios, fn($x, $y) => strcmp($x['fim'], $y['fim']));
+
+    // Escada 30/60/90 — a do acompanhamento de vencimento de contrato, pedida
+    // pelo mantenedor em 14/09/2026. As faixas são EXCLUDENTES (d60 é de 31 a
+    // 60), para os quatro números do topo somarem o total sem contar duas
+    // vezes o mesmo convênio.
+    $janelas = ['vencidos' => 0, 'd30' => 0, 'd60' => 0, 'd90' => 0, 'adiante' => 0];
+    $porAnoFim = [];
+    foreach ($convenios as $c) {
+        $d = $c['diasRestantes'];
+        $k = $d < 0 ? 'vencidos' : ($d <= 30 ? 'd30' : ($d <= 60 ? 'd60' : ($d <= 90 ? 'd90' : 'adiante')));
+        $janelas[$k]++;
+        $ano = (int)substr($c['fim'], 0, 4);
+        $porAnoFim[$ano] = ($porAnoFim[$ano] ?? 0) + 1;
+    }
+    ksort($porAnoFim);
+    $serie = [];
+    foreach ($porAnoFim as $ano => $n) $serie[] = ['ano' => $ano, 'n' => $n];
+
+    responder_json([
+        'total'      => count($convenios),
+        'janelas'    => $janelas,
+        'serie'      => $serie,
+        'convenios'  => $convenios,
     ]);
 }
 

@@ -144,11 +144,26 @@ Regra de fechamento: **todo trabalho termina em `git commit` + `git push` + o CI
 VERDE.** O GitHub é o espelho único; se não foi empurrado, não aconteceu — e se
 o CI está vermelho, também não.
 
-⚠️ **Conferir o CI não é opcional, e a razão é específica desta máquina: o PHP
-não roda aqui** (bloqueio de política do Windows). O portão local cobre
-TypeScript, a trava do redesign e o schema; os testes de PHP — sintaxe,
-`teste_ods_match`, `teste_politicas_match`, `teste_indicador_politica` — só
-existem no job `ods` do CI. Quem só roda o portão local acha que passou.
+⚠️ **Conferir o CI não é opcional: o `npm run lint` não roda uma linha de PHP.**
+O portão local cobre TypeScript, a trava do redesign e o schema; os testes de
+PHP — sintaxe, `teste_ods_match`, `teste_politicas_match`,
+`teste_indicador_politica`, `teste_convenios_estagio` — vivem no job `ods` do
+CI. Quem só roda o portão local acha que passou.
+
+⚠️ **O PHP RODA nesta máquina — só não pelo nome.** `php` não está no PATH
+(daí o `command not found` que já foi lido como "não tem PHP aqui"), mas o
+binário está instalado e funciona pelo caminho completo:
+
+```bash
+"$LOCALAPPDATA/php83/php.exe" -l backend/api/index_v2.php
+"$LOCALAPPDATA/php83/php.exe" tools/teste_convenios_estagio.php
+```
+
+É PHP 8.3.33, a mesma minor de produção (8.3) e a mesma que o CI instala.
+**Rode os testes de PHP aqui antes de empurrar** — descobrir no CI o que um
+comando local pegaria em dois segundos custa um ciclo de PR inteiro. Isso não
+dispensa o CI: ele continua sendo o único lugar onde a suíte inteira roda no
+mesmo ambiente para todo mundo.
 
 Foi exatamente o que aconteceu em 04/08/2026: o `teste_politicas_match.php`
 entrou vermelho no commit que o criou e ficou assim por **8 commits**, porque o
@@ -371,7 +386,7 @@ A aba Meu SIAPE não exige mais configuração nenhuma (o `dossie_token` do
 
 ## Painéis derivados da EMENTA (não de tabela-fato)
 
-Duas abas não têm tabela-fato própria: são **calculadas em tempo de consulta**
+Três abas não têm tabela-fato própria: são **calculadas em tempo de consulta**
 lendo o texto do ato. É uma escolha — enquanto as regras ainda estão sendo
 descobertas, mudar um regex e recarregar é barato; virar `INSERT` só quando a
 regra estabilizar (aí sim vale o modelo em estrela).
@@ -401,12 +416,35 @@ regra estabilizar (aí sim vale o modelo em estrela).
   vista noutro ato. `paisInferido` marca o que não veio do ato, e a interface
   mostra `*`. A tabela curada é **extensível**: instituição estrangeira sem país
   = uma linha nova ali.
+- **Convênios de Estágio** (`/api/convenios_estagio`, aba `#/estagios`, desde
+  14/09/2026): o radar de validade dos convênios com empresas. Diferente das
+  duas de cima, esta lê o **CORPO**, não a ementa — a vigência está no Art. 2º
+  ("A vigência do convênio é de 09/11/2025 a 08/11/2030"), e é o corpo que
+  separa o convênio de estágio do de PD&I/Finep, cuja ementa é idêntica. O
+  recorte, as medições e as três armadilhas estão em
+  [`docs/METODOLOGIA-CONVENIOS-ESTAGIO.md`](docs/METODOLOGIA-CONVENIOS-ESTAGIO.md);
+  o que não pode sair da cabeça de quem mexer:
+  **(1) A ementa tem DUAS redações.** 2021 escreve "ratificação **de**
+  Convênio"; de 2022 em diante, "**do** Convênio". Procurar só a forma nova
+  devolve ZERO para 2021 inteiro — buraco que se confunde com ausência de fato,
+  e que já enganou uma sessão deste projeto por meia hora.
+  **(2) O radar começa em 2022, e é limite de FONTE.** Medido ano a ano de 2008
+  a 2021: nenhum convênio traz vigência no corpo. São **1.835** de 4.987
+  ratificações. A aba declara isso na tela.
+  **(3) A aba NÃO é o registro oficial** — esse é o da Divisão de Estágio, em
+  `https://estagio.uff.br/convenios-ativos` (4.160 linhas, com CNPJ, cidade e
+  processo SEI). A tela linka para lá e diz que não achar a empresa aqui não
+  significa que ela não tenha convênio. O valor do painel é a DATA apurada e o
+  ato como prova: medido em 14/09/2026, **2.191 das 4.160 linhas do registro
+  oficial (53%) já venceram** e continuam listadas como ativas, 125 delas
+  desde 2018.
+  Regressão no CI: `php tools/teste_convenios_estagio.php` (21 casos).
 
 ## Cache de resposta
 
 Os painéis diário-estáticos (`stats`, `filtros`, `jornada`, `cooperacao`,
 `comissoes`, `politicas`, `insights`, `analitico`, `prazos`, `pad_cadeia`,
-`ods`, `mudancas`) são
+`ods`, `mudancas`, `convenios_estagio`) são
 cacheados em disco (`api/cache/`). Medido: jornada/cooperacao/insights custam ~0,5s de CPU
 por requisição, e dão a MESMA resposta para todos entre uma importação e outra
 (o acervo muda 1x/dia). Servidos do cache custam ~0,005s e **nem conectam no
@@ -839,12 +877,21 @@ botão "Imprimir" ali leva ao AirPrint e não ao PDF. Consequências de projeto:
 - O documento imprime **preto no branco mesmo com o portal em fotofobia**: quem
   imprime quer o papel legível, não a skin de baixo brilho.
 
-## A navegação são QUATRO rotas e um "Mais"
+## A navegação são CINCO rotas e um "Mais"
 
-`Sidebar.tsx` tem `NAV_PRIMARIO` (Dashboard, Atos e Normas, Meu SIAPE, Prazos),
-`NAV_MAIS` (as outras dez, em três grupos) e `FOOTER_ITEMS`. Aba nova entra num
-dos três — e continua precisando da linha em `ABAS_VALIDAS` e da entrada na
-ajuda, que não mudaram.
+`Sidebar.tsx` tem `NAV_PRIMARIO` (Dashboard, Atos e Normas, Meu SIAPE, Prazos,
+Convênios de Estágio), `NAV_MAIS` (as outras dez, em três grupos) e
+`FOOTER_ITEMS`. Aba nova entra num dos três — e continua precisando da linha em
+`ABAS_VALIDAS`, da entrada na ajuda e de um grupo na aba **Sobre** (a trava
+exige os três).
+
+**Foram quatro rotas até 14/09/2026**, e o quinto item entrou por um critério
+que as outras quatro não atendem: **Convênios de Estágio é a única aba cujo
+público principal é o ALUNO**. As demais servem servidor, gestor ou
+pesquisador — gente que volta ao portal e aprende onde as coisas ficam. O aluno
+entra uma vez, para saber se a empresa tem convênio; sob "Mais", ele não
+encontraria. O critério do primário continua sendo uso previsto, não
+importância do painel.
 
 Três coisas que a trava exige, cada uma por um motivo medido:
 

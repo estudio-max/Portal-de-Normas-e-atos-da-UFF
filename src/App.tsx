@@ -19,6 +19,7 @@ const ComissoesApi = lazy(() => import('./components/panels/ComissoesApi'));
 const PoliticasApi = lazy(() => import('./components/panels/PoliticasApi'));
 const MudancasApi = lazy(() => import('./components/panels/MudancasApi'));
 const CooperacaoApi = lazy(() => import('./components/panels/CooperacaoApi'));
+const EstagiosApi = lazy(() => import('./components/panels/EstagiosApi'));
 const RevalidacaoApi = lazy(() => import('./components/panels/RevalidacaoApi'));
 const OdsApi = lazy(() => import('./components/panels/OdsApi'));
 const HelpGuide = lazy(() => import('./components/panels/HelpGuide'));
@@ -52,7 +53,7 @@ function abaDoHash(): string {
 }
 
 const ABAS_VALIDAS = [
-  '', 'atos', 'relacoes', 'insights',
+  '', 'atos', 'relacoes', 'insights', 'estagios',
   'pessoal/siape', 'pessoal/chefias', 'pessoal/mandatos', 'pessoal/prazos', 'pessoal/jornada',
   'institucional/comissoes', 'institucional/politicas',
   'institucional/cooperacao', 'institucional/revalidacao', 'institucional/ods',
@@ -194,6 +195,8 @@ export default function App() {
     if (aba === 'pessoal/mandatos') return <Suspense fallback={<PanelFallback />}><MandatosApi /></Suspense>;
     if (aba === 'pessoal/prazos') return <Suspense fallback={<PanelFallback />}><PrazosApi /></Suspense>;
     if (aba === 'pessoal/jornada') return <Suspense fallback={<PanelFallback />}><JornadaApi /></Suspense>;
+
+    if (aba === 'estagios') return <Suspense fallback={<PanelFallback />}><EstagiosApi /></Suspense>;
 
     // Institucional
     if (aba === 'institucional/comissoes') return <Suspense fallback={<PanelFallback />}><ComissoesApi /></Suspense>;

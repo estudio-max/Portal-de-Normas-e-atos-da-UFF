@@ -153,7 +153,7 @@ const GRUPOS: { titulo: string; pergunta: string; abas: string[] }[] = [
   {
     titulo: 'Encontrar um ato',
     pergunta: 'Qual documento eu estou procurando?',
-    abas: ['atos', 'pessoal/siape', 'pessoal/prazos'],
+    abas: ['atos', 'pessoal/siape', 'pessoal/prazos', 'estagios'],
   },
   {
     titulo: 'Entender as ligações',
@@ -190,6 +190,7 @@ const RESUMO_CURTO: Record<string, string> = {
   'pessoal/chefias': 'Quem ocupa cada função, e desde quando',
   'pessoal/mandatos': 'Mandatos em curso e os que venceram',
   'pessoal/prazos': 'O que tem data para acabar',
+  estagios: 'Convênios com empresas e quando cada um vence',
   'pessoal/jornada': 'Setores em jornada flexibilizada ou PGD',
   'institucional/comissoes': 'Os colegiados permanentes da UFF',
   'institucional/politicas': 'A sequência de atos que construiu cada política',
