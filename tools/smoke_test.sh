@@ -61,11 +61,21 @@ checa_json "/api/jornada"              "'flex' in d and 'pgd' in d"
 checa_json "/api/cooperacao"           "isinstance(d.get('acordos'), list) and len(d['acordos']) > 0"
 checa_json "/api/prazos"               "isinstance(d, (list, dict))"
 checa_json "/api/comissoes"            "isinstance(d.get('corpos'), list) and len(d['corpos']) > 0"
-checa_json "/api/ods"                  "isinstance(d.get('lista'), list) and len(d['lista']) == 17"
+# São DEZOITO, não dezessete: o ODS 18 (Igualdade Étnico-Racial, iniciativa
+# brasileira e não da ONU) foi adotado em 18/08/2026 — ver METODOLOGIA-ODS §7-B.
+# Esta asserção ficou presa em 17 desde então e reprovava o deploy por um
+# objetivo que o portal passou a servir de propósito. O número continua fixo em
+# vez de `>= 17` porque a lista É fechada: se ela encolher ou crescer sozinha, é
+# defeito, e um teste frouxo aqui não avisaria.
+checa_json "/api/ods"                  "isinstance(d.get('lista'), list) and len(d['lista']) == 18"
 # Políticas: a rota degrada com `indisponivel` quando a tabela não existe, e
 # essa resposta é 200. Aceitar só `politicas` faria o smoke passar num servidor
 # onde o SQL não rodou — por isso o teste exige a lista de verdade.
 checa_json "/api/politicas"            "isinstance(d.get('politicas'), list) and len(d['politicas']) > 0"
+# Convênios de estágio: exige as QUATRO chaves da resposta, não só a lista. Se a
+# API subir sem a rota, o `default` do switch devolve 404 e o painel cai no aviso
+# de modo estático — que parece decisão de produto, não deploy pela metade.
+checa_json "/api/convenios_estagio"    "isinstance(d.get('convenios'), list) and len(d['convenios']) > 0 and isinstance(d.get('serie'), list) and 'vencidos' in d.get('janelas', {})"
 
 # 3) ficha por PATH_INFO (o roteamento /api/atos/{id} — quebra silenciosa
 #    clássica quando .htaccess/rewrite não subiu junto).
