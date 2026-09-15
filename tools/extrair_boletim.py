@@ -1049,8 +1049,19 @@ def extrai_ementa(resto):
     ementa = limpar(ementa)
     ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
     ementa = re.sub(r"(?i)^ementa\s*:?\s*", "", ementa)
-    # enumerador que sobra na frente ("II - Designar...", "1. No item 3.1...")
-    ementa = re.sub(r"^(?:[IVX]{1,4}|\d{1,2})\s*[-–—.)]\s+", "", ementa)
+    # Enumerador que sobra na frente ("II - Designar...", "1. No item 3.1...").
+    # O `|$` cobre o enumerador ÓRFÃO — quando o corte do dispositivo cai logo
+    # depois dele e não sobra mais nada. É o formato das resoluções ad referendum
+    # do CEPEx, que abrem direto na lista numerada de considerandos, sem bloco
+    # de ementa: "1. Considerando o constante do processo nº ..." — o corte em
+    # `Considerando` deixava a string exatamente "1.", o `\s+` não casava e
+    # o "1." virava a ementa oficial do ato. Medido em 14/09/2026: 67 atos em
+    # produção com ementa "1." (66 de 2021, 1 de 2022), todos com
+    # `ementaInferida=false` — o portal exibia "1." como se fosse a ementa do
+    # boletim. Com a string zerada, `sintetiza_ementa()` assume e o resumo do
+    # dispositivo aparece marcado como inferido. Ementa que SÓ começa com
+    # número continua intacta ("1.500 vagas" não casa: nem `\s+` nem fim).
+    ementa = re.sub(r"^(?:[IVX]{1,4}|\d{1,2})\s*[-–—.)](?:\s+|$)", "", ementa)
     ementa = re.sub(r"^[\s.,;:–\- ]+", "", ementa)
     return limpar(ementa)[:600]
 
